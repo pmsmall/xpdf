@@ -223,6 +223,7 @@ PDFDoc::PDFDoc(BaseStream *strA, GString *ownerPassword,
     fileNameU = NULL;
 #endif
   }
+  str = strA;
   ok = setup(ownerPassword, userPassword);
 }
 
