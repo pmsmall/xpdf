@@ -4,7 +4,7 @@ pdfinfo(1)                                             pdfinfo(1)
 
 NAME
        pdfinfo - Portable Document Format (PDF) document informa-
-       tion extractor (version 2.03)
+       tion extractor (version 3.00)
 
 SYNOPSIS
        pdfinfo [options] [PDF-file]
@@ -54,37 +54,42 @@ OPTIONS
        -f number
               Specifies the first page to examine.   If  multiple
               pages   are  requested  using  the  "-f"  and  "-l"
-              options,  the  size  of  each  requested  page   is
-              printed.  Otherwise, only page one is examined.
+              options, the size  of  each  requested  page  (and,
+              optionally,  the  bounding boxes for each requested
+              page) are printed.  Otherwise,  only  page  one  is
+              examined.
 
        -l number
               Specifies the last page to examine.
 
-       -meta  Prints   document-level  metadata.   (This  is  the
+       -box   Prints the page box bounding boxes: MediaBox, Crop-
+              Box, BleedBox, TrimBox, and ArtBox.
+
+       -meta  Prints  document-level  metadata.   (This  is   the
               "Metadata"  stream  from  the  PDF  file's  Catalog
               object.)
 
        -enc encoding-name
-              Sets  the  encoding  to  use  for text output.  The
-              encoding-name must be defined with  the  unicodeMap
+              Sets the encoding to  use  for  text  output.   The
+              encoding-name  must  be defined with the unicodeMap
               command (see xpdfrc(5)).  This defaults to "Latin1"
               (which is a built-in encoding).  [config file: tex-
               tEncoding]
 
        -opw password
-              Specify  the owner password for the PDF file.  Pro-
-              viding this will bypass all security  restrictions.
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
        -cfg config-file
-              Read  config-file in place of ~/.xpdfrc or the sys-
+              Read config-file in place of ~/.xpdfrc or the  sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print usage information.   (-help  and  --help  are
+       -h     Print  usage  information.   (-help  and --help are
               equivalent.)
 
 EXIT CODES
@@ -102,13 +107,13 @@ EXIT CODES
 
 AUTHOR
        The  pdfinfo  software  and  documentation  are  copyright
-       1996-2003 Glyph & Cog, LLC.
+       1996-2004 Glyph & Cog, LLC.
 
 SEE ALSO
-       xpdf(1),    pdftops(1),     pdftotext(1),     pdffonts(1),
-       pdftopbm(1), pdfimages(1), xpdfrc(5)
+       xpdf(1),     pdftops(1),     pdftotext(1),    pdffonts(1),
+       pdftoppm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
 
 
-                         10 October 2003               pdfinfo(1)
+                         22 January 2004               pdfinfo(1)

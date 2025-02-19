@@ -1,7 +1,7 @@
-.\" Copyright 1996-2003 Glyph & Cog, LLC
-.TH xpdf 1 "10 October 2003"
+.\" Copyright 1996-2004 Glyph & Cog, LLC
+.TH xpdf 1 "22 January 2004"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 2.03)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 3.00)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -90,19 +90,19 @@ to the window size, or \'width', to fit the page width to the window
 width.
 .RB "[config file: " initialZoom "; or X resource: " xpdf.initialZoom ]
 .TP
-.BI \-t1lib " font-type"
-Set the type of font rendering for t1lib (the Type 1 rasterizer) to
-use.  Options are \'none' (don't use t1lib at all), \'plain' (use
-non-anti-aliased fonts), \'low' or \'high' (use low-level or
-high-level anti-aliased fonts).
-.RB "[config file: " t1libControl ]
+.BI \-t1lib " yes | no"
+Enable or disable t1lib (a Type 1 font rasterizer).  This defaults to
+"yes".
+.RB "[config file: " enableT1lib ]
 .TP
-.BI \-freetype " font-type"
-Set the type of font rendering for FreeType (the TrueType rasterizer)
-to use.  Options are \'none' (don't use FreeType at all), \'plain'
-(use non-anti-aliased fonts), \'low' or \'high' (use anti-aliased
-fonts; these two are identical).
-.RB "[config file: " freetypeControl ]
+.BI \-freetype " yes | no"
+Enable or disable FreeType (a TrueType / Type 1 font rasterizer).
+This defaults to "yes".
+.RB "[config file: " enableFreeType ]
+.TP
+.BI \-aa " yes | no"
+Enable or disable font anti-aliasing.  This defaults to "yes".
+.RB "[config file: " antialias ]
 .TP
 .BI \-ps " PS-file"
 Set the default file name for PostScript output.  This can also be of
@@ -281,8 +281,7 @@ Rotate the page 90 degrees counterclockwise.
 .B "Rotate clockwise"
 Rotate the page 90 degrees clockwise.  The two rotate commands are
 intended primarily for PDF files where the rotation isn't correctly
-specified in the file, but they're also useful if your X server
-doesn't support font rotation.
+specified in the file.
 .TP
 .B "Close"
 Close the current window.  If this is the only open window, the
@@ -481,14 +480,14 @@ Error related to PDF permissions.
 99
 Other error.
 .SH AUTHOR
-The xpdf software and documentation are copyright 1996-2003 Glyph &
+The xpdf software and documentation are copyright 1996-2004 Glyph &
 Cog, LLC.
 .SH "SEE ALSO"
 .BR pdftops (1),
 .BR pdftotext (1),
 .BR pdfinfo (1),
 .BR pdffonts (1),
-.BR pdftopbm (1),
+.BR pdftoppm (1),
 .BR pdfimages (1),
 .BR xpdfrc (5)
 .br

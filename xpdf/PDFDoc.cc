@@ -201,7 +201,7 @@ void PDFDoc::checkHeader() {
 }
 
 void PDFDoc::displayPage(OutputDev *out, int page, double hDPI, double vDPI,
-			 int rotate, GBool doLinks,
+			 int rotate, GBool crop, GBool doLinks,
 			 GBool (*abortCheckCbk)(void *data),
 			 void *abortCheckCbkData) {
   Page *p;
@@ -215,36 +215,38 @@ void PDFDoc::displayPage(OutputDev *out, int page, double hDPI, double vDPI,
       delete links;
     }
     getLinks(p);
-    p->display(out, hDPI, vDPI, rotate, links, catalog,
+    p->display(out, hDPI, vDPI, rotate, crop, links, catalog,
 	       abortCheckCbk, abortCheckCbkData);
   } else {
-    p->display(out, hDPI, vDPI, rotate, NULL, catalog,
+    p->display(out, hDPI, vDPI, rotate, crop, NULL, catalog,
 	       abortCheckCbk, abortCheckCbkData);
   }
 }
 
 void PDFDoc::displayPages(OutputDev *out, int firstPage, int lastPage,
-			  double hDPI, double vDPI, int rotate, GBool doLinks,
+			  double hDPI, double vDPI, int rotate,
+			  GBool crop, GBool doLinks,
 			  GBool (*abortCheckCbk)(void *data),
 			  void *abortCheckCbkData) {
   int page;
 
   for (page = firstPage; page <= lastPage; ++page) {
-    displayPage(out, page, hDPI, vDPI, rotate, doLinks,
+    displayPage(out, page, hDPI, vDPI, rotate, crop, doLinks,
 		abortCheckCbk, abortCheckCbkData);
   }
 }
 
 void PDFDoc::displayPageSlice(OutputDev *out, int page,
 			      double hDPI, double vDPI,
-			      int rotate, int sliceX, int sliceY,
-			      int sliceW, int sliceH,
+			      int rotate, GBool crop,
+			      int sliceX, int sliceY, int sliceW, int sliceH,
 			      GBool (*abortCheckCbk)(void *data),
 			      void *abortCheckCbkData) {
   Page *p;
 
   p = catalog->getPage(page);
-  p->displaySlice(out, hDPI, vDPI, rotate, sliceX, sliceY, sliceW, sliceH,
+  p->displaySlice(out, hDPI, vDPI, rotate, crop,
+		  sliceX, sliceY, sliceW, sliceH,
 		  NULL, catalog, abortCheckCbk, abortCheckCbkData);
 }
 

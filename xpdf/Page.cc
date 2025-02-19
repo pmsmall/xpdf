@@ -218,15 +218,17 @@ Page::~Page() {
   contents.free();
 }
 
-void Page::display(OutputDev *out, double hDPI, double vDPI, int rotate,
+void Page::display(OutputDev *out, double hDPI, double vDPI,
+		   int rotate, GBool crop,
 		   Links *links, Catalog *catalog,
 		   GBool (*abortCheckCbk)(void *data),
 		   void *abortCheckCbkData) {
-  displaySlice(out, hDPI, vDPI, rotate, -1, -1, -1, -1, links, catalog,
+  displaySlice(out, hDPI, vDPI, rotate, crop, -1, -1, -1, -1, links, catalog,
 	       abortCheckCbk, abortCheckCbkData);
 }
 
-void Page::displaySlice(OutputDev *out, double hDPI, double vDPI, int rotate,
+void Page::displaySlice(OutputDev *out, double hDPI, double vDPI,
+			int rotate, GBool crop,
 			int sliceX, int sliceY, int sliceW, int sliceH,
 			Links *links, Catalog *catalog,
 			GBool (*abortCheckCbk)(void *data),
@@ -309,7 +311,7 @@ void Page::displaySlice(OutputDev *out, double hDPI, double vDPI, int rotate,
   }
 
   gfx = new Gfx(xref, out, num, attrs->getResourceDict(),
-		hDPI, vDPI, &box, isCropped(), cropBox, rotate,
+		hDPI, vDPI, &box, crop && isCropped(), cropBox, rotate,
 		abortCheckCbk, abortCheckCbkData);
   contents.fetch(xref, &obj);
   if (!obj.isNull()) {

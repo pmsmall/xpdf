@@ -1,8 +1,8 @@
-.\" Copyright 1997-2003 Glyph & Cog, LLC
-.TH pdftotext 1 "10 October 2003"
+.\" Copyright 1997-2004 Glyph & Cog, LLC
+.TH pdftotext 1 "22 January 2004"
 .SH NAME
 pdftotext \- Portable Document Format (PDF) to text converter
-(version 2.03)
+(version 3.00)
 .SH SYNOPSIS
 .B pdftotext
 [options]
@@ -64,7 +64,8 @@ Sets the encoding to use for text output.  The
 .I encoding\-name
 must be defined with the unicodeMap command (see
 .BR xpdfrc (5)).
-This defaults to "Latin1" (which is a built-in encoding).
+The encoding name is case-sensitive.  This defaults to "Latin1" (which
+is a built-in encoding).
 .RB "[config file: " textEncoding ]
 .TP
 .BI \-eol " unix | dos | mac"
@@ -122,14 +123,14 @@ Error related to PDF permissions.
 99
 Other error.
 .SH AUTHOR
-The pdftotext software and documentation are copyright 1996-2003 Glyph
+The pdftotext software and documentation are copyright 1996-2004 Glyph
 & Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),
 .BR pdftops (1),
 .BR pdfinfo (1),
 .BR pdffonts (1),
-.BR pdftopbm (1),
+.BR pdftoppm (1),
 .BR pdfimages (1),
 .BR xpdfrc (5)
 .br

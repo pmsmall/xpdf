@@ -1,8 +1,8 @@
-.\" Copyright 1999-2003 Glyph & Cog, LLC
-.TH pdfinfo 1 "10 October 2003"
+.\" Copyright 1999-2004 Glyph & Cog, LLC
+.TH pdfinfo 1 "22 January 2004"
 .SH NAME
 pdfinfo \- Portable Document Format (PDF) document information
-extractor (version 2.03)
+extractor (version 3.00)
 .SH SYNOPSIS
 .B pdfinfo
 [options]
@@ -82,13 +82,18 @@ the corresponding command line option.
 .TP
 .BI \-f " number"
 Specifies the first page to examine.  If multiple pages are requested
-using the "-f" and "-l" options, the size of each requested page is
-printed.  Otherwise, only page one is examined.
+using the "-f" and "-l" options, the size of each requested page (and,
+optionally, the bounding boxes for each requested page) are printed.
+Otherwise, only page one is examined.
 .TP
 .BI \-l " number"
 Specifies the last page to examine.
 .TP
-.BI \-meta
+.B \-box
+Prints the page box bounding boxes: MediaBox, CropBox, BleedBox,
+TrimBox, and ArtBox.
+.TP
+.B \-meta
 Prints document-level metadata.  (This is the "Metadata" stream from
 the PDF file's Catalog object.)
 .TP
@@ -139,14 +144,14 @@ Error related to PDF permissions.
 99
 Other error.
 .SH AUTHOR
-The pdfinfo software and documentation are copyright 1996-2003 Glyph &
+The pdfinfo software and documentation are copyright 1996-2004 Glyph &
 Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),
 .BR pdftops (1),
 .BR pdftotext (1),
 .BR pdffonts (1),
-.BR pdftopbm (1),
+.BR pdftoppm (1),
 .BR pdfimages (1),
 .BR xpdfrc (5)
 .br

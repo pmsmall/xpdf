@@ -80,21 +80,22 @@ public:
 
   // Display a page.
   void displayPage(OutputDev *out, int page, double hDPI, double vDPI,
-		   int rotate, GBool doLinks,
+		   int rotate, GBool crop, GBool doLinks,
 		   GBool (*abortCheckCbk)(void *data) = NULL,
 		   void *abortCheckCbkData = NULL);
 
   // Display a range of pages.
   void displayPages(OutputDev *out, int firstPage, int lastPage,
-		    double hDPI, double vDPI, int rotate, GBool doLinks,
+		    double hDPI, double vDPI, int rotate,
+		    GBool crop, GBool doLinks,
 		    GBool (*abortCheckCbk)(void *data) = NULL,
 		    void *abortCheckCbkData = NULL);
 
   // Display part of a page.
   void displayPageSlice(OutputDev *out, int page,
 			double hDPI, double vDPI,
-			int rotate, int sliceX, int sliceY,
-			int sliceW, int sliceH,
+			int rotate, GBool crop,
+			int sliceX, int sliceY, int sliceW, int sliceH,
 			GBool (*abortCheckCbk)(void *data) = NULL,
 			void *abortCheckCbkData = NULL);
 

@@ -4,7 +4,7 @@ pdftops(1)                                             pdftops(1)
 
 NAME
        pdftops  -  Portable  Document  Format (PDF) to PostScript
-       converter (version 2.03)
+       converter (version 3.00)
 
 SYNOPSIS
        pdftops [options] [PDF-file [PS-file]]
@@ -144,6 +144,28 @@ OPTIONS
               Set the paper height,  in  points.   [config  file:
               psPaperSize]
 
+       -nocrop
+              By default, output is cropped to the CropBox speci-
+              fied in the PDF file.  This option  disables  crop-
+              ping.  [config file: psCrop]
+
+       -expand
+              Expand PDF pages smaller than the paper to fill the
+              paper.  By default, these  pages  are  not  scaled.
+              [config file: psExpandSmaller]
+
+       -noshrink
+              Don't  scale  PDF  pages  which are larger than the
+              paper.  By default, pages larger than the paper are
+              shrunk to fit.  [config file: psShrinkLarger]
+
+       -nocenter
+              By default, PDF pages smaller than the paper (after
+              any scaling)  are  centered  on  the  paper.   This
+              option  causes them to be aligned to the lower-left
+              corner of the paper instead.  [config file:  psCen-
+              ter]
+
        -duplex
               Set  the  Duplex pagedevice entry in the PostScript
               file.  This tells duplex-capable printers to enable
@@ -183,13 +205,13 @@ EXIT CODES
 
 AUTHOR
        The  pdftops  software  and  documentation  are  copyright
-       1996-2003 Glyph & Cog, LLC.
+       1996-2004 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),     pdftotext(1),     pdfinfo(1),    pdffonts(1),
-       pdftopbm(1), pdfimages(1), xpdfrc(5)
+       pdftoppm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
 
 
-                         10 October 2003               pdftops(1)
+                         22 January 2004               pdftops(1)

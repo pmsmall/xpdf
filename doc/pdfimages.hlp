@@ -82,14 +82,14 @@
 2 AUTHOR
 
        The  pdfimages  software  and  documentation are copyright
-       1998-2003 Glyph & Cog, LLC.
+       1998-2004 Glyph & Cog, LLC.
 
                                                                ()
 
 2 SEE_ALSO
 
        xpdf(1),   pdftops(1),   pdftotext(1),   pdfinfo(1),  pdf-
-       fonts(1), pdftopbm(1), xpdfrc(5)
+       fonts(1), pdftoppm(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
                                                                ()

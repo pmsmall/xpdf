@@ -1,7 +1,7 @@
-.\" Copyright 2002-2003 Glyph & Cog, LLC
-.TH xpdfrc 5 "10 October 2003"
+.\" Copyright 2002-2004 Glyph & Cog, LLC
+.TH xpdfrc 5 "22 January 2004"
 .SH NAME
-xpdfrc \- configuration file for Xpdf tools (version 2.03)
+xpdfrc \- configuration file for Xpdf tools (version 3.00)
 .SH DESCRIPTION
 All of the Xpdf tools read a single configuration file.  If you have a
 .I .xpdfrc
@@ -139,25 +139,6 @@ for ToUnicode CMaps.  There can be multiple ToUnicode directories.
 There are no default ToUnicode directories.
 .SH DISPLAY FONTS
 .TP
-.BI displayFontX " PDF\-font\-name XLFD encoding\-name"
-Maps a PDF font,
-.IR PDF\-font\-name ,
-to an X font,
-.IR XLFD ,
-for display.  The XLFD (X Logical Font Descriptor) should contain the
-string "%s", which will be replaced by xpdf with the font size.  If
-the XLFD contains spaces it must be quoted.  The
-.I encoding\-name
-must be defined with the
-.I unicodeMap
-command (see above).  By default, the Base-14 fonts are mapped to
-standard X fonts, using the
-.IR Latin1 ,
-.IR Symbol ,
-and
-.I ZapfDingbats
-encodings.
-.TP
 .BI displayFontT1 " PDF\-font\-name T1\-file"
 Maps a PDF font,
 .IR PDF\-font\-name ,
@@ -171,28 +152,6 @@ Maps a PDF font,
 to a TrueType font for display.  The TrueType font file,
 .IR TT\-file ,
 should be a standard .ttf file.
-.TP
-.BI displayNamedCIDFontX " PDF\-font\-name XLFD encoding\-name"
-Maps a specific PDF CID (16-bit) font,
-.IR PDF\-font\-name ,
-to the X font,
-.IR XLFD ,
-for display.  The encoding given by
-.I encoding\-name
-must be defined with the unicodeMap command.  There are no default
-display CID font mappings.
-.TP
-.BI displayCIDFontX " registry\-ordering XLFD encoding\-name"
-Maps the
-.I registry\-ordering
-character collection to the X font,
-.IR XLFD ,
-for display.  This mapping is used if the font name doesn't match any
-of the fonts declared with displayNamedCIDFont* commands.  The
-encoding given by
-.I encoding\-name
-must be defined with the unicodeMap command.  There are no default
-display CID font mappings.
 .TP
 .BI displayNamedCIDFontT1 " PDF\-font\-name T1\-file"
 Maps a specific PDF CID (16-bit) font,
@@ -245,6 +204,34 @@ Sets the paper size for PostScript output to a standard size.  The
 default paper size is set when xpdf and pdftops are built, typically
 to "letter" or "A4".  This can also be set to "match", which will set
 the paper size to match the size specified in the PDF file.
+.TP
+.BR psImageableArea " llx lly urx ury"
+Sets the imageable area for PostScript output.  The four integers are
+the coordinates of the lower-left and upper-right corners of the
+imageable region, specified in points.  This defaults to the full
+paper size; the psPaperSize option will reset the imageable area
+coordinates.
+.TP
+.BR psCrop " yes | no"
+If set to "yes", PostScript output is cropped to the CropBox specified
+in the PDF file; otherwise no cropping is done.  This defaults to
+"yes".
+.TP
+.BR psExpandSmaller " yes | no"
+If set to "yes", PDF pages smaller than the PostScript imageable area
+are expanded to fill the imageable area.  Otherwise, no scalling is
+done on smaller pages.  This defaults to "no".
+.TP
+.BR psShrinkLarger " yes | no"
+If set to yes, PDF pages larger than the PostScript imageable area are
+shrunk to fit the imageable area.  Otherwise, no scaling is done on
+larger pages.  This defaults to "yes".
+.TP
+.BR psCenter " yes | no"
+If set to yes, PDF pages smaller than the PostScript imageable area
+(after any scaling) are centered in the imageable area.  Otherwise,
+they are aligned at the lower-left corner of the imageable area.  This
+defaults to "yes".
 .TP
 .BR psDuplex " yes | no"
 If set to "yes", the generated PostScript will set the "Duplex"
@@ -372,17 +359,23 @@ where 100 means 72 dpi.  You may also specify \'page', to fit the page
 to the window size, or \'width', to fit the page width to the window
 width.
 .TP
-.BR t1libControl " none | plain | low | high"
-Sets the type of font rendering for t1lib (the Type 1 rasterizer) to
-use.  Options are "none" (don't use t1lib at all), "plain" (use
-non-anti-aliased fonts), "low" or "high" (use low-level or high-level
-anti-aliased fonts).  This defaults to "low".
+.BR enableT1lib " yes | no"
+Enables or disables use of t1lib (a Type 1 font rasterizer).  This is
+only relevant if the Xpdf tools were built with t1lib support.
+("enableT1lib" replaces the old "t1libControl" option.)  This option
+defaults to "yes".
 .TP
-.BR freetypeControl " none | plain | low | high"
-Sets the type of font rendering for FreeType (the TrueType rasterizer)
-to use.  Options are "none" (don't use FreeType at all), "plain" (use
-non-anti-aliased fonts), "low" or "high" (use anti-aliased fonts;
-these two are identical).  This defaults to "low".
+.BR enableFreeType " yes | no"
+Enables or disables use of FreeType (a TrueType / Type 1 font
+rasterizer).  This is only relevant if the Xpdf tools were built with
+FreeType support.  ("enableFreeType" replaces the old
+"freetypeControl" option.)  This option defaults to "yes".
+.TP
+.BR antialias " yes | no"
+Enables or disables font anti-aliasing in the PDF rasterizer.  This
+option affects all font rasterizers.  ("antialias" replaces the
+anti-aliasing control provided by the old "t1libControl" and
+"freetypeControl" options.)  This default to "yes".
 .TP
 .BI urlCommand " command"
 Sets the command executed when you click on a URL link.  The string
@@ -419,10 +412,6 @@ cidToUnicode Adobe-Japan1 /usr/local/share/xpdf/Adobe-Japan1.cidToUnicode
 unicodeMap   JISX0208     /usr/local/share/xpdf/JISX0208.unicodeMap
 cMapDir      Adobe-Japan1 /usr/local/share/xpdf/cmap/Adobe-Japan1
 
-# use an X server font for Times-Roman
-# (this is the built-in default)
-displayFontX Times-Roman "-*-times-medium-r-normal-*-%s-*-*-*-*-*-iso8859-1" Latin1
-
 # use the Base-14 Type 1 fonts from ghostscript
 # (note that this overrides the displayFontX command above)
 displayFontT1 Times-Roman           /usr/local/share/ghostscript/fonts/n021003l.pfb
@@ -439,9 +428,6 @@ displayFontT1 Courier-Bold          /usr/local/share/ghostscript/fonts/n022004l.
 displayFontT1 Courier-BoldOblique   /usr/local/share/ghostscript/fonts/n022024l.pfb
 displayFontT1 Symbol                /usr/local/share/ghostscript/fonts/s050000l.pfb
 displayFontT1 ZapfDingbats          /usr/local/share/ghostscript/fonts/d050000l.pfb
-
-# from the Japanese support package
-displayCIDFontX Adobe-Japan1 "-*-fixed-medium-r-normal-*-%s-*-*-*-*-*-jisx0208.1983-0" JISX0208
 
 # use the Bakoma Type 1 fonts
 # (this assumes they happen to be installed in /usr/local/fonts/bakoma)
@@ -480,14 +466,14 @@ Depending on build options, it may be placed elsewhere.
 This is the user's configuration file.  If it exists, it will be read
 in place of the system-wide file.
 .SH AUTHOR
-The Xpdf software and documentation are copyright 1996-2003 Glyph &
+The Xpdf software and documentation are copyright 1996-2004 Glyph &
 Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),
 .BR pdftops (1),
 .BR pdftotext (1),
 .BR pdfinfo (1),
-.BR pdftopbm (1),
+.BR pdftoppm (1),
 .BR pdfimages (1)
 .br
 .B http://www.foolabs.com/xpdf/

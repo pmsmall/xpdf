@@ -67,12 +67,12 @@
  * One of these is defined if using FreeType (version 1 or 2).
  */
 #undef HAVE_FREETYPE_H
-#undef HAVE_FREETYPE_FREETYPE_H
+#define HAVE_FREETYPE_FREETYPE_H 1
 
 /*
  * This is defined if using FreeType version 2.
  */
-#undef FREETYPE2
+#define FREETYPE2
 
 /*
  * This is defined if using libpaper.

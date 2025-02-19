@@ -58,35 +58,36 @@
        -enc encoding-name
               Sets  the  encoding  to  use  for text output.  The
               encoding-name must be defined with  the  unicodeMap
-              command (see xpdfrc(5)).  This defaults to "Latin1"
-              (which is a built-in encoding).  [config file: tex-
-              tEncoding]
+              command  (see  xpdfrc(5)).   The  encoding  name is
+              case-sensitive.  This defaults to  "Latin1"  (which
+              is  a built-in encoding).  [config file: textEncod-
+              ing]
 
        -eol unix | dos | mac
-              Sets  the  end-of-line  convention  to use for text
+              Sets the end-of-line convention  to  use  for  text
               output.  [config file: textEOL]
 
        -nopgbrk
-              Don't insert page  breaks  (form  feed  characters)
+              Don't  insert  page  breaks  (form feed characters)
               between pages.  [config file: textPageBreaks]
 
        -opw password
-              Specify  the owner password for the PDF file.  Pro-
-              viding this will bypass all security  restrictions.
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
-       -q     Don't  print any messages or errors.  [config file:
+       -q     Don't print any messages or errors.  [config  file:
               errQuiet]
 
        -cfg config-file
-              Read config-file in place of ~/.xpdfrc or the  sys-
+              Read  config-file in place of ~/.xpdfrc or the sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print  usage  information.   (-help  and --help are
+       -h     Print usage information.   (-help  and  --help  are
               equivalent.)
 
                                                                ()
@@ -118,13 +119,13 @@
 2 AUTHOR
 
        The  pdftotext  software  and  documentation are copyright
-       1996-2003 Glyph & Cog, LLC.
+       1996-2004 Glyph & Cog, LLC.
 
                                                                ()
 
 2 SEE_ALSO
 
-       xpdf(1), pdftops(1), pdfinfo(1), pdffonts(1), pdftopbm(1),
+       xpdf(1), pdftops(1), pdfinfo(1), pdffonts(1), pdftoppm(1),
        pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
