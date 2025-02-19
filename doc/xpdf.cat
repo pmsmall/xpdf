@@ -310,10 +310,10 @@ xpdf(1)                                                   xpdf(1)
        Save as...
               Save the current file via a file requester.
 
-       Rotate left
+       Rotate counterclockwise
               Rotate the page 90 degrees counterclockwise.
 
-       Rotate right
+       Rotate clockwise
               Rotate  the  page  90  degrees  clockwise.  The two
               rotate commands  are  intended  primarily  for  PDF
               files  where the rotation isn't correctly specified

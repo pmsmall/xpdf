@@ -21,6 +21,7 @@ cd ..\xpdf
 %CXX% %CXXFLAGS% /c FontEncoding.cc
 %CXX% %CXXFLAGS% /c FontFile.cc
 %CXX% %CXXFLAGS% /c FormWidget.cc
+%CXX% %CXXFLAGS% /c Function.cc
 %CXX% %CXXFLAGS% /c Gfx.cc
 %CXX% %CXXFLAGS% /c GfxFont.cc
 %CXX% %CXXFLAGS% /c GfxState.cc
@@ -42,12 +43,12 @@ cd ..\xpdf
 %CXX% %CXXFLAGS% /c pdfinfo.cc
 %CXX% %CXXFLAGS% /c pdfimages.cc
 
-%CXX% /nologo /Fepdftops.exe Array.obj Catalog.obj Decrypt.obj Dict.obj Error.obj FontEncoding.obj FontFile.obj FormWidget.obj Gfx.obj GfxFont.obj GfxState.obj Lexer.obj Link.obj Object.obj OutputDev.obj Page.obj Params.obj Parser.obj PDFDoc.obj PSOutputDev.obj Stream.obj XRef.obj pdftops.obj ..\goo\libGoo.lib
+%CXX% /nologo /Fepdftops.exe Array.obj Catalog.obj Decrypt.obj Dict.obj Error.obj FontEncoding.obj FontFile.obj FormWidget.obj Function.obj Gfx.obj GfxFont.obj GfxState.obj Lexer.obj Link.obj Object.obj OutputDev.obj Page.obj Params.obj Parser.obj PDFDoc.obj PSOutputDev.obj Stream.obj XRef.obj pdftops.obj ..\goo\libGoo.lib
 
-%CXX% /nologo /Fepdftotext.exe Array.obj Catalog.obj Decrypt.obj Dict.obj Error.obj FontEncoding.obj FontFile.obj FormWidget.obj Gfx.obj GfxFont.obj GfxState.obj Lexer.obj Link.obj Object.obj OutputDev.obj Page.obj Params.obj Parser.obj PDFDoc.obj TextOutputDev.obj Stream.obj XRef.obj pdftotext.obj ..\goo\libGoo.lib
+%CXX% /nologo /Fepdftotext.exe Array.obj Catalog.obj Decrypt.obj Dict.obj Error.obj FontEncoding.obj FontFile.obj FormWidget.obj Function.obj Gfx.obj GfxFont.obj GfxState.obj Lexer.obj Link.obj Object.obj OutputDev.obj Page.obj Params.obj Parser.obj PDFDoc.obj TextOutputDev.obj Stream.obj XRef.obj pdftotext.obj ..\goo\libGoo.lib
 
-%CXX% /nologo /Fepdfinfo.exe Array.obj Catalog.obj Decrypt.obj Dict.obj Error.obj FontEncoding.obj FontFile.obj FormWidget.obj Gfx.obj GfxFont.obj GfxState.obj Lexer.obj Link.obj Object.obj OutputDev.obj Page.obj Params.obj Parser.obj PDFDoc.obj Stream.obj XRef.obj pdfinfo.obj ..\goo\libGoo.lib
+%CXX% /nologo /Fepdfinfo.exe Array.obj Catalog.obj Decrypt.obj Dict.obj Error.obj FontEncoding.obj FontFile.obj FormWidget.obj Function.obj Gfx.obj GfxFont.obj GfxState.obj Lexer.obj Link.obj Object.obj OutputDev.obj Page.obj Params.obj Parser.obj PDFDoc.obj Stream.obj XRef.obj pdfinfo.obj ..\goo\libGoo.lib
 
-%CXX% /nologo /Fepdfimages.exe Array.obj Catalog.obj Decrypt.obj Dict.obj Error.obj FontEncoding.obj FontFile.obj FormWidget.obj Gfx.obj GfxFont.obj GfxState.obj ImageOutputDev.obj Lexer.obj Link.obj Object.obj OutputDev.obj Page.obj Params.obj Parser.obj PDFDoc.obj Stream.obj XRef.obj pdfimages.obj ..\goo\libGoo.lib
+%CXX% /nologo /Fepdfimages.exe Array.obj Catalog.obj Decrypt.obj Dict.obj Error.obj FontEncoding.obj FontFile.obj FormWidget.obj Function.obj Gfx.obj GfxFont.obj GfxState.obj ImageOutputDev.obj Lexer.obj Link.obj Object.obj OutputDev.obj Page.obj Params.obj Parser.obj PDFDoc.obj Stream.obj XRef.obj pdfimages.obj ..\goo\libGoo.lib
 
 cd ..

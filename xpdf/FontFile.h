@@ -162,7 +162,7 @@ private:
   double getFixed(int pos);
   int seekTable(char *tag);
   void cvtEncoding(FontEncoding *encoding, FILE *out);
-  void cvtCharStrings(FILE *out);
+  void cvtCharStrings(FontEncoding *encoding, FILE *out);
   void cvtSfnts(FILE *out);
   void dumpString(char *s, int len, FILE *out);
 };

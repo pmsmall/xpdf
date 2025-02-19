@@ -102,8 +102,8 @@ enum XpdfMenuItem {
   menuOpen,
   menuReload,
   menuSavePDF,
-  menuRotateLeft,
-  menuRotateRight,
+  menuRotateCCW,
+  menuRotateCW,
   menuQuit
 };
 
@@ -1220,13 +1220,13 @@ static void menuCbk(LTKMenuItem *item) {
     if (doc)
       mapSaveDialog();
     break;
-  case menuRotateLeft:
+  case menuRotateCCW:
     if (doc) {
       r = (rotate == 0) ? 270 : rotate - 90;
       displayPage(page, zoom, r, gFalse);
     }
     break;
-  case menuRotateRight:
+  case menuRotateCW:
     if (doc) {
       r = (rotate == 270) ? 0 : rotate + 90;
       displayPage(page, zoom, r, gFalse);

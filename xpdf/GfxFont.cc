@@ -636,8 +636,28 @@ void GfxFont::makeWidths(Dict *fontDict, FontEncoding *builtinEncoding,
     widths[code] = missingWidth * 0.001;
   }
 
+  // use widths from font dict, if present
+  fontDict->lookup("FirstChar", &obj1);
+  firstChar = obj1.isInt() ? obj1.getInt() : 0;
+  obj1.free();
+  fontDict->lookup("LastChar", &obj1);
+  lastChar = obj1.isInt() ? obj1.getInt() : 255;
+  obj1.free();
+  if (type == fontType3)
+    mult = fontMat[0];
+  else
+    mult = 0.001;
+  fontDict->lookup("Widths", &obj1);
+  if (obj1.isArray()) {
+    for (code = firstChar; code <= lastChar; ++code) {
+      obj1.arrayGet(code - firstChar, &obj2);
+      if (obj2.isNum())
+	widths[code] = obj2.getNum() * mult;
+      obj2.free();
+    }
+
   // use widths from built-in font
-  if (builtinEncoding) {
+  } else if (builtinEncoding) {
     code2 = 0; // to make gcc happy
     for (code = 0; code < 256; ++code) {
       if ((charName = encoding->getCharName(code)) &&
@@ -645,55 +665,33 @@ void GfxFont::makeWidths(Dict *fontDict, FontEncoding *builtinEncoding,
 	widths[code] = builtinWidths[code2] * 0.001;
     }
 
-  // get widths from font dict
+  // couldn't find widths -- use defaults 
   } else {
-    fontDict->lookup("FirstChar", &obj1);
-    firstChar = obj1.isInt() ? obj1.getInt() : 0;
-    obj1.free();
-    fontDict->lookup("LastChar", &obj1);
-    lastChar = obj1.isInt() ? obj1.getInt() : 255;
-    obj1.free();
-    if (type == fontType3)
-      mult = fontMat[0];
-    else
-      mult = 0.001;
-    fontDict->lookup("Widths", &obj1);
-    if (obj1.isArray()) {
-      for (code = firstChar; code <= lastChar; ++code) {
-	obj1.arrayGet(code - firstChar, &obj2);
-	if (obj2.isNum())
-	  widths[code] = obj2.getNum() * mult;
-	obj2.free();
-      }
-    } else {
-
-      // couldn't find widths -- use defaults 
 #if 0 //~
-      //~ certain PDF generators apparently don't include widths
-      //~ for Arial and TimesNewRoman -- and this error message
-      //~ is a nuisance
-      error(-1, "No character widths resource for non-builtin font");
+    //~ certain PDF generators apparently don't include widths
+    //~ for Arial and TimesNewRoman -- and this error message
+    //~ is a nuisance
+    error(-1, "No character widths resource for non-builtin font");
 #endif
-      if (isFixedWidth())
-	index = 0;
-      else if (isSerif())
-	index = 8;
-      else
-	index = 4;
-      if (isBold())
-	index += 2;
-      if (isItalic())
-	index += 1;
-      defWidths = defCharWidths[index];
-      code2 = 0; // to make gcc happy
-      for (code = 0; code < 256; ++code) {
-	if ((charName = encoding->getCharName(code)) &&
-	    (code2 = standardEncoding.getCharCode(charName)) >= 0)
-	  widths[code] = defWidths[code2] * 0.001;
-      }
+    if (isFixedWidth())
+      index = 0;
+    else if (isSerif())
+      index = 8;
+    else
+      index = 4;
+    if (isBold())
+      index += 2;
+    if (isItalic())
+      index += 1;
+    defWidths = defCharWidths[index];
+    code2 = 0; // to make gcc happy
+    for (code = 0; code < 256; ++code) {
+      if ((charName = encoding->getCharName(code)) &&
+	  (code2 = standardEncoding.getCharCode(charName)) >= 0)
+	widths[code] = defWidths[code2] * 0.001;
     }
-    obj1.free();
   }
+  obj1.free();
 }
 
 void GfxFont::getType0EncAndWidths(Dict *fontDict) {

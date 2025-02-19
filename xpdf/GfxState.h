@@ -680,6 +680,10 @@ public:
   double getPageHeight() { return pageHeight; }
   GfxColor *getFillColor() { return &fillColor; }
   GfxColor *getStrokeColor() { return &strokeColor; }
+  void getFillGray(double *gray)
+    { fillColorSpace->getGray(&fillColor, gray); }
+  void getStrokeGray(double *gray)
+    { strokeColorSpace->getGray(&fillColor, gray); }
   void getFillRGB(GfxRGB *rgb)
     { fillColorSpace->getRGB(&fillColor, rgb); }
   void getStrokeRGB(GfxRGB *rgb)

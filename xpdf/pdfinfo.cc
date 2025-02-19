@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <math.h>
 #include "parseargs.h"
 #include "GString.h"
 #include "gmem.h"

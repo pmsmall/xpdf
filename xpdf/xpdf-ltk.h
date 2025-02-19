@@ -82,8 +82,8 @@ LTKMenu *makeMenu() {
     new LTKMenuItem("Reload", "R", menuReload, &menuCbk, NULL),
     new LTKMenuItem("Save as...", NULL, menuSavePDF, &menuCbk, NULL),
     new LTKMenuItem(NULL, NULL, 0, NULL, NULL),
-    new LTKMenuItem("Rotate left", NULL, menuRotateLeft, &menuCbk, NULL),
-    new LTKMenuItem("Rotate right", NULL, menuRotateRight, &menuCbk, NULL),
+    new LTKMenuItem("Rotate counterclockwise", NULL, menuRotateCCW, &menuCbk, NULL),
+    new LTKMenuItem("Rotate clockwise", NULL, menuRotateCW, &menuCbk, NULL),
     new LTKMenuItem(NULL, NULL, 0, NULL, NULL),
     new LTKMenuItem("Quit", "Q", menuQuit, &menuCbk, NULL)
 

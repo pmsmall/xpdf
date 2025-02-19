@@ -447,11 +447,14 @@ Link::Link(Dict *dict, GString *baseURI) {
   // get border
   borderW = 0;
   if (!dict->lookup("Border", &obj1)->isNull()) {
-    if (obj1.isArray() && obj1.arrayGet(2, &obj2)->isNum())
-      borderW = obj2.getNum();
-    else
-      error(-1, "Bad annotation border");
-    obj2.free();
+    if (obj1.isArray() && obj1.arrayGetLength() >= 3) {
+      if (obj1.arrayGet(2, &obj2)->isNum()) {
+	borderW = obj2.getNum();
+      } else {
+	error(-1, "Bad annotation border");
+      }
+      obj2.free();
+    }
   }
   obj1.free();
 

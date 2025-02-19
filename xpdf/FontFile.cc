@@ -2076,7 +2076,7 @@ FontEncoding *TrueTypeFontFile::getEncoding(GBool taken) {
     switch (cmapFmt) {
     case 0: // byte encoding table (Apple standard)
       cmapLen = getUShort(pos + 2);
-      for (i = 0; i < cmapLen; ++i) {
+      for (i = 0; i < cmapLen && i < 256; ++i) {
 	cmap[i] = getByte(pos + 6 + i);
       }
       break;
@@ -2211,7 +2211,7 @@ void TrueTypeFontFile::convertToType42(char *name, FontEncoding *encoding,
 
   // write the guts of the dictionary
   cvtEncoding(encoding, out);
-  cvtCharStrings(out);
+  cvtCharStrings(encoding, out);
   cvtSfnts(out);
 
   // end the dictionary and define the font
@@ -2290,63 +2290,110 @@ void TrueTypeFontFile::cvtEncoding(FontEncoding *encoding, FILE *out) {
   }
   fprintf(out, "readonly def\n");
 }
-  
-void TrueTypeFontFile::cvtCharStrings(FILE *out) {
-  Guint fmt;
-  int stringIdx, stringPos, len;
-  int pos, i, j;
 
-  fprintf(out, "/CharStrings %d dict dup begin\n", nGlyphs);
+void TrueTypeFontFile::cvtCharStrings(FontEncoding *encoding, FILE *out) {
+  int cmap[256];
+  int nCmaps, cmapPlatform, cmapEncoding, cmapFmt, cmapLen, cmapOffset;
+  int segCnt, segStart, segEnd, segDelta, segOffset;
+  char *name;
+  int pos, i, j, k;
 
-  if ((pos = seekTable("post")) >= 0) {
-    fmt = getULong(pos);
+  //----- read the cmap: construct the (char code) -> (glyph idx) mapping
 
-    // Apple font
-    if (fmt == 0x00010000) {
-      for (i = 0; i < 258 && i < nGlyphs; ++i) {
-	fprintf(out, "/%s %d def\n", macGlyphNames[i], i);
-      }
+  // map everything to the missing glyph
+  for (i = 0; i < 256; ++i) {
+    cmap[i] = 0;
+  }
 
-    // Microsoft font
-    } else if (fmt == 0x00020000) {
-      stringIdx = 0;
-      stringPos = pos + 34 + 2*nGlyphs;
-      for (i = 0; i < nGlyphs; ++i) {
-	j = getUShort(pos + 34 + 2*i);
-	if (j < 258) {
-	  fprintf(out, "/%s %d def\n", macGlyphNames[j], i);
-	} else {
-	  j -= 258;
-	  if (j != stringIdx) {
-	    for (stringIdx = 0, stringPos = pos + 34 + 2*nGlyphs;
-		 stringIdx < j;
-		 ++stringIdx, stringPos += 1 + getByte(stringPos)) ;
-	  }
-	  len = getByte(stringPos);
-	  fprintf(out, "/%.*s %d def\n", len, file + stringPos + 1, i);
-	  ++stringIdx;
-	  stringPos += 1 + len;
-	}
-      }
+  // look for the 'cmap' table
+  if ((pos = seekTable("cmap")) >= 0) {
+    nCmaps = getUShort(pos+2);
 
-    // Apple subset
-    } else if (fmt == 0x000280000) {
-      for (i = 0; i < nGlyphs; ++i) {
-	j = getByte(pos + 32 + i);
-	fprintf(out, "/%s %d def\n", macGlyphNames[j], i);
-      }
-
-    // Ugh, just assume the Apple glyph set
-    } else {
-      for (i = 0; i < 258 && i < nGlyphs; ++i) {
-	fprintf(out, "/%s %d def\n", macGlyphNames[i], i);
+    // if the font has a Windows-symbol cmap, use it;
+    // otherwise, use the first cmap in the table
+    for (i = 0; i < nCmaps; ++i) {
+      cmapPlatform = getUShort(pos + 4 + 8*i);
+      cmapEncoding = getUShort(pos + 4 + 8*i + 2);
+      if (cmapPlatform == 3 && cmapEncoding == 0) {
+	break;
       }
     }
+    if (i >= nCmaps) {
+      i = 0;
+      cmapPlatform = getUShort(pos + 4);
+      cmapEncoding = getUShort(pos + 4 + 2);
+    }
+    pos += getULong(pos + 4 + 8*i + 4);
 
-  // no "post" table: assume the Apple glyph set
-  } else {
-    for (i = 0; i < 258 && i < nGlyphs; ++i) {
-      fprintf(out, "/%s %d def\n", macGlyphNames[i], i);
+    // read the cmap
+    cmapFmt = getUShort(pos);
+    switch (cmapFmt) {
+    case 0: // byte encoding table (Apple standard)
+      cmapLen = getUShort(pos + 2);
+      for (i = 0; i < cmapLen && i < 256; ++i) {
+	cmap[i] = getByte(pos + 6 + i);
+      }
+      break;
+    case 4: // segment mapping to delta values (Microsoft standard)
+      if (cmapPlatform == 3 && cmapEncoding == 0) {
+	// Windows-symbol uses char codes 0xf000 - 0xf0ff
+	cmapOffset = 0xf000;
+      } else {
+	cmapOffset = 0;
+      }
+      segCnt = getUShort(pos + 6) / 2;
+      for (i = 0; i < segCnt; ++i) {
+	segEnd = getUShort(pos + 14 + 2*i);
+	segStart = getUShort(pos + 16 + 2*segCnt + 2*i);
+	segDelta = getUShort(pos + 16 + 4*segCnt + 2*i);
+	segOffset = getUShort(pos + 16 + 6*segCnt + 2*i);
+	if (segStart - cmapOffset <= 0xff &&
+	    segEnd - cmapOffset >= 0) {
+	  for (j = (segStart - cmapOffset >= 0) ? segStart : cmapOffset;
+	       j <= segEnd && j - cmapOffset <= 0xff;
+	       ++j) {
+	    if (segOffset == 0) {
+	      k = (j + segDelta) & 0xffff;
+	    } else {
+	      k = getUShort(pos + 16 + 6*segCnt + 2*i +
+			    segOffset + 2 * (j - segStart));
+	      if (k != 0) {
+		k = (k + segDelta) & 0xffff;
+	      }
+	    }
+	    cmap[j - cmapOffset] = k;
+	  }
+	}
+      }
+      break;
+    default:
+      error(-1, "Unimplemented cmap type (%d) in TrueType font file\n",
+	    cmapFmt);
+      break;
+    }
+  }
+
+  //----- map char code to glyph index
+
+  // 1. use encoding to map name to char code
+  // 2. use cmap to map char code to glyph index
+
+  fprintf(out, "/CharStrings 256 dict dup begin\n");
+  fprintf(out, "/.notdef 0 def\n");
+
+  // kludge: this loop goes backward because the WinAnsi and MacRoman
+  // encodings define certain chars multiple times (space, hyphen,
+  // etc.), and we want the lowest-numbered definition to "stick"
+  // (because the higher-numbered defn(s) may not have valid cmap
+  // entries)
+  i = encoding->getSize();
+  if (i > 255) {
+    i = 255;
+  }
+  for (; i >= 0; --i) {
+    name = encoding->getCharName(i);
+    if (name && strcmp(name, ".notdef")) {
+      fprintf(out, "/%s %d def\n", name, cmap[i]);
     }
   }
 
@@ -2356,16 +2403,28 @@ void TrueTypeFontFile::cvtCharStrings(FILE *out) {
 void TrueTypeFontFile::cvtSfnts(FILE *out) {
   char tableDir[12 + 9*16];
   int *list;
-  int pos, destPos, i, j, k1, k2;
+  int nTablesOut, pos, destPos, i, j, k1, k2;
 
   fprintf(out, "/sfnts [\n");
 
+  // count tables
+  nTablesOut = 0;
+  for (i = 0; i < 9; ++i) {
+    for (j = 0; j < nTables; ++j) {
+      if (!strncmp(t42ReqTables[i], tableHdrs[j].tag, 4)) {
+	++nTablesOut;
+	break;
+      }
+    }
+  }
+
+  // header
   tableDir[0] = 0x00;		// sfnt version
   tableDir[1] = 0x01;
   tableDir[2] = 0x00;
   tableDir[3] = 0x00;
-  tableDir[4] = 0;		// numTables
-  tableDir[5] = 9;
+  tableDir[4] = (nTablesOut >> 8) & 0xff;   // numTables
+  tableDir[5] = nTablesOut & 0xff;
   tableDir[6] = 0;		// searchRange
   tableDir[7] = 128;
   tableDir[8] = 0;		// entrySelector
@@ -2373,45 +2432,38 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
   tableDir[10] = 0;		// rangeShift
   tableDir[11] = 16;
 
-  destPos = 12 + 9*16;
+  // table directory
+  pos = 12;
+  destPos = 12 + 16 * nTablesOut;
   for (i = 0; i < 9; ++i) {
     for (j = 0; j < nTables; ++j) {
       if (!strncmp(t42ReqTables[i], tableHdrs[j].tag, 4)) {
 	break;
       }
     }
-    pos = 12 + i*16;
-    memcpy(&tableDir[pos], t42ReqTables[i], 4);
-    tableDir[pos+8] = (destPos >> 24) & 0xff;
-    tableDir[pos+9] = (destPos >> 16) & 0xff;
-    tableDir[pos+10] = (destPos >> 8) & 0xff;
-    tableDir[pos+11] = destPos & 0xff;
     if (j < nTables) {
+      memcpy(&tableDir[pos], t42ReqTables[i], 4);
       tableDir[pos+4] = (tableHdrs[j].checksum >> 24) & 0xff;
       tableDir[pos+5] = (tableHdrs[j].checksum >> 16) & 0xff;
       tableDir[pos+6] = (tableHdrs[j].checksum >> 8) & 0xff;
       tableDir[pos+7] = tableHdrs[j].checksum & 0xff;
+      tableDir[pos+8] = (destPos >> 24) & 0xff;
+      tableDir[pos+9] = (destPos >> 16) & 0xff;
+      tableDir[pos+10] = (destPos >> 8) & 0xff;
+      tableDir[pos+11] = destPos & 0xff;
       tableDir[pos+12] = (tableHdrs[j].length >> 24) & 0xff;
       tableDir[pos+13] = (tableHdrs[j].length >> 16) & 0xff;
       tableDir[pos+14] = (tableHdrs[j].length >> 8) & 0xff;
       tableDir[pos+15] = tableHdrs[j].length & 0xff;
+      pos += 16;
       destPos += tableHdrs[j].length;
       if (tableHdrs[j].length & 3) {
 	destPos += 4 - (tableHdrs[j].length & 3);
       }
-    } else {
-      tableDir[pos+4] = 0;
-      tableDir[pos+5] = 0;
-      tableDir[pos+6] = 0;
-      tableDir[pos+7] = 0;
-      tableDir[pos+12] = 0;
-      tableDir[pos+13] = 0;
-      tableDir[pos+14] = 0;
-      tableDir[pos+15] = 0;
     }
   }
 
-  dumpString(tableDir, 12 + 9*16, out);
+  dumpString(tableDir, 12 + 16 * nTablesOut, out);
 
   for (i = 0; i < 9; ++i) {
     for (j = 0; j < nTables; ++j) {

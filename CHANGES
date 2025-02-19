@@ -770,3 +770,12 @@ If both FlateDecode and some other filter (e.g., DCTDecode) were
   applied to an image stream, getPSFilter() crashed instead of just
   returning NULL.
 Handle the /Identity function.
+
+0.92e (2001-aug-23)
+-------------------
+Widths in font dict should override built-in font widths.
+Changed "rotate left/right" menu items to "rotate
+  clockwise/counterclockwise".
+The link parsing code choked if the Border array was incorrect (too
+  short).
+Modified PSOutputDev to output CMYK for fill/stroke colors.

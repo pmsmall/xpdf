@@ -296,7 +296,7 @@ private:
 
   XFontStruct *xFont;		// the X font
   Gushort map[256];		// forward map (PDF code -> font code)
-  Guchar revMap[256];		// reverese map (font code -> PDF code)
+  Guchar revMap[256];		// reverse map (font code -> PDF code)
 };
 
 //------------------------------------------------------------------------

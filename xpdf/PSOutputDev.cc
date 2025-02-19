@@ -1181,10 +1181,17 @@ void PSOutputDev::updateLineWidth(GfxState *state) {
 }
 
 void PSOutputDev::updateFillColor(GfxState *state) {
+  double gray;
   GfxRGB rgb;
   GfxCMYK cmyk;
 
   if (psOutLevel1Sep) {
+    state->getFillCMYK(&cmyk);
+    writePS("%g %g %g %g k\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
+  } else if (psOutLevel1) {
+    state->getFillGray(&gray);
+    writePS("%g g\n", gray);
+  } else if (state->getFillColorSpace()->getMode() == csDeviceCMYK) {
     state->getFillCMYK(&cmyk);
     writePS("%g %g %g %g k\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
   } else {
@@ -1198,10 +1205,17 @@ void PSOutputDev::updateFillColor(GfxState *state) {
 }
 
 void PSOutputDev::updateStrokeColor(GfxState *state) {
+  double gray;
   GfxRGB rgb;
   GfxCMYK cmyk;
 
   if (psOutLevel1Sep) {
+    state->getStrokeCMYK(&cmyk);
+    writePS("%g %g %g %g K\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
+  } else if (psOutLevel1) {
+    state->getStrokeGray(&gray);
+    writePS("%g G\n", gray);
+  } else if (state->getStrokeColorSpace()->getMode() == csDeviceCMYK) {
     state->getStrokeCMYK(&cmyk);
     writePS("%g %g %g %g K\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
   } else {
