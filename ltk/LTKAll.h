@@ -2,6 +2,8 @@
 //
 // LTKAll.h
 //
+// Includes all externally useful LTK include files.
+//
 // Copyright 1996 Derek B. Noonburg
 //
 //========================================================================

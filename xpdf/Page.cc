@@ -1,18 +1,22 @@
 //========================================================================
 //
-// Page.h
+// Page.cc
 //
 // Copyright 1996 Derek B. Noonburg
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
+#include <stddef.h>
 #include "Object.h"
 #include "Array.h"
 #include "Dict.h"
 #include "XRef.h"
 #include "OutputDev.h"
+#include "PSOutput.h"
 #include "Gfx.h"
 #include "Error.h"
 #include "Flags.h"
@@ -70,10 +74,11 @@ PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
 // Page
 //------------------------------------------------------------------------
 
-Page::Page(Dict *pageDict, PageAttrs *attrs1, int pageNum) {
+Page::Page(int num1, Dict *pageDict, PageAttrs *attrs1) {
   Object resourceDict;
 
-  ok = true;
+  ok = gTrue;
+  num = num1;
 
   // get attributes
   attrs = attrs1;
@@ -84,46 +89,62 @@ Page::Page(Dict *pageDict, PageAttrs *attrs1, int pageNum) {
     resourceDict.dictLookup("Font", &fontDict);
     if (!(fontDict.isDict() || fontDict.isNull())) {
       error(0, "Font resources object (page %d) is wrong type (%s)",
-	    pageNum, fontDict.getTypeName());
-      goto err2;
+	    num, fontDict.getTypeName());
+      goto err4;
     }
     resourceDict.dictLookup("XObject", &xObjDict);
     if (!(xObjDict.isDict() || xObjDict.isNull())) {
       error(0, "XObject resources object (page %d) is wrong type (%s)",
-	    pageNum, xObjDict.getTypeName());
-      goto err2;
+	    num, xObjDict.getTypeName());
+      goto err3;
     }
   } else if (resourceDict.isNull()) {
     fontDict.initNull();
     xObjDict.initNull();
   } else {
     error(0, "Resources object (page %d) is wrong type (%s)",
-	  pageNum, resourceDict.getTypeName());
-    goto err2;
+	  num, resourceDict.getTypeName());
+    goto err5;
   }
   resourceDict.free();
+
+  // annotations
+  pageDict->lookupNF("Annots", &annots);
+  if (!(annots.isRef() || annots.isArray() || annots.isNull())) {
+    error(0, "Page annotations object (page %d) is wrong type (%s)",
+	  num, annots.getTypeName());
+    goto err2;
+  }
 
   // contents
   pageDict->lookupNF("Contents", &contents);
   if (!(contents.isRef() || contents.isArray() ||
 	contents.isNull())) {
     error(0, "Page contents object (page %d) is wrong type (%s)",
-	  pageNum, contents.getTypeName());
+	  num, contents.getTypeName());
     goto err1;
   }
 
   return;
 
- err2:
+ err5:
+  fontDict.initNull();
+ err4:
+  xObjDict.initNull();
+ err3:
   resourceDict.free();
+  annots.initNull();
+ err2:
+  contents.initNull();
  err1:
-  ok = false;
+  ok = gFalse;
 }
 
 Page::~Page() {
   delete attrs;
   fontDict.free();
   xObjDict.free();
+  annots.free();
   contents.free();
 }
 
@@ -131,7 +152,7 @@ void Page::display(OutputDev *out, int dpi, int rotate) {
   Gfx *gfx;
   Dict *fonts;
   Dict *xObjects;
-  Object obj;
+  Object obj1, obj2;
   int i;
 
   if (printCommands) {
@@ -154,34 +175,69 @@ void Page::display(OutputDev *out, int dpi, int rotate) {
     rotate += 360;
   gfx = new Gfx(out, fonts, xObjects, dpi, attrs->getX1(), attrs->getY1(),
 		attrs->getX2(), attrs->getY2(), rotate);
-  if (contents.isArray()) {
-    for (i = 0; i < contents.arrayGetLength(); ++i) {
-      contents.arrayGet(i, &obj);
-      if (obj.isArray())
-	gfx->display(obj.getArray());
-      else if (obj.isStream())
-	gfx->display(obj.getStream());
-      obj.free();
+  contents.fetch(&obj1);
+  if (obj1.isArray()) {
+    for (i = 0; i < obj1.arrayGetLength(); ++i) {
+      obj1.arrayGet(i, &obj2);
+      if (obj2.isStream())
+	gfx->display(obj2.getStream());
+      else
+	error(0, "Weird page contents");
+      obj2.free();
     }
-  } else if (contents.isRef()) {
-    contents.fetch(&obj);
-    if (obj.isArray())
-      gfx->display(obj.getArray());
-    else if (obj.isStream())
-      gfx->display(obj.getStream());
-    obj.free();
+  } else if (obj1.isStream()) {
+    gfx->display(obj1.getStream());
+  } else {
+    error(0, "Weird page contents");
   }
+  obj1.free();
   delete gfx;
 }
 
-void Page::print(FILE *f) {
-  fprintf(f, "<<\n");
-  fprintf(f, "  /Type /Page\n");
-  fprintf(f, "  /MediaBox [%d %d %d %d]\n",
-	  attrs->getX1(), attrs->getY1(), attrs->getX2(), attrs->getY2());
-  fprintf(f, "  /Rotate %d\n", attrs->getRotate());
-  fprintf(f, "  /Contents ");
-  contents.print(f);
-  fprintf(f, "\n");
-  fprintf(f, ">>\n");
+void Page::genPostScript(PSOutput *psOut, int dpi, int rotate) {
+  Gfx *gfx;
+  Dict *fonts;
+  Dict *xObjects;
+  Object obj1, obj2;
+  int i;
+
+  if (printCommands) {
+    printf("***** MediaBox = ll:%d,%d ur:%d,%d\n",
+	   attrs->getX1(), attrs->getY1(), attrs->getX2(), attrs->getY2());
+    printf("***** Rotate = %d\n", attrs->getRotate());
+  }
+  psOut->startPage(num, attrs->getX1(), attrs->getY1());
+  if (fontDict.isDict())
+    fonts = fontDict.getDict();
+  else
+    fonts = NULL;
+  if (xObjDict.isDict())
+    xObjects = xObjDict.getDict();
+  else
+    xObjects = NULL;
+  rotate += attrs->getRotate();
+  if (rotate >= 360)
+    rotate -= 360;
+  else if (rotate < 0)
+    rotate += 360;
+  gfx = new Gfx(psOut, fonts, xObjects, dpi, attrs->getX1(),
+		attrs->getY1(), attrs->getX2(), attrs->getY2(), rotate);
+  contents.fetch(&obj1);
+  if (obj1.isArray()) {
+    for (i = 0; i < obj1.arrayGetLength(); ++i) {
+      obj1.arrayGet(i, &obj2);
+      if (obj2.isStream())
+	gfx->display(obj2.getStream());
+      else
+	error(0, "Weird page contents");
+      obj2.free();
+    }
+  } else if (obj1.isStream()) {
+    gfx->display(obj1.getStream());
+  } else {
+    error(0, "Weird page contents");
+  }
+  obj1.free();
+  delete gfx;
+  psOut->endPage();
 }

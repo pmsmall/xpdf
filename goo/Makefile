@@ -13,8 +13,8 @@ CXXFLAGS = -O -Wall -I. $(CXXFLAGS2)
 
 #------------------------------------------------------------------------
 
-GOO_CXX_OBJS = String.o
-GOO_C_OBJS = mem.o parseargs.o cover.o
+GOO_CXX_OBJS = GString.o
+GOO_C_OBJS = gmem.o parseargs.o cover.o
 GOO_OBJS = $(GOO_CXX_OBJS) $(GOO_C_OBJS)
 
 libGoo.a: $(GOO_OBJS)
@@ -34,29 +34,18 @@ depend:
 	cp Makefile Makefile.bak
 	sed '/^#----- dependences -----/q' Makefile.bak >Makefile
 	echo >>Makefile
-	$(CXX) $(CXXFLAGS) -M $(GOO_CXX_OBJS:.o=.cc) >>Makefile
-	$(CC) $(CFLAGS) -M $(GOO_C_OBJS:.o=.c) >>Makefile
+	$(CXX) $(CXXFLAGS) -M $(GOO_CXX_OBJS:.o=.cc) |\
+	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' >>Makefile
+	$(CC) $(CFLAGS) -M $(GOO_C_OBJS:.o=.c) |\
+	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' >>Makefile
 
 #----- dependences -----
 
-String.o: String.cc /usr/include/stdlib.h /usr/include/features.h \
-  /usr/include/sys/cdefs.h \
-  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
-  /usr/include/linux/errno.h \
-  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
-  /usr/include/string.h ./String.h
-mem.o: mem.c /usr/include/stdio.h /usr/include/features.h \
-  /usr/include/sys/cdefs.h /usr/include/libio.h /usr/include/_G_config.h \
-  /usr/include/stdlib.h /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h \
-  /usr/include/errno.h /usr/include/linux/errno.h \
-  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
-  ./mem.h
-parseargs.o: parseargs.c /usr/include/stdio.h /usr/include/features.h \
-  /usr/include/sys/cdefs.h /usr/include/libio.h /usr/include/_G_config.h \
-  /usr/include/string.h /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h \
-  /usr/include/stdlib.h /usr/include/errno.h /usr/include/linux/errno.h \
-  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
-  /usr/include/ctype.h ./parseargs.h ./stypes.h
-cover.o: cover.c /usr/include/stdio.h /usr/include/features.h \
-  /usr/include/sys/cdefs.h /usr/include/libio.h /usr/include/_G_config.h \
-  ./mem.h ./cover.h
+GString.o: GString.cc \
+  ./GString.h
+gmem.o: gmem.c \
+  ./gmem.h
+parseargs.o: parseargs.c \
+  ./parseargs.h ./gtypes.h
+cover.o: cover.c \
+  ./gmem.h ./cover.h

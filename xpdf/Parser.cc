@@ -6,8 +6,11 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
+#include <stddef.h>
 #include "Object.h"
 #include "Array.h"
 #include "Dict.h"

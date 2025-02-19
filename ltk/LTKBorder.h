@@ -9,8 +9,11 @@
 #ifndef LTKBORDER_H
 #define LTKBORDER_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
+#include <stddef.h>
 #include <X11/Xlib.h>
 
 // Width of a border.

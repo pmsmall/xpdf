@@ -9,9 +9,11 @@
 #ifndef OUTPUTDEV_H
 #define OUTPUTDEV_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
-#include <stypes.h>
+#include <gtypes.h>
 
 class GfxState;
 class GfxColorSpace;
@@ -32,16 +34,23 @@ public:
 
   // Does this device use upside-down coordinates?
   // (Upside-down means (0,0) is the top left corner of the page.)
-  virtual Boolean upsideDown() { return false; }
+  virtual GBool upsideDown() { return gFalse; }
 
   // Set page size (in pixels).
   virtual void setPageSize(int x, int y) {}
+
+  // Set transform matrix.
+  virtual void setCTM(double *ctm1);
 
   // Reset state and clear display, to prepare for a new page.
   virtual void clear() {}
 
   // Dump page contents to display.
   virtual void dump() {}
+
+  // Convert between device and user coordinates.
+  virtual void cvtDevToUser(int dx, int dy, double *ux, double *uy);
+  virtual void cvtUserToDev(double ux, double uy, int *dx, int *dy);
 
   //----- save/restore graphics state
   virtual void saveState(GfxState *state) {}
@@ -71,13 +80,18 @@ public:
 
   //----- text drawing
   virtual void drawChar(GfxState *state, double x, double y,
-			ushort c) = 0;
+			Guchar c) = 0;
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Stream *str,
-			     int width, int height, Boolean invert) = 0;
+			     int width, int height, GBool invert) = 0;
   virtual void drawImage(GfxState *state, Stream *str, int width,
 			 int height, GfxColorSpace *colorSpace) = 0;
+
+private:
+
+  double ctm[6];		// coordinate transform matrix
+  double ictm[6];		// inverse CTM
 };
 
 #endif

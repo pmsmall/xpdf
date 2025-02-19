@@ -11,32 +11,48 @@
 #ifndef LTKWIDGET_H
 #define LTKWIDGET_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
+#include <stddef.h>
 #include <X11/Xlib.h>
-#include <stypes.h>
-#include <String.h>
+#include <gtypes.h>
+#include <GString.h>
 #include <LTKWindow.h>
 
-enum LTKWidgetKind {
-  ltkBox,
-  ltkButton,
-  ltkCanvas,
-  ltkDblBufCanvas,
-  ltkEmpty,
-  ltkLabel,
-  ltkScrollbar,
-  ltkScrollingCanvas,
-  ltkTextIn
-};
+//------------------------------------------------------------------------
+// callback types
+//------------------------------------------------------------------------
+
+// Mouse button press/release.
+typedef void (*LTKMouseCbk)(LTKWidget *widget, int widgetNum,
+			    int mx, int my, int button);
+
+// Boolean value change.
+typedef void (*LTKBoolValCbk)(LTKWidget *widget, int widgetNum, GBool on);
+
+// Integer value change.
+typedef void (*LTKIntValCbk)(LTKWidget *widget, int widgetNum, int val);
+
+// String value change.
+typedef void (*LTKStringValCbk)(LTKWidget *widget, int widgetNum,
+				GString *val);
+
+// Redraw widget.
+typedef void (*LTKRedrawCbk)(LTKWidget *widget, int widgetNum);
+
+//------------------------------------------------------------------------
+// LTKWidget
+//------------------------------------------------------------------------
 
 class LTKWidget {
 public:
 
-  //---------- constructor/destructor ----------
+  //---------- constructors and destructor ----------
 
   // Constructor.
-  LTKWidget(LTKWidgetKind kind1, char *name1);
+  LTKWidget(char *name1, int widgetNum1);
 
   // Destructor.
   virtual ~LTKWidget();
@@ -46,14 +62,14 @@ public:
 
   //---------- access ----------
 
-  Boolean is(LTKWidgetKind kind1) { return kind == kind1; }
-  String *getName() { return name; }
+  virtual GBool isBox() { return gFalse; }
+  char *getName() { return name; }
   virtual void setParent(LTKWindow *parent1);
   LTKWindow *getParent() { return parent; }
   int getWidth() { return width; }
   int getHeight() { return height; }
   Window getXWindow() { return xwin; }
-  virtual long getEventMask() { return ExposureMask; }
+  virtual long getEventMask();
   Display *getDisplay() { return parent->getDisplay(); }
   int getScreenNum() { return parent->getScreenNum(); }
   unsigned long getFgColor() { return parent->getFgColor(); }
@@ -65,6 +81,11 @@ public:
   XFontStruct *getXFontStruct() { return parent->getXFontStruct(); }
   LTKWidget *getNext() { return next; }
   LTKWidget *setNext(LTKWidget *next1) { return next = next1; }
+
+  //---------- special access ----------
+
+  void setButtonPressCbk(LTKMouseCbk cbk) { btnPressCbk = cbk; }
+  void setButtonReleaseCbk(LTKMouseCbk cbk) { btnReleaseCbk = cbk; }
 
   //---------- layout ----------
 
@@ -89,11 +110,11 @@ public:
   // Draw the widget and its children.
   virtual void redraw() = 0;
 
-  //---------- event handlers ----------
+  //---------- callbacks and event handlers ----------
 
-  virtual void buttonPress(int mx, int my, int button) {}
-  virtual void buttonRelease(int mx, int my, int button) {}
-  virtual void activate(Boolean on) {}
+  virtual void buttonPress(int mx, int my, int button);
+  virtual void buttonRelease(int mx, int my, int button);
+  virtual void activate(GBool on) {}
   virtual void mouseMove(int mx, int my) {}
   virtual void keyPress(KeySym key, char *s, int n) {}
   virtual void repeatEvent() {}
@@ -101,16 +122,16 @@ public:
 protected:
 
   // Make a copy of Widget fields only.
-  LTKWidget(LTKWidget *widget):
-    kind(widget->kind),
-    name(widget->name ? widget->name->copy() : (String *)NULL),
-    width(0), height(0) {}
+  LTKWidget(LTKWidget *widget);
 
-  LTKWidgetKind kind;		// kind of widget
-  String *name;			// name (for lookup within window)
+  char *name;			// name (for lookup within window)
+  int widgetNum;		// widget number (for callbacks)
   LTKWindow *parent;		// parent window
   int x, y;			// current position (in window)
   int width, height;		// current size
+
+  LTKMouseCbk btnPressCbk;	// mouse button press callback
+  LTKMouseCbk btnReleaseCbk;	// mouse button release callback
 
   Window xwin;			// X window (not used for Boxes)
 

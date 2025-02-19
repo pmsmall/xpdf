@@ -7,7 +7,9 @@
  */
 
 #include <stdio.h>
-#include <mem.h>
+#include <stddef.h>
+#include <string.h>
+#include <gmem.h>
 #include <cover.h>
 
 typedef struct _CoverEntry {
@@ -23,7 +25,7 @@ void doCoverInit(int hashSize1) {
   int h;
 
   hashSize = hashSize1;
-  hashTab = smalloc(hashSize * sizeof(CoverEntry *));
+  hashTab = gmalloc(hashSize * sizeof(CoverEntry *));
   for (h = 0; h < hashSize; ++h)
     hashTab[h] = NULL;
 }
@@ -41,7 +43,7 @@ void doCover(char *name) {
       break;
   }
   if (!e) {
-    e = smalloc(sizeof(CoverEntry));
+    e = gmalloc(sizeof(CoverEntry));
     e->name = name;
     e->num = 0;
     e->next = hashTab[h];
@@ -64,8 +66,8 @@ void doCoverDump(FILE *f) {
   for (h = 0; h < hashSize; ++h) {
     for (e1 = hashTab[h]; e1; e1 = e2) {
       e2 = e1->next;
-      sfree(e1);
+      gfree(e1);
     }
   }
-  sfree(hashTab);
+  gfree(hashTab);
 }

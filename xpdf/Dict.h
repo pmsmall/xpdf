@@ -9,9 +9,9 @@
 #ifndef DICT_H
 #define DICT_H
 
+#ifdef __GNUC__
 #pragma interface
-
-#include <stdio.h>
+#endif
 
 #include "Object.h"
 
@@ -44,7 +44,7 @@ public:
   void add(char *key, Object *val);
 
   // Check if dictionary is of specified type.
-  Boolean is(char *type);
+  GBool is(char *type);
 
   // Look up an entry and return the value.  Returns a null object
   // if <key> is not in the dictionary.
@@ -55,9 +55,6 @@ public:
   char *getKey(int i);
   Object *getVal(int i, Object *obj);
   Object *getValNF(int i, Object *obj);
-
-  // Output.
-  void print(FILE *f = stdout);
 
 private:
 

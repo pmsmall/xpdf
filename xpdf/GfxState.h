@@ -9,9 +9,11 @@
 #ifndef GFXSTATE_H
 #define GFXSTATE_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
-#include <stypes.h>
+#include <gtypes.h>
 
 class Object;
 class GfxFont;
@@ -20,42 +22,36 @@ class GfxFont;
 // GfxColor
 //------------------------------------------------------------------------
 
-enum GfxColorMode {
-  colorGray, colorCMYK, colorRGB
-};
-
 class GfxColor {
 public:
 
-  GfxColor(): mode(colorGray), gray(0) {}
+  GfxColor(): r(0), g(0), b(0) {}
 
   // Set color.
-  void setGray(double gray1);
-  void setCMYK(double c1, double m1, double y1, double k1);
-  void setRGB(double r1, double g1, double b1);
+  void setGray(double gray)
+    { r = g = b = gray; }
+  void setCMYK(double c, double m, double y, double k);
+  void setRGB(double r1, double g1, double b1)
+    { r = r1; g = g1; b = b1; }
 
   // Accessors.
-  GfxColorMode getMode() { return mode; }
-  double getGray() { return gray; }
-  double getC() { return c; }
-  double getM() { return m; }
-  double getY() { return y; }
-  double getK() { return k; }
   double getR() { return r; }
   double getG() { return g; }
   double getB() { return b; }
+  double getGray() { return 0.299 * r + 0.587 * g + 0.114 * b; }
 
 private:
 
-  GfxColorMode mode;
-  double gray;
-  double c, m, y, k;
   double r, g, b;
 };
 
 //------------------------------------------------------------------------
 // GfxColorSpace
 //------------------------------------------------------------------------
+
+enum GfxColorMode {
+  colorGray, colorCMYK, colorRGB
+};
 
 class GfxColorSpace {
 public:
@@ -67,30 +63,28 @@ public:
   ~GfxColorSpace();
 
   // Is color space valid?
-  Boolean isOk() { return ok; }
+  GBool isOk() { return ok; }
 
   // Get stream decoding info.
   int getNumComponents() { return numComponents; }
   int getBits() { return bits; }
 
   // Get color mode.
-  GfxColorMode getMode() { return mode; }
-  Boolean isIndexed() { return indexed; }
+  GBool isIndexed() { return indexed; }
 
   // Convert an input value to a color.
-  void getGray(int x[4], uchar *gray);
-  void getCMYK(int x[4], uchar *c, uchar *y, uchar *m, uchar *k);
-  void getRGB(int x[4], uchar *r, uchar *g, uchar *b);
+  void getRGB(Guchar x[4], Guchar *r, Guchar *g, Guchar *b);
+  void getGray(Guchar x[4], Guchar *gray);
 
 private:
 
   GfxColorMode mode;		// color mode
-  Boolean indexed;		// use lookup table?
+  GBool indexed;		// use lookup table?
   int bits;			// bits per component
   int numComponents;		// number of components in input values
   int lookupComponents;		// number of components in lookup table
-  uchar (*lookup)[4];		// lookup table
-  Boolean ok;			// is color space valid?
+  Guchar (*lookup)[4];		// lookup table
+  GBool ok;			// is color space valid?
 };
 
 //------------------------------------------------------------------------
@@ -147,7 +141,7 @@ public:
   GfxPath *copy() { return new GfxPath(subpaths, n, size); }
 
   // Is the path non-empty, i.e., is there a current point?
-  Boolean isPath() { return n > 0; }
+  GBool isPath() { return n > 0; }
 
   // Get subpaths.
   int getNumSubpaths() { return n; }
@@ -186,7 +180,7 @@ public:
   // page box (<x1>,<y1>)-(<x2>,<y2>), page rotation <rotate>, and
   // coordinate system specified by <upsideDown>.
   GfxState(int dpi, int x1, int y1, int x2, int y2, int rotate,
-	   Boolean upsideDown);
+	   GBool upsideDown);
 
   // Destructor.
   ~GfxState();
@@ -223,7 +217,7 @@ public:
   double getLineY() { return lineY; }
 
   // Is there a current point?
-  Boolean isPath() { return path->isPath(); }
+  GBool isPath() { return path->isPath(); }
 
   // Transforms.
   void transform(double x1, double y1, double *x2, double *y2)
@@ -242,6 +236,7 @@ public:
   double getTransformedLineWidth()
     { return transformWidth(lineWidth); }
   double getTransformedFontSize();
+  void getFontTransMat(double *m11, double *m12, double *m21, double *m22);
 
   // Change state parameters.
   void concatCTM(double a, double b, double c,

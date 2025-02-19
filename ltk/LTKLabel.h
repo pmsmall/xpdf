@@ -9,36 +9,49 @@
 #ifndef LTKLABEL_H
 #define LTKLABEL_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
+#include <stddef.h>
 #include <X11/Xlib.h>
-#include <stypes.h>
-#include <String.h>
+#include <GString.h>
 #include <LTKWidget.h>
+
+//------------------------------------------------------------------------
+// LTKLabel
+//------------------------------------------------------------------------
 
 class LTKLabel: public LTKWidget {
 public:
 
-  LTKLabel(char *name1, int maxLength1, char *fontName1, char *text1);
+  //---------- constructors and destructor ----------
+
+  LTKLabel(char *name1, int widgetNum1,
+	   int maxLength1, char *fontName1, char *text1);
 
   ~LTKLabel();
 
   virtual LTKWidget *copy() { return new LTKLabel(this); }
 
-  virtual long getEventMask();
+  //---------- special access ----------
+
+  void setText(char *text1);
+
+  //---------- layout ----------
 
   virtual void layout1();
 
-  virtual void redraw();
+  //---------- drawing ----------
 
-  void setText(char *text1);
+  virtual void redraw();
 
 protected:
 
   LTKLabel(LTKLabel *label);
 
   int maxLength;		// max label length
-  String *text;			// the label text
+  GString *text;		// the label text
   int length;			// displayed length
   int textWidth, textHeight;	// size of text
   int textBase;			// baseline offset

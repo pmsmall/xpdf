@@ -6,8 +6,11 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
+#include <stddef.h>
 #include <stdarg.h>
 #include "Object.h"
 #include "Array.h"
@@ -36,7 +39,8 @@ char *objTypeNames[numObjTypes] = {
   "none"
 };
 
-int Object::numAlloc[numObjTypes] = {};
+int Object::numAlloc[numObjTypes] =
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 Object *Object::initArray() {
   type = objArray;
@@ -63,7 +67,7 @@ Object *Object::copy(Object *obj) {
   *obj = *this;
   switch (type) {
   case objString:
-    obj->string = copyString(string);
+    obj->string = string->copy();
     break;
   case objName:
     obj->name = copyString(name);
@@ -90,10 +94,10 @@ Object *Object::copy(Object *obj) {
 void Object::free() {
   switch (type) {
   case objString:
-    sfree(string);
+    delete string;
     break;
   case objName:
-    sfree(name);
+    gfree(name);
     break;
   case objArray:
     if (!array->decRef())
@@ -108,7 +112,7 @@ void Object::free() {
       delete stream;
     break;
   case objCmd:
-    sfree(cmd);
+    gfree(cmd);
     break;
   default:
     break;
@@ -122,6 +126,9 @@ char *Object::getTypeName() {
 }
 
 void Object::print(FILE *f) {
+  Object obj;
+  int i;
+
   switch (type) {
   case objBool:
     fprintf(f, "%s", booln ? "true" : "false");
@@ -133,7 +140,7 @@ void Object::print(FILE *f) {
     fprintf(f, "%g", real);
     break;
   case objString:
-    fprintf(f, "(%s)", string);
+    fprintf(f, "(%s)", string->getCString());
     break;
   case objName:
     fprintf(f, "/%s", name);
@@ -142,10 +149,18 @@ void Object::print(FILE *f) {
     fprintf(f, "null");
     break;
   case objArray:
-    array->print(f);
+    fprintf(f, "[");
+    for (i = 0; i < arrayGetLength(); ++i) {
+      if (i > 0)
+	fprintf(f, " ");
+      arrayGet(i, &obj);
+      obj.print(f);
+      obj.free();
+    }
+    fprintf(f, "]");
     break;
   case objDict:
-    dict->print(f);
+    fprintf(f, "<dict>");
     break;
   case objStream:
     fprintf(f, "<stream>");

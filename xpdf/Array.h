@@ -9,9 +9,9 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
+#ifdef __GNUC__
 #pragma interface
-
-#include <stdio.h>
+#endif
 
 #include "Object.h"
 
@@ -41,9 +41,6 @@ public:
   // Accessors.
   Object *get(int i, Object *obj);
   Object *getNF(int i, Object *obj);
-
-  // Output.
-  void print(FILE *f = stdout);
 
 private:
 

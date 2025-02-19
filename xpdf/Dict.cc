@@ -6,9 +6,13 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
-#include <mem.h>
+#include <stddef.h>
+#include <string.h>
+#include <gmem.h>
 #include "Object.h"
 #include "XRef.h"
 #include "Dict.h"
@@ -27,26 +31,23 @@ Dict::~Dict() {
   int i;
 
   for (i = 0; i < length; ++i) {
-    sfree(entries[i].key);
+    gfree(entries[i].key);
     entries[i].val.free();
   }
-  sfree(entries);
+  gfree(entries);
 }
 
 void Dict::add(char *key, Object *val) {
   if (length + 1 > size) {
     size += 8;
-    if (entries)
-      entries = (DictEntry *)srealloc(entries, size * sizeof(DictEntry));
-    else
-      entries = (DictEntry *)smalloc(size * sizeof(DictEntry));
+    entries = (DictEntry *)grealloc(entries, size * sizeof(DictEntry));
   }
   entries[length].key = key;
   entries[length].val = *val;
   ++length;
 }
 
-__inline DictEntry *Dict::find(char *key) {
+inline DictEntry *Dict::find(char *key) {
   int i;
 
   for (i = 0; i < length; ++i) {
@@ -56,7 +57,7 @@ __inline DictEntry *Dict::find(char *key) {
   return NULL;
 }
 
-Boolean Dict::is(char *type) {
+GBool Dict::is(char *type) {
   DictEntry *e;
 
   return (e = find("Type")) && e->val.isName(type);
@@ -84,15 +85,4 @@ Object *Dict::getVal(int i, Object *obj) {
 
 Object *Dict::getValNF(int i, Object *obj) {
   return entries[i].val.copy(obj);
-}
-
-void Dict::print(FILE *f) {
-  int i;
-
-  fprintf(f, "<<");
-  for (i = 0; i < length; ++i) {
-    fprintf(f, " /%s ", entries[i].key);
-    entries[i].val.print(f);
-  }
-  fprintf(f, " >>");
 }

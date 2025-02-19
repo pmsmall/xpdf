@@ -14,7 +14,7 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion "0.3"
+#define xpdfVersion "0.4"
 
 // supported PDF version
 #define pdfVersion "1.1"
@@ -27,8 +27,8 @@
 // X-related constants
 //------------------------------------------------------------------------
 
-// maximum size of color cube to allocate
-#define maxColorCube 5
+// default maximum size of color cube to allocate
+#define defaultRGBCube 5
 
 // number of fonts to cache
 #define fontCacheSize 16
@@ -37,7 +37,20 @@
 // misc
 //------------------------------------------------------------------------
 
+#ifdef NO_POPEN
+// command to uncompress a file
+#ifdef USE_GZIP
+#define uncompressCmd "gzip -d"
+#else
+#define uncompressCmd "uncompress"
+#endif
+#else // NO_POPEN
 // command to uncompress to stdout
+#ifdef USE_GZIP
+#define uncompressCmd "gzip -d -c"
+#else
 #define uncompressCmd "uncompress -c"
+#endif
+#endif // NO_POPEN
 
 #endif

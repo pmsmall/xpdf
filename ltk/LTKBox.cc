@@ -6,10 +6,13 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <LTKWindow.h>
@@ -18,7 +21,7 @@
 LTKBox::LTKBox(char *name1, int cols1, int rows1,
 	       int left1, int right1, int top1, int bottom1,
 	       LTKBorder border1, int xfill1, int yfill1, ...):
-    LTKWidget(ltkBox, name1) {
+    LTKWidget(name1, 0) {
   int col, row;
   va_list args;
 
@@ -49,6 +52,15 @@ LTKBox::LTKBox(LTKBox *box):
 
   cols = box->cols;
   rows = box->rows;
+  left = box->left;
+  right = box->right;
+  top = box->top;
+  bottom = box->bottom;
+  border = box->border;
+  if (border == ltkBorderNone)
+    borderWidth = 0;
+  else
+    borderWidth = ltkBorderWidth;
   xfill = box->xfill;
   yfill = box->yfill;
   contents = new LTKWidget*[cols*rows];
@@ -63,7 +75,7 @@ LTKBox::~LTKBox() {
   for (col = 0; col < cols; ++col)
     for (row = 0; row < rows; ++row)
       delete get(col, row);
-  delete contents;
+  delete[] contents;
 }
 
 void LTKBox::setParent(LTKWindow *parent1) {
@@ -75,7 +87,16 @@ void LTKBox::setParent(LTKWindow *parent1) {
       get(col, row)->setParent(parent1);
 }
 
-Boolean LTKBox::checkFills(char **err) {
+void LTKBox::setBorder(LTKBorder border1) {
+  if (border1 != border) {
+    border = border1;
+    ltkDrawBorder(getDisplay(), getParent()->getXWindow(),
+		  getBrightGC(), getDarkGC(), getBgGC(),
+		  x, y, width, height, border);
+  }
+}
+
+GBool LTKBox::checkFills(char **err) {
   LTKWidget *widget;
   LTKBox *box;
   int col, row;
@@ -84,15 +105,15 @@ Boolean LTKBox::checkFills(char **err) {
   // non-box widgets don't use fill flags, so just return
   if (cols == 1 && rows == 1) {
     widget = get(0, 0);
-    if (!widget->is(ltkBox))
-      return true;
+    if (!widget->isBox())
+      return gTrue;
   } else {
     for (col = 0; col < cols; ++col) {
       for (row = 0; row < rows; ++row) {
 	widget = get(col, row);
-	if (!widget->is(ltkBox)) {
+	if (!widget->isBox()) {
 	  *err = "contents of a non-1x1 box must be boxes";
-	  return false;
+	  return gFalse;
 	}
       }
     }
@@ -106,11 +127,11 @@ Boolean LTKBox::checkFills(char **err) {
 	box = getBox(col, row);
 	if (box->xfill != getBox(col, 0)->xfill) {
 	  *err = "all xfills in a column must be the same";
-	  return false;
+	  return gFalse;
 	}
 	if (box->yfill != getBox(0, row)->yfill) {
 	  *err = "all yfills in a row must be the same";
-	  return false;
+	  return gFalse;
 	}
       }
     }
@@ -120,13 +141,13 @@ Boolean LTKBox::checkFills(char **err) {
   for (col = 0; col < cols; ++col) {
     for (row = 0; row < rows; ++row) {
       if (!getBox(col, row)->checkFills(err))
-	return false;
+	return gFalse;
     }
   }
 
   // everything checked out ok
   *err = "";
-  return true;
+  return gTrue;
 }
 
 void LTKBox::layout1() {
@@ -141,7 +162,7 @@ void LTKBox::layout1() {
 
   // if there is only one child and it is not a box, just
   // grab its min width and height
-  if (cols == 1 && rows == 1 && !get(0, 0)->is(ltkBox)) {
+  if (cols == 1 && rows == 1 && !get(0, 0)->isBox()) {
     width = get(0, 0)->getWidth() + left + right + 2 * borderWidth;
     height = get(0, 0)->getHeight() + top + bottom + 2 * borderWidth;
     return;
@@ -209,7 +230,7 @@ void LTKBox::layout2(int x1, int y1, int width1, int height1) {
   width = width1 - left - right;
   height = height1 - top - bottom;
 
-  if (cols == 1 && rows == 1 && !get(0, 0)->is(ltkBox)) {
+  if (cols == 1 && rows == 1 && !get(0, 0)->isBox()) {
     get(0, 0)->layout2(x + borderWidth, y + borderWidth,
 		       width - 2 * borderWidth, height - 2 * borderWidth);
     return;
@@ -267,8 +288,8 @@ void LTKBox::layout2(int x1, int y1, int width1, int height1) {
     tx += widths[col];
   }
 
-  delete widths;
-  delete heights;
+  delete[] widths;
+  delete[] heights;
 }
 
 void LTKBox::layout3() {
@@ -295,17 +316,8 @@ void LTKBox::redraw() {
 		x, y, width, height, border);
   for (col = 0; col < cols; ++col) {
     for (row = 0; row < rows; ++row) {
-      if (get(col, row)->is(ltkBox))
+      if (get(col, row)->isBox())
 	get(col, row)->redraw();
     }
-  }
-}
-
-void LTKBox::setBorder(LTKBorder border1) {
-  if (border1 != border) {
-    border = border1;
-    ltkDrawBorder(getDisplay(), getParent()->getXWindow(),
-		  getBrightGC(), getDarkGC(), getBgGC(),
-		  x, y, width, height, border);
   }
 }

@@ -7,20 +7,21 @@
  */
 
 #include <stdio.h>
+#include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <parseargs.h>
 
 static ArgDesc *findArg(ArgDesc *args, char *arg);
-static Boolean grabArg(ArgDesc *arg, int i, int *argc, char *argv[]);
+static GBool grabArg(ArgDesc *arg, int i, int *argc, char *argv[]);
 
-Boolean parseArgs(ArgDesc *args, int *argc, char *argv[]) {
+GBool parseArgs(ArgDesc *args, int *argc, char *argv[]) {
   ArgDesc *arg;
   int i, j;
-  Boolean ok;
+  GBool ok;
 
-  ok = true;
+  ok = gTrue;
   i = 1;
   while (i < *argc) {
     if (!strcmp(argv[i], "--")) {
@@ -30,7 +31,7 @@ Boolean parseArgs(ArgDesc *args, int *argc, char *argv[]) {
       break;
     } else if ((arg = findArg(args, argv[i]))) {
       if (!grabArg(arg, i, argc, argv))
-	ok = false;
+	ok = gFalse;
     } else {
       ++i;
     }
@@ -40,20 +41,31 @@ Boolean parseArgs(ArgDesc *args, int *argc, char *argv[]) {
 
 void printUsage(char *program, char *otherArgs, ArgDesc *args) {
   ArgDesc *arg;
+  int w, w1;
+
+  w = 0;
+  for (arg = args; arg->arg; ++arg) {
+    if ((w1 = strlen(arg->arg)) > w)
+      w = w1;
+  }
 
   fprintf(stderr, "Usage: %s", program);
   for (arg = args; arg->arg; ++arg) {
     switch (arg->kind) {
     case argFlag:
+    case argFlagDummy:
       fprintf(stderr, " [%s]", arg->arg);
       break;
     case argInt:
+    case argIntDummy:
       fprintf(stderr, " [%s <int>]", arg->arg);
       break;
     case argFP:
+    case argFPDummy:
       fprintf(stderr, " [%s <fp>]", arg->arg);
       break;
     case argString:
+    case argStringDummy:
       fprintf(stderr, " [%s <string>]", arg->arg);
       break;
     }
@@ -61,9 +73,10 @@ void printUsage(char *program, char *otherArgs, ArgDesc *args) {
   if (otherArgs)
     fprintf(stderr, " %s", otherArgs);
   fprintf(stderr, "\n");
+
   for (arg = args; arg->arg; ++arg) {
     if (arg->usage)
-      fprintf(stderr, "  %-8s: %s\n", arg->arg, arg->usage);
+      fprintf(stderr, "  %-*s: %s\n", w, arg->arg, arg->usage);
   }
 }
 
@@ -71,22 +84,22 @@ static ArgDesc *findArg(ArgDesc *args, char *arg) {
   ArgDesc *p;
 
   for (p = args; p->arg; ++p) {
-    if (!strcmp(p->arg, arg))
+    if (p->kind < argFlagDummy && !strcmp(p->arg, arg))
       return p;
   }
   return NULL;
 }
 
-static Boolean grabArg(ArgDesc *arg, int i, int *argc, char *argv[]) {
+static GBool grabArg(ArgDesc *arg, int i, int *argc, char *argv[]) {
   int n;
   int j;
-  Boolean ok;
+  GBool ok;
 
-  ok = true;
+  ok = gTrue;
   n = 0;
   switch (arg->kind) {
   case argFlag:
-    *(Boolean *)arg->val = true;
+    *(GBool *)arg->val = gTrue;
     n = 1;
     break;
   case argInt:
@@ -94,7 +107,7 @@ static Boolean grabArg(ArgDesc *arg, int i, int *argc, char *argv[]) {
       *(int *)arg->val = atoi(argv[i+1]);
       n = 2;
     } else {
-      ok = false;
+      ok = gFalse;
       n = 1;
     }
     break;
@@ -103,7 +116,7 @@ static Boolean grabArg(ArgDesc *arg, int i, int *argc, char *argv[]) {
       *(double *)arg->val = atof(argv[i+1]);
       n = 2;
     } else {
-      ok = false;
+      ok = gFalse;
       n = 1;
     }
     break;
@@ -113,9 +126,14 @@ static Boolean grabArg(ArgDesc *arg, int i, int *argc, char *argv[]) {
       ((char *)arg->val)[arg->size - 1] = '\0';
       n = 2;
     } else {
-      ok = false;
+      ok = gFalse;
       n = 1;
     }
+    break;
+  default:
+    fprintf(stderr, "Internal error in arg table\n");
+    n = 1;
+    break;
   }
   if (n > 0) {
     *argc -= n;
@@ -125,17 +143,17 @@ static Boolean grabArg(ArgDesc *arg, int i, int *argc, char *argv[]) {
   return ok;
 }
 
-Boolean isInt(char *s) {
+GBool isInt(char *s) {
   if (*s == '-' || *s == '+')
     ++s;
   while (isdigit(*s))
     ++s;
   if (*s)
-    return false;
-  return true;
+    return gFalse;
+  return gTrue;
 }
 
-Boolean isFP(char *s) {
+GBool isFP(char *s) {
   int n;
 
   if (*s == '-' || *s == '+')
@@ -157,12 +175,12 @@ Boolean isFP(char *s) {
       ++s;
     n = 0;
     if (!isdigit(*s))
-      return false;
+      return gFalse;
     do {
       ++s;
     } while (isdigit(*s));
   }
   if (*s)
-    return false;
-  return true;
+    return gFalse;
+  return gTrue;
 }

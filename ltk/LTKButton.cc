@@ -6,54 +6,55 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <LTKWindow.h>
 #include <LTKButton.h>
 #include <LTKBorder.h>
 
-LTKButton::LTKButton(char *name1, char *label1, LTKButtonAction action1,
-		     LTKButtonCbk pressCbk1, int widgetNum1):
-    LTKWidget(ltkButton, name1) {
-  label = new String(label1);
+LTKButton::LTKButton(char *name1, int widgetNum1, char *label1,
+		     LTKButtonAction action1, LTKBoolValCbk pressCbk1):
+    LTKWidget(name1, widgetNum1) {
+  label = new GString(label1);
   icon = None;
   iconData = NULL;
   action = action1;
+  on = gFalse;
   pressCbk = pressCbk1;
-  widgetNum = widgetNum1;
-  on = false;
 }
 
-LTKButton::LTKButton(char *name1, unsigned char *iconData1,
-		     int iconWidth1, int iconHeight1, LTKButtonAction action1,
-		     LTKButtonCbk pressCbk1, int widgetNum1):
-    LTKWidget(ltkButton, name1) {
+LTKButton::LTKButton(char *name1, int widgetNum1,
+		     unsigned char *iconData1,
+		     int iconWidth1, int iconHeight1,
+		     LTKButtonAction action1, LTKBoolValCbk pressCbk1):
+    LTKWidget(name1, widgetNum1) {
   label = NULL;
   icon = None;
   iconData = iconData1;
   iconWidth = iconWidth1;
   iconHeight = iconHeight1;
   action = action1;
+  on = gFalse;
   pressCbk = pressCbk1;
-  widgetNum = widgetNum1;
-  on = false;
 }
 
 LTKButton::LTKButton(LTKButton *button):
     LTKWidget(button) {
-  label = button->label ? button->label->copy() : (String *)NULL;
+  label = button->label ? button->label->copy() : (GString *)NULL;
+  icon = None;
   iconData = button->iconData;
   iconWidth = button->iconWidth;
   iconHeight = button->iconHeight;
-  icon = None;
   action = button->action;
+  on = gFalse;
   pressCbk = button->pressCbk;
-  widgetNum = button->widgetNum;
-  on = false;
 }
 
 LTKButton::~LTKButton() {
@@ -64,7 +65,7 @@ LTKButton::~LTKButton() {
 }
 
 long LTKButton::getEventMask() {
-  return ExposureMask | ButtonPressMask | ButtonReleaseMask;
+  return LTKWidget::getEventMask() | ButtonPressMask | ButtonReleaseMask;
 }
 
 void LTKButton::layout1() {
@@ -115,12 +116,13 @@ void LTKButton::redraw() {
 }
 
 void LTKButton::buttonPress(int mx, int my, int button) {
+  oldOn = on;
   switch (action) {
   case ltkButtonClick:
-    setState(true);
+    setState(gTrue);
     break;
   case ltkButtonSticky:
-    setState(true);
+    setState(gTrue);
     break;
   case ltkButtonToggle:
     setState(!on);
@@ -129,20 +131,27 @@ void LTKButton::buttonPress(int mx, int my, int button) {
 }
 
 void LTKButton::buttonRelease(int mx, int my, int button) {
-  switch (action) {
-  case ltkButtonClick:
-    setState(false);
-    break;
-  case ltkButtonSticky:
-    break;
-  case ltkButtonToggle:
-    break;
+  // mouse was released over button
+  if (mx >= 0 && mx < width && my >= 0 && my < height) {
+    switch (action) {
+    case ltkButtonClick:
+      setState(gFalse);
+      break;
+    case ltkButtonSticky:
+      break;
+    case ltkButtonToggle:
+      break;
+    }
+    if (pressCbk)
+      (*pressCbk)(this, widgetNum, on);
+
+  // mouse was released outside button
+  } else {
+    setState(oldOn);
   }
-  if (pressCbk)
-    (*pressCbk)(this, widgetNum, on);
 }
 
-void LTKButton::setState(Boolean on1) {
+void LTKButton::setState(GBool on1) {
   if (on1 != on) {
     on = on1;
     ltkDrawBorder(getDisplay(), xwin, getBrightGC(), getDarkGC(), getBgGC(),

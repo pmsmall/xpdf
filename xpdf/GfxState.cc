@@ -6,11 +6,14 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
+#include <stddef.h>
 #include <math.h>
 #include <string.h> // for memcpy()
-#include <mem.h>
+#include <gmem.h>
 #include "Object.h"
 #include "GfxState.h"
 
@@ -18,44 +21,13 @@
 // GfxColor
 //------------------------------------------------------------------------
 
-void GfxColor::setGray(double gray1) {
-  mode = colorGray;
-  gray = gray1;
-  c = m = y = 0;
-  k = gray;
-  r = g = b = gray1;
-}
-
-void GfxColor::setCMYK(double c1, double m1, double y1, double k1) {
-  mode = colorCMYK;
-  c = c1;
-  m = m1;
-  y = y1;
-  k = k1;
-  r = 1 - (c + k);
-  g = 1 - (m + k);
-  b = 1 - (y + k);
-  gray = 0.299 * r + 0.587 * g + 0.114 * b;
-}
-
-void GfxColor::setRGB(double r1, double g1, double b1) {
-  mode = colorRGB;
-  r = r1;
-  g = g1;
-  b = b1;
-  if (r > g)
-    if (r > b)
-      k = 1 - r;
-    else
-      k = 1 - b;
-  else if (g > b)
-    k = 1 - g;
-  else
-    k = 1 - b;
-  c = 1 - r - k;
-  m = 1 - g - k;
-  y = 1 - b - k;
-  gray = 0.299 * r + 0.587 * g + 0.114 * b;
+void GfxColor::setCMYK(double c, double m, double y, double k) {
+  if ((r = 1 - (c + k)) < 0)
+    r = 0;
+  if ((g = 1 - (m + k)) < 0)
+    g = 0;
+  if ((b = 1 - (y + k)) < 0)
+    b = 0;
 }
 
 //------------------------------------------------------------------------
@@ -66,13 +38,16 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
   Object obj;
   double decodeLow[4], decodeHigh[4];
   int decodeComps;
-  uchar (*palette)[4];
+  Guchar (*palette)[4];
   int indexHigh;
+  char *s;
   int x;
   int i, j, k;
 
-  ok = true;
+  ok = gTrue;
   bits = bits1;
+  lookup = NULL;
+  palette = NULL;
 
   // get decode map
   if (decode->isNull()) {
@@ -96,7 +71,7 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
   }
 
   // get mode
-  indexed = false;
+  indexed = gFalse;
   if (colorSpace->isName("DeviceGray") || colorSpace->isName("G")) {
     mode = colorGray;
     numComponents = lookupComponents = 1;
@@ -118,7 +93,7 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
       mode = colorCMYK;
       numComponents = lookupComponents = 4;
     } else if (obj.isName("Indexed") || obj.isName("I")) {
-      indexed = true;
+      indexed = gTrue;
       numComponents = 1;
     } else {
       goto err2;
@@ -150,28 +125,50 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
       goto err2;
     indexHigh = obj.getInt();
     obj.free();
+    palette = (Guchar (*)[4])gmalloc((indexHigh + 1) * 4 * sizeof(Guchar));
     colorSpace->arrayGet(3, &obj);
-    if (!obj.isStream())
-      goto err2;
-    obj.streamReset();
-    palette = (uchar (*)[4])smalloc((indexHigh + 1) * 4 * sizeof(double));
-    for (i = 0; i <= indexHigh; ++i) {
-      for (j = 0; j < lookupComponents; ++j) {
-	if ((x = obj.streamGetChar()) == EOF)
-	  goto err2;
-	palette[i][j] = (uchar)x;
+    if (obj.isStream()) {
+      obj.streamReset();
+      for (i = 0; i <= indexHigh; ++i) {
+	for (j = 0; j < lookupComponents; ++j) {
+	  if ((x = obj.streamGetChar()) == EOF)
+	    goto err3;
+	  palette[i][j] = (Guchar)x;
+	}
       }
+    } else if (obj.isString()) {
+      s = obj.getString()->getCString();
+      for (i = 0; i <= indexHigh; ++i)
+	for (j = 0; j < lookupComponents; ++j)
+	  palette[i][j] = (Guchar)*s++;
+    } else {
+      goto err3;
     }
     obj.free();
-    lookup = (uchar (*)[4])smalloc((1 << bits) * 4 * sizeof(double));
+    lookup = (Guchar (*)[4])gmalloc((1 << bits) * 4 * sizeof(Guchar));
     for (i = 0; i < (1 << bits); ++i) {
       k = (int)(decodeLow[0] + i * (decodeHigh[0] - decodeLow[0]) /
 	                           ((1 << bits) - 1) + 0.5);
-      for (j = 0; j < lookupComponents; ++j) {
-	lookup[i][j] = palette[k][j];
+      switch (mode) {
+      case colorGray:
+	lookup[i][0] = lookup[i][1] = lookup[i][2] = palette[k][0];
+	break;
+      case colorCMYK:
+	x = palette[k][0] + palette[k][3];
+	lookup[i][0] = (x > 255) ? 0 : 255 - x;
+	x = palette[k][1] + palette[k][3];
+	lookup[i][1] = (x > 255) ? 0 : 255 - x;
+	x = palette[k][2] + palette[k][3];
+	lookup[i][2] = (x > 255) ? 0 : 255 - x;
+	break;
+      case colorRGB:
+	lookup[i][0] = palette[k][0];
+	lookup[i][1] = palette[k][1];
+	lookup[i][2] = palette[k][2];
+	break;
       }
     }
-    sfree(palette);
+    gfree(palette);
 
   // non-indexed decoding
   } else {
@@ -183,153 +180,78 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
     } else if (decodeComps != numComponents) {
       goto err1;
     }
-    lookup = (uchar (*)[4])smalloc((1 << bits) * 4 * sizeof(double));
+    lookup = (Guchar (*)[4])gmalloc((1 << bits) * 4 * sizeof(Guchar));
     for (i = 0; i < (1 << bits); ++i) {
       for (j = 0; j < lookupComponents; ++j) {
-	lookup[i][j] = (uchar)(255.0 * (decodeLow[j] +
-					(double)i *
-					(decodeHigh[j] - decodeLow[j]) /
-					(double)((1 << bits) - 1)));
+	lookup[i][j] = (Guchar)(255.0 * (decodeLow[j] +
+					 (double)i *
+					 (decodeHigh[j] - decodeLow[j]) /
+					 (double)((1 << bits) - 1)));
       }
     }
   }
 
   return;
 
+ err3:
+  gfree(palette);
  err2:
   obj.free();
  err1:
-  ok = false;
+  ok = gFalse;
 }
 
 GfxColorSpace::~GfxColorSpace() {
-  sfree(lookup);
+  gfree(lookup);
 }
 
-void GfxColorSpace::getGray(int x[4], uchar *gray) {
-  uchar *p;
+void GfxColorSpace::getGray(Guchar x[4], Guchar *gray) {
+  Guchar *p;
 
   if (indexed) {
     p = lookup[x[0]];
-    switch (mode) {
-    case colorGray:
-      *gray = p[0];
-      break;
-    case colorCMYK:
-      *gray = 255 - (uchar)(p[3] - 0.299 * p[0] - 0.587 * p[1] - 0.114 * p[2]);
-      break;
-    case colorRGB:
-      *gray = (uchar)(0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]);
-      break;
-    }
+    *gray = (Guchar)(0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]);
   } else {
     switch (mode) {
     case colorGray:
       *gray = lookup[x[0]][0];
       break;
     case colorCMYK:
-      *gray = 255 - (uchar)(lookup[x[3]][3] - 0.299 * lookup[x[0]][0] -
-			    0.587 * lookup[x[1]][1] - 0.114 * lookup[x[2]][2]);
+      *gray = 255 - (Guchar)(lookup[x[3]][3] -
+			     0.299 * lookup[x[0]][0] -
+			     0.587 * lookup[x[1]][1] -
+			     0.114 * lookup[x[2]][2]);
       break;
     case colorRGB:
-      *gray = (uchar)(0.299 * lookup[x[0]][0] + 0.587 * lookup[x[1]][1] +
-		      0.114 * lookup[x[2]][2]);
+      *gray = (Guchar)(0.299 * lookup[x[0]][0] +
+		       0.587 * lookup[x[1]][1] +
+		       0.114 * lookup[x[2]][2]);
       break;
     }
   }
 }
 
-void GfxColorSpace::getCMYK(int x[4], uchar *c, uchar *y, uchar *m,
-			    uchar *k) {
-  uchar *p;
+void GfxColorSpace::getRGB(Guchar x[4], Guchar *r, Guchar *g, Guchar *b) {
+  Guchar *p;
+  int t;
 
   if (indexed) {
     p = lookup[x[0]];
-    switch (mode) {
-    case colorGray:
-      *c = *m = *y = 0;
-      *k = p[0];
-      break;
-    case colorCMYK:
-      *c = p[0];
-      *m = p[1];
-      *y = p[2];
-      *k = p[3];
-      break;
-    case colorRGB:
-      if (p[0] > p[1])
-	if (p[0] > p[2])
-	  *k = 255 - p[0];
-	else
-	  *k = 255 - p[2];
-      else if (p[1] > p[2])
-	*k = 255 - p[1];
-      else
-	*k = 255 - p[2];
-      *c = 255 - p[0] - *k;
-      *m = 255 - p[1] - *k;
-      *y = 255 - p[2] - *k;
-      break;
-    }
-  } else {
-    switch (mode) {
-    case colorGray:
-      *c = *m = *y = 0;
-      *k = lookup[x[0]][0];
-      break;
-    case colorCMYK:
-      *c = lookup[x[0]][0];
-      *m = lookup[x[1]][1];
-      *y = lookup[x[2]][2];
-      *k = lookup[x[3]][3];
-      break;
-    case colorRGB:
-      if (lookup[x[0]][0] > lookup[x[1]][1])
-	if (lookup[x[0]][0] > lookup[x[2]][2])
-	  *k = 255 - lookup[x[0]][0];
-	else
-	  *k = 255 - lookup[x[2]][2];
-      else if (lookup[x[1]][1] > lookup[x[2]][2])
-	*k = 255 - lookup[x[1]][1];
-      else
-	*k = 255 - lookup[x[2]][2];
-      *c = 255 - lookup[x[0]][0] - *k;
-      *m = 255 - lookup[x[1]][1] - *k;
-      *y = 255 - lookup[x[2]][2] - *k;
-      break;
-    }
-  }
-}
-
-void GfxColorSpace::getRGB(int x[4], uchar *r, uchar *g, uchar *b) {
-  uchar *p;
-
-  if (indexed) {
-    p = lookup[x[0]];
-    switch (mode) {
-    case colorGray:
-      *r = *g = *b = p[0];
-      break;
-    case colorCMYK:
-      *r = 255 - (p[0] + p[3]);
-      *g = 255 - (p[1] + p[3]);
-      *b = 255 - (p[2] + p[3]);
-      break;
-    case colorRGB:
-      *r = p[0];
-      *g = p[1];
-      *b = p[2];
-      break;
-    }
+    *r = p[0];
+    *g = p[1];
+    *b = p[2];
   } else {
     switch (mode) {
     case colorGray:
       *r = *g = *b = lookup[x[0]][0];
       break;
     case colorCMYK:
-      *r = 255 - (lookup[x[0]][0] + lookup[x[3]][3]);
-      *g = 255 - (lookup[x[1]][1] + lookup[x[3]][3]);
-      *b = 255 - (lookup[x[2]][2] + lookup[x[3]][3]);
+      t = lookup[x[0]][0] + lookup[x[3]][3];
+      *r = (t > 255) ? 0 : 255 - t;
+      t = lookup[x[1]][1] + lookup[x[3]][3];
+      *g = (t > 255) ? 0 : 255 - t;
+      t = lookup[x[2]][2] + lookup[x[3]][3];
+      *b = (t > 255) ? 0 : 255 - t;
       break;
     case colorRGB:
       *r = lookup[x[0]][0];
@@ -346,24 +268,24 @@ void GfxColorSpace::getRGB(int x[4], uchar *r, uchar *g, uchar *b) {
 
 GfxSubpath::GfxSubpath(double x1, double y1) {
   size = 16;
-  x = (double *)smalloc(size * sizeof(double));
-  y = (double *)smalloc(size * sizeof(double));
+  x = (double *)gmalloc(size * sizeof(double));
+  y = (double *)gmalloc(size * sizeof(double));
   n = 1;
   x[0] = x1;
   y[0] = y1;
 }
 
 GfxSubpath::~GfxSubpath() {
-  sfree(x);
-  sfree(y);
+  gfree(x);
+  gfree(y);
 }
 
 // Used for copy().
 GfxSubpath::GfxSubpath(double *x1, double *y1, int n1, int size1) {
   size = size1;
   n = n1;
-  x = (double *)smalloc(size * sizeof(double));
-  y = (double *)smalloc(size * sizeof(double));
+  x = (double *)gmalloc(size * sizeof(double));
+  y = (double *)gmalloc(size * sizeof(double));
   memcpy(x, x1, n * sizeof(double));
   memcpy(y, y1, n * sizeof(double));
 }
@@ -371,8 +293,8 @@ GfxSubpath::GfxSubpath(double *x1, double *y1, int n1, int size1) {
 void GfxSubpath::lineTo(double x1, double y1) {
   if (n >= size) {
     size += 16;
-    x = (double *)srealloc(x, size * sizeof(double));
-    y = (double *)srealloc(y, size * sizeof(double));
+    x = (double *)grealloc(x, size * sizeof(double));
+    y = (double *)grealloc(y, size * sizeof(double));
   }
   x[n] = x1;
   y[n] = y1;
@@ -382,7 +304,7 @@ void GfxSubpath::lineTo(double x1, double y1) {
 GfxPath::GfxPath() {
   size = 16;
   n = 0;
-  subpaths = (GfxSubpath **)smalloc(size * sizeof(GfxSubpath *));
+  subpaths = (GfxSubpath **)gmalloc(size * sizeof(GfxSubpath *));
 }
 
 GfxPath::~GfxPath() {
@@ -390,7 +312,7 @@ GfxPath::~GfxPath() {
 
   for (i = 0; i < n; ++i)
     delete subpaths[i];
-  sfree(subpaths);
+  gfree(subpaths);
 }
 
 // Used for copy().
@@ -399,7 +321,7 @@ GfxPath::GfxPath(GfxSubpath **subpaths1, int n1, int size1) {
 
   size = size1;
   n = n1;
-  subpaths = (GfxSubpath **)smalloc(size * sizeof(GfxSubpath *));
+  subpaths = (GfxSubpath **)gmalloc(size * sizeof(GfxSubpath *));
   for (i = 0; i < n; ++i)
     subpaths[i] = subpaths1[i]->copy();
 }
@@ -407,7 +329,7 @@ GfxPath::GfxPath(GfxSubpath **subpaths1, int n1, int size1) {
 void GfxPath::moveTo(double x, double y) {
   if (n >= size) {
     size += 16;
-    subpaths = (GfxSubpath **)srealloc(subpaths, size * sizeof(GfxSubpath *));
+    subpaths = (GfxSubpath **)grealloc(subpaths, size * sizeof(GfxSubpath *));
   }
   subpaths[n] = new GfxSubpath(x, y);
   ++n;
@@ -418,7 +340,7 @@ void GfxPath::moveTo(double x, double y) {
 //------------------------------------------------------------------------
 
 GfxState::GfxState(int dpi, int x1, int y1, int x2, int y2, int rotate,
-		   Boolean upsideDown) {
+		   GBool upsideDown) {
   double k;
 
   k = (double)dpi / 72.0;
@@ -482,6 +404,7 @@ GfxState::GfxState(int dpi, int x1, int y1, int x2, int y2, int rotate,
   horizScaling = 100;
   leading = 0;
   rise = 0;
+  render = 0;
 
   path = new GfxPath();
   curX = curY = 0;
@@ -491,7 +414,7 @@ GfxState::GfxState(int dpi, int x1, int y1, int x2, int y2, int rotate,
 }
 
 GfxState::~GfxState() {
-  sfree(lineDash);
+  gfree(lineDash);
   delete path;
   if (saved)
     delete saved;
@@ -501,7 +424,7 @@ GfxState::~GfxState() {
 GfxState::GfxState(GfxState *state) {
   memcpy(this, state, sizeof(GfxState));
   if (lineDashLength > 0) {
-    lineDash = (double *)smalloc(lineDashLength * sizeof(double));
+    lineDash = (double *)gmalloc(lineDashLength * sizeof(double));
     memcpy(lineDash, state->lineDash, lineDashLength * sizeof(double));
   }
   path = state->path->copy();
@@ -526,6 +449,14 @@ double GfxState::getTransformedFontSize() {
   return sqrt(x2 * x2 + y2 * y2);
 }
 
+void GfxState::getFontTransMat(double *m11, double *m12,
+			       double *m21, double *m22) {
+  *m11 = (textMat[0] * ctm[0] + textMat[1] * ctm[2]) * fontSize;
+  *m12 = (textMat[0] * ctm[1] + textMat[1] * ctm[3]) * fontSize;
+  *m21 = (textMat[2] * ctm[0] + textMat[3] * ctm[2]) * fontSize;
+  *m22 = (textMat[2] * ctm[1] + textMat[3] * ctm[3]) * fontSize;
+}
+
 void GfxState::concatCTM(double a, double b, double c,
 			 double d, double e, double f) {
   double a1 = ctm[0];
@@ -543,7 +474,7 @@ void GfxState::concatCTM(double a, double b, double c,
 
 void GfxState::setLineDash(double *dash, int length, double start) {
   if (lineDash)
-    sfree(lineDash);
+    gfree(lineDash);
   lineDash = dash;
   lineDashLength = length;
   lineDashStart = start;

@@ -9,34 +9,48 @@
 #ifndef LTKSCROLLBAR_H
 #define LTKSCROLLBAR_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
+#include <stddef.h>
 #include <X11/Xlib.h>
-#include <stypes.h>
+#include <gtypes.h>
 #include <LTKWidget.h>
 
-class LTKScrollbar;
-typedef void (*LTKScrollbarCbk)(LTKScrollbar *scrollbar, int widgetNum,
-				int value);
+//------------------------------------------------------------------------
+// LTKScrollbar
+//------------------------------------------------------------------------
 
 class LTKScrollbar: public LTKWidget {
 public:
 
-  LTKScrollbar(char *name1, Boolean vertical1, int minPos1, int maxPos1,
-	       LTKScrollbarCbk moveCbk1, int widgetNum1);
+  //---------- constructors and destructor ----------
+
+  LTKScrollbar(char *name1, int widgetNum1,
+	       GBool vertical1, int minPos1, int maxPos1,
+	       LTKIntValCbk moveCbk1);
 
   virtual LTKWidget *copy() { return new LTKScrollbar(this); }
 
   virtual long getEventMask();
 
-  virtual void layout1();
-
-  virtual void redraw();
+  //---------- special access ----------
 
   void setLimits(int minPos1, int maxPos1);
   void setPos(int pos1, int size1);
   int getPos() { return pos; }
   void setScrollDelta(int scrollDelta1) { scrollDelta = scrollDelta1; }
+
+  //---------- layout ----------
+
+  virtual void layout1();
+
+  //---------- drawing ----------
+
+  virtual void redraw();
+
+  //---------- callbacks and event handlers ----------
 
   virtual void buttonPress(int mx, int my, int button);
   virtual void buttonRelease(int mx, int my, int button);
@@ -51,20 +65,20 @@ protected:
   void drawSlider(int pos1, Bool on);
   void doScroll();
 
-  Boolean vertical;		// orientation: 1=vertical, 0=horizontal
+  GBool vertical;		// orientation: 1=vertical, 0=horizontal
   int minPos, maxPos;		// min and max positions
 				//   (minPos <= pos <= maxPos - size + 1)
-  LTKScrollbarCbk moveCbk;	// slider-move callback
-  int widgetNum;		// widget number (for callback)
 
   int pos, size;		// slider position and size
   int scrollDelta;		// scroll amount
   int pixelPos, pixelSize;	// slider pos and size in pixels
   int pushPos;			// slider pos when pressed
   int pushPixel;		// mouse coord when pressed
-  Boolean sliderPressed;	// mouse has been pressed on slider
-  Boolean upPressed;		// up/left button is pressed
-  Boolean downPressed;		// down/right button is pressed
+  GBool sliderPressed;		// mouse has been pressed on slider
+  GBool upPressed;		// up/left button is pressed
+  GBool downPressed;		// down/right button is pressed
+
+  LTKIntValCbk moveCbk;		// slider-move callback
 };
 
 #endif

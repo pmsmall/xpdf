@@ -9,13 +9,13 @@
 #ifndef FLAGS_H
 #define FLAGS_H
 
+// Size of RGB color cube.
+extern int rgbCubeSize;
+
 // Print commands as they're executed.
-extern Boolean printCommands;
+extern GBool printCommands;
 
 // Send error messages to /dev/tty instead of stderr.
-extern Boolean errorsToTTY;
-
-// Print usage information.
-extern Boolean printHelp;
+extern GBool errorsToTTY;
 
 #endif

@@ -6,11 +6,14 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
 #include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 #include <ctype.h>
-#include <mem.h>
 #include "Lexer.h"
 #include "Error.h"
 
@@ -18,9 +21,10 @@
 // Lexer
 //------------------------------------------------------------------------
 
-Lexer::Lexer(Stream *str1, Boolean freeStream1) {
+Lexer::Lexer(Stream *str1, GBool freeStream1) {
   str = str1;
   buf = EOF;
+  cr = lf = gFalse;
   freeStream = freeStream1;
   str->reset();
 }
@@ -34,23 +38,23 @@ Object *Lexer::getObj(Object *obj) {
   char token[maxTokenLen+1];
   char *p;
   int n;
-  Boolean comment;
-  Boolean real;
+  GBool comment;
+  GBool real;
   int x;
-  Boolean next;
+  GBool next;
 
   // skip whitespace and comments
   if (buf == EOF)
     buf = getChar();
-  comment = false;
+  comment = gFalse;
   while (1) {
     if (!isspace(buf)) {
       if (!comment)
 	break;
       if (buf == '%')
-	comment = true;
+	comment = gTrue;
       else if (buf == '\n')
-	comment = false;
+	comment = gFalse;
       else if (buf == EOF)
 	break;
     }
@@ -67,13 +71,13 @@ Object *Lexer::getObj(Object *obj) {
 
   // number
   if ((buf >= '0' && buf <= '9') || buf == '-' || buf == '.') {
-    real = false;
+    real = gFalse;
     do {
       if (n < maxTokenLen)
 	*p++ = buf;
       ++n;
       if (buf == '.')
-	real = true;
+	real = gTrue;
       buf = getChar();
     } while ((buf >= '0' && buf <= '9') || (!real && buf == '.'));
     *p = '\0';
@@ -86,7 +90,7 @@ Object *Lexer::getObj(Object *obj) {
   } else if (buf == '(') {
     buf = getChar();
     while (buf != ')' && buf != EOF) {
-      next = true;
+      next = gTrue;
       if (buf == '\\') {
 	buf = getChar();
 	switch (buf) {
@@ -146,9 +150,9 @@ Object *Lexer::getObj(Object *obj) {
 	    if (buf >= '0' && buf <= '7')
 	      x = (x << 3) + (buf - '0');
 	    else
-	      next = false;
+	      next = gFalse;
 	  } else
-	    next = false;
+	    next = gFalse;
 	  if (n < maxTokenLen)
 	    *p++ = (char)x;
 	  ++n;
@@ -174,7 +178,7 @@ Object *Lexer::getObj(Object *obj) {
       error(getPos(), "End of file inside string");
     else
       buf = EOF;  // kill the closing paren
-    obj->initString(token);
+    obj->initString(token, p - token);
 
   // name
   } else if (buf == '/') {
@@ -256,7 +260,8 @@ Object *Lexer::getObj(Object *obj) {
 	}
 	buf = getChar();
       }
-      obj->initString(token);
+      *p = '\0';
+      obj->initString(token, p - token);
     }
 
   // dict punctuation
@@ -284,9 +289,11 @@ Object *Lexer::getObj(Object *obj) {
 	     buf != '{' && buf != '}' && buf != EOF);
     *p = '\0';
     if (!strcmp(token, "true"))
-      obj->initBool(true);
+      obj->initBool(gTrue);
     else if (!strcmp(token, "false"))
-      obj->initBool(false);
+      obj->initBool(gFalse);
+    else if (!strcmp(token, "null"))
+      obj->initNull();
     else
       obj->initCmd(token);
 
@@ -315,16 +322,16 @@ int Lexer::getChar() {
  start:
   c = str->getChar();
   if (c != '\n' && c != '\r') {
-    lf = cr = false;
+    lf = cr = gFalse;
   } else {
     if (c == '\n') {
-      lf = true;
+      lf = gTrue;
     } else {
-      cr = true;
+      cr = gTrue;
       c = '\n';
     }
     if (lf && cr) {
-      lf = cr = false;
+      lf = cr = gFalse;
       goto start;
     }
   }

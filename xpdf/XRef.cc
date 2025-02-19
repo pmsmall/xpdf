@@ -6,15 +6,21 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
 #include <stdlib.h>
-#include <mem.h>
+#include <stddef.h>
+#include <string.h>
+#include <ctype.h>
+#include <gmem.h>
 #include "Object.h"
 #include "Stream.h"
 #include "Lexer.h"
 #include "Parser.h"
 #include "Dict.h"
+#include "Error.h"
 #include "XRef.h"
 
 //------------------------------------------------------------------------
@@ -31,22 +37,23 @@ XRef::XRef(Stream *str) {
   int pos;
   int i;
 
-  ok = true;
+  ok = gTrue;
   entries = NULL;
+  encrypted = gFalse;
   file = str->getFile();
   pos = readTrailer(str);
   if (pos == 0) {
-    ok = false;
+    ok = gFalse;
     return;
   }
-  entries = (XRefEntry *)smalloc(size * sizeof(XRefEntry));
+  entries = (XRefEntry *)gmalloc(size * sizeof(XRefEntry));
   for (i = 0; i < size; ++i)
     entries[i].offset = -1;
   while (readXRef(str, &pos)) ;
 }
 
 XRef::~XRef() {
-  sfree(entries);
+  gfree(entries);
 }
 
 // Read startxref position, xref table size, and root.  Returns
@@ -57,6 +64,7 @@ int XRef::readTrailer(Stream *str) {
   Dict *dict;
   char buf[256];
   int pos;
+  char *p;
   int i;
 
   // read last 255 bytes
@@ -72,7 +80,8 @@ int XRef::readTrailer(Stream *str) {
   }
   if (i < 0)
     return 0;
-  pos = atoi(&buf[i+10]);
+  for (p = &buf[i+9]; isspace(*p); ++p) ;
+  pos = atoi(p);
 
   // read trailer dict
   for (--i; i >= 0; --i) {
@@ -99,6 +108,9 @@ int XRef::readTrailer(Stream *str) {
       pos = 0;
     }
     obj2.free();
+    dict->lookup("Encrypt", &obj2);
+    encrypted = !obj2.isNull();
+    obj2.free();
   } else {
     pos = 0;
   }
@@ -110,11 +122,11 @@ int XRef::readTrailer(Stream *str) {
 }
 
 // Read an xref table and the prev pointer from the trailer.
-Boolean XRef::readXRef(Stream *str, int *pos) {
+GBool XRef::readXRef(Stream *str, int *pos) {
   Parser *parser;
   Object obj, obj2;
   int first, n, i;
-  Boolean more;
+  GBool more;
 
   // make a parser
   obj.initNull();
@@ -139,24 +151,33 @@ Boolean XRef::readXRef(Stream *str, int *pos) {
     n = obj.getInt();
     obj.free();
     for (i = first; i < first + n; ++i) {
-      parser->getObj(&obj);
-      if (!obj.isInt())
-	goto err;
-      entries[i].offset = obj.getInt();
-      obj.free();
-      parser->getObj(&obj);
-      if (!obj.isInt())
-	goto err;
-      entries[i].gen = obj.getInt();
-      obj.free();
-      parser->getObj(&obj);
-      if (obj.isCmd("n"))
-	entries[i].used = true;
-      else if (obj.isCmd("f"))
-	entries[i].used = false;
-      else
-	goto err;
-      obj.free();
+      if (entries[i].offset < 0) {
+	parser->getObj(&obj);
+	if (!obj.isInt())
+	  goto err;
+	entries[i].offset = obj.getInt();
+	obj.free();
+	parser->getObj(&obj);
+	if (!obj.isInt())
+	  goto err;
+	entries[i].gen = obj.getInt();
+	obj.free();
+	parser->getObj(&obj);
+	if (obj.isCmd("n"))
+	  entries[i].used = gTrue;
+	else if (obj.isCmd("f"))
+	  entries[i].used = gFalse;
+	else
+	  goto err;
+	obj.free();
+      } else {
+	parser->getObj(&obj);
+	obj.free();
+	parser->getObj(&obj);
+	obj.free();
+	parser->getObj(&obj);
+	obj.free();
+      }
     }
     parser->getObj(&obj);
   }
@@ -169,9 +190,9 @@ Boolean XRef::readXRef(Stream *str, int *pos) {
   obj.getDict()->lookup("Prev", &obj2);
   if (obj2.isInt()) {
     *pos = obj2.getInt();
-    more = true;
+    more = gTrue;
   } else {
-    more = false;
+    more = gFalse;
   }
   obj.free();
   obj2.free();
@@ -180,10 +201,23 @@ Boolean XRef::readXRef(Stream *str, int *pos) {
   return more;
 
  err:
-  ok = false;
+  ok = gFalse;
   obj.free();
   delete parser;
-  return false;
+  return gFalse;
+}
+
+GBool XRef::checkEncrypted() {
+  if (encrypted) {
+    error(0, "PDF file is encrypted and cannot be displayed");
+    error(0, "*	Please send email to devsup-person@adobe.com and ask");
+    error(0, "*	them to prove that PDF is truly an open standard by");
+    error(0, "*	releasing the decryption specs to developers.  Also,");
+    error(0, "*	please send email to the person responsible for this");
+    error(0, "*	file (webmaster@... might be a good place) and ask");
+    error(0, "*	them to stop using encrypted PDF files.");
+  }
+  return encrypted;
 }
 
 Object *XRef::fetch(int num, int gen, Object *obj) {
@@ -212,15 +246,4 @@ Object *XRef::fetch(int num, int gen, Object *obj) {
     obj->initNull();
   }
   return obj;
-}
-
-void XRef::print(FILE *f) {
-  int i;
-
-  fprintf(f, "xref\n");
-  fprintf(f, "%d %d\n", 0, size);
-  for (i = 0; i < size; ++i) {
-    fprintf(f, "%4d: %010d %05d %c \n", i,
-	    entries[i].offset, entries[i].gen, entries[i].used ? 'n' : 'f');
-  }
 }

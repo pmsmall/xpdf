@@ -9,15 +9,16 @@
 #ifndef PAGE_H
 #define PAGE_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
-#include <stdio.h>
 #include "Object.h"
 
 class Dict;
 class XRef;
 class OutputDev;
-class Gfx;
+class PSOutput;
 
 //------------------------------------------------------------------------
 // PageAttrs
@@ -52,31 +53,40 @@ class Page {
 public:
 
   // Constructor.
-  Page(Dict *pageDict, PageAttrs *attrs1, int pageNum);
+  Page(int num1, Dict *pageDict, PageAttrs *attrs1);
 
   // Destructor.
   ~Page();
 
   // Is page valid?
-  Boolean isOk() { return ok; }
+  GBool isOk() { return ok; }
 
   // Get page size.
   int getWidth() { return attrs->getX2() - attrs->getX1(); }
   int getHeight() { return attrs->getY2() - attrs->getY1(); }
 
+  // Get font dictionary.
+  Dict *getFontDict()
+    { return fontDict.isDict() ? fontDict.getDict() : (Dict *)NULL; }
+
+  // Get annotations array.
+  Object *getAnnots(Object *obj) { return annots.fetch(obj); }
+
   // Display a page.
   void display(OutputDev *out, int dpi, int rotate);
 
-  // Output.
-  void print(FILE *f = stdout);
+  // Generate PostScript for a page.
+  void genPostScript(PSOutput *psOut, int dpi, int rotate);
 
 private:
 
+  int num;			// page number
   PageAttrs *attrs;		// page attributes
   Object fontDict;		// font dictionary
   Object xObjDict;		// XObject dictionary
+  Object annots;		// annotations array
   Object contents;		// page contents
-  Boolean ok;			// true if page is valid
+  GBool ok;			// true if page is valid
 };
 
 #endif

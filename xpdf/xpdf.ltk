@@ -10,39 +10,39 @@
 # main window
 #------------------------------------------------------------------------
 
-Window(func:makeWindow title:"xpdf" keyCbk:keyPress) {
+Window(func:makeWindow title:"xpdf") {
   Box(x:1 y:2 xfill:1 yfill:1) {
 
     # canvas and scrollbars
     Box(x:2 y:2 xfill:1 yfill:1) {
       Box1(xfill:1 yfill:1 sunken) {
-        ScrollingCanvas(name:"canvas" w:100 h:100 layout:layoutCanvasCbk)
+        ScrollingCanvas(name:"canvas" w:100 h:100)
       }
       Box1(yfill:1) {
-        Scrollbar(name:"vScrollbar" vert min:0 max:100 cbk:scrollVertCbk)
+        Scrollbar(name:"vScrollbar" vert min:0 max:100 move:&scrollVertCbk)
       }
       Box1(xfill:1) {
-        Scrollbar(name:"hScrollbar" horiz min:0 max:100 cbk:scrollHorizCbk)
+        Scrollbar(name:"hScrollbar" horiz min:0 max:100 move:&scrollHorizCbk)
       }
       Box1() { Empty() }
     }
 
     # buttons, page number, etc.
-    Box(x:12 y:1 xfill:1) {
+    Box(x:14 y:1 xfill:1) {
       Box1() {
         IconButton(bitmap:leftArrow_bits w:leftArrow_width
-                   h:leftArrow_height cbk:prevPageCbk)
+                   h:leftArrow_height press:&prevPageCbk)
       }
       Box1() {
         IconButton(bitmap:rightArrow_bits w:rightArrow_width
-                   h:rightArrow_height cbk:nextPageCbk)
+                   h:rightArrow_height press:&nextPageCbk)
       }
       Box1() {
         Label(text:"Page"
               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
       }
       Box1(sunken left:4 right:4) {
-        TextIn(name:"pageNum" length:6 cbk:pageNumCbk
+        TextIn(name:"pageNum" mw:6 done:&pageNumCbk
                font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
       }
       Box1() {
@@ -51,26 +51,65 @@ Window(func:makeWindow title:"xpdf" keyCbk:keyPress) {
       }
       Box1() {
         IconButton(bitmap:zoomIn_bits w:zoomIn_width
-                   h:zoomIn_height cbk:zoomInCbk)
+                   h:zoomIn_height press:&zoomInCbk)
       }
       Box1() {
         IconButton(bitmap:zoomOut_bits w:zoomOut_width
-                   h:zoomOut_height cbk:zoomOutCbk)
+                   h:zoomOut_height press:&zoomOutCbk)
       }
       Box1() {
         IconButton(bitmap:rotateCW_bits w:rotateCW_width
-                   h:rotateCW_height cbk:rotateCWCbk)
+                   h:rotateCW_height press:&rotateCWCbk)
       }
       Box1() {
         IconButton(bitmap:rotateCCW_bits w:rotateCCW_width
-                   h:rotateCCW_height cbk:rotateCCWCbk)
+                   h:rotateCCW_height press:&rotateCCWCbk)
       }
       Box1(xfill:1) { Empty() }
       Box1() {
-        IconButton(bitmap:about_bits w:about_width h:about_height
-                   cbk:aboutCbk)
+        IconButton(bitmap:postscript_bits w:postscript_width
+                   h:postscript_height press:&postScriptCbk)
       }
-      Box1() { Button(label:"Quit" cbk:quitCbk) }
+      Box1() {
+        IconButton(bitmap:about_bits w:about_width h:about_height
+                   press:&aboutCbk)
+      }
+      Box1(xfill:1) { Empty() }
+      Box1() { Button(label:"Quit" press:&quitCbk) }
+    }
+  }
+}
+
+#------------------------------------------------------------------------
+# PostScript output dialog
+#------------------------------------------------------------------------
+
+Window(func:makePostScriptDialog dialog:gTrue
+       title:"xpdf: PostScript output") {
+  Box(x:1 y:3) {
+    Box(x:4 y:1) {
+      Box1() { Label(text:"Pages:") }
+      Box1(sunken) {
+        TextIn(name:"firstPage" mw:6 tab:"lastPage"
+               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+      }
+      Box1() { Label(text:"to") }
+      Box1(sunken) {
+        TextIn(name:"lastPage" mw:6 tab:"fileName"
+               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+      }
+    }
+    Box(x:2 y:1) {
+      Box1() { Label(text:"File:") }
+      Box1(sunken xfill:1) {
+        TextIn(name:"fileName" mw:32
+               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+      }
+    }
+    Box(x:3 y:1 top:8) {
+      Box1() { Button(label:"Ok" press:&psButtonCbk num:1) }
+      Box1(xfill:1) { Empty() }
+      Box1() { Button(label:"Cancel" press:&psButtonCbk num:0) }
     }
   }
 }
@@ -110,7 +149,7 @@ Window(func:makeAboutWindow title:"About xpdf") {
     }
     Box(x:2 y:1) {
       Box1(xfill:1) { Empty() }
-      Box1() { Button(label:"Close" cbk:closeAboutCbk) }
+      Box1() { Button(label:"Close" press:&closeAboutCbk) }
     }
   }
 }

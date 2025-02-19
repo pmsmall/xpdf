@@ -1,6 +1,6 @@
 //========================================================================
 //
-// Stream.CCITT.h
+// Stream-CCITT.h
 //
 // Tables for CCITT Fax decoding.
 //

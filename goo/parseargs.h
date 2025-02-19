@@ -13,20 +13,26 @@
 extern "C" {
 #endif
 
-#include <stypes.h>
+#include <gtypes.h>
 
 /*
  * Argument kinds.
  */
 typedef enum {
   argFlag,			/* flag (present / not-present) */
-				/*   [val: Boolean *] */
-  argInt,			/* integer arg */
+				/*   [val: GBool *]             */
+  argInt,			/* integer arg    */
 				/*   [val: int *] */
   argFP,			/* floating point arg */
-				/*   [val: double *] */
-  argString			/* string arg */
+				/*   [val: double *]  */
+  argString,			/* string arg      */
 				/*   [val: char *] */
+  /* dummy entries -- these show up in the usage listing only; */
+  /* useful for X args, for example                            */
+  argFlagDummy,
+  argIntDummy,
+  argFPDummy,
+  argStringDummy
 } ArgKind;
 
 /*
@@ -43,9 +49,9 @@ typedef struct {
 /*
  * Parse command line.  Removes all args which are found in the arg
  * descriptor list <args>.  Stops parsing if "--" is found (and removes
- * it).  Returns false if there was an error.
+ * it).  Returns gFalse if there was an error.
  */
-extern Boolean parseArgs(ArgDesc *args, int *argc, char *argv[]);
+extern GBool parseArgs(ArgDesc *args, int *argc, char *argv[]);
 
 /*
  * Print usage message, based on arg descriptor list.
@@ -55,8 +61,8 @@ extern void printUsage(char *program, char *otherArgs, ArgDesc *args);
 /*
  * Check if a string is a valid integer or floating point number.
  */
-extern Boolean isInt(char *s);
-extern Boolean isFP(char *s);
+extern GBool isInt(char *s);
+extern GBool isFP(char *s);
 
 #ifdef __cplusplus
 }

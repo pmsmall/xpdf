@@ -6,8 +6,11 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
+#include <stddef.h>
 #include <LTKBorder.h>
 
 unsigned long ltkGetBrightColor(Display *display, int screenNum,

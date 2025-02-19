@@ -1,16 +1,19 @@
 //========================================================================
 //
-// Gfx.h
+// Gfx.cc
 //
 // Copyright 1996 Derek B. Noonburg
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
 #include <stdio.h>
+#include <stddef.h>
 #include <string.h>
-#include <mem.h>
+#include <gmem.h>
 #include <cover.h>
 #include "Object.h"
 #include "Array.h"
@@ -21,6 +24,7 @@
 #include "GfxFont.h"
 #include "GfxState.h"
 #include "OutputDev.h"
+#include "PSOutput.h"
 #include "Flags.h"
 #include "Error.h"
 #include "Gfx.h"
@@ -29,85 +33,125 @@
 // Operator table
 //------------------------------------------------------------------------
 
-#define maxArgs 8
-
-struct Operator {
-  char name[4];
-  int numArgs;
-  TchkType tchk[maxArgs];
-  void (Gfx::*func)(Object args[]);
-};
-
 Operator Gfx::opTab[] = {
   {"\"", 3, {tchkNum,    tchkNum,    tchkString},
-                                      &Gfx::opMoveSetShowText},
-  {"'",  1, {tchkString},             &Gfx::opMoveShowText},
-  {"B",  0, {},                       &Gfx::opFillStroke},
-  {"B*", 0, {},                       &Gfx::opEOFillStroke},
-  {"BI", 0, {},                       &Gfx::opBeginImage},
-  {"BT", 0, {},                       &Gfx::opBeginText},
-  {"Do", 1, {tchkName},               &Gfx::opXObject},
-  {"EI", 0, {},                       &Gfx::opEndImage},
-  {"ET", 0, {},                       &Gfx::opEndText},
-  {"F",  0, {},                       &Gfx::opFill},
-  {"G",  1, {tchkNum},                &Gfx::opSetStrokeGray},
-  {"ID", 0, {},                       &Gfx::opImageData},
-  {"J",  1, {tchkInt},                &Gfx::opSetLineCap},
+         &Gfx::opMoveSetShowText,    &Gfx::psMoveSetShowText},
+  {"'",  1, {tchkString},
+         &Gfx::opMoveShowText,       &Gfx::psMoveShowText},
+  {"B",  0, {tchkNone},
+         &Gfx::opFillStroke,         &Gfx::psFillStroke},
+  {"B*", 0, {tchkNone},
+         &Gfx::opEOFillStroke,       &Gfx::psEOFillStroke},
+  {"BI", 0, {tchkNone},
+         &Gfx::opBeginImage,         &Gfx::psBeginImage},
+  {"BT", 0, {tchkNone},
+         &Gfx::opBeginText,          &Gfx::psBeginText},
+  {"Do", 1, {tchkName},
+         &Gfx::opXObject,            &Gfx::psXObject},
+  {"EI", 0, {tchkNone},
+         &Gfx::opEndImage,           &Gfx::psEndImage},
+  {"ET", 0, {tchkNone},
+         &Gfx::opEndText,            &Gfx::psEndText},
+  {"F",  0, {tchkNone},
+         &Gfx::opFill,               &Gfx::psFill},
+  {"G",  1, {tchkNum},
+         &Gfx::opSetStrokeGray,      &Gfx::psSetStrokeGray},
+  {"ID", 0, {tchkNone},
+         &Gfx::opImageData,          &Gfx::psImageData},
+  {"J",  1, {tchkInt},
+         &Gfx::opSetLineCap,         &Gfx::psSetLineCap},
   {"K",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-                                      &Gfx::opSetStrokeCMYKColor},
-  {"M",  1, {tchkNum},                &Gfx::opSetMiterLimit},
-  {"Q",  0, {},                       &Gfx::opRestore},
+         &Gfx::opSetStrokeCMYKColor, &Gfx::psSetStrokeCMYKColor},
+  {"M",  1, {tchkNum},
+         &Gfx::opSetMiterLimit,      &Gfx::psSetMiterLimit},
+  {"Q",  0, {tchkNone},
+         &Gfx::opRestore,            &Gfx::psRestore},
   {"RG", 3, {tchkNum,    tchkNum,    tchkNum},
-                                      &Gfx::opSetStrokeRGBColor},
-  {"S",  0, {},                       &Gfx::opStroke},
-  {"T*", 0, {},                       &Gfx::opTextNextLine},
-  {"TD", 2, {tchkNum,    tchkNum},    &Gfx::opTextMoveSet},
-  {"TJ", 1, {tchkArray},              &Gfx::opShowSpaceText},
-  {"TL", 1, {tchkNum},                &Gfx::opSetTextLeading},
-  {"Tc", 1, {tchkNum},                &Gfx::opSetCharSpacing},
-  {"Td", 2, {tchkNum,    tchkNum},    &Gfx::opTextMove},
-  {"Tf", 2, {tchkName,   tchkNum},    &Gfx::opSetFont},
-  {"Tj", 1, {tchkString},             &Gfx::opShowText},
+         &Gfx::opSetStrokeRGBColor,  &Gfx::psSetStrokeRGBColor},
+  {"S",  0, {tchkNone},
+         &Gfx::opStroke,             &Gfx::psStroke},
+  {"T*", 0, {tchkNone},
+         &Gfx::opTextNextLine,       &Gfx::psTextNextLine},
+  {"TD", 2, {tchkNum,    tchkNum},
+         &Gfx::opTextMoveSet,        &Gfx::psTextMoveSet},
+  {"TJ", 1, {tchkArray},
+         &Gfx::opShowSpaceText,      &Gfx::psShowSpaceText},
+  {"TL", 1, {tchkNum},
+         &Gfx::opSetTextLeading,     &Gfx::psSetTextLeading},
+  {"Tc", 1, {tchkNum},
+         &Gfx::opSetCharSpacing,     &Gfx::psSetCharSpacing},
+  {"Td", 2, {tchkNum,    tchkNum},
+         &Gfx::opTextMove,           &Gfx::psTextMove},
+  {"Tf", 2, {tchkName,   tchkNum},
+         &Gfx::opSetFont,            &Gfx::psSetFont},
+  {"Tj", 1, {tchkString},
+         &Gfx::opShowText,           &Gfx::psShowText},
   {"Tm", 6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
-	     tchkNum,    tchkNum},    &Gfx::opSetTextMatrix},
-  {"Tr", 1, {tchkInt},                &Gfx::opSetTextRender},
-  {"Ts", 1, {tchkNum},                &Gfx::opSetTextRise},
-  {"Tw", 1, {tchkNum},                &Gfx::opSetWordSpacing},
-  {"Tz", 1, {tchkNum},                &Gfx::opSetHorizScaling},
-  {"W",  0, {},                       &Gfx::opClip},
-  {"W*", 0, {},                       &Gfx::opEOClip},
-  {"b",  0, {},                       &Gfx::opCloseFillStroke},
-  {"b*", 0, {},                       &Gfx::opCloseEOFillStroke},
+	     tchkNum,    tchkNum},
+         &Gfx::opSetTextMatrix,      &Gfx::psSetTextMatrix},
+  {"Tr", 1, {tchkInt},
+         &Gfx::opSetTextRender,      &Gfx::psSetTextRender},
+  {"Ts", 1, {tchkNum},
+         &Gfx::opSetTextRise,        &Gfx::psSetTextRise},
+  {"Tw", 1, {tchkNum},
+         &Gfx::opSetWordSpacing,     &Gfx::psSetWordSpacing},
+  {"Tz", 1, {tchkNum},
+         &Gfx::opSetHorizScaling,    &Gfx::psSetHorizScaling},
+  {"W",  0, {tchkNone},
+         &Gfx::opClip,               &Gfx::psClip},
+  {"W*", 0, {tchkNone},
+         &Gfx::opEOClip,             &Gfx::psEOClip},
+  {"b",  0, {tchkNone},
+         &Gfx::opCloseFillStroke,    &Gfx::psCloseFillStroke},
+  {"b*", 0, {tchkNone},
+         &Gfx::opCloseEOFillStroke,  &Gfx::psCloseEOFillStroke},
   {"c",  6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
-	     tchkNum,    tchkNum},    &Gfx::opCurveTo},
+	     tchkNum,    tchkNum},
+         &Gfx::opCurveTo,            &Gfx::psCurveTo},
   {"cm", 6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
-	     tchkNum,    tchkNum},    &Gfx::opConcat},
-  {"d",  2, {tchkArray,  tchkNum},    &Gfx::opSetDash},
-  {"d0", 2, {tchkNum,    tchkNum},    &Gfx::opSetCharWidth},
+	     tchkNum,    tchkNum},
+         &Gfx::opConcat,             &Gfx::psConcat},
+  {"d",  2, {tchkArray,  tchkNum},
+         &Gfx::opSetDash,            &Gfx::psSetDash},
+  {"d0", 2, {tchkNum,    tchkNum},
+         &Gfx::opSetCharWidth,       &Gfx::psSetCharWidth},
   {"d1", 2, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
-	     tchkNum,    tchkNum},    &Gfx::opSetCacheDevice},
-  {"f",  0, {},                       &Gfx::opFill},
-  {"f*", 0, {},                       &Gfx::opEOFill},
-  {"g",  1, {tchkNum},                &Gfx::opSetFillGray},
-  {"h",  0, {},                       &Gfx::opClosePath},
-  {"i",  1, {tchkNum},                &Gfx::opSetFlat},
-  {"j",  1, {tchkInt},                &Gfx::opSetLineJoin},
+	     tchkNum,    tchkNum},
+         &Gfx::opSetCacheDevice,     &Gfx::psSetCacheDevice},
+  {"f",  0, {tchkNone},
+         &Gfx::opFill,               &Gfx::psFill},
+  {"f*", 0, {tchkNone},
+         &Gfx::opEOFill,             &Gfx::psEOFill},
+  {"g",  1, {tchkNum},
+         &Gfx::opSetFillGray,        &Gfx::psSetFillGray},
+  {"h",  0, {tchkNone},
+         &Gfx::opClosePath,          &Gfx::psClosePath},
+  {"i",  1, {tchkNum},
+         &Gfx::opSetFlat,            &Gfx::psSetFlat},
+  {"j",  1, {tchkInt},
+         &Gfx::opSetLineJoin,        &Gfx::psSetLineJoin},
   {"k",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-                                      &Gfx::opSetFillCMYKColor},
-  {"l",  2, {tchkNum,    tchkNum},    &Gfx::opLineTo},
-  {"m",  2, {tchkNum,    tchkNum},    &Gfx::opMoveTo},
-  {"n",  0, {},                       &Gfx::opEndPath},
-  {"q",  0, {},                       &Gfx::opSave},
+         &Gfx::opSetFillCMYKColor,   &Gfx::psSetFillCMYKColor},
+  {"l",  2, {tchkNum,    tchkNum},
+         &Gfx::opLineTo,             &Gfx::psLineTo},
+  {"m",  2, {tchkNum,    tchkNum},
+         &Gfx::opMoveTo,             &Gfx::psMoveTo},
+  {"n",  0, {tchkNone},
+         &Gfx::opEndPath,            &Gfx::psEndPath},
+  {"q",  0, {tchkNone},
+         &Gfx::opSave,               &Gfx::psSave},
   {"re", 4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-                                      &Gfx::opRectangle},
+         &Gfx::opRectangle,          &Gfx::psRectangle},
   {"rg", 3, {tchkNum,    tchkNum,    tchkNum},
-                                      &Gfx::opSetFillRGBColor},
-  {"s",  0, {},                       &Gfx::opCloseStroke},
+         &Gfx::opSetFillRGBColor,    &Gfx::psSetFillRGBColor},
+  {"s",  0, {tchkNone},
+         &Gfx::opCloseStroke,        &Gfx::psCloseStroke},
   {"v",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-                                      &Gfx::opCurveTo1},
-  {"w",  1, {tchkNum},                &Gfx::opSetLineWidth},
+         &Gfx::opCurveTo1,           &Gfx::psCurveTo1},
+  {"w",  1, {tchkNum},
+         &Gfx::opSetLineWidth,       &Gfx::psSetLineWidth},
   {"y",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-                                      &Gfx::opCurveTo2}
+         &Gfx::opCurveTo2,           &Gfx::psCurveTo2}
 };
 
 #define numOps (sizeof(opTab) / sizeof(Operator))
@@ -119,22 +163,49 @@ Operator Gfx::opTab[] = {
 Gfx::Gfx(OutputDev *out1, Dict *fontDict, Dict *xObjDict1,
 	 int dpi, int x1, int y1, int x2, int y2, int rotate) {
   out = out1;
+  psOut = NULL;
   if (fontDict)
     fonts = new GfxFontDict(fontDict);
   else
     fonts = NULL;
   xObjDict = xObjDict1;
   state = new GfxState(dpi, x1, y1, x2, y2, rotate, out->upsideDown());
-  fontChanged = false;
+  fontChanged = gFalse;
+  clip = clipNone;
+  psFont = NULL;
+  psFontSize = 1;
+  psGfxFont = NULL;
   out->updateAll(state);
   out->setPageSize(state->getPageWidth(), state->getPageHeight());
+  out->setCTM(state->getCTM());
   out->clear();
+}
+
+Gfx::Gfx(PSOutput *psOut1, Dict *fontDict, Dict *xObjDict1,
+	 int dpi, int x1, int y1, int x2, int y2, int rotate) {
+  psOut = psOut1;
+  out = NULL;
+  //~ the fonts are needed to adjust for imperfect match with PS fonts
+  if (fontDict)
+    fonts = new GfxFontDict(fontDict);
+  else
+    fonts = NULL;
+  xObjDict = xObjDict1;
+  state = NULL;
+  fontChanged = gFalse;
+  clip = clipNone;
+  psFont = NULL;
+  psFontSize = 1;
+  psGfxFont = NULL;
 }
 
 Gfx::~Gfx() {
   if (fonts)
     delete fonts;
-  delete state;
+  if (state)
+    delete state;
+  if (psFont)
+    delete psFont;
 }
 
 void Gfx::display(Array *a1) {
@@ -147,7 +218,7 @@ void Gfx::display(Array *a1) {
 
 void Gfx::display(Stream *str1) {
   cover("Gfx::display(Stream)");
-  parser = new Parser(new Lexer(str1, false));
+  parser = new Parser(new Lexer(str1, gFalse));
   a = NULL;
   go();
 }
@@ -194,7 +265,10 @@ void Gfx::go() {
       args[j].free();
   }
   done();
-  out->dump();
+  if (out)
+    out->dump();
+  if (printCommands)
+    fflush(stdout);
 }
 
 void Gfx::execOp(Object *cmd, Object args[], int numArgs) {
@@ -223,7 +297,10 @@ void Gfx::execOp(Object *cmd, Object args[], int numArgs) {
   }
 
   // do it
-  (this->*op->func)(args);
+  if (out)
+    (this->*op->func)(args);
+  else
+    (this->*op->psFunc)(args);
 }
 
 Operator *Gfx::findOp(char *name) {
@@ -247,7 +324,7 @@ Operator *Gfx::findOp(char *name) {
   return &opTab[a];
 }
 
-Boolean Gfx::checkArg(Object *arg, TchkType type) {
+GBool Gfx::checkArg(Object *arg, TchkType type) {
   switch (type) {
   case tchkBool:   return arg->isBool();
   case tchkInt:    return arg->isInt();
@@ -255,8 +332,9 @@ Boolean Gfx::checkArg(Object *arg, TchkType type) {
   case tchkString: return arg->isString();
   case tchkName:   return arg->isName();
   case tchkArray:  return arg->isArray();
+  case tchkNone:   return gFalse;
   }
-  return false;
+  return gFalse;
 }
 
 Object *Gfx::nextObj(Object *obj) {
@@ -286,10 +364,18 @@ void Gfx::opSave(Object args[]) {
   state = state->save();
 }
 
+void Gfx::psSave(Object args[]) {
+  psOut->writePS("q\n");
+}
+
 void Gfx::opRestore(Object args[]) {
   cover("Gfx::opRestore");
   state = state->restore();
   out->restoreState(state);
+}
+
+void Gfx::psRestore(Object args[]) {
+  psOut->writePS("Q\n");
 }
 
 void Gfx::opConcat(Object args[]) {
@@ -298,6 +384,14 @@ void Gfx::opConcat(Object args[]) {
 		   args[2].getNum(), args[3].getNum(),
 		   args[4].getNum(), args[5].getNum());
   out->updateCTM(state);
+  fontChanged = gTrue;
+}
+
+void Gfx::psConcat(Object args[]) {
+  psOut->writePS("[%g %g %g %g %g %g] cm\n",
+		 args[0].getNum(), args[1].getNum(),
+		 args[2].getNum(), args[3].getNum(),
+		 args[4].getNum(), args[5].getNum());
 }
 
 void Gfx::opSetDash(Object args[]) {
@@ -313,7 +407,7 @@ void Gfx::opSetDash(Object args[]) {
   if (length == 0) {
     dash = NULL;
   } else {
-    dash = (double *)smalloc(length * sizeof(double));
+    dash = (double *)gmalloc(length * sizeof(double));
     for (i = 0; i < length; ++i) {
       dash[i] = a->get(i, &obj)->getNum();
       obj.free();
@@ -323,10 +417,31 @@ void Gfx::opSetDash(Object args[]) {
   out->updateLineDash(state);
 }
 
+void Gfx::psSetDash(Object args[]) {
+  Array *a;
+  int length;
+  Object obj;
+  int i;
+
+  a = args[0].getArray();
+  length = a->getLength();
+  psOut->writePS("[");
+  for (i = 0; i < length; ++i) {
+    psOut->writePS("%g%s", a->get(i, &obj)->getNum(),
+		   (i == length-1) ? "" : " ");
+    obj.free();
+  }
+  psOut->writePS("] %g d\n", args[1].getNum());
+}
+
 void Gfx::opSetFlat(Object args[]) {
   cover("Gfx::opSetFlat");
   state->setFlatness((int)args[0].getNum());
   out->updateFlatness(state);
+}
+
+void Gfx::psSetFlat(Object args[]) {
+  psOut->writePS("%g i\n", args[0].getNum());
 }
 
 void Gfx::opSetLineJoin(Object args[]) {
@@ -335,10 +450,18 @@ void Gfx::opSetLineJoin(Object args[]) {
   out->updateLineJoin(state);
 }
 
+void Gfx::psSetLineJoin(Object args[]) {
+  psOut->writePS("%d j\n", args[0].getInt());
+}
+
 void Gfx::opSetLineCap(Object args[]) {
   cover("Gfx::opSetLineCap");
   state->setLineCap(args[0].getInt());
   out->updateLineCap(state);
+}
+
+void Gfx::psSetLineCap(Object args[]) {
+  psOut->writePS("%d J\n", args[0].getInt());
 }
 
 void Gfx::opSetMiterLimit(Object args[]) {
@@ -347,10 +470,18 @@ void Gfx::opSetMiterLimit(Object args[]) {
   out->updateMiterLimit(state);
 }
 
+void Gfx::psSetMiterLimit(Object args[]) {
+  psOut->writePS("%g M\n", args[0].getNum());
+}
+
 void Gfx::opSetLineWidth(Object args[]) {
   cover("Gfx::opSetLineWidth");
   state->setLineWidth(args[0].getNum());
   out->updateLineWidth(state);
+}
+
+void Gfx::psSetLineWidth(Object args[]) {
+  psOut->writePS("%g w\n", args[0].getNum());
 }
 
 //------------------------------------------------------------------------
@@ -363,10 +494,18 @@ void Gfx::opSetFillGray(Object args[]) {
   out->updateFillColor(state);
 }
 
+void Gfx::psSetFillGray(Object args[]) {
+  psOut->writePS("%g g\n", args[0].getNum());
+}
+
 void Gfx::opSetStrokeGray(Object args[]) {
   cover("Gfx::opSetStrokeGray");
   state->setStrokeGray(args[0].getNum());
   out->updateStrokeColor(state);
+}
+
+void Gfx::psSetStrokeGray(Object args[]) {
+  psOut->writePS("%g G\n", args[0].getNum());
 }
 
 void Gfx::opSetFillCMYKColor(Object args[]) {
@@ -376,11 +515,23 @@ void Gfx::opSetFillCMYKColor(Object args[]) {
   out->updateFillColor(state);
 }
 
+void Gfx::psSetFillCMYKColor(Object args[]) {
+  psOut->writePS("%g %g %g %g k\n",
+		 args[0].getNum(), args[1].getNum(),
+		 args[2].getNum(), args[3].getNum());
+}
+
 void Gfx::opSetStrokeCMYKColor(Object args[]) {
   cover("Gfx::opSetStrokeCMYKColor");
   state->setStrokeCMYK(args[0].getNum(), args[1].getNum(),
 		       args[2].getNum(), args[3].getNum());
   out->updateStrokeColor(state);
+}
+
+void Gfx::psSetStrokeCMYKColor(Object args[]) {
+  psOut->writePS("%g %g %g %g K\n",
+		 args[0].getNum(), args[1].getNum(),
+		 args[2].getNum(), args[3].getNum());
 }
 
 void Gfx::opSetFillRGBColor(Object args[]) {
@@ -389,10 +540,20 @@ void Gfx::opSetFillRGBColor(Object args[]) {
   out->updateFillColor(state);
 }
 
+void Gfx::psSetFillRGBColor(Object args[]) {
+  psOut->writePS("%g %g %g rg\n",
+		 args[0].getNum(), args[1].getNum(), args[2].getNum());
+}
+
 void Gfx::opSetStrokeRGBColor(Object args[]) {
   cover("Gfx::opSetStrokeRGBColor");
   state->setStrokeRGB(args[0].getNum(), args[1].getNum(), args[2].getNum());
   out->updateStrokeColor(state);
+}
+
+void Gfx::psSetStrokeRGBColor(Object args[]) {
+  psOut->writePS("%g %g %g RG\n",
+		 args[0].getNum(), args[1].getNum(), args[2].getNum());
 }
 
 //------------------------------------------------------------------------
@@ -404,6 +565,10 @@ void Gfx::opMoveTo(Object args[]) {
   state->moveTo(args[0].getNum(), args[1].getNum());
 }
 
+void Gfx::psMoveTo(Object args[]) {
+  psOut->writePS("%g %g m\n", args[0].getNum(), args[1].getNum());
+}
+
 void Gfx::opLineTo(Object args[]) {
   cover("Gfx::opLineTo");
   if (!state->isPath()) {
@@ -411,6 +576,10 @@ void Gfx::opLineTo(Object args[]) {
     return;
   }
   state->lineTo(args[0].getNum(), args[1].getNum());
+}
+
+void Gfx::psLineTo(Object args[]) {
+  psOut->writePS("%g %g l\n", args[0].getNum(), args[1].getNum());
 }
 
 void Gfx::opCurveTo(Object args[]) {
@@ -430,6 +599,12 @@ void Gfx::opCurveTo(Object args[]) {
   state->curveTo(x1, y1, x2, y2, x3, y3);
 }
 
+void Gfx::psCurveTo(Object args[]) {
+  psOut->writePS("%g %g %g %g %g %g c\n",
+		 args[0].getNum(), args[1].getNum(), args[2].getNum(),
+		 args[3].getNum(), args[4].getNum(), args[5].getNum());
+}
+
 void Gfx::opCurveTo1(Object args[]) {
   double x1, y1, x2, y2, x3, y3;
 
@@ -445,6 +620,12 @@ void Gfx::opCurveTo1(Object args[]) {
   x3 = args[2].getNum();
   y3 = args[3].getNum();
   state->curveTo(x1, y1, x2, y2, x3, y3);
+}
+
+void Gfx::psCurveTo1(Object args[]) {
+  psOut->writePS("%g %g %g %g v\n",
+		 args[0].getNum(), args[1].getNum(),
+		 args[2].getNum(), args[3].getNum());
 }
 
 void Gfx::opCurveTo2(Object args[]) {
@@ -464,6 +645,12 @@ void Gfx::opCurveTo2(Object args[]) {
   state->curveTo(x1, y1, x2, y2, x3, y3);
 }
 
+void Gfx::psCurveTo2(Object args[]) {
+  psOut->writePS("%g %g %g %g y\n",
+		 args[0].getNum(), args[1].getNum(),
+		 args[2].getNum(), args[3].getNum());
+}
+
 void Gfx::opRectangle(Object args[]) {
   double x, y, w, h;
 
@@ -479,6 +666,12 @@ void Gfx::opRectangle(Object args[]) {
   state->closePath();
 }
 
+void Gfx::psRectangle(Object args[]) {
+  psOut->writePS("%g %g %g %g re\n",
+		 args[0].getNum(), args[1].getNum(),
+		 args[2].getNum(), args[3].getNum());
+}
+
 void Gfx::opClosePath(Object args[]) {
   GfxPath *path;
 
@@ -491,6 +684,10 @@ void Gfx::opClosePath(Object args[]) {
   path = state->getPath();
 }
 
+void Gfx::psClosePath(Object args[]) {
+  psOut->writePS("h\n");
+}
+
 //------------------------------------------------------------------------
 // path painting operators
 //------------------------------------------------------------------------
@@ -498,6 +695,12 @@ void Gfx::opClosePath(Object args[]) {
 void Gfx::opEndPath(Object args[]) {
   cover("Gfx::opEndPath");
   doEndPath();
+}
+
+void Gfx::psEndPath(Object args[]) {
+  if (clip != clipNone)
+    psDoClip(gFalse);
+  psOut->writePS("n\n");
 }
 
 void Gfx::opStroke(Object args[]) {
@@ -508,6 +711,14 @@ void Gfx::opStroke(Object args[]) {
   }
   out->stroke(state);
   doEndPath();
+}
+
+void Gfx::psStroke(Object args[]) {
+  if (clip != clipNone)
+    psOut->writePS("gsave\n");
+  psOut->writePS("S\n");
+  if (clip != clipNone)
+    psDoClip(gTrue);
 }
 
 void Gfx::opCloseStroke(Object args[]) {
@@ -521,6 +732,14 @@ void Gfx::opCloseStroke(Object args[]) {
   doEndPath();
 }
 
+void Gfx::psCloseStroke(Object args[]) {
+  if (clip != clipNone)
+    psOut->writePS("gsave\n");
+  psOut->writePS("s\n");
+  if (clip != clipNone)
+    psDoClip(gTrue);
+}
+
 void Gfx::opFill(Object args[]) {
   cover("Gfx::opFill");
   if (!state->isPath()) {
@@ -529,6 +748,14 @@ void Gfx::opFill(Object args[]) {
   }
   out->fill(state);
   doEndPath();
+}
+
+void Gfx::psFill(Object args[]) {
+  if (clip != clipNone)
+    psOut->writePS("gsave\n");
+  psOut->writePS("f\n");
+  if (clip != clipNone)
+    psDoClip(gTrue);
 }
 
 void Gfx::opEOFill(Object args[]) {
@@ -541,6 +768,14 @@ void Gfx::opEOFill(Object args[]) {
   doEndPath();
 }
 
+void Gfx::psEOFill(Object args[]) {
+  if (clip != clipNone)
+    psOut->writePS("gsave\n");
+  psOut->writePS("f*\n");
+  if (clip != clipNone)
+    psDoClip(gTrue);
+}
+
 void Gfx::opFillStroke(Object args[]) {
   cover("Gfx::opFillStroke");
   if (!state->isPath()) {
@@ -550,6 +785,14 @@ void Gfx::opFillStroke(Object args[]) {
   out->fill(state);
   out->stroke(state);
   doEndPath();
+}
+
+void Gfx::psFillStroke(Object args[]) {
+  if (clip != clipNone)
+    psOut->writePS("gsave\n");
+  psOut->writePS("B\n");
+  if (clip != clipNone)
+    psDoClip(gTrue);
 }
 
 void Gfx::opCloseFillStroke(Object args[]) {
@@ -564,6 +807,14 @@ void Gfx::opCloseFillStroke(Object args[]) {
   doEndPath();
 }
 
+void Gfx::psCloseFillStroke(Object args[]) {
+  if (clip != clipNone)
+    psOut->writePS("gsave\n");
+  psOut->writePS("b\n");
+  if (clip != clipNone)
+    psDoClip(gTrue);
+}
+
 void Gfx::opEOFillStroke(Object args[]) {
   cover("Gfx::opEOFillStroke");
   if (!state->isPath()) {
@@ -573,6 +824,14 @@ void Gfx::opEOFillStroke(Object args[]) {
   out->eoFill(state);
   out->stroke(state);
   doEndPath();
+}
+
+void Gfx::psEOFillStroke(Object args[]) {
+  if (clip != clipNone)
+    psOut->writePS("gsave\n");
+  psOut->writePS("B*\n");
+  if (clip != clipNone)
+    psDoClip(gTrue);
 }
 
 void Gfx::opCloseEOFillStroke(Object args[]) {
@@ -587,6 +846,14 @@ void Gfx::opCloseEOFillStroke(Object args[]) {
   doEndPath();
 }
 
+void Gfx::psCloseEOFillStroke(Object args[]) {
+  if (clip != clipNone)
+    psOut->writePS("gsave\n");
+  psOut->writePS("b*\n");
+  if (clip != clipNone)
+    psDoClip(gTrue);
+}
+
 void Gfx::doEndPath() {
   if (clip == clipNormal)
     out->clip(state);
@@ -594,6 +861,18 @@ void Gfx::doEndPath() {
     out->eoClip(state);
   clip = clipNone;
   state->clearPath();
+}
+
+void Gfx::psDoClip(GBool needRestore) {
+  if (needRestore)
+    psOut->writePS("grestore\n");
+  if (clip == clipNormal)
+    psOut->writePS("clip\n");
+  else
+    psOut->writePS("eoclip\n");
+  if (needRestore)
+    psOut->writePS("newpath\n");
+  clip = clipNone;
 }
 
 //------------------------------------------------------------------------
@@ -605,8 +884,16 @@ void Gfx::opClip(Object args[]) {
   clip = clipNormal;
 }
 
+void Gfx::psClip(Object args[]) {
+  clip = clipNormal;
+}
+
 void Gfx::opEOClip(Object args[]) {
   cover("Gfx::opEOClip");
+  clip = clipEO;
+}
+
+void Gfx::psEOClip(Object args[]) {
   clip = clipEO;
 }
 
@@ -618,11 +905,19 @@ void Gfx::opBeginText(Object args[]) {
   cover("Gfx::opBeginText");
   state->setTextMat(1, 0, 0, 1, 0, 0);
   state->textMoveTo(0, 0);
-  fontChanged = true;
+  fontChanged = gTrue;
+}
+
+void Gfx::psBeginText(Object args[]) {
+  psOut->writePS("[1 0 0 1 0 0] Tm\n");
+  fontChanged = gTrue;
 }
 
 void Gfx::opEndText(Object args[]) {
   cover("Gfx::opEndText");
+}
+
+void Gfx::psEndText(Object args[]) {
 }
 
 //------------------------------------------------------------------------
@@ -632,6 +927,10 @@ void Gfx::opEndText(Object args[]) {
 void Gfx::opSetCharSpacing(Object args[]) {
   cover("Gfx::opSetCharSpacing");
   state->setCharSpace(args[0].getNum());
+}
+
+void Gfx::psSetCharSpacing(Object args[]) {
+  psOut->writePS("%g Tc\n", args[0].getNum());
 }
 
 void Gfx::opSetFont(Object args[]) {
@@ -648,10 +947,21 @@ void Gfx::opSetFont(Object args[]) {
   }
   if (printCommands) {
     printf("  font: '%s' %g\n",
-	   font->getName()->getCString(), args[1].getNum());
+	   font->getName() ? font->getName()->getCString() : "???",
+	   args[1].getNum());
   }
   state->setFont(font, args[1].getNum());
-  fontChanged = true;
+  fontChanged = gTrue;
+}
+
+void Gfx::psSetFont(Object args[]) {
+  if (fonts)
+    psGfxFont = fonts->lookup(args[0].getName());
+  if (psFont)
+    delete psFont;
+  psFont = new GString(args[0].getName());
+  psFontSize = args[1].getNum();
+  fontChanged = gTrue;
 }
 
 void Gfx::opSetTextLeading(Object args[]) {
@@ -659,9 +969,20 @@ void Gfx::opSetTextLeading(Object args[]) {
   state->setLeading(args[0].getNum());
 }
 
+void Gfx::psSetTextLeading(Object args[]) {
+  psOut->writePS("%g TL\n", args[0].getNum());
+}
+
 void Gfx::opSetTextRender(Object args[]) {
   cover("Gfx::opSetTextRender");
   state->setRender(args[0].getInt());
+}
+
+void Gfx::psSetTextRender(Object args[]) {
+  int r;
+
+  r = args[0].getInt();
+  psOut->writePS("%d Tr\n", r);
 }
 
 void Gfx::opSetTextRise(Object args[]) {
@@ -669,14 +990,26 @@ void Gfx::opSetTextRise(Object args[]) {
   state->setRise(args[0].getNum());
 }
 
+void Gfx::psSetTextRise(Object args[]) {
+  psOut->writePS("%g Ts\n", args[0].getNum());
+}
+
 void Gfx::opSetWordSpacing(Object args[]) {
   cover("Gfx::opSetWordSpacing");
   state->setWordSpace(args[0].getNum());
 }
 
+void Gfx::psSetWordSpacing(Object args[]) {
+  psOut->writePS("%g Tw\n", args[0].getNum());
+}
+
 void Gfx::opSetHorizScaling(Object args[]) {
   cover("Gfx::opSetHorizScaling");
   state->setHorizScaling(args[0].getNum());
+}
+
+void Gfx::psSetHorizScaling(Object args[]) {
+  psOut->writePS("%g Tz\n", args[0].getNum());
 }
 
 //------------------------------------------------------------------------
@@ -692,6 +1025,10 @@ void Gfx::opTextMove(Object args[]) {
   state->textMoveTo(tx, ty);
 }
 
+void Gfx::psTextMove(Object args[]) {
+  psOut->writePS("%g %g Td\n", args[0].getNum(), args[1].getNum());
+}
+
 void Gfx::opTextMoveSet(Object args[]) {
   double tx, ty;
 
@@ -703,13 +1040,25 @@ void Gfx::opTextMoveSet(Object args[]) {
   state->textMoveTo(tx, ty);
 }
 
+void Gfx::psTextMoveSet(Object args[]) {
+  psOut->writePS("%g %g TD\n", args[0].getNum(), args[1].getNum());
+}
+
 void Gfx::opSetTextMatrix(Object args[]) {
   cover("Gfx::opSetTextMatrix");
   state->setTextMat(args[0].getNum(), args[1].getNum(),
 		    args[2].getNum(), args[3].getNum(),
 		    args[4].getNum(), args[5].getNum());
   state->textMoveTo(0, 0);
-  fontChanged = true;
+  fontChanged = gTrue;
+}
+
+void Gfx::psSetTextMatrix(Object args[]) {
+  psOut->writePS("[%g %g %g %g %g %g] Tm\n",
+		 args[0].getNum(), args[1].getNum(),
+		 args[2].getNum(), args[3].getNum(),
+		 args[4].getNum(), args[5].getNum());
+  fontChanged = gTrue;
 }
 
 void Gfx::opTextNextLine(Object args[]) {
@@ -719,6 +1068,10 @@ void Gfx::opTextNextLine(Object args[]) {
   tx = state->getLineX();
   ty = state->getLineY() - state->getLeading();
   state->textMoveTo(tx, ty);
+}
+
+void Gfx::psTextNextLine(Object args[]) {
+  psOut->writePS("T*\n");
 }
 
 //------------------------------------------------------------------------
@@ -731,7 +1084,16 @@ void Gfx::opShowText(Object args[]) {
     error(0, "No font in show");
     return;
   }
-  doShowText((uchar *)args[0].getString());
+  doShowText(args[0].getString());
+}
+
+void Gfx::psShowText(Object args[]) {
+  if (fontChanged) {
+    psOut->writePS("/%s %g Tf\n", psFont->getCString(), psFontSize);
+    fontChanged = gFalse;
+  }
+  psOut->writePSString(args[0].getString());
+  psOut->writePS(" %g Tj\n", psGfxFont->getWidth(args[0].getString()));
 }
 
 void Gfx::opMoveShowText(Object args[]) {
@@ -745,7 +1107,17 @@ void Gfx::opMoveShowText(Object args[]) {
   tx = state->getLineX();
   ty = state->getLineY() - state->getLeading();
   state->textMoveTo(tx, ty);
-  doShowText((uchar *)args[0].getString());
+  doShowText(args[0].getString());
+}
+
+void Gfx::psMoveShowText(Object args[]) {
+  if (fontChanged) {
+    psOut->writePS("/%s %g Tf\n", psFont->getCString(), psFontSize);
+    fontChanged = gFalse;
+  }
+  psOut->writePS("T* ");
+  psOut->writePSString(args[0].getString());
+  psOut->writePS(" %g Tj\n", psGfxFont->getWidth(args[0].getString()));
 }
 
 void Gfx::opMoveSetShowText(Object args[]) {
@@ -761,7 +1133,17 @@ void Gfx::opMoveSetShowText(Object args[]) {
   tx = state->getLineX();
   ty = state->getLineY() - state->getLeading();
   state->textMoveTo(tx, ty);
-  doShowText((uchar *)args[2].getString());
+  doShowText(args[2].getString());
+}
+
+void Gfx::psMoveSetShowText(Object args[]) {
+  if (fontChanged) {
+    psOut->writePS("/%s %g Tf\n", psFont->getCString(), psFontSize);
+    fontChanged = gFalse;
+  }
+  psOut->writePS("%g Tw %g Tc T* ", args[0].getNum(), args[1].getNum());
+  psOut->writePSString(args[2].getString());
+  psOut->writePS(" %g Tj\n", psGfxFont->getWidth(args[2].getString()));
 }
 
 void Gfx::opShowSpaceText(Object args[]) {
@@ -780,23 +1162,46 @@ void Gfx::opShowSpaceText(Object args[]) {
     if (obj.isNum())
       state->textShift(-obj.getNum() * 0.001 * state->getFontSize());
     else if (obj.isString())
-      doShowText((uchar *)obj.getString());
+      doShowText(obj.getString());
     else
       error(0, "Element of show/space array must be number or string");
     obj.free();
   }
 }
 
-void Gfx::doShowText(uchar *s) {
-  uchar *p;
+void Gfx::psShowSpaceText(Object args[]) {
+  Array *a;
+  Object obj;
+  int i;
+
+  if (fontChanged) {
+    psOut->writePS("/%s %g Tf\n", psFont->getCString(), psFontSize);
+    fontChanged = gFalse;
+  }
+  a = args[0].getArray();
+  for (i = 0; i < a->getLength(); ++i) {
+    a->get(i, &obj);
+    if (obj.isNum()) {
+      psOut->writePS("%g TJm\n", obj.getNum());
+    } else if (obj.isString()) {
+      psOut->writePSString(obj.getString());
+      psOut->writePS(" %g Tj\n", psGfxFont->getWidth(obj.getString()));
+    }
+    obj.free();
+  }
+}
+
+void Gfx::doShowText(GString *s) {
+  Guchar *p;
+  int n;
   double dx, dy;
 
   if (fontChanged) {
     out->updateFont(state);
-    fontChanged = false;
+    fontChanged = gFalse;
   }
   state->textTransformDelta(0, state->getRise(), &dx, &dy);
-  for (p = s; *p; ++p) {
+  for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
     if (*p != '\r' && *p != '\n') {
       out->drawChar(state, state->getCurX() + dx, state->getCurY() + dy, *p);
       if (*p == ' ')
@@ -838,14 +1243,40 @@ void Gfx::opXObject(Object args[]) {
   obj1.free();
 }
 
+void Gfx::psXObject(Object args[]) {
+  Object obj1, obj2;
+
+  if (!xObjDict) {
+    error(0, "No XObject dictionary in 'Do' operator");
+    return;
+  }
+  xObjDict->lookup(args[0].getName(), &obj1);
+  if (!obj1.isStream("XObject")) {
+    error(0, "XObject '%s' is unknown or wrong type", args[0].getName());
+    obj1.free();
+    return;
+  }
+  obj1.streamGetDict()->lookup("Subtype", &obj2);
+  if (obj2.isName("Image"))
+    psDoImage(obj1.getStream());
+  else if (obj2.isName("Form"))
+    psDoForm(obj1.getStream());
+  else if (obj2.isName())
+    error(0, "Unknown XObject subtype '%s'", obj2.getName());
+  else
+    error(0, "XObject subtype is missing or wrong type");
+  obj2.free();
+  obj1.free();
+}
+
 void Gfx::doImage(Stream *str) {
   Dict *dict;
   Object obj1, obj2;
   int width, height;
   int bits;
-  Boolean mask;
+  GBool mask;
   GfxColorSpace *colorSpace;
-  Boolean invert;
+  GBool invert;
 
   cover("Gfx::doImage");
 
@@ -878,7 +1309,7 @@ void Gfx::doImage(Stream *str) {
     obj1.free();
     dict->lookup("IM", &obj1);
   }
-  mask = false;
+  mask = gFalse;
   if (obj1.isBool())
     mask = obj1.getBool();
   else if (!obj1.isNull())
@@ -900,7 +1331,7 @@ void Gfx::doImage(Stream *str) {
   if (mask) {
     if (bits != 1)
       goto err1;
-    invert = false;
+    invert = gFalse;
     dict->lookup("Decode", &obj1);
     if (obj1.isNull()) {
       obj1.free();
@@ -909,7 +1340,7 @@ void Gfx::doImage(Stream *str) {
     if (obj1.isArray()) {
       obj1.arrayGet(0, &obj2);
       if (obj2.isInt() && obj2.getInt() == 1)
-	invert = true;
+	invert = gTrue;
       obj2.free();
     } else if (!obj1.isNull()) {
       goto err2;
@@ -956,8 +1387,16 @@ void Gfx::doImage(Stream *str) {
   error(0, "Bad image parameters");
 }
 
+void Gfx::psDoImage(Stream *str) {
+  psOut->writeImage(str->getDict(), str, gFalse);
+}
+
 void Gfx::doForm(Stream *str) {
   cover("Gfx::doForm");
+  error(0, "Unimplemented: form");
+}
+
+void Gfx::psDoForm(Stream *str) {
   error(0, "Unimplemented: form");
 }
 
@@ -966,17 +1405,51 @@ void Gfx::doForm(Stream *str) {
 //------------------------------------------------------------------------
 
 void Gfx::opBeginImage(Object args[]) {
+  Object obj;
+  Stream *str;
+
+  cover("Gfx::opBeginImage");
+
+  // build dict/stream
+  str = buildImageStream();
+
+  // display the image
+  if (str) {
+    doImage(str);
+    delete str;
+  }
+
+  // get 'EI' tag
+  nextObj(&obj);
+  if (!obj.isCmd("EI"))
+    error(0, "Expected 'EI' operator");
+  obj.free();
+}
+
+void Gfx::psBeginImage(Object args[]) {
+  Stream *str;
+
+  // build dict/stream
+  str = buildImageStream();
+
+  // display the image
+  // (writeImage() eats the 'EI' tag)
+  if (str) {
+    psOut->writeImage(str->getDict(), str, gTrue);
+    delete str;
+  }
+}
+
+Stream *Gfx::buildImageStream() {
   Object dict;
   Object obj;
   char *key;
   Stream *str;
 
-  cover("Gfx::opBeginImage");
-
   // inline image must be in stream
   if (!parser) {
     error(0, "Inline image in array content stream");
-    return;
+    return NULL;
   }
 
   // build dictionary
@@ -1005,22 +1478,22 @@ void Gfx::opBeginImage(Object args[]) {
   str = new SubStream(parser->getStream(), &dict);
   str = str->addFilters(&dict);
 
-  // display the image
-  doImage(str);
-  delete str;
-
-  // get 'EI' tag
-  nextObj(&obj);
-  if (!obj.isCmd("EI"))
-    error(0, "Expected 'EI' operator");
-  obj.free();
+  return str;
 }
 
 void Gfx::opImageData(Object args[]) {
   error(0, "Internal: got 'ID' operator");
 }
 
+void Gfx::psImageData(Object args[]) {
+  error(0, "Internal: got 'ID' operator");
+}
+
 void Gfx::opEndImage(Object args[]) {
+  error(0, "Internal: got 'EI'operator");
+}
+
+void Gfx::psEndImage(Object args[]) {
   error(0, "Internal: got 'EI'operator");
 }
 
@@ -1033,7 +1506,13 @@ void Gfx::opSetCharWidth(Object args[]) {
   error(0, "Encountered 'd0' operator in content stream");
 }
 
+void Gfx::psSetCharWidth(Object args[]) {
+}
+
 void Gfx::opSetCacheDevice(Object args[]) {
   cover("Gfx::opSetCacheDevice");
   error(0, "Encountered 'd1' operator in content stream");
+}
+
+void Gfx::psSetCacheDevice(Object args[]) {
 }

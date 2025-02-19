@@ -9,52 +9,73 @@
 #ifndef LTKTEXTIN_H
 #define LTKTEXTIN_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
-#include <stypes.h>
-#include <String.h>
+#include <gtypes.h>
+#include <GString.h>
 #include <LTKWidget.h>
 
-class LTKTextIn;
-typedef void (*LTKTextInCbk)(LTKTextIn *textIn, int widgetNum, String *text);
+//------------------------------------------------------------------------
+// LTKTextIn
+//------------------------------------------------------------------------
 
 class LTKTextIn: public LTKWidget {
 public:
 
-  LTKTextIn(char *name1, int maxLength1, char *fontName1,
-	    LTKTextInCbk cbk1, int widgetNum1);
+  //---------- constructors and destructor ----------
+
+  LTKTextIn(char *name1, int widgetNum1, int minWidth1,
+	    char *fontName1, LTKStringValCbk doneCbk1,
+	    char *tabTarget1);
 
   ~LTKTextIn();
 
   virtual LTKWidget *copy() { return new LTKTextIn(this); }
 
+  //---------- access ----------
+
   virtual long getEventMask();
 
-  virtual void layout1();
-
-  virtual void redraw();
-
-  virtual void buttonPress(int mx, int my, int button);
-  virtual void activate(Boolean on);
-  virtual void keyPress(KeySym key, char *s, int n);
+  //---------- special access ----------
 
   char *getText() { return text->getCString(); }
   void setText(char *s);
 
+  //---------- layout ----------
+
+  virtual void layout1();
+  virtual void layout3();
+
+  //---------- drawing ----------
+
+  virtual void redraw();
+
+  //---------- callbacks and event handlers ----------
+
+  virtual void buttonPress(int mx, int my, int button);
+  virtual void activate(GBool on);
+  virtual void keyPress(KeySym key, char *s, int n);
+
 protected:
 
   LTKTextIn(LTKTextIn *textIn);
-  void drawCursor(Boolean on);
-  void redrawTail(int i);
+  void drawCursor(GBool on);
+  void redrawTail(int i, GBool clear);
 
-  int maxLength;		// max text length
-  String *text;			// the current text
-  Boolean active;		// set if widget has input focus
+  int minWidth;			// minimum width
+  GString *text;		// the current text
+  GBool active;			// set if widget has input focus
+  int firstChar;		// index of first displayed char
   int cursor;			// cursor is before char #<cursor>
-  LTKTextInCbk cbk;		// called when <Return> is pressed
-  int widgetNum;		// widget number (for callback)
-  int textWidth, textHeight;	// size of text
+  int textHeight;		// height of text
   int textBase;			// baseline offset
+
+  LTKStringValCbk doneCbk;	// called when <Return> is pressed or
+				//   widget is de-selected
+  char *tabTarget;		// name of widget to be activated when
+				//   <Tab> or <Return> is pressed
 
   char *fontName;		// non-NULL if using a custom font
   XFontStruct *fontStruct;	// font info

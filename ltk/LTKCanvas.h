@@ -9,26 +9,33 @@
 #ifndef LTKCANVAS_H
 #define LTKCANVAS_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
+#include <stddef.h>
 #include <X11/Xlib.h>
-#include <stypes.h>
 #include <LTKWidget.h>
 
-class LTKCanvas;
-typedef void (*LTKCanvasCbk)(LTKCanvas *canvas, int widgetNum);
+//------------------------------------------------------------------------
+// LTKCanvas
+//------------------------------------------------------------------------
 
 class LTKCanvas: public LTKWidget {
 public:
 
-  LTKCanvas(char *name1, int minWidth1, int minHeight1,
-	    LTKCanvasCbk redrawCbk1, int widgetNum1);
+  //---------- constructors and destructor ----------
+
+  LTKCanvas(char *name1, int widgetNum1,
+	    int minWidth1, int minHeight1, LTKRedrawCbk redrawCbk1);
 
   virtual LTKWidget *copy() { return new LTKCanvas(this); }
 
-  virtual long getEventMask();
+  //---------- layout ----------
 
   virtual void layout1();
+
+  //---------- drawing ----------
 
   virtual void redraw();
 
@@ -37,8 +44,8 @@ protected:
   LTKCanvas(LTKCanvas *canvas);
 
   int minWidth, minHeight;	// minimum size
-  LTKCanvasCbk redrawCbk;	// redraw callback
-  int widgetNum;		// widget number (for callback)
+
+  LTKRedrawCbk redrawCbk;	// redraw callback
 };
 
 #endif

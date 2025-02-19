@@ -9,10 +9,12 @@
 #ifndef XREF_H
 #define XREF_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
 #include <stdio.h>
-#include <stypes.h>
+#include <gtypes.h>
 
 class Object;
 class Stream;
@@ -24,7 +26,7 @@ class Stream;
 struct XRefEntry {
   int offset;
   int gen;
-  Boolean used;
+  GBool used;
 };
 
 class XRef {
@@ -37,7 +39,10 @@ public:
   ~XRef();
 
   // Is xref table valid?
-  Boolean isOk() { return ok; }
+  GBool isOk() { return ok; }
+
+  // Is the PDF file encrypted?
+  GBool checkEncrypted();
 
   // Get catalog object.
   Object *getCatalog(Object *obj) { return fetch(rootNum, rootGen, obj); }
@@ -45,19 +50,17 @@ public:
   // Fetch an indirect reference.
   Object *fetch(int num, int gen, Object *obj);
 
-  // Output.
-  void print(FILE *f = stdout);
-
 private:
 
   FILE *file;			// input file
   XRefEntry *entries;		// xref entries
   int size;			// size of <entries> array
   int rootNum, rootGen;		// catalog dict
-  Boolean ok;			// true if xref table is valid
+  GBool encrypted;		// true if file is encrypted
+  GBool ok;			// true if xref table is valid
 
   int readTrailer(Stream *str);
-  Boolean readXRef(Stream *str, int *pos);
+  GBool readXRef(Stream *str, int *pos);
 };
 
 //------------------------------------------------------------------------

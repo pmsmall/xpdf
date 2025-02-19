@@ -9,15 +9,19 @@
 #ifndef LTKBUTTON_H
 #define LTKBUTTON_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
+#include <stddef.h>
 #include <X11/Xlib.h>
-#include <stypes.h>
-#include <String.h>
+#include <gtypes.h>
+#include <GString.h>
 #include <LTKWidget.h>
 
-class LTKButton;
-typedef void (*LTKButtonCbk)(LTKButton *button, int widgetNum, Boolean on);
+//------------------------------------------------------------------------
+// button action type
+//------------------------------------------------------------------------
 
 typedef enum {
   ltkButtonClick,		// momentarily on
@@ -25,47 +29,64 @@ typedef enum {
   ltkButtonToggle		// press on, press off
 } LTKButtonAction;
 
+//------------------------------------------------------------------------
+// LTKButton
+//------------------------------------------------------------------------
+
 class LTKButton: public LTKWidget {
 public:
 
-  LTKButton(char *name1, char *label1, LTKButtonAction action1,
-	    LTKButtonCbk pressCbk1, int widgetNum1);
+  //---------- constructors and destructor ----------
 
-  LTKButton(char *name1, unsigned char *iconData1,
-	    int iconWidth1, int iconHeight1, LTKButtonAction action1,
-	    LTKButtonCbk pressCbk1, int widgetNum1);
+  LTKButton(char *name1, int widgetNum1, char *label1,
+	    LTKButtonAction action1, LTKBoolValCbk pressCbk1);
+
+  LTKButton(char *name1, int widgetNum1,
+	    unsigned char *iconData1,
+	    int iconWidth1, int iconHeight1,
+	    LTKButtonAction action1, LTKBoolValCbk pressCbk1);
 
   ~LTKButton();
 
   virtual LTKWidget *copy() { return new LTKButton(this); }
 
+  //---------- access ----------
+
   virtual long getEventMask();
 
-  virtual void layout1();
+  //---------- special access ----------
 
+  void setState(GBool on1);
+
+  //---------- layout ----------
+
+  virtual void layout1();
   virtual void layout3();
+
+  //---------- drawing ----------
 
   virtual void redraw();
 
+  //---------- callbacks and event handlers ----------
+
   virtual void buttonPress(int bx, int by, int button);
   virtual void buttonRelease(int bx, int by, int button);
-
-  void setState(Boolean on1);
 
 protected:
 
   LTKButton(LTKButton *button);
 
-  String *label;		// label (button has either label or icon)
+  GString *label;		// label (button has either label or icon)
   Pixmap icon;			// icon
   unsigned char *iconData;	// the icon data (bitmap format)
   int iconWidth, iconHeight;	// the icon size
   LTKButtonAction action;	// action kind
-  LTKButtonCbk pressCbk;	// button-press callback
-  int widgetNum;		// widget number (for callback)
-  Boolean on;			// current state
+  GBool on;			// current state
+  GBool oldOn;			// saved state
   int textWidth, textHeight;	// size of text
   int textBase;			// baseline offset
+
+  LTKBoolValCbk pressCbk;	// button-press callback
 };
 
 #endif

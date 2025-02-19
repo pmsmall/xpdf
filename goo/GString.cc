@@ -1,18 +1,21 @@
 //========================================================================
 //
-// String.cc
+// GString.cc
 //
-// Variable-length string type.
+// Simple variable-length string type.
 //
 // Copyright 1996 Derek B. Noonburg
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
-#include <String.h>
+#include <GString.h>
 
 static inline int size(int len) {
   int delta;
@@ -21,85 +24,92 @@ static inline int size(int len) {
   return ((len + 1) + delta) & ~delta;
 }
 
-inline void String::resize(int length1) {
+inline void GString::resize(int length1) {
   char *s1;
 
   if (!s) {
     s = new char[size(length1)];
   } else if (size(length1) != size(length)) {
     s1 = new char[size(length1)];
-    strncpy(s1, s, length1);
-    delete s;
+    memcpy(s1, s, length + 1);
+    delete[] s;
     s = s1;
   }
 }
 
-String::String() {
+GString::GString() {
   s = NULL;
   resize(length = 0);
   s[0] = '\0';
 }
 
-String::String(char *s1) {
+GString::GString(char *s1) {
+  int n = strlen(s1);
+
   s = NULL;
-  resize(length = (int)strlen(s1));
-  strcpy(s, s1);
+  resize(length = n);
+  memcpy(s, s1, n + 1);
 }
 
-String::String(char *s1, int length1) {
+GString::GString(char *s1, int length1) {
   s = NULL;
   resize(length = length1);
-  strncpy(s, s1, length);
+  memcpy(s, s1, length * sizeof(char));
   s[length] = '\0';
 }
 
-String::String(String *str) {
+GString::GString(GString *str) {
   s = NULL;
   resize(length = str->getLength());
-  strcpy(s, str->getCString());
+  memcpy(s, str->getCString(), length + 1);
 }
 
-String::String(String *str1, String *str2) {
+GString::GString(GString *str1, GString *str2) {
+  int n1 = str1->getLength();
+  int n2 = str2->getLength();
+
   s = NULL;
-  resize(length = str1->getLength() + str2->getLength());
-  strcpy(s, str1->getCString());
-  strcpy(s + str1->getLength(), str2->getCString());
+  resize(length = n1 + n2);
+  memcpy(s, str1->getCString(), n1);
+  memcpy(s + n1, str2->getCString(), n2 + 1);
 }
 
-String::~String() {
-  delete s;
+GString::~GString() {
+  delete[] s;
 }
 
-String *String::clear() {
+GString *GString::clear() {
   resize(0);
   s[length = 0] = '\0';
   return this;
 }
 
-String *String::append(char c) {
+GString *GString::append(char c) {
   resize(length + 1);
   s[length++] = c;
   s[length] = '\0';
   return this;
 }
 
-String *String::append(String *str) {
-  resize(length + str->getLength());
-  strcpy(s + length, str->getCString());
-  length += str->getLength();
-  return this;
-}
-
-String *String::append(char *str) {
-  int n = strlen(str);
+GString *GString::append(GString *str) {
+  int n = str->getLength();
 
   resize(length + n);
-  strcpy(s + length, str);
+  memcpy(s + length, str->getCString(), n + 1);
   length += n;
   return this;
 }
 
-String *String::insert(int i, char c) {
+GString *GString::append(char *str) {
+  int n = strlen(str);
+
+  resize(length + n);
+  memcpy(s + length, str, n + 1);
+  length += n;
+  return this;
+}
+
+GString *GString::insert(int i, char c) {
   int j;
 
   resize(length + 1);
@@ -110,31 +120,31 @@ String *String::insert(int i, char c) {
   return this;
 }
 
-String *String::insert(int i, String *str) {
+GString *GString::insert(int i, GString *str) {
   int n = str->getLength();
   int j;
 
   resize(length + n);
   for (j = length; j >= i; --j)
     s[j+n] = s[j];
-  strncpy(s+i, str->getCString(), n);
+  memcpy(s+i, str->getCString(), n);
   length += n;
   return this;
 }
 
-String *String::insert(int i, char *str) {
+GString *GString::insert(int i, char *str) {
   int n = strlen(str);
   int j;
 
   resize(length + n);
   for (j = length; j >= i; --j)
     s[j+n] = s[j];
-  strncpy(s+i, str, n);
+  memcpy(s+i, str, n);
   length += n;
   return this;
 }
 
-String *String::del(int i, int n) {
+GString *GString::del(int i, int n) {
   int j;
 
   if (n > 0) {

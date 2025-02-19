@@ -9,11 +9,15 @@
 #ifndef LTKMISC_H
 #define LTKMISC_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
-#include <String.h>
+#include <GString.h>
 
-extern String *ltkGetHomeDir(void);
+#ifndef VMS
+extern GString *ltkGetHomeDir(void);
+#endif
 
 extern void ltkError(char *msg, ...);
 

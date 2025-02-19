@@ -6,9 +6,12 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
-#include <mem.h>
+#include <stddef.h>
+#include <gmem.h>
 #include "Object.h"
 #include "Array.h"
 #include "Dict.h"
@@ -25,8 +28,9 @@ Catalog::Catalog(Object *catDict) {
   Object obj;
   int i;
 
-  ok = true;
+  ok = gTrue;
   pages = NULL;
+  pageRefs = NULL;
   numPages = 0;
   if (!catDict->isDict("Catalog")) {
     error(0, "Catalog object is wrong type (%s)", catDict->getTypeName());
@@ -46,9 +50,13 @@ Catalog::Catalog(Object *catDict) {
   }
   numPages = obj.getInt();
   obj.free();
-  pages = (Page **)smalloc(numPages * sizeof(Page *));
-  for (i = 0; i < numPages; ++i)
+  pages = (Page **)gmalloc(numPages * sizeof(Page *));
+  pageRefs = (Ref *)gmalloc(numPages * sizeof(Ref));
+  for (i = 0; i < numPages; ++i) {
     pages[i] = NULL;
+    pageRefs[i].num = -1;
+    pageRefs[i].gen = -1;
+  }
   readPageTree(pagesDict.getDict(), NULL, 0);
   pagesDict.free();
   return;
@@ -58,7 +66,7 @@ Catalog::Catalog(Object *catDict) {
  err2:
   pagesDict.free();
  err1:
-  ok = false;
+  ok = gFalse;
 }
 
 Catalog::~Catalog() {
@@ -69,13 +77,15 @@ Catalog::~Catalog() {
       if (pages[i])
 	delete pages[i];
     }
-    sfree(pages);
+    gfree(pages);
+    gfree(pageRefs);
   }
 }
 
 int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
   Object kids;
   Object kid;
+  Object kidRef;
   PageAttrs *attrs1, *attrs2;
   Page *page;
   int i;
@@ -91,12 +101,19 @@ int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
     kids.arrayGet(i, &kid);
     if (kid.isDict("Page")) {
       attrs2 = new PageAttrs(attrs1, kid.getDict());
-      page = new Page(kid.getDict(), attrs2, start);
+      page = new Page(start+1, kid.getDict(), attrs2);
       if (!page->isOk()) {
 	++start;
 	goto err3;
       }
-      pages[start++] = page;
+      pages[start] = page;
+      kids.arrayGetNF(i, &kidRef);
+      if (kidRef.isRef()) {
+	pageRefs[start].num = kidRef.getRefNum();
+	pageRefs[start].gen = kidRef.getRefGen();
+      }
+      kidRef.free();
+      ++start;
     } else if (kid.isDict("Pages")) {
       if ((start = readPageTree(kid.getDict(), attrs1, start)) < 0)
 	goto err2;
@@ -118,15 +135,16 @@ int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
  err1:
   kids.free();
   delete attrs1;
-  ok = false;
+  ok = gFalse;
   return -1;
 }
 
-void Catalog::print(FILE *f) {
+int Catalog::findPage(int num, int gen) {
   int i;
 
   for (i = 0; i < numPages; ++i) {
-    fprintf(f, "*** page %d ***\n", i + 1);
-    pages[i]->print(f);
+    if (pageRefs[i].num == num && pageRefs[i].gen == gen)
+      return i + 1;
   }
+  return 0;
 }

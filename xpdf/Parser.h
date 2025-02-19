@@ -9,7 +9,9 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
 #include "Lexer.h"
 

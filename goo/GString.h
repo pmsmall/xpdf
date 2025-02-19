@@ -1,39 +1,44 @@
 //========================================================================
 //
-// String.h
+// GString.h
 //
-// Variable-length string type.
+// Simple variable-length string type.
 //
 // Copyright 1996 Derek B. Noonburg
 //
 //========================================================================
 
-#ifndef VSTRING_H
-#define VSTRING_H
+#ifndef GSTRING_H
+#define GSTRING_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
-class String {
+#include <string.h>
+
+class GString {
 public:
 
   // Create an empty string.
-  String();
+  GString();
 
   // Create a string from a C string.
-  String(char *s1);
+  GString(char *s1);
 
-  // Create a string from the first <length1> chars of a C string.
-  String (char *s1, int length1);
+  // Create a string from <length1> chars at <s1>.  This string
+  // can contain null characters.
+  GString (char *s1, int length1);
 
   // Copy a string.
-  String(String *str);
-  String *copy() { return new String(this); }
+  GString(GString *str);
+  GString *copy() { return new GString(this); }
 
   // Concatenate two strings.
-  String(String *str1, String *str2);
+  GString(GString *str1, GString *str2);
 
   // Destructor.
-  ~String();
+  ~GString();
 
   // Get length.
   int getLength() { return length; }
@@ -45,23 +50,24 @@ public:
   char getChar(int i) { return s[i]; }
 
   // Clear string to zero length.
-  String *clear();
+  GString *clear();
 
   // Append a character or string.
-  String *append(char c);
-  String *append(String *str);
-  String *append(char *str);
+  GString *append(char c);
+  GString *append(GString *str);
+  GString *append(char *str);
 
   // Insert a character or string.
-  String *insert(int i, char c);
-  String *insert(int i, String *str);
-  String *insert(int i, char *str);
+  GString *insert(int i, char c);
+  GString *insert(int i, GString *str);
+  GString *insert(int i, char *str);
 
   // Delete a character or range of characters.
-  String *del(int i, int n = 1);
+  GString *del(int i, int n = 1);
 
   // Compare two strings:  -1:<  0:=  +1:>
-  int cmp(String *str) { return strcmp(s, str->getCString()); }
+  // These function assume the strings do not contain null characters.
+  int cmp(GString *str) { return strcmp(s, str->getCString()); }
   int cmp(char *s1) { return strcmp(s, s1); }
 
 private:

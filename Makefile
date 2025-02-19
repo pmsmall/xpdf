@@ -7,9 +7,22 @@
 #========================================================================
 
 all:
-	cd goo; make depend; make
-	cd ltk; make depend; make
-	cd xpdf; make depend; make
+	cd goo; make
+	cd ltk; make
+	cd xpdf; make all
+
+xpdf:
+	cd goo; make
+	cd ltk; make
+	cd xpdf; make xpdf
+
+pdftops:
+	cd goo; make
+	cd xpdf; make pdftops
+
+install:
+	install -c xpdf/xpdf $(PREFIX)/bin
+	install -c xpdf/pdftops $(PREFIX)/bin
 
 clean:
 	cd goo; make clean

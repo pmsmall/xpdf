@@ -6,12 +6,15 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
 #include <stdlib.h>
+#include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <stypes.h>
+#include <gtypes.h>
 #include <LTKApp.h>
 #include <LTKResources.h>
 #include <LTKWindow.h>
@@ -22,10 +25,11 @@ LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
 	       int *argc, char *argv[]) {
   int numOpts;
   XrmDatabase cmdLineDB;
-  String *displayName;
+  GString *displayName;
 
-  appName = new String(appName1);
+  appName = new GString(appName1);
   windows = NULL;
+  grabWin = NULL;
   repeatWidget = NULL;
   cmdLineDB = NULL;
   resourceDB = NULL;
@@ -51,9 +55,10 @@ LTKApp::~LTKApp() {
     delete w1;
   }
   XCloseDisplay(display);
+  delete appName;
 }
 
-String *LTKApp::getStringResource(char *inst, char *def) {
+GString *LTKApp::getStringResource(char *inst, char *def) {
   return ltkGetStringResource(resourceDB, appName, inst, def);
 }
 
@@ -66,6 +71,12 @@ unsigned long LTKApp::getColorResource(char *inst,
 
 XFontStruct *LTKApp::getFontResource(char *inst,  char *def) {
   return ltkGetFontResouce(resourceDB, appName, inst, display, screenNum, def);
+}
+
+void LTKApp::getGeometryResource(char *inst, int *x, int *y,
+				 Guint *width, Guint *height) {
+  ltkGetGeometryResource(resourceDB, appName, inst, display, screenNum,
+			 x, y, width, height);
 }
 
 LTKWindow *LTKApp::addWindow(LTKWindow *w) {
@@ -115,7 +126,7 @@ LTKWindow *LTKApp::findWindow(Window xwin, LTKWidget **widget) {
   return w;
 }
 
-void LTKApp::doEvent(Boolean wait) {
+void LTKApp::doEvent(GBool wait) {
   XEvent event;
   int pending;
   LTKWindow *win;
@@ -124,6 +135,7 @@ void LTKApp::doEvent(Boolean wait) {
   char s[20];
   int n;
 
+ start:
   pending = XPending(display);
 
   if (pending == 0 && repeatWidget) {
@@ -134,7 +146,9 @@ void LTKApp::doEvent(Boolean wait) {
     win = findWindow(event.xany.window, &widget);
     switch (event.type) {
     case Expose:
-      if (win) {
+      // redraw the window or widget, ignoring all but the last
+      // Expose event for that window
+      if (event.xexpose.count == 0 && win) {
 	if (widget)
 	  widget->redraw();
 	else
@@ -146,17 +160,24 @@ void LTKApp::doEvent(Boolean wait) {
 	if (event.xconfigure.width != win->getWidth() ||
 	    event.xconfigure.height != win->getHeight()) {
 	  XClearWindow(display, win->getXWindow());
-	  win->layout(event.xconfigure.width, event.xconfigure.height);
+	  win->layout(-1, -1, event.xconfigure.width, event.xconfigure.height);
 	}
       }
       break;
+    case VisibilityNotify:
+      if (event.xvisibility.state == VisibilityUnobscured &&
+	  grabWin && win == grabWin->getOverWin())
+	XRaiseWindow(display, grabWin->getXWindow());
+      break;
     case ButtonPress:
+      if (grabWin && win != grabWin)
+	goto start;
       if (win) {
 	if (widget != win->getKeyWidget()) {
 	  if (win->getKeyWidget())
-	    win->getKeyWidget()->activate(false);
+	    win->getKeyWidget()->activate(gFalse);
 	  if (widget)
-	    widget->activate(true);
+	    widget->activate(gTrue);
 	}
 	if (widget) {
 	  widget->buttonPress(event.xbutton.x, event.xbutton.y,
@@ -165,17 +186,23 @@ void LTKApp::doEvent(Boolean wait) {
       }
       break;
     case ButtonRelease:
+      if (grabWin && win != grabWin)
+	goto start;
       if (win && widget) {
 	widget->buttonRelease(event.xbutton.x, event.xbutton.y,
 			      event.xbutton.button - Button1 + 1);
       }
       break;
     case MotionNotify:
+      if (grabWin && win != grabWin)
+	goto start;
       if (win && widget) {
 	widget->mouseMove(event.xmotion.x, event.xmotion.y);
       }
       break;
     case KeyPress:
+      if (grabWin && win != grabWin)
+	goto start;
       if (win) {
 	n = XLookupString((XKeyEvent *)&event, s, sizeof(s)-1,
 			  &key, NULL);
@@ -184,12 +211,13 @@ void LTKApp::doEvent(Boolean wait) {
       }
       break;
     case PropertyNotify:
+      if (grabWin && win != grabWin)
+	goto start;
       if (win)
-	win->doPropChange(event.xproperty.atom);
+	win->propChange(event.xproperty.atom);
       break;
     default:
       break;
     }
-
   }
 }

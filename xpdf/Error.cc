@@ -6,16 +6,19 @@
 //
 //========================================================================
 
+#ifdef __GNUC__
 #pragma implementation
+#endif
 
 #include <stdio.h>
+#include <stddef.h>
 #include <stdarg.h>
-#include <stypes.h>
+#include <gtypes.h>
 #include "Flags.h"
 #include "Error.h"
 
 // Send error messages to /dev/tty instead of stderr.
-Boolean errorsToTTY;
+GBool errorsToTTY = gFalse;
 
 // File to send error (and other) messages to.
 FILE *errFile;

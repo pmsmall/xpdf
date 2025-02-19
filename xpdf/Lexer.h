@@ -9,7 +9,9 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
 #include "Object.h"
 #include "Stream.h"
@@ -24,7 +26,7 @@ class Lexer {
 public:
 
   // Constructor.
-  Lexer(Stream *str1, Boolean freeStream1 = true);
+  Lexer(Stream *str1, GBool freeStream1 = gTrue);
 
   // Destructor.
   ~Lexer();
@@ -45,8 +47,8 @@ private:
 
   Stream *str;			// input stream
   int buf;			// next character
-  Boolean cr, lf;		// used for filtering CR/LF
-  Boolean freeStream;		// should Lexer free the Stream?
+  GBool cr, lf;			// used for filtering CR/LF
+  GBool freeStream;		// should Lexer free the Stream?
 
   int getChar();
 };

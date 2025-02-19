@@ -15,3 +15,48 @@ Fixed inverted CCITT decoding and inverted image mask drawing.
 Now compiles under gcc 2.7.x (ignore those stupid 'unused parameter'
   warnings).
 Many minor bug fixes and optimizations.
+
+
+0.4 (96-apr-24)
+---------------
+Implemented DCT filter.
+Implemented PostScript output; wrote pdftops program.
+Implemented links.
+Implemented font rotation -- I was wrong: X11R6 servers *do* support
+  font rotation (by specifying a matrix in place of a size).
+Added bindings for Home/End, Page Up/Down, arrow keys.
+Added initialZoom resource and -z option.
+Added geometry resource and -g option.
+Fixed image size off-by-one bug.
+Fixed bug where page content is reference to an array of streams.
+Cleaned up uninitialized variables which were causing random problems
+  on various platforms.
+Manually skip whitespace before calling atoi() for startxref.
+Replaced calls to XrmCombineFileDatabase() with calls to
+  XrmGetFileDatabase() and XrmMergeDatabases() so it will work under
+  older versions of X.
+Fixed problem with reading multiple xref tables in updated PDF files.
+Check for encryption and print appropriate error message.
+Rudimentary dithering of images.
+Fixed buf in CCITTFax filter (pass mode followed by horizontal mode).
+Optimized drawImage() and drawImageMask().
+Changed several things to ease porting:
+  - changed '__inline' to 'inline' (to adhere to the ANSI standard)
+  - surrounded interface/implementation pragmas with #ifdef _GNUC__
+  - got rid of empty array initializer lists
+  - moved Operator type definition from Gfx.cc to Gfx.h
+  - renamed String, uint, etc.
+  - ability to uncompress to file (NO_POPEN and USE_GZIP flags)
+  - added definitions of XK_Page_Up/Down and XPointer for old versions
+    of X
+For VMS port:
+  - use correct Xdefaults name for VMS, get rid of ltkGetHomeDir()
+  - added '#include <stddef.h>' before all X includes
+  - renamed files with multiple periods in their names
+Fixed window resizing infinite oscillation bug.
+Fixed problem with string-type (as opposed to stream-type) indexed
+  color space lookup tables (which are used in inline images).
+If an X font is not found, try smaller and then larger sizes (this is
+  useful for old or broken X servers which can't scale bitmap fonts).
+Added -rgb (color cube size) option.
+Various minor bug fixes.

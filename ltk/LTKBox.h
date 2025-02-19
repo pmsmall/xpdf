@@ -9,15 +9,24 @@
 #ifndef LTKBOX_H
 #define LTKBOX_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
+#include <stddef.h>
 #include <X11/Xlib.h>
-#include <stypes.h>
+#include <gtypes.h>
 #include <LTKBorder.h>
 #include <LTKWidget.h>
 
+//------------------------------------------------------------------------
+// LTKBox
+//------------------------------------------------------------------------
+
 class LTKBox: public LTKWidget {
 public:
+
+  //---------- constructors and destructor ----------
 
   LTKBox(char *name1, int cols1, int rows1,
 	 int left1, int right1, int top1, int bottom1,
@@ -27,20 +36,28 @@ public:
 
   virtual LTKWidget *copy() { return new LTKBox(this); }
 
+  //---------- access ----------
+
+  virtual GBool isBox() { return gTrue; }
   virtual void setParent(LTKWindow *parent1);
   int getXFill() { return xfill; }
   int getYFill() { return yfill; }
 
-  Boolean checkFills(char **err);
+  //---------- special access ----------
 
+  void setBorder(LTKBorder border1);
+
+  //---------- layout ----------
+
+  GBool checkFills(char **err);
   virtual void layout1();
   virtual void layout2(int x1, int y1, int width1, int height1);
   virtual void layout3();
-
-  virtual void redraw();
   virtual void map();
 
-  void setBorder(LTKBorder border1);
+  //---------- drawing ----------
+
+  virtual void redraw();
 
 protected:
 

@@ -9,28 +9,68 @@
 #ifndef XOUTPUTDEV_H
 #define XOUTPUTDEV_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
+#include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include "config.h"
 #include "OutputDev.h"
 
+class GString;
 class LTKApp;
 class LTKWindow;
 class GfxColor;
 class GfxFont;
+struct RGBColor;
+
+#define maxRGBCube 8		// max size of RGB color cube
 
 #define numTmpPoints 256	// number of XPoints in temporary array
 
 //------------------------------------------------------------------------
-// XOutputFontCache
+// XOutputFont
 //------------------------------------------------------------------------
 
-struct XOutputFont {
-  char name[100];
-  XFontStruct *font;
+class XOutputFont {
+public:
+
+  // Constructor.
+  XOutputFont(GfxFont *gfxFont, double m11, double m12,
+	      double m21, double m22, Display *display1);
+
+  // Destructor.
+  ~XOutputFont();
+
+  // Does this font match the tag, size, and angle?
+  GBool matches(GString *tag1, double m11, double m12, double m21, double m22)
+    { return tag->cmp(tag1) == 0 && mat11 == m11 && mat12 == m12 &&
+	     mat21 == m21 && mat22 == m22; }
+
+  // Get X font.
+  XFontStruct *getXFont() { return xFont; }
+
+  // Get character mapping.
+  Gushort mapChar(Guchar c) { return map[c]; }
+
+  // Reverse map a character.
+  Guchar revMapChar(Gushort c) { return revMap[c]; }
+
+private:
+
+  GString *tag;
+  double mat11, mat12, mat21, mat22;
+  Display *display;
+  XFontStruct *xFont;
+  Gushort map[256];
+  Guchar *revMap;
 };
+
+//------------------------------------------------------------------------
+// XOutputFontCache
+//------------------------------------------------------------------------
 
 class XOutputFontCache {
 public:
@@ -41,13 +81,14 @@ public:
   // Destructor.
   ~XOutputFontCache();
 
-  // Get a font.  This does an XLoadFont if necessary.
-  XFontStruct *getFont(char *name);
+  // Get a font.  This creates a new font if necessary.
+  XOutputFont *getFont(GfxFont *gfxFont, double m11, double m12,
+		       double m21, double m22);
 
 private:
 
   Display *display;		// X display pointer
-  XOutputFont			// fonts in reverse-LRU order
+  XOutputFont *			// fonts in reverse-LRU order
     fonts[fontCacheSize];
   int numFonts;			// number of valid entries
 };
@@ -78,7 +119,7 @@ public:
 
   // Does this device use upside-down coordinates?
   // (Upside-down means (0,0) is the top left corner of the page.)
-  virtual Boolean upsideDown() { return true; }
+  virtual GBool upsideDown() { return gTrue; }
 
   // Set page size (in pixels).
   virtual void setPageSize(int x, int y);
@@ -95,6 +136,7 @@ public:
 
   //----- update graphics state
   virtual void updateAll(GfxState *state);
+  virtual void updateCTM(GfxState *state);
   virtual void updateLineDash(GfxState *state);
   virtual void updateLineJoin(GfxState *state);
   virtual void updateLineCap(GfxState *state);
@@ -114,11 +156,11 @@ public:
   virtual void eoClip(GfxState *state);
 
   //----- text drawing
-  virtual void drawChar(GfxState *state, double x, double y, ushort c);
+  virtual void drawChar(GfxState *state, double x, double y, Guchar c);
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Stream *str,
-			     int width, int height, Boolean invert);
+			     int width, int height, GBool invert);
   virtual void drawImage(GfxState *state, Stream *str, int width,
 			 int height, GfxColorSpace *colorSpace);
 
@@ -133,23 +175,21 @@ private:
   GC strokeGC;			// GC with stroke color
   GC fillGC;			// GC with fill color
   Region clipRegion;		// clipping region
-  unsigned long			// color cube
-    colors[maxColorCube * maxColorCube * maxColorCube];
+  Gulong			// color cube
+    colors[maxRGBCube * maxRGBCube * maxRGBCube];
   int numColors;		// size of color cube
   XPoint			// temporary points array
     tmpPoints[numTmpPoints];
-  GfxFont *gFont;		// current font
-  XFontStruct *font;		// current X font
-  ushort *isoMap;		// font encoding
-  ushort *revISOMap;		// reverse encoding
+  GfxFont *gfxFont;		// current PDF font
+  XOutputFont *font;		// current font
   XOutputFontCache *fontCache;	// font cache
   XOutputState *save;		// stack of saved states
 
-  void updateLineAttrs(GfxState *state, Boolean updateDash);
+  void updateLineAttrs(GfxState *state, GBool updateDash);
   void doFill(GfxState *state, int rule);
   XPoint *pathPoints(GfxState *state, int *numPoints);
-  unsigned long findColor(GfxColor *color);
-  unsigned long findColor(int x[4], GfxColorSpace *colorSpace);
+  Gulong findColor(GfxColor *color);
+  Gulong findColor(RGBColor *x, RGBColor *err);
 };
 
 #endif

@@ -13,12 +13,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
-#include <stypes.h>
-#include <mem.h>
-#include <String.h>
+#include <gtypes.h>
+#include <gmem.h>
+#include <GString.h>
 
 enum ArgKind {
   argVal,			// arg with value
@@ -29,7 +30,7 @@ enum ArgKind {
 struct ArgDesc {
   char *tag;			// tag used in ltk file
   ArgKind kind;			// kind of arg
-  Boolean required;
+  GBool required;
   char *val;			// default for argVal; value for argSel
 };
 
@@ -50,17 +51,17 @@ struct Block {
   int numArgs;
 };
 
-#include "ltkbuild.widgets.h"
+#include "ltkbuild-widgets.h"
 
-static Boolean readWindow();
+static GBool readWindow();
 static void readBox(int indent);
 static void readWidget(int indent);
 static Block *readBlock(BlockDesc *tab, char *err);
 static void freeBlock(Block *block);
 static void initLexer();
 static char *getToken();
-static Boolean skipSpace();
-static Boolean checkToken(char *s, char *msg = NULL);
+static GBool skipSpace();
+static GBool checkToken(char *s, char *msg = NULL);
 static void error(char *msg, ...);
 
 static char line[256];
@@ -82,12 +83,12 @@ int main(int argc, char *argv[]) {
 
 //------------------------------------------------------------------------
 
-static Boolean readWindow() {
+static GBool readWindow() {
   Block *block;
   int i;
 
   if (!(block = readBlock(windowTab, "window block")))
-    return false;
+    return gFalse;
 
   printf("%s *%s(LTKApp *app) {\n", block->type, block->args[0].s);
   printf("  return new %s(app, ", block->type);
@@ -105,7 +106,7 @@ static Boolean readWindow() {
   printf("  );\n");
   printf("}\n\n");
 
-  return true;
+  return gTrue;
 }
 
 static void readBox(int indent) {
@@ -181,7 +182,7 @@ static Block *readBlock(BlockDesc *tab, char *err) {
   BlockDesc *bd;
   ArgDesc *ad;
   int n;
-  Boolean isVal;
+  GBool isVal;
 
   // get name and find block descriptor
   if (!(name = getToken()))
@@ -199,7 +200,7 @@ static Block *readBlock(BlockDesc *tab, char *err) {
   checkToken("(");
 
   // allocate block
-  block = (Block *)smalloc(sizeof(Block));
+  block = (Block *)gmalloc(sizeof(Block));
   block->name = bd->name;
   block->type = bd->type;
 
@@ -209,20 +210,20 @@ static Block *readBlock(BlockDesc *tab, char *err) {
     if (ad->kind == argVal || ad->kind == argLastSel)
       ++block->numArgs;
   }
-  block->args = (Arg *)smalloc(block->numArgs * sizeof(Arg));
+  block->args = (Arg *)gmalloc(block->numArgs * sizeof(Arg));
 
   // initialize args to defaults
   n = 0;
-  isVal = true;
+  isVal = gTrue;
   for (ad = bd->args; ad->tag; ++ad) {
     if (ad->kind == argVal) {
       strcpy(block->args[n++].s, ad->val);
-      isVal = true;
+      isVal = gTrue;
     } else if (isVal && ad->kind == argSel) {
       strcpy(block->args[n++].s, ad->val);
-      isVal = false;
+      isVal = gFalse;
     } else if (ad->kind == argLastSel) {
-      isVal = true;
+      isVal = gTrue;
     }
   }
 
@@ -235,9 +236,9 @@ static Block *readBlock(BlockDesc *tab, char *err) {
     n = strlen(tag);
     if (tag[n-1] == ':') {
       tag[n-1] = '\0';
-      isVal = true;
+      isVal = gTrue;
     } else {
-      isVal = false;
+      isVal = gFalse;
     }
     n = 0;
     for (ad = bd->args; ad->tag; ++ad) {
@@ -270,8 +271,8 @@ static Block *readBlock(BlockDesc *tab, char *err) {
 }
 
 static void freeBlock(Block *block) {
-  sfree(block->args);
-  sfree(block);
+  gfree(block->args);
+  gfree(block);
 }
 
 //------------------------------------------------------------------------
@@ -345,13 +346,13 @@ static char *getToken() {
   return tokenBuf;
 }
 
-static Boolean skipSpace() {
+static GBool skipSpace() {
   while (1) {
     if (!*nextChar || *nextChar == '#') {
       if (!fgets(line, sizeof(line), stdin)) {
 	line[0] = '\0';
 	nextChar = line;
-	return false;
+	return gFalse;
       }
       ++lineNum;
       nextChar = line;
@@ -361,20 +362,20 @@ static Boolean skipSpace() {
       break;
     }
   }
-  return true;
+  return gTrue;
 }
 
-static Boolean checkToken(char *s, char *msg) {
+static GBool checkToken(char *s, char *msg) {
   char *tok;
 
   tok = getToken();
   if (tok && !strcmp(tok, s))
-    return true;
+    return gTrue;
   if (msg)
     error("Expected '%s', got '%s' (%s)", s, tok, msg);
   else
     error("Expected '%s', got '%s'", s, tok);
-  return false;
+  return gFalse;
 }
 
 static void error(char *msg, ...) {

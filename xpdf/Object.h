@@ -9,12 +9,15 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
 #include <stdio.h>
 #include <string.h>
-#include <stypes.h>
-#include <mem.h>
+#include <gtypes.h>
+#include <gmem.h>
+#include <GString.h>
 #include "XRef.h"
 
 class Array;
@@ -71,7 +74,7 @@ public:
     type(objNone) {}
 
   // Initialize an object.
-  Object *initBool(Boolean booln1)
+  Object *initBool(GBool booln1)
     { type = objBool; booln = booln1;
       ++numAlloc[objBool]; return this; }
   Object *initInt(int intg1)
@@ -80,8 +83,8 @@ public:
   Object *initReal(double real1)
     { type = objReal; real = real1;
       ++numAlloc[objReal]; return this; }
-  Object *initString(char *string1)
-    { type = objString; string = copyString(string1);
+  Object *initString(char *string1, int length)
+    { type = objString; string = new GString(string1, length);
       ++numAlloc[objString]; return this; }
   Object *initName(char *name1)
     { type = objName; name = copyString(name1);
@@ -118,36 +121,36 @@ public:
   void free();
 
   // Type checking.
-  Boolean isBool() { return type == objBool; }
-  Boolean isInt() { return type == objInt; }
-  Boolean isReal() { return type == objReal; }
-  Boolean isNum() { return type == objInt || type == objReal; }
-  Boolean isString() { return type == objString; }
-  Boolean isName() { return type == objName; }
-  Boolean isNull() { return type == objNull; }
-  Boolean isArray() { return type == objArray; }
-  Boolean isDict() { return type == objDict; }
-  Boolean isStream() { return type == objStream; }
-  Boolean isRef() { return type == objRef; }
-  Boolean isCmd() { return type == objCmd; }
-  Boolean isError() { return type == objError; }
-  Boolean isEOF() { return type == objEOF; }
-  Boolean isNone() { return type == objNone; }
+  GBool isBool() { return type == objBool; }
+  GBool isInt() { return type == objInt; }
+  GBool isReal() { return type == objReal; }
+  GBool isNum() { return type == objInt || type == objReal; }
+  GBool isString() { return type == objString; }
+  GBool isName() { return type == objName; }
+  GBool isNull() { return type == objNull; }
+  GBool isArray() { return type == objArray; }
+  GBool isDict() { return type == objDict; }
+  GBool isStream() { return type == objStream; }
+  GBool isRef() { return type == objRef; }
+  GBool isCmd() { return type == objCmd; }
+  GBool isError() { return type == objError; }
+  GBool isEOF() { return type == objEOF; }
+  GBool isNone() { return type == objNone; }
 
   // Special type checking.
-  Boolean isName(char *name1)
+  GBool isName(char *name1)
     { return type == objName && !strcmp(name, name1); }
-  Boolean isDict(char *dictType);
-  Boolean isStream(char *dictType);
-  Boolean isCmd(char *cmd1)
+  GBool isDict(char *dictType);
+  GBool isStream(char *dictType);
+  GBool isCmd(char *cmd1)
     { return type == objCmd && !strcmp(cmd, cmd1); }
 
   // Accessors.  NB: these assume object is of correct type.
-  Boolean getBool() { return booln; }
+  GBool getBool() { return booln; }
   int getInt() { return intg; }
   double getReal() { return real; }
   double getNum() { return type == objInt ? (double)intg : real; }
-  char *getString() { return string; }
+  GString *getString() { return string; }
   char *getName() { return name; }
   Array *getArray() { return array; }
   Dict *getDict() { return dict; }
@@ -164,7 +167,7 @@ public:
   // Dict accessors.
   int dictGetLength();
   void dictAdd(char *key, Object *val);
-  Boolean dictIs(char *dictType);
+  GBool dictIs(char *dictType);
   Object *dictLookup(char *key, Object *obj);
   Object *dictLookupNF(char *key, Object *obj);
   char *dictGetKey(int i);
@@ -172,14 +175,14 @@ public:
   Object *dictGetValNF(int i, Object *obj);
 
   // Stream accessors.
-  Boolean streamIs(char *dictType);
+  GBool streamIs(char *dictType);
   void streamReset();
   int streamGetChar();
   int streamGetPos();
   void streamSetPos(int pos);
   FILE *streamGetFile();
   Dict *streamGetDict();
-  Boolean streamCheckHeader();
+  GBool streamCheckHeader();
 
   // Output.
   char *getTypeName();
@@ -192,10 +195,10 @@ private:
 
   ObjType type;			// object type
   union {			// value for each type:
-    Boolean booln;		//   boolean
+    GBool booln;		//   boolean
     int intg;			//   integer
     double real;		//   real
-    char *string;		//   string
+    GString *string;		//   string
     char *name;			//   name
     Array *array;		//   array
     Dict *dict;			//   dictionary
@@ -214,16 +217,16 @@ private:
 
 #include "Array.h"
 
-__inline int Object::arrayGetLength()
+inline int Object::arrayGetLength()
   { return array->getLength(); }
 
-__inline void Object::arrayAdd(Object *elem)
+inline void Object::arrayAdd(Object *elem)
   { array->add(elem); }
 
-__inline Object *Object::arrayGet(int i, Object *obj)
+inline Object *Object::arrayGet(int i, Object *obj)
   { return array->get(i, obj); }
 
-__inline Object *Object::arrayGetNF(int i, Object *obj)
+inline Object *Object::arrayGetNF(int i, Object *obj)
   { return array->getNF(i, obj); }
 
 //------------------------------------------------------------------------
@@ -232,31 +235,31 @@ __inline Object *Object::arrayGetNF(int i, Object *obj)
 
 #include "Dict.h"
 
-__inline int Object::dictGetLength()
+inline int Object::dictGetLength()
   { return dict->getLength(); }
 
-__inline void Object::dictAdd(char *key, Object *val)
+inline void Object::dictAdd(char *key, Object *val)
   { dict->add(key, val); }
 
-__inline Boolean Object::dictIs(char *dictType)
+inline GBool Object::dictIs(char *dictType)
   { return dict->is(dictType); }
 
-__inline Boolean Object::isDict(char *dictType)
+inline GBool Object::isDict(char *dictType)
   { return type == objDict && dictIs(dictType); }
 
-__inline Object *Object::dictLookup(char *key, Object *obj)
+inline Object *Object::dictLookup(char *key, Object *obj)
   { return dict->lookup(key, obj); }
 
-__inline Object *Object::dictLookupNF(char *key, Object *obj)
+inline Object *Object::dictLookupNF(char *key, Object *obj)
   { return dict->lookupNF(key, obj); }
 
-__inline char *Object::dictGetKey(int i)
+inline char *Object::dictGetKey(int i)
   { return dict->getKey(i); }
 
-__inline Object *Object::dictGetVal(int i, Object *obj)
+inline Object *Object::dictGetVal(int i, Object *obj)
   { return dict->getVal(i, obj); }
 
-__inline Object *Object::dictGetValNF(int i, Object *obj)
+inline Object *Object::dictGetValNF(int i, Object *obj)
   { return dict->getValNF(i, obj); }
 
 //------------------------------------------------------------------------
@@ -265,31 +268,31 @@ __inline Object *Object::dictGetValNF(int i, Object *obj)
 
 #include "Stream.h"
 
-__inline Boolean Object::streamIs(char *dictType)
+inline GBool Object::streamIs(char *dictType)
   { return stream->getDict()->is(dictType); }
 
-__inline Boolean Object::isStream(char *dictType)
+inline GBool Object::isStream(char *dictType)
   { return type == objStream && streamIs(dictType); }
 
-__inline void Object::streamReset()
+inline void Object::streamReset()
   { stream->reset(); }
 
-__inline int Object::streamGetChar()
+inline int Object::streamGetChar()
   { return stream->getChar(); }
 
-__inline int Object::streamGetPos()
+inline int Object::streamGetPos()
   { return stream->getPos(); }
 
-__inline void Object::streamSetPos(int pos)
+inline void Object::streamSetPos(int pos)
   { stream->setPos(pos); }
 
-__inline FILE *Object::streamGetFile()
+inline FILE *Object::streamGetFile()
   { return stream->getFile(); }
 
-__inline Dict *Object::streamGetDict()
+inline Dict *Object::streamGetDict()
   { return stream->getDict(); }
 
-__inline Boolean Object::streamCheckHeader()
+inline GBool Object::streamCheckHeader()
   { return stream->checkHeader(); }
 
 #endif

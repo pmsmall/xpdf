@@ -9,10 +9,12 @@
 #ifndef GFXFONT_H
 #define GFXFONT_H
 
+#ifdef __GNUC__
 #pragma interface
+#endif
 
-#include <stypes.h>
-#include <String.h>
+#include <gtypes.h>
+#include <GString.h>
 
 class Dict;
 
@@ -22,6 +24,7 @@ class Dict;
 
 #define fontFixedWidth (1 << 0)
 #define fontSerif      (1 << 1)
+#define fontSymbolic   (1 << 2)
 #define fontItalic     (1 << 6)
 #define fontBold       (1 << 18)
 
@@ -34,40 +37,43 @@ public:
   // Destructor.
   ~GfxFont();
 
+  // Get font tag.
+  GString *getTag() { return tag; }
+
   // Does this font match the tag?
-  Boolean matches(char *tag1) { return !tag->cmp(tag1); }
+  GBool matches(char *tag1) { return !tag->cmp(tag1); }
 
   // Get base font name.
-  String *getName() { return name; }
+  GString *getName() { return name; }
 
   // Get font descriptor flags.
-  Boolean isFixedWidth() { return flags & fontFixedWidth; }
-  Boolean isSerif() { return flags & fontSerif; }
-  Boolean isItalic() { return flags & fontItalic; }
-  Boolean isBold() { return flags & fontBold; }
+  GBool isFixedWidth() { return flags & fontFixedWidth; }
+  GBool isSerif() { return flags & fontSerif; }
+  GBool isSymbolic() { return flags & fontSymbolic; }
+  GBool isItalic() { return flags & fontItalic; }
+  GBool isBold() { return flags & fontBold; }
 
   // Get width of a character.
-  double getWidth(uchar c) { return widths[c]; }
+  double getWidth(Guchar c) { return widths[c]; }
+  double getWidth(GString *s);
 
-  // Get the mapping from font encoding to ISO or PDF encoding.
-  ushort *getISOMap() { return isoMap; }
-  ushort *getPDFMap() { return pdfMap; }
+  // Get encoded character name.
+  char *getCharName(int code) { return encoding[code]; }
 
-  // Get the mapping from ISO encoding to font encoding.
-  ushort *getReverseISOMap() { return revISOMap; }
+  // Look up a character name in an encoding.
+  int lookupCharName(char *name, char **enc, int encSize, int hint);
 
 private:
 
-  void getEncoding(Dict *dict);
-  void findNamedChar(char *name, ushort *isoCode, ushort *pdfCode);
+  void makeEncoding(Dict *fontDict, char **builtinEncoding);
+  void makeWidths(Dict *fontDict, char **builtinEncoding,
+		  int builtinEncodingSize, Gushort *builtinWidths);
 
-  String *tag;
-  String *name;
+  GString *tag;
+  GString *name;
   int flags;
   double widths[256];
-  ushort isoMap[256];
-  ushort revISOMap[256];
-  ushort pdfMap[256];
+  char *encoding[256];
 };
 
 //------------------------------------------------------------------------
@@ -77,11 +83,18 @@ private:
 class GfxFontDict {
 public:
 
+  // Build the font dictionary, given the PDF font dictionary.
   GfxFontDict(Dict *fontDict);
 
+  // Destructor.
   ~GfxFontDict();
 
+  // Get the specified font.
   GfxFont *lookup(char *tag);
+
+  // Iterative access.
+  int getNumFonts() { return numFonts; }
+  GfxFont *getFont(int i) { return fonts[i]; }
 
 private:
 
