@@ -14,7 +14,7 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion         "2.02"
+#define xpdfVersion         "2.02pl1"
 #define xpdfVersionNum      2.02
 #define xpdfMajorVersion    2
 #define xpdfMinorVersion    2

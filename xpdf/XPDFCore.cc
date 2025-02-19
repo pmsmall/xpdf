@@ -14,6 +14,7 @@
 
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
+#include <string.h>
 #include "gmem.h"
 #include "GString.h"
 #include "GList.h"
@@ -1271,26 +1272,9 @@ void XPDFCore::doAction(LinkAction *action) {
 void XPDFCore::runCommand(GString *cmdFmt, GString *arg) {
   GString *cmd;
   char *s;
-  int i;
 
   if ((s = strstr(cmdFmt->getCString(), "%s"))) {
-    cmd = arg->copy();
-    // filter out any quote marks (' or ") to avoid a potential
-    // security hole
-    i = 0;
-    while (i < cmd->getLength()) {
-      if (cmd->getChar(i) == '"') {
-	cmd->del(i);
-	cmd->insert(i, "%22");
-	i += 3;
-      } else if (cmd->getChar(i) == '\'') {
-	cmd->del(i);
-	cmd->insert(i, "%27");
-	i += 3;
-      } else {
-	++i;
-      }
-    }
+    cmd = mungeURL(arg);
     cmd->insert(0, cmdFmt->getCString(),
 		s - cmdFmt->getCString());
     cmd->append(s + 2);
@@ -1306,6 +1290,31 @@ void XPDFCore::runCommand(GString *cmdFmt, GString *arg) {
 #endif
   system(cmd->getCString());
   delete cmd;
+}
+
+// Escape any characters in a URL which might cause problems when
+// calling system().
+GString *XPDFCore::mungeURL(GString *url) {
+  static char *allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                         "abcdefghijklmnopqrstuvwxyz"
+                         "0123456789"
+                         "-_.~/?:@&=+,#%";
+  GString *newURL;
+  char c;
+  char buf[4];
+  int i;
+
+  newURL = new GString();
+  for (i = 0; i < url->getLength(); ++i) {
+    c = url->getChar(i);
+    if (strchr(allowed, c)) {
+      newURL->append(c);
+    } else {
+      sprintf(buf, "%%%02x", c & 0xff);
+      newURL->append(buf);
+    }
+  }
+  return newURL;
 }
 
 
@@ -1942,7 +1951,7 @@ void XPDFCore::doErrorDialog(char *title, GString *msg) {
 
 GBool XPDFCore::doDialog(int type, GBool hasCancel,
 			 char *title, GString *msg) {
-  Widget dialog;
+  Widget dialog, scroll, text;
   XtAppContext appContext;
   Arg args[20];
   int n;
@@ -1954,11 +1963,31 @@ GBool XPDFCore::doDialog(int type, GBool hasCancel,
   XtSetArg(args[n], XmNdialogStyle, XmDIALOG_PRIMARY_APPLICATION_MODAL); ++n;
   s1 = XmStringCreateLocalized(title);
   XtSetArg(args[n], XmNdialogTitle, s1); ++n;
-  s2 = XmStringCreateLocalized(msg->getCString());
-  XtSetArg(args[n], XmNmessageString, s2); ++n;
+  s2 = NULL; // make gcc happy
+  if (msg->getLength() <= 80) {
+    s2 = XmStringCreateLocalized(msg->getCString());
+    XtSetArg(args[n], XmNmessageString, s2); ++n;
+  }
   dialog = XmCreateMessageDialog(drawArea, "questionDialog", args, n);
   XmStringFree(s1);
-  XmStringFree(s2);
+  if (msg->getLength() <= 80) {
+    XmStringFree(s2);
+  } else {
+    n = 0;
+    XtSetArg(args[n], XmNscrollingPolicy, XmAUTOMATIC); ++n;
+    if (drawAreaWidth > 300) {
+      XtSetArg(args[n], XmNwidth, drawAreaWidth - 100); ++n;
+    }
+    scroll = XmCreateScrolledWindow(dialog, "scroll", args, n);
+    XtManageChild(scroll);
+    n = 0;
+    XtSetArg(args[n], XmNeditable, False); ++n;
+    XtSetArg(args[n], XmNeditMode, XmMULTI_LINE_EDIT); ++n;
+    XtSetArg(args[n], XmNvalue, msg->getCString()); ++n;
+    XtSetArg(args[n], XmNshadowThickness, 0); ++n;
+    text = XmCreateText(scroll, "text", args, n);
+    XtManageChild(text);
+  }
   XtUnmanageChild(XmMessageBoxGetChild(dialog, XmDIALOG_HELP_BUTTON));
   XtAddCallback(dialog, XmNokCallback,
 		&dialogOkCbk, (XtPointer)this);

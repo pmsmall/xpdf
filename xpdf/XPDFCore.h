@@ -196,6 +196,7 @@ private:
   //----- hyperlinks
   void doLink(int mx, int my);
   void runCommand(GString *cmdFmt, GString *arg);
+  GString *mungeURL(GString *url);
 
   //----- selection
   static Boolean convertSelectionCbk(Widget widget, Atom *selection,
