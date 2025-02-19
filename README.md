@@ -5,7 +5,7 @@ project. This file was generated automatically from the source code repository.
 
 ## Description
 - **Name:** xpdfreader
-- **Version:** 3.03
+- **Version:** 3.04
 - **Author:** [www.xpdfreader.com](https://www.xpdfreader.com)
 
 xpdfreader is an open-source implementation of a PDF reader designed to mimic the functionality and interface of
