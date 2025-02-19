@@ -390,6 +390,7 @@ int main(int argc, char *argv[]) {
   int pg;
   int x, y;
   Guint width, height;
+  double width1, height1;
   GString *zoomStr;
   GBool ok;
   char s[20];
@@ -599,23 +600,25 @@ int main(int argc, char *argv[]) {
     app->getGeometryResource("geometry", &x, &y, &width, &height);
     if (width == 0 || height == 0) {
       if (!doc || doc->getNumPages() == 0) {
-	width = 612;
-	height = 792;
+	width1 = 612;
+	height1 = 792;
       } else if (doc->getPageRotate(pg) == 90 ||
 		 doc->getPageRotate(pg) == 270) {
-	width = (int)(doc->getPageHeight(pg) + 0.5);
-	height = (int)(doc->getPageWidth(pg) + 0.5);
+	width1 = doc->getPageHeight(pg);
+	height1 = doc->getPageWidth(pg);
       } else {
-	width = (int)(doc->getPageWidth(pg) + 0.5);
-	height = (int)(doc->getPageHeight(pg) + 0.5);
+	width1 = doc->getPageWidth(pg);
+	height1 = doc->getPageHeight(pg);
       }
       if (zoom == zoomPage || zoom == zoomWidth) {
-	width = (width * zoomDPI[defZoom - minZoom]) / 72 + 28;
-	height = (height * zoomDPI[defZoom - minZoom]) / 72 + 56;
+	width = (int)((width1 * zoomDPI[defZoom - minZoom]) / 72 + 0.5);
+	height = (int)((height1 * zoomDPI[defZoom - minZoom]) / 72 + 0.5);
       } else {
-	width = (width * zoomDPI[zoom - minZoom]) / 72 + 28;
-	height = (height * zoomDPI[zoom - minZoom]) / 72 + 56;
+	width = (int)((width1 * zoomDPI[zoom - minZoom]) / 72 + 0.5);
+	height = (int)((height1 * zoomDPI[zoom - minZoom]) / 72 + 0.5);
       }
+      width += 28;
+      height += 56;
       if (width > (Guint)app->getDisplayWidth() - 100) {
 	width = app->getDisplayWidth() - 100;
       }
@@ -1201,6 +1204,7 @@ static void doLink(int mx, int my) {
   GString *namedDest;
   char *s;
   GString *fileName;
+  GString *actionName;
   Ref pageRef;
   int pg;
   double x, y;
@@ -1400,6 +1404,32 @@ static void doLink(int mx, int my) {
       }
       break;
 
+    // Named action
+    case actionNamed:
+      actionName = ((LinkNamed *)action)->getName();
+      if (!actionName->cmp("NextPage")) {
+	nextPageCbk(NULL, 0, gTrue);
+      } else if (!actionName->cmp("PrevPage")) {
+	prevPageCbk(NULL, 0, gTrue);
+      } else if (!actionName->cmp("FirstPage")) {
+	if (page != 1) {
+	  displayPage(1, zoom, rotate, gTrue);
+	}
+      } else if (!actionName->cmp("LastPage")) {
+	if (page != doc->getNumPages()) {
+	  displayPage(doc->getNumPages(), zoom, rotate, gTrue);
+	}
+      } else if (!actionName->cmp("GoBack")) {
+	backCbk(NULL, 0, gTrue);
+      } else if (!actionName->cmp("GoForward")) {
+	forwardCbk(NULL, 0, gTrue);
+      } else if (!actionName->cmp("Quit")) {
+	quitCbk(NULL, 0, gTrue);
+      } else {
+	error(-1, "Unknown named action: '%s'", actionName->getCString());
+      }
+      break;
+
     // unknown action type
     case actionUnknown:
       error(-1, "Unknown link action type: '%s'",
@@ -1437,6 +1467,9 @@ static void mouseMoveCbk(LTKWidget *widget, int widgetNum, int mx, int my) {
 	  break;
 	case actionURI:
 	  s = ((LinkURI *)action)->getURI()->getCString();
+	  break;
+	case actionNamed:
+	  s = ((LinkNamed *)linkAction)->getName()->getCString();
 	  break;
 	case actionUnknown:
 	  s = "[unknown link]";
@@ -1935,6 +1968,9 @@ static void openSelectCbk(LTKWidget *widget, int n, GString *name) {
 static void reloadCbk() {
   int pg;
 
+  if (!doc) {
+    return;
+  }
   pg = page;
   if (loadFile(doc->getFileName()->copy())) {
     if (pg > doc->getNumPages()) {

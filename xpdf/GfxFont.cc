@@ -72,24 +72,6 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
   tag = new GString(tag1);
   id = id1;
 
-  // get base font name
-  name = NULL;
-  fontDict->lookup("BaseFont", &obj1);
-  if (obj1.isName())
-    name = new GString(obj1.getName());
-  obj1.free();
-
-  // is it a built-in font?
-  builtinFont = NULL;
-  if (name) {
-    for (i = 0; i < numBuiltinFonts; ++i) {
-      if (!strcmp(builtinFonts[i].name, name->getCString())) {
-	builtinFont = &builtinFonts[i];
-	break;
-      }
-    }
-  }
-
   // get font type
   type = fontUnknownType;
   fontDict->lookup("Subtype", &obj1);
@@ -106,8 +88,12 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
   obj1.free();
   is16 = gFalse;
 
-  // assume Times-Roman by default (for substitution purposes)
-  flags = fontSerif;
+  // get base font name
+  name = NULL;
+  fontDict->lookup("BaseFont", &obj1);
+  if (obj1.isName())
+    name = new GString(obj1.getName());
+  obj1.free();
 
   // Newer Adobe tools are using Base14-compatible TrueType fonts
   // without embedding them, so munge the names into the equivalent
@@ -127,21 +113,21 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
 	name2 = "Helvetica";
       }
     } else if (!strncmp(p, "TimesNewRoman", 13)) {
-      if (!strcmp(p+5, ",Bold")) {
+      if (!strcmp(p+13, ",Bold")) {
 	name2 = "Times-Bold";
-      } else if (!strcmp(p+5, "Italic")) {
+      } else if (!strcmp(p+13, "Italic")) {
 	name2 = "Times-Italic";
-      } else if (!strcmp(p+5, "BoldItalic")) {
+      } else if (!strcmp(p+13, "BoldItalic")) {
 	name2 = "Times-BoldItalic";
       } else {
 	name2 = "Times-Roman";
       }
     } else if (!strncmp(p, "CourierNew", 10)) {
-      if (!strcmp(p+5, ",Bold")) {
+      if (!strcmp(p+10, ",Bold")) {
 	name2 = "Courier-Bold";
-      } else if (!strcmp(p+5, "Italic")) {
+      } else if (!strcmp(p+10, "Italic")) {
 	name2 = "Courier-Oblique";
-      } else if (!strcmp(p+5, "BoldItalic")) {
+      } else if (!strcmp(p+10, "BoldItalic")) {
 	name2 = "Courier-BoldOblique";
       } else {
 	name2 = "Courier";
@@ -152,6 +138,20 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
       name = new GString(name2);
     }
   }
+
+  // is it a built-in font?
+  builtinFont = NULL;
+  if (name) {
+    for (i = 0; i < numBuiltinFonts; ++i) {
+      if (!strcmp(builtinFonts[i].name, name->getCString())) {
+	builtinFont = &builtinFonts[i];
+	break;
+      }
+    }
+  }
+
+  // assume Times-Roman by default (for substitution purposes)
+  flags = fontSerif;
 
   // get info from font descriptor
   embFontName = NULL;
@@ -564,6 +564,7 @@ char *GfxFont::readEmbFontFile(int *len) {
     buf[i++] = c;
   }
   *len = i;
+  str->close();
 
   obj2.free();
   obj1.free();

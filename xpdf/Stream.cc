@@ -59,6 +59,9 @@ Stream::Stream() {
 Stream::~Stream() {
 }
 
+void Stream::close() {
+}
+
 int Stream::getRawChar() {
   error(-1, "Internal: called getRawChar() on non-predictor stream");
   return EOF;
@@ -292,6 +295,10 @@ FilterStream::FilterStream(Stream *str) {
 }
 
 FilterStream::~FilterStream() {
+}
+
+void FilterStream::close() {
+  str->close();
 }
 
 void FilterStream::setPos(int pos) {
@@ -556,9 +563,7 @@ FileStream::FileStream(FILE *f, int start, int length, Object *dict):
 }
 
 FileStream::~FileStream() {
-  if (savePos >= 0) {
-    fseek(f, savePos, SEEK_SET);
-  }
+  close();
 }
 
 Stream *FileStream::makeSubStream(int start, int length, Object *dict) {
@@ -574,6 +579,13 @@ void FileStream::reset() {
   if (decrypt)
     decrypt->reset();
 #endif
+}
+
+void FileStream::close() {
+  if (savePos >= 0) {
+    fseek(f, savePos, SEEK_SET);
+    savePos = -1;
+  }
 }
 
 GBool FileStream::fillBuf() {
@@ -1614,7 +1626,9 @@ short CCITTFaxStream::getWhiteCode() {
     }
   }
   error(getPos(), "Bad white code (%04x) in CCITTFax stream", code);
-  return EOF;
+  // return a positive number so that the caller doesn't go into an
+  // infinite loop
+  return 1;
 }
 
 short CCITTFaxStream::getBlackCode() {
@@ -1673,7 +1687,9 @@ short CCITTFaxStream::getBlackCode() {
     }
   }
   error(getPos(), "Bad black code (%04x) in CCITTFax stream", code);
-  return EOF;
+  // return a positive number so that the caller doesn't go into an
+  // infinite loop
+  return 1;
 }
 
 short CCITTFaxStream::lookBits(int n) {
@@ -2787,6 +2803,14 @@ FlateStream::~FlateStream() {
 void FlateStream::reset() {
   int cmf, flg;
 
+  index = 0;
+  remain = 0;
+  codeBuf = 0;
+  codeSize = 0;
+  compressedBlock = gFalse;
+  endOfBlock = gTrue;
+  eof = gTrue;
+
   str->reset();
 
   // read header
@@ -2809,13 +2833,6 @@ void FlateStream::reset() {
     return;
   }
 
-  // initialize
-  index = 0;
-  remain = 0;
-  codeBuf = 0;
-  codeSize = 0;
-  compressedBlock = gFalse;
-  endOfBlock = gTrue;
   eof = gFalse;
 }
 
@@ -3226,6 +3243,9 @@ void FixedLengthEncoder::reset() {
   count = 0;
 }
 
+void FixedLengthEncoder::close() {
+}
+
 int FixedLengthEncoder::getChar() {
   if (length >= 0 && count >= length)
     return EOF;
@@ -3260,6 +3280,9 @@ void ASCII85Encoder::reset() {
   bufPtr = bufEnd = buf;
   lineLen = 0;
   eof = gFalse;
+}
+
+void ASCII85Encoder::close() {
 }
 
 GBool ASCII85Encoder::fillBuf() {
@@ -3327,6 +3350,9 @@ void RunLengthEncoder::reset() {
   str->reset();
   bufPtr = bufEnd = nextEnd = buf;
   eof = gFalse;
+}
+
+void RunLengthEncoder::close() {
 }
 
 //

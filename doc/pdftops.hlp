@@ -38,6 +38,11 @@
               Level 2 PostScript.  In particular,  Level  2  sup-
               ports color images and image compression.
 
+       -level1sep
+              Generate  Level 1 separable PostScript.  All colors
+              are converted to CMYK.   Images  are  written  with
+              separate stream data for the four components.
+
        -eps   Generate an Encapsulated PostScript (EPS) file.  An
               EPS file contains a single image,  so  if  you  use
               this  option  with  a multi-page PDF file, you must

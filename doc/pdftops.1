@@ -49,6 +49,11 @@ significantly larger (if they contain images), but will print on Level
 default behavior is to generate Level 2 PostScript.  In particular,
 Level 2 supports color images and image compression.
 .TP
+.B \-level1sep
+Generate Level 1 separable PostScript.  All colors are converted to
+CMYK.  Images are written with separate stream data for the four
+components.
+.TP
 .B \-eps
 Generate an Encapsulated PostScript (EPS) file.  An EPS file contains
 a single image, so if you use this option with a multi-page PDF file,

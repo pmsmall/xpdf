@@ -622,3 +622,50 @@ Fix missing closepath bug in PostScript output.
 Change PostScript portrait/landscape mode selection so it only uses
   landscape if the page width is greater than the paper width.
 Tweaked the VMS code in makePathAbsolute().
+
+0.91a (2000-oct-11)
+-------------------
+Implemented separable CMYK PostScript output (the -level1sep switch to
+  pdftops).
+Implemented Pattern color spaces with tiling patterns (polygon fills
+  only).
+Implemented Stamp annotations.
+Implemented Named link actions.
+Fixed a really dumb bug in the TrueColor code in SFont (which affects
+  both Type 1 and TrueType font rendering on 16-bit displays).
+Rewrote the GfxColorSpace / GfxColor code.
+Switched from djgppcfg to dj_make.bat (from Michael Richmond).
+Bug in the Type 1 encoding parser -- couldn't handle lines of the form
+  'dup NNN/name put' (with no space between the code and the name).
+Fixed the mkstemp() test in configure.in -- switched from
+  AC_TRY_COMPILE to AC_TRY_LINK and added <unistd.h>.
+Added DESTDIR to top-level Makefile.in.
+Fixed an incorrect OPI comment in PSOutputDev.
+Minor tweak to the CCITTFax code to avoid writing past the end of an
+  array on an invalid data stream.
+Xpdf crashed if the user selected 'reload' when no document was
+  loaded.
+Look for character names of the form "xx" (two hex digits with no
+  leading alphabetic char) and 'cNNN' (decimal digits with a leading
+  alphabetic char that happens to be a hex digit).
+FlateStream didn't correctly handle zero-length streams.
+Xref reconstruction didn't handle the case where the opening "<<"
+  immediately followed "trailer" with no intervening whitespace.
+Fix the %%DocumentSuppliedResources comment in EPS output.
+Scale annotations to fit their rectangles.
+Added Stream::close() to handle cases (e.g., patterns) where a Stream
+  object is used multiple times before it is deleted.
+Added the topLevel arg to Gfx::go() so it doesn't call out->dump() for
+  every pattern element (and form).
+Rearranged the GfxResources class.
+Clean up white space handling in Lexer.
+Make the dpi parameter to PDFDoc::displayPage etc. a double - this
+  avoids margin gaps with fit-page and fit-width.
+Fix a rounding problem in xpdf.cc that was causing the window to
+  sometimes be one pixel too small.
+Fixed a minor bug in dealing with Base-14 TrueType font names.
+Fixed Lab -> RGB color space conversion.
+Added support for opacity values (from PDF 1.4) to GfxState and
+  OutputDev.  [Thanks to Leonard Rosenthol.]
+Implemented type 2 functions; rearranged the Function class
+  hierarchy.

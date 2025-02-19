@@ -477,10 +477,19 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
 	if ((charName[0] == 'B' || charName[0] == 'C' ||
 	     charName[0] == 'G') &&
 	    strlen(charName) == 3 &&
+	    isxdigit(charName[1]) && isxdigit(charName[2]) &&
 	    ((charName[1] >= 'a' && charName[1] <= 'f') ||
 	     (charName[1] >= 'A' && charName[1] <= 'F') ||
 	     (charName[2] >= 'a' && charName[2] <= 'f') ||
 	     (charName[2] >= 'A' && charName[2] <= 'F'))) {
+	  hex = gTrue;
+	  break;
+	} else if ((strlen(charName) == 2) &&
+		   isxdigit(charName[0]) && isxdigit(charName[1]) &&
+		   ((charName[0] >= 'a' && charName[0] <= 'f') ||
+		    (charName[0] >= 'A' && charName[0] <= 'F') ||
+		    (charName[1] >= 'a' && charName[1] <= 'f') ||
+		    (charName[1] >= 'A' && charName[1] <= 'F'))) {
 	  hex = gTrue;
 	  break;
 	}
@@ -547,13 +556,16 @@ void XOutputT1Font::updateGC(GC gc) {
 
 void XOutputT1Font::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 			     GC gc, double x, double y, int c) {
-  GfxColor *color;
+  GfxRGB rgb;
 
-  color = (state->getRender() & 1) ? state->getStrokeColor() :
-                                     state->getFillColor();
+  if (state->getRender() & 1) {
+    state->getStrokeRGB(&rgb);
+  } else {
+    state->getFillRGB(&rgb);
+  }
   font->drawChar(pixmap, w, h, gc, xoutRound(x), xoutRound(y),
-		 (int)(color->getR() * 65535), (int)(color->getG() * 65535),
-		 (int)(color->getB() * 65535), c);
+		 (int)(rgb.r * 65535), (int)(rgb.g * 65535),
+		 (int)(rgb.b * 65535), c);
 }
 #endif // HAVE_T1LIB_H
 
@@ -608,13 +620,16 @@ void XOutputTTFont::updateGC(GC gc) {
 
 void XOutputTTFont::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 			     GC gc, double x, double y, int c) {
-  GfxColor *color;
+  GfxRGB rgb;
 
-  color = (state->getRender() & 1) ? state->getStrokeColor() :
-                                     state->getFillColor();
+  if (state->getRender() & 1) {
+    state->getStrokeRGB(&rgb);
+  } else {
+    state->getFillRGB(&rgb);
+  }
   font->drawChar(pixmap, w, h, gc, xoutRound(x), xoutRound(y),
-		 (int)(color->getR() * 65535), (int)(color->getG() * 65535),
-		 (int)(color->getB() * 65535), c);
+		 (int)(rgb.r * 65535), (int)(rgb.g * 65535),
+		 (int)(rgb.b * 65535), c);
 }
 #endif // HAVE_FREETYPE_FREETYPE_H
 
@@ -643,8 +658,8 @@ XOutputServerFont::XOutputServerFont(GfxFont *gfxFont, char *fontNameFmt,
   xFont = NULL;
 
   // Construct forward and reverse map.
-  // This tries to deal with font subset character names of the
-  // form 'Bxx', 'Cxx', 'Gxx', with decimal or hex numbering.
+  // This tries to deal with font subset character names of the form
+  // 'Bxx', 'Cxx', 'Gxx', or 'xx' with decimal or hex numbering.
   if (!gfxFont->is16Bit()) {
     for (code = 0; code < 256; ++code)
       revMap[code] = 0;
@@ -658,12 +673,15 @@ XOutputServerFont::XOutputServerFont(GfxFont *gfxFont, char *fontNameFmt,
 		 charName[0] == 'G') &&
 		isxdigit(charName[1]) && isxdigit(charName[2])) {
 	      sscanf(charName+1, "%x", &code2);
+	    } else if (hex && n == 2 &&
+		       isxdigit(charName[0]) && isxdigit(charName[1])) {
+	      sscanf(charName, "%x", &code2);
 	    } else if (!hex && n >= 2 && n <= 3 &&
 		       isdigit(charName[0]) && isdigit(charName[1])) {
 	      code2 = atoi(charName);
 	      if (code2 >= 256)
 		code2 = -1;
-	    } else if (!hex && n >= 3 && n <= 5 && isdigit(charName[1])) {
+	    } else if (n >= 3 && n <= 5 && isdigit(charName[1])) {
 	      code2 = atoi(charName+1);
 	      if (code2 >= 256)
 		code2 = -1;
@@ -1304,6 +1322,7 @@ T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
 	while ((c = strObj.streamGetChar()) != EOF) {
 	  fputc(c, f);
 	}
+	strObj.streamClose();
 	strObj.free();
       }
       fclose(f);
@@ -1388,6 +1407,7 @@ TTFontFile *XOutputFontCache::getTTFont(GfxFont *gfxFont) {
     while ((c = strObj.streamGetChar()) != EOF) {
       fputc(c, f);
     }
+    strObj.streamClose();
     strObj.free();
     fclose(f);
 
@@ -1658,14 +1678,16 @@ void XOutputDev::endPage() {
 
 void XOutputDev::drawLink(Link *link, Catalog *catalog) {
   double x1, y1, x2, y2, w;
-  GfxColor color;
+  GfxRGB rgb;
   XPoint points[5];
   int x, y;
 
   link->getBorder(&x1, &y1, &x2, &y2, &w);
   if (w > 0) {
-    color.setRGB(0, 0, 1);
-    XSetForeground(display, strokeGC, findColor(&color));
+    rgb.r = 0;
+    rgb.g = 0;
+    rgb.b = 1;
+    XSetForeground(display, strokeGC, findColor(&rgb));
     XSetLineAttributes(display, strokeGC, xoutRound(w),
 		       LineSolid, CapRound, JoinRound);
     cvtUserToDev(x1, y1, &x, &y);
@@ -1821,11 +1843,17 @@ void XOutputDev::updateLineAttrs(GfxState *state, GBool updateDash) {
 }
 
 void XOutputDev::updateFillColor(GfxState *state) {
-  XSetForeground(display, fillGC, findColor(state->getFillColor()));
+  GfxRGB rgb;
+
+  state->getFillRGB(&rgb);
+  XSetForeground(display, fillGC, findColor(&rgb));
 }
 
 void XOutputDev::updateStrokeColor(GfxState *state) {
-  XSetForeground(display, strokeGC, findColor(state->getStrokeColor()));
+  GfxRGB rgb;
+
+  state->getStrokeRGB(&rgb);
+  XSetForeground(display, strokeGC, findColor(&rgb));
 }
 
 void XOutputDev::updateFont(GfxState *state) {
@@ -2473,7 +2501,7 @@ void XOutputDev::drawChar16(GfxState *state, double x, double y,
   }
 }
 
-inline Gulong XOutputDev::findColor(RGBColor *x, RGBColor *err) {
+inline Gulong XOutputDev::findColor(GfxRGB *x, GfxRGB *err) {
   double gray;
   int r, g, b;
   Gulong pixel;
@@ -2513,28 +2541,28 @@ inline Gulong XOutputDev::findColor(RGBColor *x, RGBColor *err) {
   return pixel;
 }
 
-Gulong XOutputDev::findColor(GfxColor *color) {
+Gulong XOutputDev::findColor(GfxRGB *rgb) {
   int r, g, b;
   double gray;
   Gulong pixel;
 
   if (trueColor) {
-    r = xoutRound(color->getR() * rMul);
-    g = xoutRound(color->getG() * gMul);
-    b = xoutRound(color->getB() * bMul);
+    r = xoutRound(rgb->r * rMul);
+    g = xoutRound(rgb->g * gMul);
+    b = xoutRound(rgb->b * bMul);
     pixel = ((Gulong)r << rShift) +
             ((Gulong)g << gShift) +
             ((Gulong)b << bShift);
   } else if (numColors == 1) {
-    gray = color->getGray();
+    gray = 0.299 * rgb->r + 0.587 * rgb->g + 0.114 * rgb->b;
     if (gray < 0.5)
       pixel = colors[0];
     else
       pixel = colors[1];
   } else {
-    r = xoutRound(color->getR() * (numColors - 1));
-    g = xoutRound(color->getG() * (numColors - 1));
-    b = xoutRound(color->getB() * (numColors - 1));
+    r = xoutRound(rgb->r * (numColors - 1));
+    g = xoutRound(rgb->g * (numColors - 1));
+    b = xoutRound(rgb->b * (numColors - 1));
 #if 0 //~ this makes things worse as often as better
     // even a very light color shouldn't map to white
     if (r == numColors - 1 && g == numColors - 1 && b == numColors - 1) {
@@ -2564,24 +2592,19 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   int dx, dy;
   int dvx, dvdx, dvpx, dvqx, dvdx2, dvtx;
   int dvy, dvdy, dvpy, dvqy, dvdy2, dvty;
-#if 1 //~bres
   int dhx, dhdx, dhpx, dhqx, dhdx2, dhtx, dhtx0;
   int dhy, dhdy, dhpy, dhqy, dhdy2, dhty, dhty0;
-#else
-  int dhx, dhdx, dhpx, dhqx, dhdx2, dhtx;
-  int dhy, dhdy, dhpy, dhqy, dhdy2, dhty;
-#endif
   int ivy, ivdy, ivpy, ivqy, ivty;
   int ihx, ihdx, ihpx, ihqx, ihtx;
   int vn, vi, hn, hi;
   int bufy;
-  GfxColor *color;
+  GfxRGB rgb;
   Guchar *pixBuf;
   int imgPix;
   double alpha;
   XColor xcolor;
   Gulong lastPixel;
-  GfxColor color2;
+  GfxRGB rgb2;
   double r0, g0, b0, r1, g1, b1;
   Gulong pix;
   Guchar *p;
@@ -2756,10 +2779,10 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
 	       image, cx1, cy1);
 
   // get mask color
-  color = state->getFillColor();
-  r0 = color->getR();
-  g0 = color->getG();
-  b0 = color->getB();
+  state->getFillRGB(&rgb);
+  r0 = rgb.r;
+  g0 = rgb.g;
+  b0 = rgb.b;
 
   // initialize background color
   // (the specific pixel value doesn't matter here, as long as
@@ -2781,10 +2804,8 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   dvty = 0;
   ivy = 0;
   ivty = 0;
-#if 1 //~bres
   dhtx0 = 0;
   dhty0 = 0;
-#endif
   n = 0;
   bufy = -1;
   for (vi = 0; vi <= vn; ++vi) {
@@ -2812,13 +2833,8 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
     // traverse a horizontal stripe
     dhx = 0;
     dhy = 0;
-#if 0 //~bres
-    dhtx = 0;
-    dhty = 0;
-#else
     dhtx = dhtx0;
     dhty = dhty0;
-#endif
     ihx = 0;
     ihtx = 0;
     for (hi = 0; hi <= hn; ++hi) {
@@ -2848,10 +2864,10 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
 	b1 = (double)xcolor.blue / 65535.0;
 	lastPixel = xcolor.pixel;
       }
-      color2.setRGB(r0 * (1 - alpha) + r1 * alpha,
-		    g0 * (1 - alpha) + g1 * alpha,
-		    b0 * (1 - alpha) + b1 * alpha);
-      pix = findColor(&color2);
+      rgb2.r = r0 * (1 - alpha) + r1 * alpha;
+      rgb2.g = g0 * (1 - alpha) + g1 * alpha;
+      rgb2.b = b0 * (1 - alpha) + b1 * alpha;
+      pix = findColor(&rgb2);
 
       // set pixel
       XPutPixel(image, dvx + dhx - bx0, dvy + dhy - by0, pix);
@@ -2880,27 +2896,19 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
     // Bresenham increment (left edge)
     dvx += dvdx;
     dvtx += dvpx;
-#if 1 //~bres
     dhty0 += dvdx * dhdx * dhpy;
-#endif
     if (dvtx >= dvqx) {
       dvx += dvdx2;
       dvtx -= dvqx;
-#if 1 //~bres
       dhty0 += dvdx2 * dhdx * dhpy;
-#endif
     }
     dvy += dvdy;
     dvty += dvpy;
-#if 1 //~bres
     dhtx0 += dvdy * dhdy * dhpx;
-#endif
     if (dvty >= dvqy) {
       dvy += dvdy2;
       dvty -= dvqy;
-#if 1 //~bres
       dhtx0 += dvdy2 * dhdy * dhpx;
-#endif
     }
     ivy += ivdy;
     ivty += ivpy;
@@ -2908,7 +2916,6 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
       ++ivy;
       ivty -= ivqy;
     }
-#if 1 //~bres
     if (dhtx0 >= dhqy) {
       dhtx0 -= dhqx;
     } else if (dhtx0 < 0) {
@@ -2919,7 +2926,6 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
     } else if (dhty0 < 0) {
       dhty0 += dhqy;
     }
-#endif
   }
   
   // blit the image into the pixmap
@@ -2948,25 +2954,19 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   int dx, dy;
   int dvx, dvdx, dvpx, dvqx, dvdx2, dvtx;
   int dvy, dvdy, dvpy, dvqy, dvdy2, dvty;
-#if 1 //~bres
   int dhx, dhdx, dhpx, dhqx, dhdx2, dhtx, dhtx0;
   int dhy, dhdy, dhpy, dhqy, dhdy2, dhty, dhty0;
-#else
-  int dhx, dhdx, dhpx, dhqx, dhdx2, dhtx;
-  int dhy, dhdy, dhpy, dhqy, dhdy2, dhty;
-#endif
   int ivy, ivdy, ivpy, ivqy, ivty;
   int ihx, ihdx, ihpx, ihqx, ihtx;
   int vn, vi, hn, hi;
   int bufy;
-  RGBColor *pixBuf;
-  Guchar pixBuf2[4];
-  GfxColor color;
-  RGBColor color2, err, errRight;
-  RGBColor *errDown;
+  GfxRGB *pixBuf;
+  Guchar pixBuf2[gfxColorMaxComps];
+  GfxRGB color2, err, errRight;
+  GfxRGB *errDown;
   double r0, g0, b0;
   Gulong pix;
-  RGBColor *p;
+  GfxRGB *p;
   int n, m, i, j;
 
   // image parameters
@@ -3135,7 +3135,7 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
 
   // allocate pixel buffer
   n = ivdy + (ivpy > 0 ? 1 : 0);
-  pixBuf = (RGBColor *)gmalloc(n * width * sizeof(RGBColor));
+  pixBuf = (GfxRGB *)gmalloc(n * width * sizeof(GfxRGB));
 
   // allocate XImage
   image = XCreateImage(display, DefaultVisual(display, screenNum),
@@ -3152,7 +3152,7 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
 
   // allocate error diffusion accumulators
   if (dither) {
-    errDown = (RGBColor *)gmalloc(bw * sizeof(RGBColor));
+    errDown = (GfxRGB *)gmalloc(bw * sizeof(GfxRGB));
     for (j = 0; j < bw; ++j) {
       errDown[j].r = errDown[j].g = errDown[j].b = 0;
     }
@@ -3171,10 +3171,8 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   dvty = 0;
   ivy = 0;
   ivty = 0;
-#if 1 //~bres
   dhtx0 = 0;
   dhty0 = 0;
-#endif
   n = 0;
   bufy = -1;
   for (vi = 0; vi <= vn; ++vi) {
@@ -3190,10 +3188,7 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
       for (i = 0; i < n; ++i) {
 	for (j = 0; j < width; ++j) {
 	  imgStr->getPixel(pixBuf2);
-	  colorMap->getColor(pixBuf2, &color);
-	  p->r = color.getR();
-	  p->g = color.getG();
-	  p->b = color.getB();
+	  colorMap->getRGB(pixBuf2, p);
 	  ++p;
 	}
       }
@@ -3206,13 +3201,8 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
     // traverse a horizontal stripe
     dhx = 0;
     dhy = 0;
-#if 0 //~bres
-    dhtx = 0;
-    dhty = 0;
-#else
     dhtx = dhtx0;
     dhty = dhty0;
-#endif
     ihx = 0;
     ihtx = 0;
     for (hi = 0; hi <= hn; ++hi) {
@@ -3296,27 +3286,19 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
     // Bresenham increment (left edge)
     dvx += dvdx;
     dvtx += dvpx;
-#if 1 //~bres
     dhty0 += dvdx * dhdx * dhpy;
-#endif
     if (dvtx >= dvqx) {
       dvx += dvdx2;
       dvtx -= dvqx;
-#if 1 //~bres
       dhty0 += dvdx2 * dhdx * dhpy;
-#endif
     }
     dvy += dvdy;
     dvty += dvpy;
-#if 1 //~bres
     dhtx0 += dvdy * dhdy * dhpx;
-#endif
     if (dvty >= dvqy) {
       dvy += dvdy2;
       dvty -= dvqy;
-#if 1 //~bres
       dhtx0 += dvdy2 * dhdy * dhpx;
-#endif
     }
     ivy += ivdy;
     ivty += ivpy;
@@ -3324,7 +3306,6 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
       ++ivy;
       ivty -= ivqy;
     }
-#if 1 //~bres
     if (dhtx0 >= dhqy) {
       dhtx0 -= dhqx;
     } else if (dhtx0 < 0) {
@@ -3335,7 +3316,6 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
     } else if (dhty0 < 0) {
       dhty0 += dhqy;
     }
-#endif
   }
   
   // blit the image into the pixmap

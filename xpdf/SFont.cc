@@ -46,8 +46,8 @@ Gulong SFontEngine::findColor(int r, int g, int b) {
   Gulong pix;
 
   r1 = ((r & 0xffff) * rMax) / 0xffff;
-  g1 = ((g & 0xffff) * rMax) / 0xffff;
-  b1 = ((b & 0xffff) * rMax) / 0xffff;
+  g1 = ((g & 0xffff) * gMax) / 0xffff;
+  b1 = ((b & 0xffff) * bMax) / 0xffff;
   if (trueColor) {
     pix = (r1 << rShift) + (g1 << gShift) + (b1 << bShift);
   } else {

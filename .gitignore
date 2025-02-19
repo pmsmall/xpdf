@@ -5,7 +5,6 @@
 *.dll
 *.dylib
 *.la
-*.exe
 .idea
 .iml
 *.old
@@ -14,13 +13,9 @@ cmake-build-debug
 exe/*
 CMakeCache.txt
 *.cmake
-./*.xml
-*.pdf
 *.cbp
 .DS_Store
 ./*.xml_data/
-libs/image/png/src/libpng.a
-libs/image/zlib/src/libzlib.a
 traingenerator
 jeu/*
 build/

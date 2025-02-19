@@ -84,6 +84,8 @@ public:
   virtual void updateLineWidth(GfxState *state) {}
   virtual void updateFillColor(GfxState *state) {}
   virtual void updateStrokeColor(GfxState *state) {}
+  virtual void updateFillOpacity(GfxState *state) {}
+  virtual void updateStrokeOpacity(GfxState *state) {}
 
   //----- update text state
   virtual void updateFont(GfxState *state) {}

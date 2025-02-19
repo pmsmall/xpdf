@@ -486,7 +486,7 @@ xpdf(1)                                                   xpdf(1)
        the directory /home/derekn/fonts/bakoma.
 
 BUGS
-       No support for TrueType and Type 3 fonts.
+       No support for Type 3 fonts.
 
 AUTHOR
        The   xpdf   software   and  documentation  are  copyright

@@ -35,35 +35,37 @@ static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
 
 static ArgDesc argDesc[] = {
-  {"-f",      argInt,      &firstPage,     0,
+  {"-f",      argInt,      &firstPage,      0,
    "first page to print"},
-  {"-l",      argInt,      &lastPage,      0,
+  {"-l",      argInt,      &lastPage,       0,
    "last page to print"},
-  {"-paperw", argInt,      &paperWidth,    0,
+  {"-paperw", argInt,      &paperWidth,     0,
    "paper width, in points"},
-  {"-paperh", argInt,      &paperHeight,   0,
+  {"-paperh", argInt,      &paperHeight,    0,
    "paper height, in points"},
-  {"-level1", argFlag,     &psOutLevel1,   0,
+  {"-level1", argFlag,     &psOutLevel1,    0,
    "generate Level 1 PostScript"},
-  {"-eps",    argFlag,     &psOutEPS,      0,
+  {"-level1sep", argFlag,  &psOutLevel1Sep, 0,
+   "generate Level 1 separable PostScript"},
+  {"-eps",    argFlag,     &psOutEPS,       0,
    "generate Encapsulated PostScript (EPS)"},
 #if OPI_SUPPORT
-  {"-opi",    argFlag,     &psOutOPI,      0,
+  {"-opi",    argFlag,     &psOutOPI,       0,
    "generate OPI comments"},
 #endif
-  {"-noemb",  argFlag,     &noEmbedFonts,  0,
+  {"-noemb",  argFlag,     &noEmbedFonts,   0,
    "don't embed Type 1 fonts"},
-  {"-form",   argFlag,     &doForm,        0,
+  {"-form",   argFlag,     &doForm,         0,
    "generate a PostScript form"},
-  {"-upw",    argString,   userPassword,   sizeof(userPassword),
+  {"-upw",    argString,   userPassword,    sizeof(userPassword),
    "user password (for encrypted files)"},
-  {"-q",      argFlag,     &errQuiet,      0,
+  {"-q",      argFlag,     &errQuiet,       0,
    "don't print any messages or errors"},
-  {"-v",      argFlag,     &printVersion,  0,
+  {"-v",      argFlag,     &printVersion,   0,
    "print copyright and version info"},
-  {"-h",      argFlag,     &printHelp,     0,
+  {"-h",      argFlag,     &printHelp,      0,
    "print usage information"},
-  {"-help",   argFlag,     &printHelp,     0,
+  {"-help",   argFlag,     &printHelp,      0,
    "print usage information"},
   {NULL}
 };
@@ -87,7 +89,11 @@ int main(int argc, char *argv[]) {
     }
     exit(1);
   }
-  if (doForm && psOutLevel1) {
+  if (psOutLevel1 && psOutLevel1Sep) {
+    fprintf(stderr, "Error: use -level1 or -level1sep, not both.\n");
+    exit(1);
+  }
+  if (doForm && (psOutLevel1 || psOutLevel1Sep)) {
     fprintf(stderr, "Error: forms are only available with Level 2 output.\n");
     exit(1);
   }

@@ -173,7 +173,8 @@ dnl # the mkstemp exists in the library but isn't declared in the
 dnl # include file (e.g., in cygwin 1.1.2).
 AC_CACHE_CHECK([for mkstemp],
 xpdf_cv_func_mkstemp,
-[AC_TRY_COMPILE([#include <stdlib.h>],
+[AC_TRY_LINK([#include <stdlib.h>
+#include <unistd.h>],
 [mkstemp("foo");],
 xpdf_cv_func_mkstemp=yes, xpdf_cv_func_mkstemp=no)])
 if test "$xpdf_cv_func_mkstemp" = yes; then

@@ -160,11 +160,7 @@ With djgpp:
 
   * Open a DOS window.
 
-  * ./djgppcfg
-
-  * make
-
-  * make install
+  * ./dj_make
 
 With the Microsoft tools:
 

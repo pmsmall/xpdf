@@ -182,7 +182,7 @@ Page::~Page() {
   contents.free();
 }
 
-void Page::display(OutputDev *out, int dpi, int rotate,
+void Page::display(OutputDev *out, double dpi, int rotate,
 		   Links *links, Catalog *catalog) {
 #ifndef PDF_PARSER_ONLY
   Gfx *gfx;

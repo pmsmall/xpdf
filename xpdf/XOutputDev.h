@@ -20,11 +20,10 @@
 #include "OutputDev.h"
 
 class GString;
-class GfxColor;
+struct GfxRGB;
 class GfxFont;
 class GfxSubpath;
 class TextPage;
-struct RGBColor;
 class FontEncoding;
 class XOutputFontCache;
 class Link;
@@ -59,10 +58,6 @@ class TTFont;
 struct BoundingRect {
   short xMin, xMax;		// min/max x values
   short yMin, yMax;		// min/max y values
-};
-
-struct RGBColor {
-  double r, g, b;
 };
 
 //------------------------------------------------------------------------
@@ -501,8 +496,8 @@ private:
 	       double x0, double y0, double x1, double y1,
 	       double x2, double y2, double x3, double y3);
   void addPoint(XPoint **points, int *size, int *k, int x, int y);
-  Gulong findColor(GfxColor *color);
-  Gulong findColor(RGBColor *x, RGBColor *err);
+  Gulong findColor(GfxRGB *rgb);
+  Gulong findColor(GfxRGB *x, GfxRGB *err);
 };
 
 #endif

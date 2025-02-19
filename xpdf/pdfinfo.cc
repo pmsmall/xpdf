@@ -126,9 +126,11 @@ int main(int argc, char *argv[]) {
   // print encryption info
   printf("Encrypted:    ");
   if (doc->isEncrypted()) {
-    printf("yes (print:%s copy:%s)\n",
+    printf("yes (print:%s copy:%s change:%s addNotes:%s)\n",
 	   doc->okToPrint() ? "yes" : "no",
-	   doc->okToCopy() ? "yes" : "no");
+	   doc->okToCopy() ? "yes" : "no",
+	   doc->okToChange() ? "yes" : "no",
+	   doc->okToAddNotes() ? "yes" : "no");
   } else {
     printf("no\n");
   }

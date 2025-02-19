@@ -19,17 +19,25 @@
 
 //------------------------------------------------------------------------
 
-// A '1' in this array means the corresponding character ends a name
-// or command.
-static char endOfNameChars[128] = {
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0,   // 0x
+// A '1' in this array means the character is white space.  A '1' or
+// '2' means the character ends a name or command.
+static char specialChars[256] = {
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0,   // 0x
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 1x
-  1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1,   // 2x
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0,   // 3x
+  1, 0, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 0, 0, 2,   // 2x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0,   // 3x
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 4x
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0,   // 5x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0,   // 5x
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 6x
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0    // 7x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0,   // 7x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 8x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 9x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // ax
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // bx
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // cx
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // dx
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // ex
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0    // fx
 };
 
 //------------------------------------------------------------------------
@@ -67,6 +75,7 @@ Lexer::Lexer(Object *obj) {
 
 Lexer::~Lexer() {
   if (!curStr.isNone()) {
+    curStr.streamClose();
     curStr.free();
   }
   if (freeArray) {
@@ -79,6 +88,7 @@ int Lexer::getChar() {
 
   c = EOF;
   while (!curStr.isNone() && (c = curStr.streamGetChar()) == EOF) {
+    curStr.streamClose();
     curStr.free();
     ++strPtr;
     if (strPtr < streams->getLength()) {
@@ -117,7 +127,7 @@ Object *Lexer::getObj(Object *obj) {
 	comment = gFalse;
     } else if (c == '%') {
       comment = gTrue;
-    } else if (!isspace(c)) {
+    } else if (specialChars[c] != 1) {
       break;
     }
   }
@@ -284,8 +294,7 @@ Object *Lexer::getObj(Object *obj) {
   case '/':
     p = tokBuf;
     n = 0;
-    while ((c = lookChar()) != EOF &&
-	   !(c < 128 && endOfNameChars[c])) {
+    while ((c = lookChar()) != EOF && !specialChars[c]) {
       getChar();
       if (c == '#') {
 	c2 = lookChar();
@@ -354,7 +363,7 @@ Object *Lexer::getObj(Object *obj) {
 	} else if (c == EOF) {
 	  error(getPos(), "Unterminated hex string");
 	  break;
-	} else if (!isspace(c)) {
+	} else if (specialChars[c] != 1) {
 	  c2 = c2 << 4;
 	  if (c >= '0' && c <= '9')
 	    c2 += c - '0';
@@ -417,8 +426,7 @@ Object *Lexer::getObj(Object *obj) {
     p = tokBuf;
     *p++ = c;
     n = 1;
-    while ((c = lookChar()) != EOF &&
-	   !(c < 128 && endOfNameChars[c])) {
+    while ((c = lookChar()) != EOF && !specialChars[c]) {
       getChar();
       if (++n == tokBufSize) {
 	error(getPos(), "Command token too long");

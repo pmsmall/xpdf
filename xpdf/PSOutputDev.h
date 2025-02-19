@@ -20,6 +20,7 @@
 
 class GfxPath;
 class GfxFont;
+class GfxColorSpace;
 
 //------------------------------------------------------------------------
 // Parameters
@@ -27,6 +28,9 @@ class GfxFont;
 
 // Generate Level 1 PostScript?
 extern GBool psOutLevel1;
+
+// Generate Level 1 separable PostScript?
+extern GBool psOutLevel1Sep;
 
 // Generate Encapsulated PostScript?
 extern GBool psOutEPS;
@@ -146,9 +150,13 @@ private:
   void doImageL1(GfxImageColorMap *colorMap,
 		 GBool invert, GBool inlineImg,
 		 Stream *str, int width, int height, int len);
-  void doImage(GfxImageColorMap *colorMap,
-	       GBool invert, GBool inlineImg,
-	       Stream *str, int width, int height, int len);
+  void doImageL1Sep(GfxImageColorMap *colorMap,
+		    GBool invert, GBool inlineImg,
+		    Stream *str, int width, int height, int len);
+  void doImageL2(GfxImageColorMap *colorMap,
+		 GBool invert, GBool inlineImg,
+		 Stream *str, int width, int height, int len);
+  void dumpColorSpaceL2(GfxColorSpace *colorSpace);
   void opiBegin20(GfxState *state, Dict *dict);
   void opiBegin13(GfxState *state, Dict *dict);
   void opiTransform(GfxState *state, double x0, double y0,

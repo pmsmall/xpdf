@@ -92,7 +92,7 @@ void ImageOutputDev::drawImage(GfxState *state, Stream *str, int width,
   FILE *f;
   ImageStream *imgStr;
   Guchar pixBuf[4];
-  GfxColor color;
+  GfxRGB rgb;
   int x, y;
   int c;
 
@@ -143,10 +143,10 @@ void ImageOutputDev::drawImage(GfxState *state, Stream *str, int width,
       // write the line
       for (x = 0; x < width; ++x) {
 	imgStr->getPixel(pixBuf);
-	colorMap->getColor(pixBuf, &color);
-	fputc((int)(color.getR() * 255 + 0.5), f);
-	fputc((int)(color.getG() * 255 + 0.5), f);
-	fputc((int)(color.getB() * 255 + 0.5), f);
+	colorMap->getRGB(pixBuf, &rgb);
+	fputc((int)(rgb.r * 255 + 0.5), f);
+	fputc((int)(rgb.g * 255 + 0.5), f);
+	fputc((int)(rgb.b * 255 + 0.5), f);
       }
     }
     delete imgStr;

@@ -14,7 +14,7 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion "0.91"
+#define xpdfVersion "0.91a"
 
 // supported PDF version
 #define supportedPDFVersionStr "1.3"

@@ -290,13 +290,16 @@ void TextString::addChar(GfxState *state, double x, double y,
 	   charName[0] == 'G') &&
 	  isxdigit(charName[1]) && isxdigit(charName[2])) {
 	sscanf(charName+1, "%x", &c1);
+      } else if (hexCodes && m == 2 &&
+		 isxdigit(charName[0]) && isxdigit(charName[1])) {
+	sscanf(charName, "%x", &c1);
       } else if (!hexCodes && m >= 2 && m <= 3 &&
 		 isdigit(charName[0]) && isdigit(charName[1])) {
 	c1 = atoi(charName);
 	if (c1 >= 256) {
 	  c1 = -1;
 	}
-      } else if (!hexCodes && m >= 3 && m <= 5 && isdigit(charName[1])) {
+      } else if (m >= 3 && m <= 5 && isdigit(charName[1])) {
 	c1 = atoi(charName+1);
 	if (c1 >= 256) {
 	  c1 = -1;
@@ -1012,10 +1015,19 @@ void TextOutputDev::updateFont(GfxState *state) {
 	if ((charName[0] == 'B' || charName[0] == 'C' ||
 	     charName[0] == 'G') &&
 	    strlen(charName) == 3 &&
+	    isxdigit(charName[1]) && isxdigit(charName[2]) &&
 	    ((charName[1] >= 'a' && charName[1] <= 'f') ||
 	     (charName[1] >= 'A' && charName[1] <= 'F') ||
 	     (charName[2] >= 'a' && charName[2] <= 'f') ||
 	     (charName[2] >= 'A' && charName[2] <= 'F'))) {
+	  hexCodes = gTrue;
+	  break;
+	} else if ((strlen(charName) == 2) &&
+		   isxdigit(charName[0]) && isxdigit(charName[1]) &&
+		   ((charName[0] >= 'a' && charName[0] <= 'f') ||
+		    (charName[0] >= 'A' && charName[0] <= 'F') ||
+		    (charName[1] >= 'a' && charName[1] <= 'f') ||
+		    (charName[1] >= 'A' && charName[1] <= 'F'))) {
 	  hexCodes = gTrue;
 	  break;
 	}

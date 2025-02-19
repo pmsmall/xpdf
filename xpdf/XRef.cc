@@ -342,7 +342,7 @@ GBool XRef::constructXRef() {
     if (!strncmp(p, "trailer", 7)) {
       obj.initNull();
       parser = new Parser(new Lexer(
-		      str->makeSubStream(start + pos + 8, -1, &obj)));
+		      str->makeSubStream(start + pos + 7, -1, &obj)));
       if (!trailerDict.isNone())
 	trailerDict.free();
       parser->getObj(&trailerDict);

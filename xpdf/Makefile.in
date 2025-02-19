@@ -248,9 +248,9 @@ Stream.o: ./Stream.cc ../goo/gmem.h ../goo/gfile.h ../goo/gtypes.h \
 T1Font.o: ./T1Font.cc ../goo/gmem.h FontEncoding.h ../goo/gtypes.h \
  T1Font.h SFont.h
 TextOutputDev.o: ./TextOutputDev.cc ../goo/GString.h ../goo/gmem.h \
- config.h Error.h GfxState.h ../goo/gtypes.h FontEncoding.h \
- TextOutputDev.h GfxFont.h Object.h Array.h Dict.h Stream.h \
- OutputDev.h TextOutputFontInfo.h
+ config.h Error.h GfxState.h ../goo/gtypes.h Object.h Array.h Dict.h \
+ Stream.h FontEncoding.h TextOutputDev.h GfxFont.h OutputDev.h \
+ TextOutputFontInfo.h
 TTFont.o: ./TTFont.cc ../goo/gmem.h TTFont.h SFont.h ../goo/gtypes.h
 XOutputDev.o: ./XOutputDev.cc ../goo/gmem.h ../goo/gfile.h \
  ../goo/gtypes.h ../goo/GString.h Object.h Array.h Dict.h Stream.h \
