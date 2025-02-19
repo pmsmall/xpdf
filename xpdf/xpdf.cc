@@ -312,6 +312,7 @@ int main(int argc, char *argv[]) {
 
   // check for memory leaks
   Object::memCheck(errFile);
+  gMemReport(errFile);
 
   // print coverage info
   coverDump(errFile);
@@ -479,23 +480,30 @@ static void keyPressCbk(LTKWindow *win, KeySym key, char *s, int n) {
   if (n > 0) {
     switch (s[0]) {
     case 'n':
-      vScrollbar->setPos(0, canvas->getHeight());
       nextPageCbk(NULL, 0, gTrue);
       break;
     case 'p':
-      vScrollbar->setPos(0, canvas->getHeight());
       prevPageCbk(NULL, 0, gTrue);
       break;
     case ' ':
-      vScrollbar->setPos(vScrollbar->getPos() + canvas->getHeight(),
-			 canvas->getHeight());
-      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      if (vScrollbar->getPos() >=
+	  canvas->getRealHeight() - canvas->getHeight()) {
+	nextPageCbk(NULL, 0, gTrue);
+      } else {
+	vScrollbar->setPos(vScrollbar->getPos() + canvas->getHeight(),
+			   canvas->getHeight());
+	canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      }
       break;
     case '\b':			// bs
     case '\177':		// del
-      vScrollbar->setPos(vScrollbar->getPos() - canvas->getHeight(),
-			 canvas->getHeight());
-      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      if (vScrollbar->getPos() == 0) {
+	prevPageCbk(NULL, 0, gTrue);
+      } else {
+	vScrollbar->setPos(vScrollbar->getPos() - canvas->getHeight(),
+			   canvas->getHeight());
+	canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      }
       break;
     case '\014':		// ^L
       displayPage(page, zoom, rotate);
@@ -519,14 +527,23 @@ static void keyPressCbk(LTKWindow *win, KeySym key, char *s, int n) {
       canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
       break;
     case XK_Page_Up:
-      vScrollbar->setPos(vScrollbar->getPos() - canvas->getHeight(),
-			 canvas->getHeight());
-      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      if (vScrollbar->getPos() == 0) {
+	prevPageCbk(NULL, 0, gTrue);
+      } else {
+	vScrollbar->setPos(vScrollbar->getPos() - canvas->getHeight(),
+			   canvas->getHeight());
+	canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      }
       break;
     case XK_Page_Down:
-      vScrollbar->setPos(vScrollbar->getPos() + canvas->getHeight(),
-			 canvas->getHeight());
-      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      if (vScrollbar->getPos() >=
+	  canvas->getRealHeight() - canvas->getHeight()) {
+	nextPageCbk(NULL, 0, gTrue);
+      } else {
+	vScrollbar->setPos(vScrollbar->getPos() + canvas->getHeight(),
+			   canvas->getHeight());
+	canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      }
       break;
     case XK_Left:
       hScrollbar->setPos(hScrollbar->getPos() - 16, canvas->getWidth());
@@ -689,17 +706,21 @@ static void buttonPressCbk(LTKWidget *canvas1, int n,
 }
 
 static void nextPageCbk(LTKWidget *button, int n, GBool on) {
-  if (page < catalog->getNumPages())
+  if (page < catalog->getNumPages()) {
+    vScrollbar->setPos(0, canvas->getHeight());
     displayPage(page + 1, zoom, rotate);
-  else
+  } else {
     XBell(display, 0);
+  }
 }
 
 static void prevPageCbk(LTKWidget *button, int n, GBool on) {
-  if (page > 1)
+  if (page > 1) {
+    vScrollbar->setPos(0, canvas->getHeight());
     displayPage(page - 1, zoom, rotate);
-  else
+  } else {
     XBell(display, 0);
+  }
 }
 
 static void pageNumCbk(LTKWidget *textIn, int n, GString *text) {
@@ -798,6 +819,7 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on) {
 	catalog->getPage(pg)->genPostScript(psOut, zoomDPI[zoom - minZoom],
 					    rotate);
       }
+      psOut->trailer();
     }
     delete psOut;
 

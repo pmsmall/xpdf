@@ -9,6 +9,8 @@
 #ifndef GMEM_H
 #define GMEM_H
 
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,6 +31,15 @@ extern void *grealloc(void *p, int size);
  * Same as free, but checks for and ignores NULL pointers.
  */
 extern void gfree(void *p);
+
+#ifdef DEBUG_MEM
+/*
+ * Report on unfreed memory.
+ */
+extern void gMemReport(FILE *f);
+#else
+#define gMemReport(f)
+#endif
 
 /*
  * Allocate memory and copy a string into it.

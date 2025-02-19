@@ -7,24 +7,24 @@
 #========================================================================
 
 all:
-	cd goo; make
-	cd ltk; make
-	cd xpdf; make all
+	cd goo; $(MAKE)
+	cd ltk; $(MAKE)
+	cd xpdf; $(MAKE) all
 
 xpdf:
-	cd goo; make
-	cd ltk; make
-	cd xpdf; make xpdf
+	cd goo; $(MAKE)
+	cd ltk; $(MAKE)
+	cd xpdf; $(MAKE) xpdf
 
 pdftops:
-	cd goo; make
-	cd xpdf; make pdftops
+	cd goo; $(MAKE)
+	cd xpdf; $(MAKE) pdftops
 
 install:
 	install -c xpdf/xpdf $(PREFIX)/bin
 	install -c xpdf/pdftops $(PREFIX)/bin
 
 clean:
-	cd goo; make clean
-	cd ltk; make clean
-	cd xpdf; make clean
+	cd goo; $(MAKE) clean
+	cd ltk; $(MAKE) clean
+	cd xpdf; $(MAKE) clean

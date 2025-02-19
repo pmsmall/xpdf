@@ -47,11 +47,11 @@ public:
   // Go to a position in the stream.
   virtual void setPos(int pos1);
 
-  // Get name of i'th filter.
-  virtual char *getFilter(int i) { return NULL; }
+  // Get PostScript command for the filter(s).
+  virtual GString *getPSFilter(char *indent);
 
   // Does this stream type potentially contain non-printable chars?
-  virtual GBool isBinary() { return gTrue; }
+  virtual GBool isBinary(GBool last = gTrue) = 0;
 
   // Get the base FileStream or SubStream of this stream.
   virtual Stream *getBaseStream() = 0;
@@ -61,9 +61,6 @@ public:
 
   // Get the dictionary associated with this stream.
   virtual Dict *getDict() = 0;
-
-  // Check for a PDF header on this stream.
-  GBool checkHeader();
 
   // Add filters to this stream according to the parameters in <dict>.
   // Returns the new stream.
@@ -89,9 +86,17 @@ public:
   virtual int getChar();
   virtual int getPos() { return pos; }
   virtual void setPos(int pos1);
+  virtual GBool isBinary(GBool last = gTrue) { return last; }
   virtual Stream *getBaseStream() { return this; }
   virtual FILE *getFile() { return f; }
   virtual Dict *getDict() { return dict.getDict(); }
+
+  // Check for a PDF header on this stream.  Skip past some garbage
+  // if necessary.
+  GBool checkHeader();
+
+  // Get position of first byte of stream within the file.
+  int getStart() { return start; }
 
 private:
 
@@ -115,6 +120,7 @@ public:
   virtual void reset() {}
   virtual int getChar() { return str->getChar(); }
   virtual int getPos() { return str->getPos(); }
+  virtual GBool isBinary(GBool last = gTrue) { return last; }
   virtual Stream *getBaseStream() { return this; }
   virtual FILE *getFile() { return str->getFile(); }
   virtual Dict *getDict() { return dict.getDict(); }
@@ -137,8 +143,8 @@ public:
   virtual void reset();
   virtual int getChar();
   virtual int getPos() { return str->getPos(); }
-  virtual char *getFilter(int i);
-  virtual GBool isBinary() { return gFalse; }
+  virtual GString *getPSFilter(char *indent);
+  virtual GBool isBinary(GBool last = gTrue);
   virtual Stream *getBaseStream() { return str->getBaseStream(); }
   virtual FILE *getFile() { return str->getFile(); }
   virtual Dict *getDict() { return str->getDict(); }
@@ -161,8 +167,8 @@ public:
   virtual void reset();
   virtual int getChar();
   virtual int getPos() { return str->getPos(); }
-  virtual char *getFilter(int i);
-  virtual GBool isBinary() { return gFalse; }
+  virtual GString *getPSFilter(char *indent);
+  virtual GBool isBinary(GBool last = gTrue);
   virtual Stream *getBaseStream() { return str->getBaseStream(); }
   virtual FILE *getFile() { return str->getFile(); }
   virtual Dict *getDict() { return str->getDict(); }
@@ -189,7 +195,8 @@ public:
   virtual void reset();
   virtual int getChar();
   virtual int getPos() { return str->getPos(); }
-  virtual char *getFilter(int i);
+  virtual GString *getPSFilter(char *indent);
+  virtual GBool isBinary(GBool last = gTrue);
   virtual Stream *getBaseStream() { return str->getBaseStream(); }
   virtual FILE *getFile() { return str->getFile(); }
   virtual Dict *getDict() { return str->getDict(); }
@@ -237,7 +244,8 @@ public:
   virtual void reset();
   virtual int getChar();
   virtual int getPos() { return str->getPos(); }
-  virtual char *getFilter(int i);
+  virtual GString *getPSFilter(char *indent);
+  virtual GBool isBinary(GBool last = gTrue);
   virtual Stream *getBaseStream() { return str->getBaseStream(); }
   virtual FILE *getFile() { return str->getFile(); }
   virtual Dict *getDict() { return str->getDict(); }
@@ -293,7 +301,8 @@ public:
   virtual void reset();
   virtual int getChar();
   virtual int getPos() { return str->getPos(); }
-  virtual char *getFilter(int i);
+  virtual GString *getPSFilter(char *indent);
+  virtual GBool isBinary(GBool last = gTrue);
   virtual Stream *getBaseStream() { return str->getBaseStream(); }
   virtual FILE *getFile() { return str->getFile(); }
   virtual Dict *getDict() { return str->getDict(); }

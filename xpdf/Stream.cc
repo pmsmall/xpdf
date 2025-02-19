@@ -33,6 +33,10 @@ extern "C" int unlink(char *filename);
 #endif
 
 //------------------------------------------------------------------------
+
+#define headerSearchSize 1024	// read this many bytes at beginning of
+				//   file to look for '%PDF'
+//------------------------------------------------------------------------
 // Stream (base class)
 //------------------------------------------------------------------------
 
@@ -40,31 +44,8 @@ void Stream::setPos(int pos) {
   error(0, "Internal: called setPos() on non-FileStream");
 }
 
-GBool Stream::checkHeader() {
-  GBool ok;
-  char buf[20];
-  double version;
-  int i;
-
-  ok = gTrue;
-  for (i = 0; i < 19; ++i) {
-    buf[i] = getChar();
-    if (buf[i] == ' ' || buf[i] == '\n' || buf[i] == '\r')
-      break;
-  }
-  buf[i] = '\0';
-  if (!strncmp(buf, "%PDF-", 5)) {
-    version = atof(&buf[5]);
-    if (!(buf[5] >= '0' && buf[5] <= '9') || version > pdfVersionNum) {
-      error(getPos(), "PDF version %s -- xpdf supports version %s"
-	    " (continuing anyway)", &buf[5], pdfVersion);
-      ok = gFalse;
-    }
-  } else {
-    error(getPos(), "May not be a PDF file (continuing anyway)");
-    ok = gFalse;
-  }
-  return ok;
+GString *Stream::getPSFilter(char *indent) {
+  return new GString();
 }
 
 Stream *Stream::addFilters(Object *dict) {
@@ -237,6 +218,34 @@ void FileStream::setPos(int pos1) {
   }
 }
 
+GBool FileStream::checkHeader() {
+  char buf[headerSearchSize+1];
+  char *p;
+  double version;
+  int i;
+
+  for (i = 0; i < headerSearchSize; ++i)
+    buf[i] = getChar();
+  buf[headerSearchSize] = '\0';
+  for (i = 0; i < headerSearchSize - 5; ++i) {
+    if (!strncmp(&buf[i], "%PDF-", 5))
+      break;
+  }
+  if (i >= headerSearchSize - 5) {
+    error(0, "May not be a PDF file (continuing anyway)");
+    return gFalse;
+  }
+  start += i;
+  p = strtok(&buf[i+5], " \t\n\r");
+  version = atof(p);
+  if (!(buf[i+5] >= '0' && buf[i+5] <= '9') || version > pdfVersionNum) {
+    error(getPos(), "PDF version %s -- xpdf supports version %s"
+	  " (continuing anyway)", p, pdfVersion);
+    return gFalse;
+  }
+  return gTrue;
+}
+
 //------------------------------------------------------------------------
 // SubStream
 //------------------------------------------------------------------------
@@ -309,10 +318,16 @@ int ASCIIHexStream::getChar() {
   return x & 0xff;
 }
 
-char *ASCIIHexStream::getFilter(int i) {
-  if (i == 0)
-    return "ASCIIHexDecode";
-  return str->getFilter(i-1);
+GString *ASCIIHexStream::getPSFilter(char *indent) {
+  GString *s;
+
+  s = str->getPSFilter(indent);
+  s->append(indent)->append("/ASCIIHexDecode filter\n");
+  return s;
+}
+
+GBool ASCIIHexStream::isBinary(GBool last) {
+  return str->isBinary(gFalse);
 }
 
 //------------------------------------------------------------------------
@@ -379,10 +394,16 @@ int ASCII85Stream::getChar() {
   return b[index++];
 }
 
-char *ASCII85Stream::getFilter(int i) {
-  if (i == 0)
-    return "ASCII85Decode";
-  return str->getFilter(i-1);
+GString *ASCII85Stream::getPSFilter(char *indent) {
+  GString *s;
+
+  s = str->getPSFilter(indent);
+  s->append(indent)->append("/ASCII85Decode filter\n");
+  return s;
+}
+
+GBool ASCII85Stream::isBinary(GBool last) {
+  return str->isBinary(gFalse);
 }
 
 //------------------------------------------------------------------------
@@ -615,10 +636,16 @@ int LZWStream::getChar() {
   return c;
 }
 
-char *LZWStream::getFilter(int i) {
-  if (i == 0)
-    return "LZWDecode";
-  return str->getFilter(i-1);
+GString *LZWStream::getPSFilter(char *indent) {
+  GString *s;
+
+  s = str->getPSFilter(indent);
+  s->append(indent)->append("/LZWDecode filter\n");
+  return s;
+}
+
+GBool LZWStream::isBinary(GBool last) {
+  return str->isBinary(gTrue);
 }
 
 //------------------------------------------------------------------------
@@ -856,10 +883,32 @@ int CCITTFaxStream::getBit() {
   return bit;
 }
 
-char *CCITTFaxStream::getFilter(int i) {
-  if (i == 0)
-    return "CCITTFaxDecode";
-  return str->getFilter(i-1);
+GString *CCITTFaxStream::getPSFilter(char *indent) {
+  GString *s;
+  char s1[50];
+
+  s = str->getPSFilter(indent);
+  s->append(indent)->append("<< ");
+  if (encoding != 0) {
+    sprintf(s1, "/K %d ", encoding);
+    s->append(s1);
+  }
+  if (byteAlign)
+    s->append("/EncodedByteAlign true ");
+  sprintf(s1, "/Columns %d ", columns);
+  s->append(s1);
+  if (rows != 0) {
+    sprintf(s1, "/Rows %d ", rows);
+    s->append(s1);
+  }
+  if (black)
+    s->append("/BlackIs1 true ");
+  s->append(">> /CCITTFaxDecode filter\n");
+  return s;
+}
+
+GBool CCITTFaxStream::isBinary(GBool last) {
+  return str->isBinary(gTrue);
 }
 
 //------------------------------------------------------------------------
@@ -1294,6 +1343,7 @@ int DCTStream::readBit() {
 GBool DCTStream::readHeader() {
   GBool doScan;
   int minHSample, minVSample;
+  int bufWidth;
   int c = 0;
   int i, j;
 
@@ -1367,9 +1417,10 @@ GBool DCTStream::readHeader() {
   mcuHeight = (mcuHeight / minVSample) * 8;
 
   // allocate buffers
+  bufWidth = ((width + mcuWidth - 1) / mcuWidth) * mcuWidth;
   for (i = 0; i < numComps; ++i)
     for (j = 0; j < mcuHeight; ++j)
-      rowBuf[i][j] = (Guchar *)gmalloc(width * sizeof(Guchar));
+      rowBuf[i][j] = (Guchar *)gmalloc(bufWidth * sizeof(Guchar));
 
   // initialize counters
   comp = 0;
@@ -1579,8 +1630,14 @@ int DCTStream::read16() {
   return (c1 << 8) + c2;
 }
 
-char *DCTStream::getFilter(int i) {
-  if (i == 0)
-    return "DCTDecode";
-  return str->getFilter(i-1);
+GString *DCTStream::getPSFilter(char *indent) {
+  GString *s;
+
+  s = str->getPSFilter(indent);
+  s->append(indent)->append("<< >> /DCTDecode filter\n");
+  return s;
+}
+
+GBool DCTStream::isBinary(GBool last) {
+  return str->isBinary(gTrue);
 }

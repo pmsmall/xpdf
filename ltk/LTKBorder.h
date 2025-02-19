@@ -34,10 +34,10 @@ typedef enum {
   ltkTriDown
 } LTKTriangle;
 
-extern unsigned long ltkGetBrightColor(Display *display, int screenNum,
-				       XColor *bg, unsigned long def);
-extern unsigned long ltkGetDarkColor(Display *display, int screenNum,
-				     XColor *bg, unsigned long def);
+extern Gulong ltkGetBrightColor(Display *display, int screenNum,
+				XColor *bg, Gulong def);
+extern Gulong ltkGetDarkColor(Display *display, int screenNum,
+			      XColor *bg, Gulong def);
 
 extern void ltkDrawBorder(Display *display, Window xwin,
 			  GC bright, GC dark, GC background,

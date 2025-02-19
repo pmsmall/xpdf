@@ -60,3 +60,35 @@ If an X font is not found, try smaller and then larger sizes (this is
   useful for old or broken X servers which can't scale bitmap fonts).
 Added -rgb (color cube size) option.
 Various minor bug fixes.
+
+0.5 (96-may-23)
+---------------
+Fixed bug in LTKWindow which broke the remote server mode.
+Fixed PostScript output:
+  - doesn't seg fault if file is unwritable.
+  - incorrect DSC comment - need colon in '%%Page:'.
+  - use 'imagemask' command for masks.
+  - output filters in the correct order.
+  - Stream::isBinary() checks the next-to-bottom, not top, stream.
+  - if page width > height, rotate it 90 degrees.
+  - if page is larger than paper size, scale it down.
+Set default MediaBox to 8.5" x 11" to deal with non-compliant PDF
+  files which don't specify a MediaBox.
+Added DEBUG_MEM stuff in gmem.c and gmempp.cc.
+Fixed memory leaks:
+  - LTKWindow didn't delete the LTKBox.
+  - LinkAction needs a virtual destructor.
+Use $(RANLIB) variable in goo/Makefile and ltk/Makefile.
+Allocate image data after calling XCreateImage, using
+  image->bytes_per_line -- works in 24-bit mode now.
+DCTStream rounds width of rowBuf lines up to the next multiple of
+  mcuWidth, so last MCU doesn't run off end of buffer.
+Increase size of block (from 255 to 1024 bytes) read at end of file to
+  search for 'startxref'.
+Skip past garbage at start of file, look for '%PDF'.
+Moved more compiler options out of Makefiles into Makefile.config.
+Top-level Makefile uses '$(MAKE)' instead of 'make' for making
+  subdirectories.
+Space/PageDown/Next and Backspace/PageUp/Previous now moves to
+  next/previous page if already scrolled to bottom/top of current
+  page.

@@ -33,6 +33,9 @@ enum LinkActionKind {
 class LinkAction {
 public:
 
+  // Destructor.
+  virtual ~LinkAction() {}
+
   // Was the LinkAction created successfully?
   virtual GBool isOk() = 0;
 

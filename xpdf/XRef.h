@@ -17,7 +17,7 @@
 #include <gtypes.h>
 
 class Object;
-class Stream;
+class FileStream;
 
 //------------------------------------------------------------------------
 // XRef
@@ -33,7 +33,7 @@ class XRef {
 public:
 
   // Constructor.  Read xref table from stream.
-  XRef(Stream *str);
+  XRef(FileStream *str);
 
   // Destructor.
   ~XRef();
@@ -53,14 +53,16 @@ public:
 private:
 
   FILE *file;			// input file
+  int start;			// offset in file (to allow for garbage
+				//   at beginning of file)
   XRefEntry *entries;		// xref entries
   int size;			// size of <entries> array
   int rootNum, rootGen;		// catalog dict
   GBool encrypted;		// true if file is encrypted
   GBool ok;			// true if xref table is valid
 
-  int readTrailer(Stream *str);
-  GBool readXRef(Stream *str, int *pos);
+  int readTrailer(FileStream *str);
+  GBool readXRef(FileStream *str, int *pos);
 };
 
 //------------------------------------------------------------------------

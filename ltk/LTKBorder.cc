@@ -11,20 +11,25 @@
 #endif
 
 #include <stddef.h>
+#include <gtypes.h>
 #include <LTKBorder.h>
 
-unsigned long ltkGetBrightColor(Display *display, int screenNum,
-				XColor *bg, unsigned long def) {
+Gulong ltkGetBrightColor(Display *display, int screenNum,
+				XColor *bg, Gulong def) {
   XColor bright;
-  unsigned long ret;
+  Gulong ret;
+  Gulong t;
 
   if ((bg->red == 0 && bg->green == 0 && bg->blue == 0) ||
       (bg->red == 65535 && bg->green == 65535 && bg->blue == 65535)) {
     ret = def;
   } else {
-    bright.red = (unsigned short)((2 * (int)bg->red + 65535) / 3);
-    bright.green = (unsigned short)((2 * (int)bg->green + 65535) / 3);
-    bright.blue = (unsigned short)((2 * (int)bg->blue + 65535) / 3);
+    t = (Gulong)bg->red + (Gulong)bg->red / 4;
+    bright.red = (t > 65535) ? 65535 : (Gushort)t;
+    t = (Gulong)bg->green + (Gulong)bg->green / 4;
+    bright.green = (t > 65535) ? 65535 : (Gushort)t;
+    t = (Gulong)bg->blue + (Gulong)bg->blue / 4;
+    bright.blue = (t > 65535) ? 65535 : (Gushort)t;
     if (XAllocColor(display, DefaultColormap(display, screenNum), &bright))
       ret = bright.pixel;
     else
@@ -33,18 +38,22 @@ unsigned long ltkGetBrightColor(Display *display, int screenNum,
   return ret;
 }
 
-unsigned long ltkGetDarkColor(Display *display, int screenNum,
-			      XColor *bg, unsigned long def) {
+Gulong ltkGetDarkColor(Display *display, int screenNum,
+			      XColor *bg, Gulong def) {
   XColor dark;
-  unsigned long ret;
+  Gulong ret;
+  long t;
 
   if ((bg->red == 0 && bg->green == 0 && bg->blue == 0) ||
       (bg->red == 65535 && bg->green == 65535 && bg->blue == 65535)) {
     ret = def;
   } else {
-    dark.red = (unsigned short)((2 * (int)bg->red) / 3);
-    dark.green = (unsigned short)((2 * (int)bg->green) / 3);
-    dark.blue = (unsigned short)((2 * (int)bg->blue) / 3);
+    t = (Gulong)bg->red - (Gulong)bg->red / 4;
+    dark.red = (t < 0) ? 0 : (Gushort)t;
+    t = (Gulong)bg->green - (Gulong)bg->green / 4;
+    dark.green = (t < 0) ? 0 : (Gushort)t;
+    t = (Gulong)bg->blue - (Gulong)bg->blue / 4;
+    dark.blue = (t < 0) ? 0 : (Gushort)t;
     if (XAllocColor(display, DefaultColormap(display, screenNum), &dark))
       ret = dark.pixel;
     else

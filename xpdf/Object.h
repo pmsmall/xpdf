@@ -76,37 +76,67 @@ public:
   // Initialize an object.
   Object *initBool(GBool booln1)
     { type = objBool; booln = booln1;
-      ++numAlloc[objBool]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objBool];
+#endif
+      return this; }
   Object *initInt(int intg1)
     { type = objInt; intg = intg1;
-      ++numAlloc[objInt]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objInt];
+#endif
+      return this; }
   Object *initReal(double real1)
     { type = objReal; real = real1;
-      ++numAlloc[objReal]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objReal];
+#endif
+      return this; }
   Object *initString(char *string1, int length)
     { type = objString; string = new GString(string1, length);
-      ++numAlloc[objString]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objString];
+#endif
+      return this; }
   Object *initName(char *name1)
     { type = objName; name = copyString(name1);
-      ++numAlloc[objName]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objName];
+#endif
+      return this; }
   Object *initNull()
     { type = objNull;
-      ++numAlloc[objNull]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objNull];
+#endif
+      return this; }
   Object *initArray();
   Object *initDict();
   Object *initStream(Stream *stream1);
   Object *initRef(int num1, int gen1)
     { type = objRef; ref.num = num1; ref.gen = gen1;
-      ++numAlloc[objRef]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objRef];
+#endif
+      return this; }
   Object *initCmd(char *cmd1)
     { type = objCmd; cmd = copyString(cmd1);
-      ++numAlloc[objCmd]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objCmd];
+#endif
+      return this; }
   Object *initError()
     { type = objError;
-      ++numAlloc[objError]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objError];
+#endif
+      return this; }
   Object *initEOF()
     { type = objEOF;
-      ++numAlloc[objEOF]; return this; }
+#ifdef DEBUG_MEM
+      ++numAlloc[objEOF];
+#endif
+      return this; }
 
   // Copy an object.
   Object *copy(Object *obj);
@@ -182,7 +212,6 @@ public:
   void streamSetPos(int pos);
   FILE *streamGetFile();
   Dict *streamGetDict();
-  GBool streamCheckHeader();
 
   // Output.
   char *getTypeName();
@@ -207,8 +236,10 @@ private:
     char *cmd;			//   command
   };
 
+#ifdef DEBUG_MEM
   static int			// number of each type of object
     numAlloc[numObjTypes];	//   currently allocated
+#endif
 };
 
 //------------------------------------------------------------------------
@@ -291,8 +322,5 @@ inline FILE *Object::streamGetFile()
 
 inline Dict *Object::streamGetDict()
   { return stream->getDict(); }
-
-inline GBool Object::streamCheckHeader()
-  { return stream->checkHeader(); }
 
 #endif

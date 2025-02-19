@@ -213,7 +213,7 @@ PSOutput::PSOutput(char *fileName, Catalog *catalog,
   // open file
   ok = gTrue;
   if (!(f = fopen(fileName, "w"))) {
-    error(0, "Couldn't open PostScript file '%s'\n", fileName);
+    error(0, "Couldn't open PostScript file '%s'", fileName);
     ok = gFalse;
     return;
   }
@@ -264,9 +264,8 @@ PSOutput::PSOutput(char *fileName, Catalog *catalog,
 }
 
 PSOutput::~PSOutput() {
-  writePS("%%%%Trailer\n");
-  writePS("%%%%EOF\n");
-  fclose(f);
+  if (f)
+    fclose(f);
 }
 
 void PSOutput::setupFont(GfxFont *font) {
@@ -310,12 +309,35 @@ void PSOutput::setupFont(GfxFont *font) {
   writePS("pdfMakeFont\n");
 }
 
-void PSOutput::startPage(int pageNum, int x1, int y1) {
-  writePS("%%%%Page %d %d\n", pageNum, seqPage);
+void PSOutput::startPage(int pageNum, int x1, int y1, int x2, int y2) {
+  int width, height, t;
+  double xScale, yScale;
+
+  writePS("%%%%Page: %d %d\n", pageNum, seqPage);
   writePS("%%%%BeginPageSetup\n");
   writePS("pdfStartPage\n");
-  if (x1 != 0 || y1 != 0)
-    writePS("%d %d translate\n", -x1, -y1);
+
+  // rotate, translate, and scale page
+  width = x2 - x1;
+  height = y2 - y1;
+  if (width > height) {
+    writePS("90 rotate\n");
+    writePS("%d %d translate\n", -x1, -(y1 + paperWidth));
+    t = width;
+    width = height;
+    height = t;
+  } else {
+    if (x1 != 0 || y1 != 0)
+      writePS("%d %d translate\n", -x1, -y1);
+  }
+  if (width > paperWidth || height > paperHeight) {
+    xScale = (double)paperWidth / (double)width;
+    yScale = (double)paperHeight / (double)height;
+    if (yScale < xScale)
+      xScale = yScale;
+    writePS("%0.4f %0.4f scale\n", xScale, xScale);
+  }
+
   writePS("%%%%EndPageSetup\n");
   ++seqPage;
 }
@@ -324,6 +346,11 @@ void PSOutput::endPage() {
   writePS("showpage\n");
   writePS("%%%%PageTrailer\n");
   writePS("pdfEndPage\n");
+}
+
+void PSOutput::trailer() {
+  writePS("%%%%Trailer\n");
+  writePS("%%%%EOF\n");
 }
 
 void PSOutput::writePS(char *fmt, ...) {
@@ -439,6 +466,7 @@ void PSOutput::writeImage(Dict *dict, Stream *str, GBool inlineImg) {
   GBool mask, indexed;
   Object obj1, obj2;
   char *s;
+  GString *s1;
   int numComps, w, h, bits;
   int c;
   int n, i;
@@ -584,16 +612,15 @@ void PSOutput::writeImage(Dict *dict, Stream *str, GBool inlineImg) {
   obj1.free();
 
   // data source
-  writePS("  /DataSource currentfile");
+  writePS("  /DataSource currentfile\n");
   if (str->isBinary())
-    writePS(" /ASCII85Decode filter");
-  i = 0;
-  while ((s = str->getFilter(i++)))
-    writePS(" /%s filter", s);
-  writePS("\n");
+    writePS("    /ASCII85Decode filter\n");
+  s1 = str->getPSFilter("    ");
+  writePS("%s", s1->getCString());
+  delete s1;
 
   // end of image dictionary
-  writePS(">>\nimage\n");
+  writePS(">>\n%s\n", mask ? "imagemask" : "image");
 
   // image data
   writeStream(str->getBaseStream(), inlineImg, str->isBinary());

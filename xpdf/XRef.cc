@@ -24,6 +24,11 @@
 #include "XRef.h"
 
 //------------------------------------------------------------------------
+
+#define xrefSearchSize 1024	// read this many bytes at end of file
+				//   to look for 'startxref'
+
+//------------------------------------------------------------------------
 // The global xref table
 //------------------------------------------------------------------------
 
@@ -33,7 +38,7 @@ XRef *xref = NULL;
 // XRef
 //------------------------------------------------------------------------
 
-XRef::XRef(Stream *str) {
+XRef::XRef(FileStream *str) {
   int pos;
   int i;
 
@@ -41,6 +46,7 @@ XRef::XRef(Stream *str) {
   entries = NULL;
   encrypted = gFalse;
   file = str->getFile();
+  start = str->getStart();
   pos = readTrailer(str);
   if (pos == 0) {
     ok = gFalse;
@@ -58,23 +64,23 @@ XRef::~XRef() {
 
 // Read startxref position, xref table size, and root.  Returns
 // first xref position.
-int XRef::readTrailer(Stream *str) {
+int XRef::readTrailer(FileStream *str) {
   Parser *parser;
   Object obj, obj2;
   Dict *dict;
-  char buf[256];
+  char buf[xrefSearchSize+1];
   int pos;
   char *p;
   int i;
 
-  // read last 255 bytes
-  str->setPos(-255);
-  for (i = 0; i < 255; ++i)
+  // read last xrefSearchSize bytes
+  str->setPos(-xrefSearchSize);
+  for (i = 0; i < xrefSearchSize; ++i)
     buf[i] = str->getChar();
-  buf[255] = '\0';
+  buf[xrefSearchSize] = '\0';
 
   // find startxref
-  for (i = 255 - 9; i >= 0; --i) {
+  for (i = xrefSearchSize - 9; i >= 0; --i) {
     if (!strncmp(&buf[i], "startxref", 9))
       break;
   }
@@ -90,7 +96,7 @@ int XRef::readTrailer(Stream *str) {
   }
   obj.initNull();
   parser = new Parser(new Lexer(
-    new FileStream(file, str->getPos() - 255 + i + 8, -1, &obj)));
+    new FileStream(file, str->getPos() - xrefSearchSize + i + 8, -1, &obj)));
   parser->getObj(&obj);
   if (obj.isDict()) {
     dict = obj.getDict();
@@ -122,7 +128,7 @@ int XRef::readTrailer(Stream *str) {
 }
 
 // Read an xref table and the prev pointer from the trailer.
-GBool XRef::readXRef(Stream *str, int *pos) {
+GBool XRef::readXRef(FileStream *str, int *pos) {
   Parser *parser;
   Object obj, obj2;
   int first, n, i;
@@ -130,7 +136,8 @@ GBool XRef::readXRef(Stream *str, int *pos) {
 
   // make a parser
   obj.initNull();
-  parser = new Parser(new Lexer(new FileStream(file, *pos, -1, &obj)));
+  parser = new Parser(new Lexer(
+    new FileStream(file, start + *pos, -1, &obj)));
 
   // make sure it's an xref table
   parser->getObj(&obj);
@@ -228,7 +235,8 @@ Object *XRef::fetch(int num, int gen, Object *obj) {
   e = &entries[num];
   if (e->gen == gen && e->offset >= 0) {
     obj1.initNull();
-    parser = new Parser(new Lexer(new FileStream(file, e->offset, -1, &obj1)));
+    parser = new Parser(new Lexer(
+      new FileStream(file, start + e->offset, -1, &obj1)));
     parser->getObj(&obj1);
     parser->getObj(&obj2);
     parser->getObj(&obj3);

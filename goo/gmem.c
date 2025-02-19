@@ -12,7 +12,58 @@
 #include <string.h>
 #include <gmem.h>
 
+#ifdef DEBUG_MEM
+typedef struct _GMemHdr {
+  int size;
+  int index;
+  struct _GMemHdr *next;
+} GMemHdr;
+
+#define gMemHdrSize ((sizeof(GMemHdr) + 7) & ~7)
+#define gMemTrlSize (sizeof(long))
+
+#if gmemTrlSize==8
+#define gMemDeadVal 0xdeadbeefdeadbeef
+#else
+#define gMemDeadVal 0xdeadbeef
+
+/* round data size so trailer will be aligned */
+#define gMemDataSize(size) \
+  ((((size) + gMemTrlSize - 1) / gMemTrlSize) * gMemTrlSize)
+
+#endif
+
+static GMemHdr *gMemList = NULL;
+static int gMemIndex = 0;
+static int gMemAlloc = 0;
+#endif
+
 void *gmalloc(int size) {
+#if DEBUG_MEM
+  int size1;
+  char *mem;
+  GMemHdr *hdr;
+  void *data;
+  long *trl;
+
+  if (size == 0)
+    return NULL;
+  size1 = gMemDataSize(size);
+  if (!(mem = (char *)malloc(size1 + gMemHdrSize + gMemTrlSize))) {
+    fprintf(stderr, "Out of memory\n");
+    exit(1);
+  }
+  hdr = (GMemHdr *)mem;
+  data = (void *)(mem + gMemHdrSize);
+  trl = (long *)(mem + gMemHdrSize + size1);
+  hdr->size = size;
+  hdr->index = gMemIndex++;
+  hdr->next = gMemList;
+  gMemList = hdr;
+  ++gMemAlloc;
+  *trl = gMemDeadVal;
+  return data;
+#else
   void *p;
 
   if (size == 0)
@@ -22,9 +73,31 @@ void *gmalloc(int size) {
     exit(1);
   }
   return p;
+#endif
 }
 
 void *grealloc(void *p, int size) {
+#if DEBUG_MEM
+  GMemHdr *hdr;
+  void *q;
+  int oldSize;
+
+  if (size == 0) {
+    if (p)
+      gfree(p);
+    return NULL;
+  }
+  if (p) {
+    hdr = (GMemHdr *)((char *)p - gMemHdrSize);
+    oldSize = hdr->size;
+    q = gmalloc(size);
+    memcpy(q, p, size < oldSize ? size : oldSize);
+    gfree(p);
+  } else {
+    q = gmalloc(size);
+  }
+  return q;
+#else
   void *q;
 
   if (size == 0) {
@@ -41,12 +114,61 @@ void *grealloc(void *p, int size) {
     exit(1);
   }
   return q;
+#endif
 }
 
 void gfree(void *p) {
+#ifdef DEBUG_MEM
+  int size;
+  GMemHdr *hdr;
+  GMemHdr *prevHdr, *q;
+  long *trl;
+
+  if (p) {
+    hdr = (GMemHdr *)((char *)p - gMemHdrSize);
+    for (prevHdr = NULL, q = gMemList; q; prevHdr = q, q = q->next) {
+      if (q == hdr)
+	break;
+    }
+    if (q) {
+      if (prevHdr)
+	prevHdr->next = hdr->next;
+      else
+	gMemList = hdr->next;
+      --gMemAlloc;
+      size = gMemDataSize(hdr->size);
+      trl = (long *)((char *)hdr + gMemHdrSize + size);
+      if (*trl != gMemDeadVal) {
+	fprintf(stderr, "Overwrite past end of block %d at address %p\n",
+		hdr->index, p);
+      }
+      free(hdr);
+    } else {
+      fprintf(stderr, "Attempted to free bad address %p\n", p);
+    }
+  }
+#else
   if (p)
     free(p);
+#endif
 }
+
+#ifdef DEBUG_MEM
+void gMemReport(FILE *f) {
+  GMemHdr *p;
+
+  fprintf(f, "%d memory allocations in all\n", gMemIndex);
+  if (gMemAlloc > 0) {
+    fprintf(f, "%d memory blocks left allocated:\n", gMemAlloc);
+    fprintf(f, " index     size\n");
+    fprintf(f, "-------- --------\n");
+    for (p = gMemList; p; p = p->next)
+      fprintf(f, "%8d %8d\n", p->index, p->size);
+  } else {
+    fprintf(f, "No memory blocks left allocated\n");
+  }
+}
+#endif
 
 char *copyString(char *s) {
   char *s1;

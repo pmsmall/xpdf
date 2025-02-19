@@ -1,0 +1,230 @@
+.\" Copyright 1996 Derek B. Noonburg
+.TH xpdf 1 "23 May 1996"
+.SH NAME
+xpdf \- Portable Document Format (PDF) file viewer for X (version 0.5)
+.SH SYNOPSIS
+.B xpdf
+[options]
+.RI [ PDF-file
+.RI [ page ]]
+.SH DESCRIPTION
+.B Xpdf
+is a viewer for Portable Document Format (PDF) files.  (These are also
+sometimes also called \'Acrobat' files, from the name of Adobe's PDF
+software.)  Xpdf runs under UNIX or VMS and the X Window System.
+.PP
+To run xpdf, simply type:
+.PP
+.RS
+xpdf file.pdf
+.RE
+.PP
+where
+.I file.pdf
+is your PDF file.  The file name can be followed by a number
+specifying the page which should be displayed first, e.g.:
+.PP
+.RS
+xpdf file.pdf 18
+.RE
+.SH OPTIONS
+X resources are listed in square brackets with the corresponding
+option.
+.TP
+.B \-err
+Send error messages to /dev/tty instead of stderr (useful if xpdf is
+started from another application, e.g., netscape which otherwise pops
+up an annoying little window for every error).
+.TP
+.BI \-z " number"
+Set the initial zoom factor (-5 .. 5).
+.RB [ xpdf.initialZoom ]
+.TP
+.BI \-g " geometry"
+Set the initial window geometry.
+.RB ( \-geometry
+is equivalent.)
+.RB [ xpdf.geometry ]
+.TP
+.BI \-remote " name"
+Start/contact xpdf remote server with specified name (see the
+.B "REMOTE SERVER MODE"
+section below).
+.TP
+.B \-raise
+Raise xpdf remote server window (with -remote only).
+.TP
+.B \-quit
+Kill xpdf remote server (with -remote only).
+.TP
+.BI \-rgb " number"
+Set the size of largest RGB cube xpdf will try to allocate.  The
+default is 5 (for a 5x5x5 cube); set to a smaller number to conserve
+color table entries.
+.TP
+.B \-cmd
+Print commands as they're executed (useful for debugging).
+.TP
+.B \-h
+Print usage information.
+.RB ( \-help
+is equivalent.)
+.PP
+Several other standard X options and resources will work as expected:
+.TP
+.BI \-display " display"
+.RB [ xpdf.display ]
+.TP
+.BI \-fg " color"
+.RB ( \-foreground
+is equivalent.)
+.RB [ xpdf.foreground ]
+.TP
+.BI \-bg " color"
+.RB ( \-background
+is equivalent.)
+.RB [ xpdf.background ]
+.TP
+.BI \-font " font"
+.RB ( \-fn
+is equivalent.)
+.RB [ xpdf.font ]
+.PP
+The color and font options only affect the user interface elements,
+not the PDF display (the \'paper').
+.SH CONTROLS
+.SS On-screen controls, at the bottom of the xpdf window
+.TP
+.B "left/right arrow buttons"
+Move to the previous/next page.
+.TP
+.B "\'Page' entry box"
+Move to a specific page number.  Click in the box to activate it, type
+the page number, then hit return.
+.TP
+.B "magnifying glass buttons"
+Increase and decrease the resolution, i.e., zoom in and zoom out.
+.TP
+.B "print button"
+Bring up a dialog for generating a PostScript file.  The dialog has
+options to set the pages to be printed and the PostScript file name.
+.TP
+.B "curved arrow buttons"
+Rotate the page clockwise and counterclockwise.  These are intended
+primarily for PDF files where the rotation isn't correctly specified
+in the file, but they're also useful if your X server doesn't support
+font rotation.
+.TP
+.B "\'?' button"
+Bring up the \'about xpdf' window.
+.TP
+.B "\'Quit' button"
+Quit xpdf.
+.PP
+.SS Links
+Clicking on a hyperlink will jump to the link's destination.
+Currently, only links within PDF documents or to another PDF file are
+supported.  Clicking on a URL link just prints the URL.  Clicking on
+any other type of link (e.g., links to executable programs) prints an
+error message.
+.PP
+.SS Key bindings
+.TP
+.B n
+Move to the next page.
+.TP
+.B p
+Move to the previous page.
+.TP
+.BR <Space> " or " <PageDown> " or " <Next>
+Scroll down on the current page; if already at bottom, move to next
+page.
+.TP
+.BR <Backspace> " or " <Delete> " or " <PageUp> " or " <Previous>
+Scroll up on the current page; if already at top, move to previous
+page.
+.TP
+.B <Home>
+Scroll to top of current page.
+.TP
+.B <End>
+Scroll to bottom of current page.
+.TP
+.B arrows
+Scroll the current page.
+.TP
+.B control-L
+Redraw the current page.
+.TP
+.B q
+Quit xpdf.
+.SH "WEB BROWSERS"
+If you want to run xpdf automatically from netscape or mosaic (and
+probably other browsers) when you click on a link to a PDF file, you
+need to edit (or create) the files
+.I .mime.types
+and
+.I .mailcap
+in your home directory.  In
+.I .mime.types
+add the line:
+.PP
+.RS
+application/pdf pdf
+.RE
+.PP
+In
+.I .mailcap
+add the lines:
+.PP
+.RS
+# Use xpdf to view PDF files.
+.RE
+.RS
+application/pdf; xpdf -err %s
+.RE
+.PP
+Make sure that xpdf is on your executable search path.
+.SH "REMOTE SERVER MODE"
+Xpdf can be started in remote server mode by specifying a server name
+(in addition to the file name and page number).  For example:
+.PP
+.RS
+xpdf -remote myServer file.pdf
+.RE
+.PP
+If there is currently no xpdf running in server mode with the name
+\'myServer', a new xpdf window will be opened.  If another command:
+.PP
+.RS
+xpdf -remote myServer another.pdf 9
+.RE
+.PP
+is issued, a new copy of xpdf will not be started.  Instead, the first
+xpdf (the server) will load
+.I another.pdf
+and display page nine.  If the file name is the same:
+.PP
+.RS
+xpdf -remote myServer another.pdf 4
+.RE
+.PP
+the xpdf server will simply display the specified page.
+.PP
+The -raise option tells the server to raise its window; it can be
+specified with or without a file name and page number.
+.PP
+The -quit option tells the server to close its window and exit.
+.SH BUGS
+This is a beta release of xpdf, and there are still a bunch of PDF
+features which I have yet to implement.
+.PP
+At this point, the biggest problem is that embedded fonts are not
+handled properly.
+.SH AUTHOR
+The xpdf software and documentation are copyright 1996 Derek
+B. Noonburg (derekn@ece.cmu.edu).
+.SH "SEE ALSO"
+.BR pdftops (1)
+.br
+.B http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html

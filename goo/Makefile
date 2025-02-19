@@ -8,19 +8,19 @@
 
 include ../Makefile.config
 
-CFLAGS = -O -Wall -I. $(CFLAGS2)
-CXXFLAGS = -O -Wall -I. $(CXXFLAGS2)
+CFLAGS = $(CFLAGS2) -I.
+CXXFLAGS = $(CXXFLAGS2) -I.
 
 #------------------------------------------------------------------------
 
-GOO_CXX_OBJS = GString.o
+GOO_CXX_OBJS = GString.o gmempp.o
 GOO_C_OBJS = gmem.o parseargs.o cover.o
 GOO_OBJS = $(GOO_CXX_OBJS) $(GOO_C_OBJS)
 
 libGoo.a: $(GOO_OBJS)
 	rm -f libGoo.a
 	ar q libGoo.a $(GOO_OBJS)
-	ranlib libGoo.a
+	$(RANLIB) libGoo.a
 
 #------------------------------------------------------------------------
 
@@ -42,10 +42,11 @@ depend:
 #----- dependences -----
 
 GString.o: GString.cc \
-  ./GString.h
+ GString.h
+gmempp.o: gmempp.cc gmem.h
 gmem.o: gmem.c \
-  ./gmem.h
+ gmem.h
 parseargs.o: parseargs.c \
-  ./parseargs.h ./gtypes.h
+ parseargs.h gtypes.h
 cover.o: cover.c \
-  ./gmem.h ./cover.h
+ gmem.h cover.h

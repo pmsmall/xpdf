@@ -182,6 +182,7 @@ void GfxFont::makeWidths(Dict *fontDict, char **builtinEncoding,
   Object obj1, obj2;
   int firstChar, lastChar;
   int code, code2;
+  double scale;
 
   // use widths from built-in font
   if (builtinEncoding) {

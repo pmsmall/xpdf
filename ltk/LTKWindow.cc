@@ -49,6 +49,8 @@ LTKWindow::LTKWindow(LTKApp *app1, GBool dialog1, char *title1,
   keyWidget = NULL;
   overWin = NULL;
   xwin = None;
+  eventMask = ExposureMask | StructureNotifyMask | VisibilityChangeMask |
+              ButtonPressMask;
   fgGC = bgGC = brightGC = darkGC = None;
   fontStruct = NULL;
   next = NULL;
@@ -78,7 +80,6 @@ LTKWindow::LTKWindow(LTKWindow *window) {
 
 LTKWindow::~LTKWindow() {
   XEvent event;
-  LTKWidget *w1;
 
   if (xwin) {
     XFreeFont(display, fontStruct);
@@ -94,11 +95,7 @@ LTKWindow::~LTKWindow() {
   app->setGrabWin(NULL);
   app->delWindow(this);
   delete title;
-  while (widgets) {
-    w1 = widgets;
-    widgets = widgets->getNext();
-    delete w1;
-  }
+  delete box;
 }
 
 LTKWidget *LTKWindow::addWidget(LTKWidget *widget) {
@@ -144,6 +141,26 @@ LTKWidget *LTKWindow::findWidget(char *name) {
   return widget;
 }
 
+void LTKWindow::setKeyCbk(LTKWindowKeyCbk cbk) {
+  keyCbk = cbk;
+  if (keyCbk)
+    eventMask |= KeyPressMask;
+  else
+    eventMask &= ~KeyPressMask;
+  if (xwin != None)
+    XSelectInput(display, xwin, eventMask);
+}
+
+void LTKWindow::setPropChangeCbk(LTKWindowPropCbk cbk) {
+  propCbk = cbk;
+  if (propCbk)
+    eventMask |= PropertyChangeMask;
+  else
+    eventMask &= ~PropertyChangeMask;
+  if (xwin != None)
+    XSelectInput(display, xwin, eventMask);
+}
+
 GBool LTKWindow::checkFills(char **err) {
   // outer box must either have both xfill > 0 and yfill > 0
   // (i.e., the window is resizable), or xfill = yfill = 0
@@ -163,7 +180,6 @@ GBool LTKWindow::checkFills(char **err) {
 }
 
 void LTKWindow::layout(int x, int y, int width1, int height1) {
-  long eventMask;
   XColor bgXcol;
   XGCValues gcValues;
   int minWidth, minHeight;
@@ -187,10 +203,6 @@ void LTKWindow::layout(int x, int y, int width1, int height1) {
     xwin = XCreateSimpleWindow(display, RootWindow(display, screenNum),
 			       (x < 0) ? 0 : x, (y < 0) ? 0 : y, 1, 1, 0,
 			       fgColor, bgColor);
-    eventMask = ExposureMask | StructureNotifyMask | VisibilityChangeMask |
-                ButtonPressMask | KeyPressMask;
-    if (propCbk)
-      eventMask |= PropertyChangeMask;
     XSelectInput(display, xwin, eventMask);
     gcValues.foreground = fgColor;
     gcValues.background = bgColor;

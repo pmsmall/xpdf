@@ -14,7 +14,7 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion "0.4"
+#define xpdfVersion "0.5"
 
 // supported PDF version
 #define pdfVersion "1.1"
@@ -22,6 +22,11 @@
 
 // copyright notice
 #define xpdfCopyright "Copyright \251 1996 Derek B. Noonburg"
+
+// paper size (in points) for PostScript output
+// (set to American 8.5"x11" for now; will be configurable later)
+#define paperWidth  612
+#define paperHeight 792
 
 //------------------------------------------------------------------------
 // X-related constants

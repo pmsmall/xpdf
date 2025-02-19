@@ -37,7 +37,12 @@ PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
     y2 = attrs->y2;
     rotate = attrs->rotate;
   } else {
-    x1 = y1 = x2 = y2 = 0;
+    // set default MediaBox to 8.5" x 11" -- this shouldn't be necessary
+    // but some (non-compliant) PDF files don't specify a MediaBox
+    x1 = 0;
+    y1 = 0;
+    x2 = 612;
+    y2 = 792;
     rotate = 0;
   }
 
@@ -206,7 +211,8 @@ void Page::genPostScript(PSOutput *psOut, int dpi, int rotate) {
 	   attrs->getX1(), attrs->getY1(), attrs->getX2(), attrs->getY2());
     printf("***** Rotate = %d\n", attrs->getRotate());
   }
-  psOut->startPage(num, attrs->getX1(), attrs->getY1());
+  psOut->startPage(num, attrs->getX1(), attrs->getY1(),
+		   attrs->getX2(), attrs->getY2());
   if (fontDict.isDict())
     fonts = fontDict.getDict();
   else

@@ -37,10 +37,13 @@ public:
   GBool isOk() { return ok; }
 
   // Start a page.
-  void startPage(int pageNum, int x1, int y1);
+  void startPage(int pageNum, int x1, int y1, int x2, int y2);
 
   // End a page.
   void endPage();
+
+  // Write trailer at end of file.
+  void trailer();
 
   // Write PostScript code to file.  Uses printf format.
   void writePS(char *fmt, ...);

@@ -1,0 +1,53 @@
+.\" Copyright 1996 Derek B. Noonburg
+.TH pdftops 1 "23 May 1996"
+.SH NAME
+pdftops \- Portable Document Format (PDF) to PostScript converter
+(version 0.5)
+.SH SYNOPSIS
+.B pdftops
+[options]
+.RI [ PDF-file
+.RI [ PS-file ]]
+.SH DESCRIPTION
+.B Pdftops
+converts Portable Document Format (PDF) files to PostScript so they
+can be printed.
+.PP
+Pdftops reads the PDF file,
+.IR PDF-file ,
+and writes a PostScript file,
+.IR PS-file .
+If
+.I PS-file
+is not specified, pdftops converts
+.I file.pdf
+to
+.IR file.ps.
+.PP
+The generated PostScript is Level 2.  This means it will not work on
+old printers which only support Level 1 PostScript.
+.SH OPTIONS
+.TP
+.BI \-f number
+Specifies the first page to print.
+.TP
+.BI \-l number
+Specifies the last page to print.
+.TP
+.B \-h
+Print usage information.
+.RB ( \-help
+is equivalent.)
+.SH BUGS
+This is a beta release of pdftops, and there are still a bunch of PDF
+features which I have yet to implement.
+.PP
+At this point, the biggest problem is that embedded fonts are not
+handled properly.
+.SH AUTHOR
+The pdftops software and documentation are copyright 1996 Derek
+B. Noonburg (derekn@ece.cmu.edu).
+.SH "SEE ALSO"
+.BR xpdf (1)
+.br
+.B http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html

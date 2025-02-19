@@ -39,27 +39,35 @@ char *objTypeNames[numObjTypes] = {
   "none"
 };
 
+#ifdef DEBUG_MEM
 int Object::numAlloc[numObjTypes] =
   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+#endif
 
 Object *Object::initArray() {
   type = objArray;
   array = new Array();
+#ifdef DEBUG_MEM
   ++numAlloc[objArray];
+#endif
   return this;
 }
 
 Object *Object::initDict() {
   type = objDict;
   dict = new Dict();
+#ifdef DEBUG_MEM
   ++numAlloc[objDict];
+#endif
   return this;
 }
 
 Object *Object::initStream(Stream *stream1) {
   type = objStream;
   stream = stream1;
+#ifdef DEBUG_MEM
   ++numAlloc[objStream];
+#endif
   return this;
 }
 
@@ -87,7 +95,9 @@ Object *Object::copy(Object *obj) {
   default:
     break;
   }
+#ifdef DEBUG_MEM
   ++numAlloc[type];
+#endif
   return obj;
 }
 
@@ -117,7 +127,9 @@ void Object::free() {
   default:
     break;
   }
+#ifdef DEBUG_MEM
   --numAlloc[type];
+#endif
   type = objNone;
 }
 
@@ -183,6 +195,7 @@ void Object::print(FILE *f) {
 }
 
 void Object::memCheck(FILE *f) {
+#ifdef DEBUG_MEM
   int i;
   int t;
 
@@ -196,4 +209,5 @@ void Object::memCheck(FILE *f) {
 	fprintf(f, "  %-20s: %6d\n", objTypeNames[i], numAlloc[i]);
     }
   }
+#endif
 }

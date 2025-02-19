@@ -1217,8 +1217,6 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   int x0, y0;			// top left corner of image
   int w0, h0, w1, h1;		// size of image
   Guint depth;
-  int bytes;
-  char *data;
   double xt, yt, wt, ht;
   GBool rotate, xFlip, yFlip;
   GBool dither;
@@ -1290,10 +1288,9 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
 
   // allocate XImage
   depth = DefaultDepth(display, screenNum);
-  bytes = (w0 * depth + 7) >> 3;
-  data = (char *)gmalloc(h0 * bytes);
   image = XCreateImage(display, DefaultVisual(display, screenNum),
-		       depth, ZPixmap, 0, data, w0, h0, 8, 0);
+		       depth, ZPixmap, 0, NULL, w0, h0, 8, 0);
+  image->data = (char *)gmalloc(h0 * image->bytes_per_line);
 
   // allocate line buffer
   pixLine = (Guchar *)gmalloc(((nVals + 7) & ~7) * sizeof(Guchar));
@@ -1471,7 +1468,7 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   XPutImage(display, pixmap, fillGC, image, 0, 0, x0, y0, w0, h0);
 
   // free memory
-  gfree(data);
+  gfree(image->data);
   image->data = NULL;
   XDestroyImage(image);
   gfree(pixLine);

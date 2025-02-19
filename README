@@ -2,8 +2,8 @@ xpdf
 ====
 and pdftops
 
-version 0.4 (beta)
-96-apr-24
+version 0.5 (beta)
+96-may-23
 
 The xpdf and pdftops software and documentation are
 copyright 1996 Derek B. Noonburg.
@@ -32,12 +32,12 @@ Compatibility
 
 Xpdf is known to work on the following systems:
 
-* x86, Linux 1.2.13 a.out, gcc 2.6.3
-* x86, Linux 1.2.13 ELF, gcc 2.7.0
+* x86, Linux 1.2.13 a.out, gcc 2.7.2
+* x86, Linux 1.2.13 ELF, gcc 2.7.2
 * PowerPC, AIX 4.1, gcc 2.7.0
 * SPARC, SunOS 4.1.3, gcc 2.7.2
 * MIPS, Ultrix 4.4, gcc 2.6.3
-* Alpha, OSF/1 1.3, gcc 2.6.3
+* Alpha, OSF/1 3.2, gcc 2.7.0
 * HP-PA, HP-UX 9.05, gcc 2.7.2
 
 It should work on pretty much any UNIX or VMS system which runs X11.
@@ -97,7 +97,7 @@ On-screen controls, at the bottom of the xpdf window:
     name.
 
   curved arrow buttons:
-    Totate the page clockwise and counterclockwise.  These are
+    Rotate the page clockwise and counterclockwise.  These are
     intended primarily for PDF files where the rotation isn't
     correctly specified in the file, but they're also useful if your X
     server doesn't support font rotation.
@@ -122,12 +122,14 @@ Key bindings:
 
   p            move to the previous page
 
-  <Space>      scroll down on the current page
-  <PageDown>
+  <Space>      scroll down on the current page; if already at bottom,
+  <PageDown>     move to next page
+  <Next>
 
-  <Backspace>  scroll up on the current page
-  <Delete> 
+  <Backspace>  scroll up on the current page; if already at top, move
+  <Delete>       to previous page
   <PageUp> 
+  <Previous>
 
   <Home>       scroll to top of current page
 
@@ -151,7 +153,7 @@ Command line options and X resources:
 
   -g <geometry>              [xpdf.geometry]
   -geometry <geometry>
-    Set the initizl window geometry.
+    Set the initial window geometry.
 
   -remote <name>
     Start/contact xpdf remote server with specified name (see the
@@ -194,10 +196,10 @@ not the PDF display (the 'paper').
 Web browsers
 ------------
 
-If you want to run xpdf automatically from netscape when you click on
-a link to a PDF file, you need to edit (or create) the files
-'.mime.types' and '.mailcap' in your home directory.  In '.mime.types'
-add the line:
+If you want to run xpdf automatically from netscape or mosaic (and
+probably other browsers) when you click on a link to a PDF file, you
+need to edit (or create) the files '.mime.types' and '.mailcap' in
+your home directory.  In '.mime.types' add the line:
 
     application/pdf pdf
 
@@ -206,7 +208,7 @@ In '.mailcap' add the lines:
     # Use xpdf to view PDF files.
     application/pdf; xpdf -err %s
 
-This should also work for mosaic and possibly for other browsers.
+Make sure that xpdf is on your executable search path.
 
 
 Remote server mode
@@ -418,6 +420,9 @@ Bugs
 This is an beta release of xpdf, and there are still a bunch of PDF
 features which I have yet to implement.
 
+At this point, the biggest problem is that embedded fonts are not
+handled correctly.
+
 If you find a bug in xpdf, i.e., if it prints an error message,
 crashes, or incorrectly displays a document, and you don't see that
 bug listed here, please send me email, with a pointer (URL, ftp site,
@@ -426,21 +431,22 @@ etc.) to the PDF file.
 This is a list of things which I plan to add (in approximate order of
 priority):
 
+* forms
 * text search/select/copy
 * separate program to extract all text from PDF file
 * text annotations
 * bookmarks
 * support for Adobe Acrobat Amber optimized PDF files
 * article threads
-* document outline
+* index window or mode -- outline and/or thumbnails
 * distribute with a small demo PDF file
-* forms
 * RunLength filter (I haven't found a PDF file which uses this)
 * encryption (if I can get documentation)
 * adding text to clipping path
-* thumbnails
 * miter limit
 * text rendering mode (X display and PostScript output)
+* separate pdftoppm program (args are PDF file, page number, and
+  resolution (in dpi))
 
 There are also some problems which I know about.  This is a list of
 things which I plan to fix:
@@ -448,6 +454,7 @@ things which I plan to fix:
 * handle embedded Type-1 and Type-3 fonts
   - on screen (dump Type-1 fonts to file and let X server load them?)
   - embed in PostScript files
+* "cancel" button to stop page computation
 * pan by dragging with button 2
 * do a better job of scaling and dithering images
   - look at 'Interpolate' param;
@@ -464,8 +471,7 @@ things which I plan to fix:
 * "save bitmap" (PPM) command (how to generate 24-bit image?)
 * efficiently handle very large files - don't read entire catalog,
   xref, etc. (is this necessary?)
-
-I'm also planning to write a man page.
+* don't allocate full-size pixmap (optional?  only if > N bytes?)
 
 
 Acknowledgments
@@ -475,6 +481,7 @@ Thanks to:
 
 * Patrick Voigt for help with the remote server code.
 * Patrick Moreau for the VMS port.
+* David Boldt and Rick Rodgers for sample man pages.
 
 
 References

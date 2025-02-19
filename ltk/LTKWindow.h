@@ -76,8 +76,8 @@ public:
 
   //---------- special access ----------
 
-  void setKeyCbk(LTKWindowKeyCbk cbk) { keyCbk = cbk; }
-  void setPropChangeCbk(LTKWindowPropCbk cbk) { propCbk = cbk; }
+  void setKeyCbk(LTKWindowKeyCbk cbk);
+  void setPropChangeCbk(LTKWindowPropCbk cbk);
   void setLayoutCbk(LTKWindowLayoutCbk cbk) { layoutCbk = cbk; }
   void setKeyWidget(LTKWidget *widget) { keyWidget = widget; }
   LTKWidget *getKeyWidget() { return keyWidget; }
@@ -130,6 +130,7 @@ protected:
   Display *display;		// X display
   int screenNum;		// X screen number
   Window xwin;			// X window ID
+  long eventMask;		// current event mask
   unsigned long fgColor,	// foreground pixel number
                 bgColor;	// background pixel number
   GC fgGC;			// X GC for foreground color
