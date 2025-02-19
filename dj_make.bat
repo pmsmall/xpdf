@@ -53,6 +53,7 @@ del *.o
 %CXX% %CXXFLAGS% -c Stream.cc
 %CXX% %CXXFLAGS% -c TextOutputDev.cc
 %CXX% %CXXFLAGS% -c UnicodeMap.cc
+%CXX% %CXXFLAGS% -c UnicodeTypeTable.cc
 %CXX% %CXXFLAGS% -c XRef.cc
 del libxpdf.a
 %LIBPROG% -rc libxpdf.a *.o

@@ -1,8 +1,8 @@
 .\" Copyright 1999-2003 Glyph & Cog, LLC
-.TH pdfinfo 1 "24 March 2003"
+.TH pdfinfo 1 "10 October 2003"
 .SH NAME
 pdfinfo \- Portable Document Format (PDF) document information
-extractor (version 2.02)
+extractor (version 2.03)
 .SH SYNOPSIS
 .B pdfinfo
 [options]
@@ -42,6 +42,9 @@ modification date
 In addition, the following information is printed:
 .PP
 .RS
+tagged (yes/no)
+.RE
+.RS
 page count
 .RE
 .RS
@@ -51,7 +54,19 @@ encrypted flag (yes/no)
 print and copy permissions (if encrypted)
 .RE
 .RS
+page size
+.RE
+.RS
+file size
+.RE
+.RS
 linearized (yes/no)
+.RE
+.RS
+PDF version
+.RE
+.RS
+metadata (only if requested)
 .RE
 .SH CONFIGURATION FILE
 Pdfinfo reads a configuration file at startup.  It first tries to find
@@ -64,6 +79,14 @@ man page for details.
 Many of the following options can be set with configuration file
 commands.  These are listed in square brackets with the description of
 the corresponding command line option.
+.TP
+.BI \-f " number"
+Specifies the first page to examine.  If multiple pages are requested
+using the "-f" and "-l" options, the size of each requested page is
+printed.  Otherwise, only page one is examined.
+.TP
+.BI \-l " number"
+Specifies the last page to examine.
 .TP
 .BI \-meta
 Prints document-level metadata.  (This is the "Metadata" stream from

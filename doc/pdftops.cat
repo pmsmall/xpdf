@@ -1,12 +1,10 @@
-
-
-
 pdftops(1)                                             pdftops(1)
+
 
 
 NAME
        pdftops  -  Portable  Document  Format (PDF) to PostScript
-       converter (version 2.02)
+       converter (version 2.03)
 
 SYNOPSIS
        pdftops [options] [PDF-file [PS-file]]
@@ -56,19 +54,6 @@ OPTIONS
               are  converted  to  CMYK.   Images are written with
               separate  stream  data  for  the  four  components.
               [config file: psLevel]
-
-
-
-
-
-                          24 March 2003                         1
-
-
-
-
-
-pdftops(1)                                             pdftops(1)
-
 
        -level2
               Generate  Level  2  PostScript.   Level  2 supports
@@ -124,18 +109,6 @@ pdftops(1)                                             pdftops(1)
               file.  This option  causes  pdftops  to  substitute
               base fonts instead.  Embedded fonts make PostScript
               files larger, but may  be  necessary  for  readable
-
-
-
-                          24 March 2003                         2
-
-
-
-
-
-pdftops(1)                                             pdftops(1)
-
-
               output.   Also, some PostScript interpreters do not
               have TrueType  rasterizers.   [config  file:  psEm-
               bedTrueTypeFonts]
@@ -190,18 +163,6 @@ pdftops(1)                                             pdftops(1)
               Read config-file in place of ~/.xpdfrc or the  sys-
               tem-wide config file.
 
-
-
-
-                          24 March 2003                         3
-
-
-
-
-
-pdftops(1)                                             pdftops(1)
-
-
        -v     Print copyright and version information.
 
        -h     Print  usage  information.   (-help  and --help are
@@ -231,34 +192,4 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                          24 March 2003                         4
-
-
+                         10 October 2003               pdftops(1)

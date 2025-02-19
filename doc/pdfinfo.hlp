@@ -23,10 +23,17 @@
 
        In addition, the following information is printed:
 
+              tagged (yes/no)
               page count
               encrypted flag (yes/no)
               print and copy permissions (if encrypted)
+              page size
+              file size
               linearized (yes/no)
+              PDF version
+              metadata (only if requested)
+
+                                                               ()
 
 2 ONFIGURATION_FIL
 
@@ -37,6 +44,8 @@
        can  be changed when pdfinfo is built).  See the xpdfrc(5)
        man page for details.
 
+                                                               ()
+
 2 OPTIONS
 
        Many  of  the following options can be set with configura-
@@ -44,32 +53,43 @@
        with  the  description  of  the corresponding command line
        option.
 
-       -meta  Prints  document-level  metadata.   (This  is   the
+       -f number
+              Specifies the first page to examine.   If  multiple
+              pages   are  requested  using  the  "-f"  and  "-l"
+              options,  the  size  of  each  requested  page   is
+              printed.  Otherwise, only page one is examined.
+
+       -l number
+              Specifies the last page to examine.
+
+       -meta  Prints   document-level  metadata.   (This  is  the
               "Metadata"  stream  from  the  PDF  file's  Catalog
               object.)
 
        -enc encoding-name
-              Sets the encoding to  use  for  text  output.   The
-              encoding-name  must  be defined with the unicodeMap
+              Sets  the  encoding  to  use  for text output.  The
+              encoding-name must be defined with  the  unicodeMap
               command (see xpdfrc(5)).  This defaults to "Latin1"
               (which is a built-in encoding).  [config file: tex-
               tEncoding]
 
        -opw password
-              Specify the owner password for the PDF file.   Pro-
-              viding  this will bypass all security restrictions.
+              Specify  the owner password for the PDF file.  Pro-
+              viding this will bypass all security  restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
        -cfg config-file
-              Read config-file in place of ~/.xpdfrc or the  sys-
+              Read  config-file in place of ~/.xpdfrc or the sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print  usage  information.   (-help  and --help are
+       -h     Print usage information.   (-help  and  --help  are
               equivalent.)
+
+                                                               ()
 
 2 XIT_CODE
 
@@ -85,14 +105,20 @@
 
        99     Other error.
 
+                                                               ()
+
 2 AUTHOR
 
        The  pdfinfo  software  and  documentation  are  copyright
        1996-2003 Glyph & Cog, LLC.
+
+                                                               ()
 
 2 SEE_ALSO
 
        xpdf(1),     pdftops(1),     pdftotext(1),    pdffonts(1),
        pdftopbm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
+
+                                                               ()
 

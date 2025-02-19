@@ -856,6 +856,7 @@ Optional Features:
   --enable-no-text-select do not allow text selection
   --enable-opi            include support for OPI comments
   --enable-multithreaded  include support for multithreading
+  --enable-wordlist       include support for building word lists
   --disable-largefile     omit support for large files
 
 Optional Packages:
@@ -1341,6 +1342,14 @@ if test "${enable_multithreaded+set}" = set; then
   enableval="$enable_multithreaded"
   cat >>confdefs.h <<\_ACEOF
 #define MULTITHREADED 1
+_ACEOF
+
+fi;
+# Check whether --enable-wordlist or --disable-wordlist was given.
+if test "${enable_wordlist+set}" = set; then
+  enableval="$enable_wordlist"
+  cat >>confdefs.h <<\_ACEOF
+#define TEXTOUT_WORD_LIST 1
 _ACEOF
 
 fi;

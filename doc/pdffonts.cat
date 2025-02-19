@@ -1,12 +1,10 @@
-
-
-
 pdffonts(1)                                           pdffonts(1)
+
 
 
 NAME
        pdffonts  -  Portable  Document Format (PDF) font analyzer
-       (version 2.02)
+       (version 2.03)
 
 SYNOPSIS
        pdffonts [options] [PDF-file]
@@ -58,18 +56,6 @@ OPTIONS
        Many of the following options can be set  with  configura-
        tion  file  commands.  These are listed in square brackets
        with the description of  the  corresponding  command  line
-
-
-
-                          24 March 2003                         1
-
-
-
-
-
-pdffonts(1)                                           pdffonts(1)
-
-
        option.
 
        -f number
@@ -118,15 +104,4 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-                          24 March 2003                         2
-
-
+                         10 October 2003              pdffonts(1)

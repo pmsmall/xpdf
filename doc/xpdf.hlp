@@ -2,7 +2,7 @@
 1 xpdf
 
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 2.02)
+       (version 2.03)
 
        xpdf [options] [PDF-file [page | +dest]]
 
@@ -28,6 +28,8 @@
 
               xpdf
 
+                                                               ()
+
 2 ONFIGURATION_FIL
 
        Xpdf  reads  a  configuration  file  at startup.  It first
@@ -36,6 +38,8 @@
        file, typically /usr/local/etc/xpdfrc (but  this  location
        can be changed when xpdf is built).  See the xpdfrc(5) man
        page for details.
+
+                                                               ()
 
 2 OPTIONS
 
@@ -77,11 +81,11 @@
               the text.  [X resource: xpdf.paperColor]
 
        -z zoom
-              Set the initial zoom factor.  A number  (-5  ..  5)
-              specifies a zoom factor, where 0 means 72 dpi.  You
-              may also specify 'page', to fit  the  page  to  the
-              window  size,  or 'width', to fit the page width to
-              the window width.  [config file: initialZoom; or  X
+              Set the initial zoom factor.  A number specifies  a
+              zoom  percentage,  where  100  means 72 dpi.You may
+              also specify 'page', to fit the page to the  window
+              size, or 'width', to fit the page width to the win-
+              dow  width.   [config  file:  initialZoom;   or   X
               resource: xpdf.initialZoom]
 
        -t1lib font-type
@@ -208,6 +212,8 @@
               Enables  the  'h',  'l', 'k' and 'j' keys for left,
               right, up, and down scrolling.
 
+                                                               ()
+
 2 CONTROLS
 
    On-screen controls, at the bottom of the xpdf window
@@ -262,7 +268,6 @@
               file requester.
 
        Reload Reload the current PDF file.  Note that  Xpdf  will
-
               reload  the file automatically (on a page change or
               redraw) if it has changed since it was last loaded.
 
@@ -286,28 +291,34 @@
 
        Quit   Quit xpdf.
 
+   Outline
+       If the PDF contains an outline (a.k.a., bookmarks),  there
+       will  be  an  outline pane on the left side of the window.
+       The width of the outline pane is adjustable with a  verti-
+       cal split bar via the knob near its bottom end.
+
    Text selection
-       Dragging the mouse with the left  button  held  down  will
-       highlight  an  arbitrary  rectangle.  Any text inside this
+       Dragging  the  mouse  with  the left button held down will
+       highlight an arbitrary rectangle.  Any  text  inside  this
        rectangle will be copied to the X selection buffer.
 
    Links
-       Clicking on a hyperlink will jump to the  link's  destina-
-       tion.   A link to another PDF document will make xpdf load
-       that document.  A 'launch' link to an  executable  program
-       will  display a dialog, and if you click 'ok', execute the
-       program.  URL links call an external command (see the  WEB
+       Clicking  on  a hyperlink will jump to the link's destina-
+       tion.  A link to another PDF document will make xpdf  load
+       that  document.   A 'launch' link to an executable program
+       will display a dialog, and if you click 'ok', execute  the
+       program.   URL links call an external command (see the WEB
        BROWSERS section below).
 
    Panning
-       Dragging  the  mouse with the middle button held down pans
+       Dragging the mouse with the middle button held  down  pans
        the window.
 
    Key bindings
        o      Open a new PDF file via a file requester.
 
-       r      Reload the current PDF file.  Note that  Xpdf  will
-              reload  the file automatically (on a page change or
+       r      Reload  the  current PDF file.  Note that Xpdf will
+              reload the file automatically (on a page change  or
               redraw) if it has changed since it was last loaded.
 
        control-L
@@ -325,10 +336,10 @@
        control-P
               Print.
 
-       n      Move  to  the next page.  Scrolls to the top of the
+       n      Move to the next page.  Scrolls to the top  of  the
               page, unless scroll lock is turned on.
 
-       p      Move to the previous page.  Scrolls to the  top  of
+       p      Move  to  the previous page.  Scrolls to the top of
               the page, unless scroll lock is turned on.
 
        <Space> or <PageDown> or <Next>
@@ -336,7 +347,7 @@
               tom, move to next page.
 
        <Backspace> or <Delete> or <PageUp> or <Previous>
-              Scroll up on the current page; if already  at  top,
+              Scroll  up  on the current page; if already at top,
               move to previous page.
 
        v      Move forward along the history path.
@@ -355,7 +366,7 @@
 
        arrows Scroll the current page.
 
-       g      Activate  the page number text field ("goto page").
+       g      Activate the page number text field ("goto  page").
 
        0      Set the zoom factor to zero (72 dpi).
 
@@ -365,10 +376,12 @@
 
        z      Set the zoom factor to 'page' (fit page to window).
 
-       w      Set  the  zoom factor to 'width' (fit page width to
+       w      Set the zoom factor to 'width' (fit page  width  to
               window).
 
        q      Quit xpdf.
+
+                                                               ()
 
 2 WEB_BROWSERS
 
@@ -394,6 +407,8 @@
        your config file:
 
               urlCommand "netscape -remote 'openURL(%s)'"
+
+                                                               ()
 
 2 REMOTE_SERVER_MODE
 
@@ -424,6 +439,8 @@
        The  -quit option tells the server to close its window and
        exit.
 
+                                                               ()
+
 2 XIT_CODE
 
        The Xpdf tools use the following exit codes:
@@ -438,14 +455,20 @@
 
        99     Other error.
 
+                                                               ()
+
 2 AUTHOR
 
        The   xpdf   software   and  documentation  are  copyright
        1996-2003 Glyph & Cog, LLC.
+
+                                                               ()
 
 2 SEE_ALSO
 
        pdftops(1),    pdftotext(1),    pdfinfo(1),   pdffonts(1),
        pdftopbm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
+
+                                                               ()
 

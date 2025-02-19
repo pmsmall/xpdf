@@ -1,12 +1,10 @@
-
-
-
 xpdf(1)                                                   xpdf(1)
+
 
 
 NAME
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 2.02)
+       (version 2.03)
 
 SYNOPSIS
        xpdf [options] [PDF-file [page | +dest]]
@@ -59,17 +57,6 @@ OPTIONS
        -cmap  Install a private colormap.   This  is  ignored  on
               TrueColor visuals.  [X resource: xpdf.installCmap]
 
-
-
-                          24 March 2003                         1
-
-
-
-
-
-xpdf(1)                                                   xpdf(1)
-
-
        -rgb number
               Set  the  size of largest RGB cube xpdf will try to
               allocate.  The default is 5 (for a 5x5x5 cube); set
@@ -92,11 +79,11 @@ xpdf(1)                                                   xpdf(1)
               the text.  [X resource: xpdf.paperColor]
 
        -z zoom
-              Set the initial zoom factor.  A number  (-5  ..  5)
-              specifies a zoom factor, where 0 means 72 dpi.  You
-              may also specify 'page', to fit  the  page  to  the
-              window  size,  or 'width', to fit the page width to
-              the window width.  [config file: initialZoom; or  X
+              Set the initial zoom factor.  A number specifies  a
+              zoom  percentage,  where  100  means 72 dpi.You may
+              also specify 'page', to fit the page to the  window
+              size, or 'width', to fit the page width to the win-
+              dow  width.   [config  file:  initialZoom;   or   X
               resource: xpdf.initialZoom]
 
        -t1lib font-type
@@ -124,18 +111,6 @@ xpdf(1)                                                   xpdf(1)
        -paper size
               Set the paper size to  one  of  "letter",  "legal",
               "A4",  or  "A3".   This can also be set to "match",
-
-
-
-                          24 March 2003                         2
-
-
-
-
-
-xpdf(1)                                                   xpdf(1)
-
-
               which will set the paper size  to  match  the  size
               specified  in the PDF file.  [config file: psPaper-
               Size]
@@ -190,17 +165,6 @@ xpdf(1)                                                   xpdf(1)
 
        -raise Raise  xpdf  remote  server  window  (with  -remote
               only).
-
-
-
-                          24 March 2003                         3
-
-
-
-
-
-xpdf(1)                                                   xpdf(1)
-
 
        -quit  Kill xpdf remote server (with -remote only).
 
@@ -257,17 +221,6 @@ CONTROLS
        dashed left/right arrow buttons
               Move backward or forward along the history path.
 
-
-
-                          24 March 2003                         4
-
-
-
-
-
-xpdf(1)                                                   xpdf(1)
-
-
        'Page' entry box
               Move to a specific page number.  Click in  the  box
               to  activate  it,  type  the  page number, then hit
@@ -322,18 +275,6 @@ xpdf(1)                                                   xpdf(1)
 
        Rotate clockwise
               Rotate the page  90  degrees  clockwise.   The  two
-
-
-
-                          24 March 2003                         5
-
-
-
-
-
-xpdf(1)                                                   xpdf(1)
-
-
               rotate  commands  are  intended  primarily  for PDF
               files where the rotation isn't correctly  specified
               in  the  file,  but  they're  also useful if your X
@@ -347,31 +288,38 @@ xpdf(1)                                                   xpdf(1)
        Quit   Quit xpdf.
 
 
+   Outline
+       If  the PDF contains an outline (a.k.a., bookmarks), there
+       will be an outline pane on the left side  of  the  window.
+       The  width of the outline pane is adjustable with a verti-
+       cal split bar via the knob near its bottom end.
+
+
    Text selection
-       Dragging  the  mouse  with  the left button held down will
-       highlight an arbitrary rectangle.  Any  text  inside  this
+       Dragging the mouse with the left  button  held  down  will
+       highlight  an  arbitrary  rectangle.  Any text inside this
        rectangle will be copied to the X selection buffer.
 
 
    Links
-       Clicking  on  a hyperlink will jump to the link's destina-
-       tion.  A link to another PDF document will make xpdf  load
-       that  document.   A 'launch' link to an executable program
-       will display a dialog, and if you click 'ok', execute  the
-       program.   URL links call an external command (see the WEB
+       Clicking on a hyperlink will jump to the  link's  destina-
+       tion.   A link to another PDF document will make xpdf load
+       that document.  A 'launch' link to an  executable  program
+       will  display a dialog, and if you click 'ok', execute the
+       program.  URL links call an external command (see the  WEB
        BROWSERS section below).
 
 
    Panning
-       Dragging the mouse with the middle button held  down  pans
+       Dragging  the  mouse with the middle button held down pans
        the window.
 
 
    Key bindings
        o      Open a new PDF file via a file requester.
 
-       r      Reload  the  current PDF file.  Note that Xpdf will
-              reload the file automatically (on a page change  or
+       r      Reload the current PDF file.  Note that  Xpdf  will
+              reload  the file automatically (on a page change or
               redraw) if it has changed since it was last loaded.
 
        control-L
@@ -389,21 +337,10 @@ xpdf(1)                                                   xpdf(1)
        control-P
               Print.
 
-
-
-                          24 March 2003                         6
-
-
-
-
-
-xpdf(1)                                                   xpdf(1)
-
-
-       n      Move to the next page.  Scrolls to the top  of  the
+       n      Move  to  the next page.  Scrolls to the top of the
               page, unless scroll lock is turned on.
 
-       p      Move  to  the previous page.  Scrolls to the top of
+       p      Move to the previous page.  Scrolls to the  top  of
               the page, unless scroll lock is turned on.
 
        <Space> or <PageDown> or <Next>
@@ -411,7 +348,7 @@ xpdf(1)                                                   xpdf(1)
               tom, move to next page.
 
        <Backspace> or <Delete> or <PageUp> or <Previous>
-              Scroll  up  on the current page; if already at top,
+              Scroll up on the current page; if already  at  top,
               move to previous page.
 
        v      Move forward along the history path.
@@ -430,7 +367,7 @@ xpdf(1)                                                   xpdf(1)
 
        arrows Scroll the current page.
 
-       g      Activate the page number text field ("goto  page").
+       g      Activate  the page number text field ("goto page").
 
        0      Set the zoom factor to zero (72 dpi).
 
@@ -440,31 +377,19 @@ xpdf(1)                                                   xpdf(1)
 
        z      Set the zoom factor to 'page' (fit page to window).
 
-       w      Set the zoom factor to 'width' (fit page  width  to
+       w      Set  the  zoom factor to 'width' (fit page width to
               window).
 
        q      Quit xpdf.
 
 WEB BROWSERS
-       If  you  want  to  run xpdf automatically from netscape or
-       mosaic (and probably other browsers) when you click  on  a
+       If you want to run xpdf  automatically  from  netscape  or
+       mosaic  (and  probably other browsers) when you click on a
        link to a PDF file, you need to edit (or create) the files
-       .mime.types and  .mailcap  in  your  home  directory.   In
+       .mime.types  and  .mailcap  in  your  home  directory.  In
        .mime.types add the line:
 
               application/pdf pdf
-
-
-
-
-                          24 March 2003                         7
-
-
-
-
-
-xpdf(1)                                                   xpdf(1)
-
 
        In .mailcap add the lines:
 
@@ -474,27 +399,27 @@ xpdf(1)                                                   xpdf(1)
        Make sure that xpdf is on your executable search path.
 
        When you click on a URL link in a PDF file, xpdf will exe-
-       cute the command specified by the urlCommand  config  file
+       cute  the  command specified by the urlCommand config file
        option, replacing an occurrence of '%s' with the URL.  For
-       example, to call netscape with the URL, add this  line  to
+       example,  to  call netscape with the URL, add this line to
        your config file:
 
               urlCommand "netscape -remote 'openURL(%s)'"
 
 REMOTE SERVER MODE
-       Xpdf  can be started in remote server mode by specifying a
-       server name (in addition to the file name  and  page  num-
+       Xpdf can be started in remote server mode by specifying  a
+       server  name  (in  addition to the file name and page num-
        ber).  For example:
 
               xpdf -remote myServer file.pdf
 
-       If  there is currently no xpdf running in server mode with
+       If there is currently no xpdf running in server mode  with
        the name 'myServer', a new xpdf window will be opened.  If
        another command:
 
               xpdf -remote myServer another.pdf 9
 
-       is  issued,  a  new  copy  of  xpdf  will  not be started.
+       is issued, a  new  copy  of  xpdf  will  not  be  started.
        Instead, the first xpdf (the server) will load another.pdf
        and display page nine.  If the file name is the same:
 
@@ -506,7 +431,7 @@ REMOTE SERVER MODE
        can be specified with or without a file name and page num-
        ber.
 
-       The  -quit option tells the server to close its window and
+       The -quit option tells the server to close its window  and
        exit.
 
 EXIT CODES
@@ -520,75 +445,17 @@ EXIT CODES
 
        3      Error related to PDF permissions.
 
-
-
-
-                          24 March 2003                         8
-
-
-
-
-
-xpdf(1)                                                   xpdf(1)
-
-
        99     Other error.
 
 AUTHOR
-       The  xpdf  software  and   documentation   are   copyright
+       The   xpdf   software   and  documentation  are  copyright
        1996-2003 Glyph & Cog, LLC.
 
 SEE ALSO
-       pdftops(1),    pdftotext(1),    pdfinfo(1),   pdffonts(1),
+       pdftops(1),   pdftotext(1),    pdfinfo(1),    pdffonts(1),
        pdftopbm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                          24 March 2003                         9
-
-
+                         10 October 2003                  xpdf(1)

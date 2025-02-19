@@ -2,7 +2,7 @@
 1 xpdfrc
 2 NCLUDE_FILE
 
-       xpdfrc - configuration file for Xpdf tools (version 2.02)
+       xpdfrc - configuration file for Xpdf tools (version 2.03)
 
        include config-file
               Includes  the specified config file.  The effect of
@@ -10,6 +10,8 @@
               config-file directly into the parent config file in
               place of the include command.  Config files can  be
               nested arbitrarily deep.
+
+                                                               ()
 
 2 HARACTER_MAPPIN
 
@@ -44,6 +46,23 @@
               fied file is used.  There are no built-in cidToUni-
               code mappings.
 
+       unicodeToUnicode font-name-substring map-file
+              This is used to work around PDF  fonts  which  have
+              incorrect Unicode information.  It specifies a file
+              which  maps  from  the  given  (incorrect)  Unicode
+              indexes  to  the correct ones.  The mapping will be
+              used   for   any   font   whose    name    contains
+              font-name-substring.   Each line of a unicodeToUni-
+              code file represents one Unicode character:
+
+                  in-hex out-hex1 out-hex2 ...
+
+              The in-hex field is an  input  (incorrect)  Unicode
+              index,  and  the rest of the fields are one or more
+              output (correct) Unicode indexes.  Each  occurrence
+              of in-hex will be converted to the specified output
+              sequence.
+
        unicodeMap encoding-name map-file
               Specifies the file with  mapping  from  Unicode  to
               encoding-name.  These encodings are used for X dis-
@@ -66,7 +85,6 @@
               length of the  out-start-hex  (or  out-hex)  string
               determines  the  length  of  the  output characters
               (e.g., UTF-8 uses different  numbers  of  bytes  to
-
               represent characters in different ranges).  Entries
               must be given in increasing  Unicode  order.   Only
               one  file  is allowed per encoding; the last speci-
@@ -84,6 +102,8 @@
               Specifies  a  search  directory, dir, for ToUnicode
               CMaps.  There can be  multiple  ToUnicode  directo-
               ries.   There are no default ToUnicode directories.
+
+                                                               ()
 
 2 ISPLAY_FONT
 
@@ -140,7 +160,6 @@
        displayNamedCIDFontTT PDF-font-name TT-file
               Maps    a   specific   PDF   CID   (16-bit)   font,
               PDF-font-name, to a  (16-bit)  TrueType  font,  for
-
               display.  There are no default CID font mappings.
 
        displayCIDFontTT registry-ordering TT-file
@@ -163,6 +182,8 @@
               files in these directories will be ignored.   There
               are no default fontDir directories.
 
+                                                               ()
+
 2 OSTSCRIPT_CONTRO
 
        psPaperSize width(pts) height(pts)
@@ -184,8 +205,8 @@
               capable  printers  to   enable   duplexing.    This
               defaults to "no".
 
-       psLevel  level1  |  level1sep  |  level2  |  level2sep |
-              level3 | level3Sep
+       psLevel level1 | level1sep | level2 | level2sep | level3 |
+       level3Sep
               Sets   the  PostScript  level  to  generate.   This
               defaults to "level2".
 
@@ -265,6 +286,8 @@
               See  the  description  above,  in the DISPLAY FONTS
               section.
 
+                                                               ()
+
 2 EXT_CONTRO
 
        textEncoding encoding-name
@@ -286,23 +309,30 @@
               the  command  line.)  The default value is based on
               the OS where xpdf and pdftotext were built.
 
+       textPageBreaks yes | no
+              If set to "yes", text extraction will  insert  page
+              breaks  (form feed characters) between pages.  This
+              defaults to "yes".
+
        textKeepTinyChars yes | no
               If set to "yes",  text  extraction  will  keep  all
               characters.   If  set to "no", text extraction will
               discard tiny  (smaller  than  3  point)  characters
-              after  the first 20000 per page, avoiding extremely
+              after  the first 50000 per page, avoiding extremely
               slow run times for PDF files that use special fonts
               to  do shading or cross-hatching.  This defaults to
               "no".
 
+                                                               ()
+
 2 ISCELLANEOUS_SETTING
 
-       initialZoom -5..5 | page | width
-              Sets  the  initial zoom factor.  A number (-5 .. 5)
-              specifies a zoom factor, where 0 means 72 dpi.  You
-              may  also  specify  'page',  to fit the page to the
-              window size, or 'width', to fit the page  width  to
-              the window width.
+       initialZoom percentage | page | width
+              Sets the initial zoom factor.  A number specifies a
+              zoom percentage, where 100 means 72 dpi.   You  may
+              also  specify 'page', to fit the page to the window
+              size, or 'width', to fit the page width to the win-
+              dow width.
 
        t1libControl none | plain | low | high
               Sets the type of font rendering for t1lib (the Type
@@ -347,6 +377,8 @@
               If  set  to  "yes",  this  suppresses all error and
               warning messages from all of the Xpdf tools.   This
               defaults to "no".
+
+                                                               ()
 
 2 EXAMPLES
 
@@ -403,13 +435,14 @@
 
        # set the text output options
        textEncoding UTF-8
-
        textEOL      unix
 
        # misc options
        t1libControl    low
        freetypeControl low
-       urlCommand      "netscape -remove 'openURL(%s)'"
+       urlCommand      "netscape -remote 'openURL(%s)'"
+
+                                                               ()
 
 2 FILES
 
@@ -423,14 +456,20 @@
               exists, it will be read in place of the system-wide
               file.
 
+                                                               ()
+
 2 AUTHOR
 
        The   Xpdf   software   and  documentation  are  copyright
        1996-2003 Glyph & Cog, LLC.
+
+                                                               ()
 
 2 SEE_ALSO
 
        xpdf(1),     pdftops(1),     pdftotext(1),     pdfinfo(1),
        pdftopbm(1), pdfimages(1)
        http://www.foolabs.com/xpdf/
+
+                                                               ()
 

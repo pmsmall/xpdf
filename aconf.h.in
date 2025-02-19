@@ -30,6 +30,11 @@
 #undef MULTITHREADED
 
 /*
+ * Enable word list support.
+ */
+#undef TEXTOUT_WORD_LIST
+
+/*
  * Directory with the Xpdf app-defaults file.
  */
 #undef APPDEFDIR

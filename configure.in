@@ -18,6 +18,9 @@ AC_DEFINE(OPI_SUPPORT))
 AC_ARG_ENABLE(multithreaded,
 [  --enable-multithreaded  include support for multithreading],
 AC_DEFINE(MULTITHREADED))
+AC_ARG_ENABLE(wordlist,
+[  --enable-wordlist       include support for building word lists],
+AC_DEFINE(TEXTOUT_WORD_LIST))
 AC_ARG_WITH(appdef-dir,
 [  --with-appdef-dir       set app-defaults directory],
 AC_DEFINE_UNQUOTED(APPDEFDIR, "$with_appdef_dir"))

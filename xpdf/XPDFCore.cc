@@ -92,14 +92,6 @@
 
 //------------------------------------------------------------------------
 
-static int zoomDPI[maxZoom - minZoom + 1] = {
-  29, 35, 42, 50, 60,
-  72,
-  86, 104, 124, 149, 179
-};
-
-//------------------------------------------------------------------------
-
 GString *XPDFCore::currentSelection = NULL;
 XPDFCore *XPDFCore::currentSelectionOwner = NULL;
 Atom XPDFCore::targetsAtom;
@@ -147,10 +139,8 @@ XPDFCore::XPDFCore(Widget shellA, Widget parentWidgetA,
     zoom = zoomWidth;
   } else {
     zoom = atoi(initialZoom->getCString());
-    if (zoom < minZoom) {
-      zoom = minZoom;
-    } else if (zoom > maxZoom) {
-      zoom = maxZoom;
+    if (zoom <= 0) {
+      zoom = defZoom;
     }
   }
   delete initialZoom;
@@ -398,11 +388,11 @@ void XPDFCore::resizeToPage(int pg) {
       height1 = doc->getPageHeight(pg);
     }
     if (zoom == zoomPage || zoom == zoomWidth) {
-      width = (Dimension)((width1 * zoomDPI[defZoom - minZoom]) / 72 + 0.5);
-      height = (Dimension)((height1 * zoomDPI[defZoom - minZoom]) / 72 + 0.5);
+      width = (Dimension)(width1 * 0.01 * defZoom + 0.5);
+      height = (Dimension)(height1 * 0.01 * defZoom + 0.5);
     } else {
-      width = (Dimension)((width1 * zoomDPI[zoom - minZoom]) / 72 + 0.5);
-      height = (Dimension)((height1 * zoomDPI[zoom - minZoom]) / 72 + 0.5);
+      width = (Dimension)(width1 * 0.01 * zoom + 0.5);
+      height = (Dimension)(height1 * 0.01 * zoom + 0.5);
     }
     if (width > displayW - 100) {
       width = displayW - 100;
@@ -442,7 +432,7 @@ void XPDFCore::clear() {
   redrawRectangle(scrollX, scrollY, drawAreaWidth, drawAreaHeight);
 }
 
-void XPDFCore::displayPage(int pageA, int zoomA, int rotateA,
+void XPDFCore::displayPage(int pageA, double zoomA, int rotateA,
 			   GBool scrollToTop, GBool addToHist) {
   double hDPI, vDPI;
   int rot;
@@ -526,10 +516,10 @@ void XPDFCore::displayPage(int pageA, int zoomA, int rotateA,
       dpi = (drawAreaWidth / doc->getPageWidth(page)) * 72;
     }
   } else {
-    dpi = zoomDPI[zoom - minZoom];
+    dpi = 0.01 * zoom * 72;
   }
   out->setWindow(XtWindow(drawArea));
-  doc->displayPage(out, page, dpi, rotate, gTrue);
+  doc->displayPage(out, page, dpi, dpi, rotate, gTrue);
   oldScrollX = scrollX;
   oldScrollY = scrollY;
   updateScrollBars();
@@ -577,7 +567,7 @@ void XPDFCore::displayPage(int pageA, int zoomA, int rotateA,
   setCursor(None);
 }
 
-void XPDFCore::displayDest(LinkDest *dest, int zoomA, int rotateA,
+void XPDFCore::displayDest(LinkDest *dest, double zoomA, int rotateA,
 			   GBool addToHist) {
   Ref pageRef;
   int pg;
@@ -686,7 +676,7 @@ void XPDFCore::goForward() {
   }
   --historyFLen;
   ++historyBLen;
-  if (history[historyCur].fileName->cmp(doc->getFileName()) != 0) {
+  if (!doc || history[historyCur].fileName->cmp(doc->getFileName()) != 0) {
     if (loadFile(history[historyCur].fileName) != errNone) {
       XBell(display, 0);
       return;
@@ -705,7 +695,7 @@ void XPDFCore::goBackward() {
   }
   --historyBLen;
   ++historyFLen;
-  if (history[historyCur].fileName->cmp(doc->getFileName()) != 0) {
+  if (!doc || history[historyCur].fileName->cmp(doc->getFileName()) != 0) {
     if (loadFile(history[historyCur].fileName) != errNone) {
       XBell(display, 0);
       return;
@@ -1046,7 +1036,7 @@ GString *XPDFCore::extractText(int pageNum,
     delete textOut;
     return NULL;
   }
-  doc->displayPage(textOut, pageNum, dpi, rotate, gFalse);
+  doc->displayPage(textOut, pageNum, dpi, dpi, rotate, gFalse);
   s = textOut->getText(xMin, yMin, xMax, yMax);
   delete textOut;
   return s;
@@ -1056,7 +1046,7 @@ GString *XPDFCore::extractText(int pageNum,
 // hyperlinks
 //------------------------------------------------------------------------
 
-void XPDFCore::doLink(int mx, int my) {
+GBool XPDFCore::doLink(int mx, int my) {
   double x, y;
   LinkAction *action;
 
@@ -1064,7 +1054,9 @@ void XPDFCore::doLink(int mx, int my) {
   out->cvtDevToUser(mx, my, &x, &y);
   if ((action = doc->findLink(x, y))) {
     doAction(action);
+    return gTrue;
   }
+  return gFalse;
 }
 
 void XPDFCore::doAction(LinkAction *action) {
@@ -1322,13 +1314,13 @@ GString *XPDFCore::mungeURL(GString *url) {
 // find
 //------------------------------------------------------------------------
 
-void XPDFCore::find(char *s) {
+void XPDFCore::find(char *s, GBool next) {
   Unicode *u;
   TextOutputDev *textOut;
   int xMin, yMin, xMax, yMax;
   double xMin1, yMin1, xMax1, yMax1;
   int pg;
-  GBool top;
+  GBool startAtTop;
   int len, i;
 
   // check for zero-length string
@@ -1350,15 +1342,12 @@ void XPDFCore::find(char *s) {
 #endif
 
   // search current page starting at current selection or top of page
-  xMin = yMin = xMax = yMax = 0;
-  if (selectXMin < selectXMax && selectYMin < selectYMax) {
-    xMin = selectXMax;
-    yMin = (selectYMin + selectYMax) / 2;
-    top = gFalse;
-  } else {
-    top = gTrue;
-  }
-  if (out->findText(u, len, top, gTrue, &xMin, &yMin, &xMax, &yMax)) {
+  startAtTop = !next && !(selectXMin < selectXMax && selectYMin < selectYMax);
+  xMin = selectXMin + 1;
+  yMin = selectYMin + 1;
+  xMax = yMax = 0;
+  if (out->findText(u, len, startAtTop, gTrue, next, gFalse,
+		    &xMin, &yMin, &xMax, &yMax)) {
     goto found;
   }
 
@@ -1369,8 +1358,8 @@ void XPDFCore::find(char *s) {
     goto done;
   }
   for (pg = page+1; pg <= doc->getNumPages(); ++pg) {
-    doc->displayPage(textOut, pg, 72, 0, gFalse);
-    if (textOut->findText(u, len, gTrue, gTrue,
+    doc->displayPage(textOut, pg, 72, 72, 0, gFalse);
+    if (textOut->findText(u, len, gTrue, gTrue, gFalse, gFalse,
 			  &xMin1, &yMin1, &xMax1, &yMax1)) {
       goto foundPage;
     }
@@ -1378,8 +1367,8 @@ void XPDFCore::find(char *s) {
 
   // search previous pages
   for (pg = 1; pg < page; ++pg) {
-    doc->displayPage(textOut, pg, 72, 0, gFalse);
-    if (textOut->findText(u, len, gTrue, gTrue,
+    doc->displayPage(textOut, pg, 72, 72, 0, gFalse);
+    if (textOut->findText(u, len, gTrue, gTrue, gFalse, gFalse,
 			  &xMin1, &yMin1, &xMax1, &yMax1)) {
       goto foundPage;
     }
@@ -1387,10 +1376,12 @@ void XPDFCore::find(char *s) {
   delete textOut;
 
   // search current page ending at current selection
-  if (selectXMin < selectXMax && selectYMin < selectYMax) {
+  if (!startAtTop) {
+    xMin = yMin = 0;
     xMax = selectXMin;
-    yMax = (selectYMin + selectYMax) / 2;
-    if (out->findText(u, len, gTrue, gFalse, &xMin, &yMin, &xMax, &yMax)) {
+    yMax = selectYMin;
+    if (out->findText(u, len, gTrue, gFalse, gFalse, next,
+		      &xMin, &yMin, &xMax, &yMax)) {
       goto found;
     }
   }
@@ -1403,7 +1394,8 @@ void XPDFCore::find(char *s) {
  foundPage:
   delete textOut;
   displayPage(pg, zoom, rotate, gTrue, gTrue);
-  if (!out->findText(u, len, gTrue, gTrue, &xMin, &yMin, &xMax, &yMax)) {
+  if (!out->findText(u, len, gTrue, gTrue, gFalse, gFalse,
+		     &xMin, &yMin, &xMax, &yMax)) {
     // this can happen if coalescing is bad
     goto done;
   }

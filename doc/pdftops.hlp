@@ -15,6 +15,8 @@
        -eps option).  If PS-file is '-', the PostScript  is  sent
        to stdout.
 
+                                                               ()
+
 2 ONFIGURATION_FIL
 
        Pdftops  reads  a configuration file at startup.  It first
@@ -23,6 +25,8 @@
        file, typically /usr/local/etc/xpdfrc (but  this  location
        can  be changed when pdftops is built).  See the xpdfrc(5)
        man page for details.
+
+                                                               ()
 
 2 OPTIONS
 
@@ -79,7 +83,6 @@
               this  option  with  a multi-page PDF file, you must
               use -f and -l to specify a single  page.   No  more
               than  one  of the mode options (-eps, -form) may be
-
               given.
 
        -form  Generate a PostScript form which can be imported by
@@ -167,6 +170,8 @@
        -h     Print usage information.   (-help  and  --help  are
               equivalent.)
 
+                                                               ()
+
 2 XIT_CODE
 
        The Xpdf tools use the following exit codes:
@@ -181,14 +186,20 @@
 
        99     Other error.
 
+                                                               ()
+
 2 AUTHOR
 
        The  pdftops  software  and  documentation  are  copyright
        1996-2003 Glyph & Cog, LLC.
+
+                                                               ()
 
 2 SEE_ALSO
 
        xpdf(1),     pdftotext(1),     pdfinfo(1),    pdffonts(1),
        pdftopbm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
+
+                                                               ()
 

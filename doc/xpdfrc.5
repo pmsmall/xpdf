@@ -1,7 +1,7 @@
 .\" Copyright 2002-2003 Glyph & Cog, LLC
-.TH xpdfrc 5 "24 March 2003"
+.TH xpdfrc 5 "10 October 2003"
 .SH NAME
-xpdfrc \- configuration file for Xpdf tools (version 2.02)
+xpdfrc \- configuration file for Xpdf tools (version 2.03)
 .SH DESCRIPTION
 All of the Xpdf tools read a single configuration file.  If you have a
 .I .xpdfrc
@@ -59,6 +59,24 @@ CID 0, the second line CID 1, etc.  File size is determined by size of
 the character collection.  Only one file is allowed per character
 collection; the last specified file is used.  There are no built-in
 cidToUnicode mappings.
+.TP
+.BI unicodeToUnicode " font\-name\-substring map\-file"
+This is used to work around PDF fonts which have incorrect Unicode
+information.  It specifies a file which maps from the given
+(incorrect) Unicode indexes to the correct ones.  The mapping will be
+used for any font whose name contains
+.IR font\-name\-substring .
+Each line of a unicodeToUnicode file represents one Unicode character:
+
+.RI "    " in\-hex " " out\-hex1 " " out\-hex2 " ..."
+
+The
+.I in\-hex
+field is an input (incorrect) Unicode index, and the rest of the
+fields are one or more output (correct) Unicode indexes.  Each
+occurrence of
+.I in\-hex
+will be converted to the specified output sequence.
 .TP
 .BI unicodeMap " encoding\-name map\-file"
 Specifies the file with mapping from Unicode to
@@ -336,19 +354,23 @@ are:
 The default value is based on the OS where xpdf and pdftotext were
 built.
 .TP
+.BR textPageBreaks " yes | no"
+If set to "yes", text extraction will insert page breaks (form feed
+characters) between pages.  This defaults to "yes".
+.TP
 .BR textKeepTinyChars " yes | no"
 If set to "yes", text extraction will keep all characters.  If set to
 "no", text extraction will discard tiny (smaller than 3 point)
-characters after the first 20000 per page, avoiding extremely slow run
+characters after the first 50000 per page, avoiding extremely slow run
 times for PDF files that use special fonts to do shading or
 cross-hatching.  This defaults to "no".
 .SH MISCELLANEOUS SETTINGS
 .TP
-.BR initialZoom " -5..5 | page | width"
-Sets the initial zoom factor.  A number (-5 .. 5) specifies a zoom
-factor, where 0 means 72 dpi.  You may also specify \'page', to fit
-the page to the window size, or \'width', to fit the page width to the
-window width.
+.BR initialZoom " \fIpercentage\fR | page | width"
+Sets the initial zoom factor.  A number specifies a zoom percentage,
+where 100 means 72 dpi.  You may also specify \'page', to fit the page
+to the window size, or \'width', to fit the page width to the window
+width.
 .TP
 .BR t1libControl " none | plain | low | high"
 Sets the type of font rendering for t1lib (the Type 1 rasterizer) to
@@ -445,7 +467,7 @@ textEOL      unix
 # misc options
 t1libControl    low
 freetypeControl low
-urlCommand      "netscape -remove 'openURL(%s)'"
+urlCommand      "netscape -remote 'openURL(%s)'"
 
 .fi
 .SH FILES

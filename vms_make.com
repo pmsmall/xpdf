@@ -58,6 +58,8 @@ $!
 $! Setup variables holding "config" information
 $!
 $ aconf_in_file = "aconf_h.in#aconf.h_in#aconf.h.in"
+$ name        = "Xpdf"
+$ version     = "?.?"
 $ mydefs        = "#"
 $ xlibs         = "xt#xmu#motif"
 $ cxxdefs       = ""
@@ -76,11 +78,13 @@ $   resfil = "'p3'"
 $ endif
 $!
 $ gosub proc_config
+$ gosub check_version
 $!
 $! Start building the option file
 $!
 $ open/write optf xpdf.opt
-$ write optf "Identification=""xpdf 2.01"""
+$ open/write topt tmp.opt
+$ write optf "Identification=""''name' ''version'"""
 $ gosub check_create_vmslib
 $ gosub check_xlib
 $!
@@ -91,6 +95,7 @@ $ incs = "sys$library:,[-],[],[-.goo]''libincs'"
 $!
 $ gosub check_compiler
 $ close optf
+$ close topt
 $!
 $! aconf.h.in might be mapped in different ways, so go figure
 $!
@@ -140,6 +145,7 @@ $ set default [-.xpdf]
 $ @vms_make
 $ set default [-]
 $ gosub reset_env
+$ dele/noconf/nolog tmp.opt;*
 $ exit
 $ACONF_ERR:
 $ write sys$output "Input file ''fname' could not be opened"
@@ -160,6 +166,7 @@ $ close/nolog aconf_in
 $ close/nolog aconf
 $ close/nolog optf
 $ close/nolog tmpc
+$ close/nolop topt
 $ write sys$output "Exiting..."  
 $ exit 2
 $!------------------------------------------------------------------------------
@@ -252,6 +259,7 @@ $ lqual = "/lib"
 $ libtype = f$edit(f$parse(libloc,,,"TYPE"),"UPCASE")
 $ if f$locate("EXE",libtype) .lt. f$length(libtype) then lqual = "/share"
 $ write optf libloc , lqual
+$ write topt libloc , lqual
 $!
 $! Nasty hack to get the freetype includes to work
 $!
@@ -330,6 +338,63 @@ $ then
 $   copy sys$input: 'tc
 $   deck
 #include <dirent.h>
+int main(){
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_SYS_NDIR_H")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <sys/ndir.h>
+int main(){
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_SYS_DIR_H")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <sys/dir.h>
+int main(){
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_NDIR_H")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <ndir.h>
+int main(){
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_SYS_SELECT_H")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <sys/select.h>
+int main(){
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_SYS_BSDTYPES_H")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <sys/bsdtypes.h>
+int main(){
+}
 $   eod
 $   gosub cc_prop_check
 $   return
@@ -339,6 +404,8 @@ $ then
 $   copy sys$input: 'tc
 $   deck
 #include <strings.h>
+int main(){
+}
 $   eod
 $   gosub cc_prop_check
 $   return
@@ -584,17 +651,19 @@ $ cc 'tmpnam'
 $ if .not. ($status)  then cc_prop = false
 $ on error then continue
 $! The headers might lie about the capabilities of the RTL
-$ link 'tmpnam'
+$ link/opt=tmp.opt 'tmpnam'
 $ if .not. ($status)  then cc_prop = false
 $ set message/fac/ident/sever/text
 $ on error then goto err_exit
 $ delete/nolog 'tmpnam'.*;*
 $ if cc_prop 
 $ then
+$   write sys$output "Checking for ''def'... yes"
 $   write aconf "#define ''def' 1"
 $   if (def .eqs. "HAVE_FSEEKO") .or. (def .eqs. "_LARGE_FILES") then - 
       write aconf "#define _LARGEFILE"
 $ else 
+$   write sys$output "Checking for ''def'... no"
 $   write aconf line
 $ endif
 $ return
@@ -611,28 +680,57 @@ $ On Error Then GoTo XUI
 $ @sys$update:decw$get_image_version sys$share:decw$xlibshr.exe decw$version
 $ if f$extract(4,3,decw$version).eqs."1.0"
 $ then
-$   if need_xt .or. need_xmu .or. need_xm then -
-      write optf "Sys$share:DECW$DWTLIBSHR.EXE/Share"
+$   if need_xt .or. need_xmu .or. need_xm 
+$   then 
+$      write optf "Sys$share:DECW$DWTLIBSHR.EXE/Share"
+$      write topt "Sys$share:DECW$DWTLIBSHR.EXE/Share"
+$   endif
 $ endif
 $ if f$extract(4,3,decw$version).eqs."1.1"
 $ then
 $   if need_xm  then write optf "sys$share:decw$xmlibshr.exe/share"
 $   if need_xt  then write optf "sys$share:decw$xtshr.exe/share"
 $   if nedd_xmu then write optf "sys$share:decw$xmulibshr.exe/share"
+$   if need_xm  then write topt "sys$share:decw$xmlibshr.exe/share"
+$   if need_xt  then write topt "sys$share:decw$xtshr.exe/share"
+$   if nedd_xmu then write topt "sys$share:decw$xmulibshr.exe/share"
 $ endif
 $ if f$extract(4,3,decw$version).eqs."1.2"
 $ then
 $   if need_xm  then write optf "sys$share:decw$xmlibshr12.exe/share"
 $   if need_xt  then write optf "sys$share:decw$xtlibshrr5.exe/share"
 $   if need_xmu then write optf "sys$share:decw$xmulibshrr5.exe/share"
+$   if need_xm  then write topt "sys$share:decw$xmlibshr12.exe/share"
+$   if need_xt  then write topt "sys$share:decw$xtlibshrr5.exe/share"
+$   if need_xmu then write topt "sys$share:decw$xmulibshrr5.exe/share"
 $ endif
 $ GoTo MAIN
 $ XUI:
 $!
-$   if need_xt .or. need_xmu then -
-      write optf "Sys$share:DECW$DWTLIBSHR.EXE/Share"
+$ if need_xt .or. need_xmu 
+$ then 
+$   write optf "Sys$share:DECW$DWTLIBSHR.EXE/Share"
+$   write topt "Sys$share:DECW$DWTLIBSHR.EXE/Share"
+$ endif 
 $ MAIN:
 $ on error then goto err_exit
 $ write optf "sys$share:decw$xlibshr.exe/share"
+$ write topt "sys$share:decw$xlibshr.exe/share"
+$ return
+$!------------------------------------------------------------------------------
+$!
+$! Check version of Xpdf to build
+$!
+$CHECK_VERSION:
+$ open/read in [.xpdf]config.h
+$ check_string = "xpdfVersionNum"
+$vloop:
+$ read/end=vdone in rec
+$ if (f$element(1," " ,rec) .nes. check_string) then goto vloop
+$ start = f$locate(check_string,rec) + f$length(check_string)
+$ len   = f$length(rec) - start 
+$ version = f$edit(f$extract(start,len,rec),"COLLAPSE")
+$vdone:
+$ close in
 $ return
 $!------------------------------------------------------------------------------

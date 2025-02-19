@@ -1,7 +1,7 @@
 .\" Copyright 1996-2003 Glyph & Cog, LLC
-.TH xpdf 1 "24 March 2003"
+.TH xpdf 1 "10 October 2003"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 2.02)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 2.03)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -84,10 +84,10 @@ white behind the text.
 .RB "[X resource: " xpdf.paperColor ]
 .TP
 .BI \-z " zoom"
-Set the initial zoom factor.  A number (-5 .. 5) specifies a zoom
-factor, where 0 means 72 dpi.  You may also specify \'page', to fit
-the page to the window size, or \'width', to fit the page width to the
-window width.
+Set the initial zoom factor.  A number specifies a zoom percentage,
+where 100 means 72 dpi.You may also specify \'page', to fit the page
+to the window size, or \'width', to fit the page width to the window
+width.
 .RB "[config file: " initialZoom "; or X resource: " xpdf.initialZoom ]
 .TP
 .BI \-t1lib " font-type"
@@ -291,6 +291,12 @@ command won't quit xpdf).
 .TP
 .B "Quit"
 Quit xpdf.
+.PP
+.SS Outline
+If the PDF contains an outline (a.k.a., bookmarks), there will be an
+outline pane on the left side of the window.  The width of the outline
+pane is adjustable with a vertical split bar via the knob near its
+bottom end.
 .PP
 .SS Text selection
 Dragging the mouse with the left button held down will highlight an
