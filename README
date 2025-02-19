@@ -1,0 +1,270 @@
+xpdf
+====
+
+version 0.2 (alpha)
+95-dec-12
+
+Copyright 1995 Derek B. Noonburg
+derekn@ece.cmu.edu
+
+
+What is xpdf?
+-------------
+
+Xpdf is a viewer for Portable Document Format (PDF) files.  (These are
+also sometimes also called 'Acrobat' files, after the name of Adobe's
+PDF viewer.)  Xpdf runs under UNIX and the X Window System.
+
+Xpdf is designed to be small and efficient.  It does not use the Motif
+or Xt libraries.  It uses standard X fonts.  The Linux/x86 binary is
+124 kB, and is quite usable on my 486-66.
+
+Xpdf is known to work on the following systems:
+
+* x86, Linux 1.2.13, XFree86 3.1.1, gcc 2.6.3
+* PowerPC, AIX 4.1, gcc 2.6.3
+* SPARC, SunOS 4.1.3, gcc 2.5.8
+* MIPS, Ultrix 4.4, gcc 2.6.3
+* Alpha, OSF/1 1.3, gcc 2.6.3
+
+If you compile it for another system, please let me know.  If you try,
+but can't get it to compile, I'll try to help.
+
+Version 2.7.0 of g++ will not compile xpdf (at least under AIX 4.1).
+I'll work on this.
+
+
+Getting xpdf
+------------
+
+The latest version is available from
+
+    http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
+
+Source code and some precompiled executables are available.
+
+If anyone would like to volunteer an ftp site, please let me know.
+
+
+Running xpdf
+------------
+
+To run xpdf, simply type:
+
+    xpdf file.pdf
+
+where 'file.pdf' is your PDF file.
+
+If you want to run xpdf automatically from netscape when you click on
+a PDF file, you need to edit (or create) the files '.mime.types' and
+'.mailcap' in your home directory.  In '.mime.types' add the line:
+
+    application/pdf pdf
+
+In '.mailcap' add the lines:
+
+    # Use xpdf to view PDF files.
+    application/pdf; xpdf -err %s
+
+This should also work for mosaic and possibly for other browsers.  The
+'-err' switch sends error messages to '/dev/tty' instead of stderr, so
+netscape doesn't pop up annoying little windows.
+
+
+Using xpdf
+----------
+
+There are several controls at the bottom of the xpdf window:
+
+* The left and right arrow buttons move to the previous and next page,
+  respectively.
+
+* The 'Page' entry box allows you to move to a specific page number.
+  Click in the box to activate it, type the page number, then hit
+  return.
+
+* The double-box buttons increase and decrease the resolution, i.e.,
+  zoom in and zoom out.  (I don't like these icons.  If you can do
+  better (in 15x15 pixels not including the border), I'll be happy to
+  use them.)
+
+* The curved arrow buttons rotate the page clockwise and
+  counterclockwise.  These are intended primarily for PDF files where
+  the rotation isn't correctly specified in the file.
+
+* The '?' button brings up an 'about xpdf' window.
+
+* The 'Quit' button exits xpdf.
+
+There are also a few key bindings:
+
+* 'n' moves to the next page.
+
+* 'p' move to the previous page.
+
+* <Space> scrolls down on the current page.
+
+* <Backspace> or <delete> scrolls up on the current page.
+
+* Control-L redraws the current page.
+
+* 'q' quits xpdf.
+
+
+Fonts
+-----
+
+Xpdf uses X server fonts.  It requires the following fonts:
+
+* courier: medium-r, bold-r, medium-o, and bold-o
+* helvetica: medium-r, bold-r, medium-o, and bold-o
+* times: medium-r, bold-r, medium-i, and bold-i
+
+(In future versions, Symbol and Zapf Dingbats will also be used, but
+xpdf currently does not use them correctly.)
+
+Most X installations should already have all of these fonts.
+
+X versions R5 and higher support scalable fonts.  Xpdf will
+automatically take advantage of scalable fonts if available.  If you
+have access to Type-1 fonts, e.g., from the Adobe Acrobat Reader
+package, you can tell X to use them.  See the mkfontdir(1) man page
+for details.  Note that scaling fonts takes time, and PDF documents
+tend to use lots of fonts.
+
+
+Notes
+-----
+
+This is an alpha version, so there are some known problems.  This
+section lists some of the more noticeable things.  (See 'Bugs' below
+for a more complete list).
+
+Individual characters are always drawn 'right-side-up'; rotated text
+looks pretty strange.
+
+PDF version 1.1 allows encryption.  I'll implement decryption if I can
+get the necessary information from Adobe.  Encryped PDF files will
+show up in xpdf as blank with error messages of the form "Unknown
+operator '<gibberish>'".
+
+Images which are embedded in a content stream are not implemented yet.
+These do not seem to be used too often -- most images are stored as
+XObjects, which are handled correctly.  Inline images will produce an
+"Unimplemented: inline image" error.
+
+
+Compiling xpdf
+--------------
+
+Xpdf is written in C++ (with a little bit of C).  It *should* work
+with any ANSI-compliant C++ and C compilers.  The systems and
+compilers it's been tested with are listed near the top of this
+document.
+
+To compile xpdf:
+
+* Edit 'Makefile.config' in the top-level directory.  Set the
+  compilers you want to use (e.g., gcc and g++) and add any necessary
+  switches (e.g., include and library directories).
+
+* Type 'make'.
+
+* If nothing goes wrong, the executable will be left in xpdf/xpdf.
+  There are no runtime configuration or support files; the binary can
+  be moved to any directory.
+
+
+Distribution
+------------
+
+Xpdf may be distributed under the following conditions:
+
+1. This file ('README') is included, unmodified, in the distribution.
+
+2. The distribution includes:
+   a. all of the xpdf source code, unmodified; OR
+   b. one or more xpdf executables, compiled from the unmodified
+      source code; OR
+   b. both of the above.
+
+If you distribute xpdf, I would appreciate receiving a pointer (ftp
+site, BBS phone number, etc.) or a copy (disk, CD-ROM, etc.).
+
+Modified versions of xpdf or applications using some or all of the
+xpdf code (i.e., 'derivative works' under copyright law) may not be
+distributed without explicit permission.
+
+
+Bugs
+----
+
+This is an alpha release of xpdf, and there are still a bunch of PDF
+features which I have yet to implement.
+
+If you find a bug in xpdf, i.e., if it prints an error message,
+crashes, or incorrectly displays a document, please send me email,
+with a pointer (URL, ftp site, etc.) to the PDF file.
+
+This is a list of things which I plan to add:
+
+* inline images
+* PostScript output
+* annotations -- text and hyperlinks
+* document outline
+* forms
+* text search/select/copy
+* DCT filter
+* RunLength filter
+* encryption (if I can get documentation)
+* adding text to clipping path
+* thumbnails
+* miter limit
+
+There are also some problems which I know about.  This is a list of
+things which I plan to fix:
+
+* write a man page
+* do a better job of scaling images; look at 'Interpolate' param
+* keep static points array for fill functions in XOutputDev
+* do curve flatness right, i.e., in device coord space, in the device
+  driver
+* rotated (90/180/270) text
+* fix trademark ('TM') constructed char to use smaller font
+* use LZW and CCITT filter parameters
+* greek small fonts
+* if a Type1 font file is embedded in the PDF file, dump it to disk
+  and add it to the X font path
+* fix ZapfDingbats and Symbol fonts
+* correctly handle fills defined by disjoint polygons
+* check into problem with off-by-one errors on rectangles, images,
+  clipping regions
+* efficiently handle very large files - don't read entire catalog,
+  xref, etc.
+
+
+References
+----------
+
+Adobe Systems Inc., _Portable Document Format Reference Manual_.
+Addison-Wesley, 1993, ISBN 0-201-62628-4.
+[The manual for PDF version 1.0.]
+
+Adobe Systems Inc., _Updates to the Portable Document Format Reference
+Manual_, Adobe Developer Support Technical Note #5156.  1995.
+[Updates for PDF version 1.1.  Available on the WWW as
+http://www.adobe.com/PDFs/TN/5156.PDF11.pdf.]
+
+CCITT, _Blue Book_, Volume VII Fascicle 3: "Terminal Equipment and
+Protocols for Telematic Services", Recommendations T.4 and T.6.
+[The official Group 3 and 4 fax standards.  These are available on the
+WWW (but misformatted) as
+ftp://ftp.uu.net/doc/standards/ccitt/1988/7_3_01.ps and 7_3_02.ps.]
+
+Foley, van Dam, Feiner, and Hughes, _Computer Graphics: Principles and
+Practice_, 2nd Ed.  Addison-Wesley, 1990, ISBN 0-201-12110-7.
+[Colorspace conversion functions, Bezier spline math.]
+
+Robert L. Hummel, _Programmer's Technical Reference: Data and Fax
+Communications_.  Ziff-Davis Press, 1993, ISBN 1-56276-077-7.
+[CCITT Group 3 and 4 fax decoding.]

@@ -1,0 +1,111 @@
+#========================================================================
+#
+# xpdf.ltk
+#
+#========================================================================
+
+#------------------------------------------------------------------------
+# main window
+#------------------------------------------------------------------------
+
+Window(func:makeWindow title:"xpdf" keyCbk:keyPress) {
+  Box(x:1 y:2 xfill:1 yfill:1) {
+
+    # canvas and scrollbars
+    Box(x:2 y:2 xfill:1 yfill:1) {
+      Box1(xfill:1 yfill:1 sunken) {
+        ScrollingCanvas(name:"canvas" w:100 h:100 layout:layoutCanvasCbk)
+      }
+      Box1(yfill:1) {
+        Scrollbar(name:"vScrollbar" vert min:0 max:100 cbk:scrollVertCbk)
+      }
+      Box1(xfill:1) {
+        Scrollbar(name:"hScrollbar" horiz min:0 max:100 cbk:scrollHorizCbk)
+      }
+      Box1() { Empty() }
+    }
+
+    # buttons, page number, etc.
+    Box(x:12 y:1 xfill:1) {
+      Box1() {
+        IconButton(bitmap:leftArrow_bits w:leftArrow_width
+                   h:leftArrow_height cbk:prevPageCbk)
+      }
+      Box1() {
+        IconButton(bitmap:rightArrow_bits w:rightArrow_width
+                   h:rightArrow_height cbk:nextPageCbk)
+      }
+      Box1() {
+        Label(text:"Page"
+              font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+      }
+      Box1(sunken left:4 right:4) {
+        TextIn(name:"pageNum" length:6 cbk:pageNumCbk
+               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+      }
+      Box1() {
+        Label(name:"numPages" length:9
+              font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+      }
+      Box1() {
+        IconButton(bitmap:zoomIn_bits w:zoomIn_width
+                   h:zoomIn_height cbk:zoomInCbk)
+      }
+      Box1() {
+        IconButton(bitmap:zoomOut_bits w:zoomOut_width
+                   h:zoomOut_height cbk:zoomOutCbk)
+      }
+      Box1() {
+        IconButton(bitmap:rotateCW_bits w:rotateCW_width
+                   h:rotateCW_height cbk:rotateCWCbk)
+      }
+      Box1() {
+        IconButton(bitmap:rotateCCW_bits w:rotateCCW_width
+                   h:rotateCCW_height cbk:rotateCCWCbk)
+      }
+      Box1(xfill:1) { Empty() }
+      Box1() {
+        IconButton(bitmap:about_bits w:about_width h:about_height
+                   cbk:aboutCbk)
+      }
+      Box1() { Button(label:"Quit" cbk:quitCbk) }
+    }
+  }
+}
+
+#------------------------------------------------------------------------
+# "about" window
+#------------------------------------------------------------------------
+
+Window(func:makeAboutWindow title:"About xpdf") {
+  Box(x:1 y:2) {
+    Box(x:1 y:7 left:2 right:2 top:2 bottom:2 sunken) {
+      Box1(bottom:0) {
+        Label(text:"xpdf"
+              font:"-*-times-bold-i-*-*-24-*-*-*-*-*-*-*")
+      }
+      Box1(bottom:12) {
+        Label(text:["Version " xpdfVersion])
+      }
+      Box1(bottom:0) {
+        Label(text:xpdfCopyright)
+      }
+      Box1(bottom:12) {
+        Label(text:"derekn@ece.cmu.edu")
+      }
+      Box1(bottom:0) {
+        Label(text:["Supports PDF version " pdfVersion "."])
+      }
+      Box1(bottom:0) {
+        Label(text:"The PDF data structures, operators, and specification")
+      }
+      Box1(bottom:12) {
+        Label(text:"are copyright 1995 Adobe Systems Inc.")
+      }
+    }
+    Box(x:2 y:1) {
+      Box1(xfill:1) { Empty() }
+      Box1() { Button(label:"Close" cbk:closeAboutCbk) }
+    }
+  }
+}
