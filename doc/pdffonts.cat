@@ -4,7 +4,7 @@ pdffonts(1)                                           pdffonts(1)
 
 NAME
        pdffonts  -  Portable  Document Format (PDF) font analyzer
-       (version 3.01)
+       (version 3.02)
 
 SYNOPSIS
        pdffonts [options] [PDF-file]
@@ -38,24 +38,29 @@ DESCRIPTION
 
               Type 1
               Type 1C -- aka Compact Font Format (CFF)
+              Type 1C (OT) -- OpenType with 8-bit CFF data
               Type 3
               TrueType
+              TrueType (OT) -- OpenType with 8-bit TrueType data
               CID Type 0 -- 16-bit font with no specified type
               CID Type 0C -- 16-bit PostScript CFF font
+              CID Type 0C (OT) -- OpenType with CID CFF data
               CID TrueType -- 16-bit TrueType font
+              CID  TrueType  (OT)  --  OpenType with CID TrueType
+              data
 
 CONFIGURATION FILE
-       Pdffonts  reads a configuration file at startup.  It first
-       tries to find the user's private config  file,  ~/.xpdfrc.
-       If  that  doesn't exist, it looks for a system-wide config
-       file, typically /usr/local/etc/xpdfrc (but  this  location
+       Pdffonts reads a configuration file at startup.  It  first
+       tries  to  find the user's private config file, ~/.xpdfrc.
+       If that doesn't exist, it looks for a  system-wide  config
+       file,  typically  /usr/local/etc/xpdfrc (but this location
        can be changed when pdffonts is built).  See the xpdfrc(5)
        man page for details.
 
 OPTIONS
-       Many of the following options can be set  with  configura-
-       tion  file  commands.  These are listed in square brackets
-       with the description of  the  corresponding  command  line
+       Many  of  the following options can be set with configura-
+       tion file commands.  These are listed in  square  brackets
+       with  the  description  of  the corresponding command line
        option.
 
        -f number
@@ -65,19 +70,19 @@ OPTIONS
               Specifies the last page to analyze.
 
        -opw password
-              Specify  the owner password for the PDF file.  Pro-
-              viding this will bypass all security  restrictions.
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
        -cfg config-file
-              Read  config-file in place of ~/.xpdfrc or the sys-
+              Read config-file in place of ~/.xpdfrc or the  sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print usage information.   (-help  and  --help  are
+       -h     Print  usage  information.   (-help  and --help are
               equivalent.)
 
 EXIT CODES
@@ -94,8 +99,8 @@ EXIT CODES
        99     Other error.
 
 AUTHOR
-       The  pdffonts  software  and  documentation  are copyright
-       1996-2005 Glyph & Cog, LLC.
+       The pdffonts  software  and  documentation  are  copyright
+       1996-2007 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),     pdftops(1),     pdftotext(1),     pdfinfo(1),
@@ -104,4 +109,4 @@ SEE ALSO
 
 
 
-                          17 August 2005              pdffonts(1)
+                         27 February 2007             pdffonts(1)

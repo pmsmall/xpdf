@@ -3,7 +3,7 @@ xpdfrc(5)                                               xpdfrc(5)
 
 
 NAME
-       xpdfrc - configuration file for Xpdf tools (version 3.01)
+       xpdfrc - configuration file for Xpdf tools (version 3.02)
 
 DESCRIPTION
        All  of  the  Xpdf tools read a single configuration file.
@@ -278,93 +278,156 @@ POSTSCRIPT CONTROL
               Level  3 PostScript, this generates a CID font, for
               lower levels it generates a non-CID composite font.
 
+       psPreload yes | no
+              If set to "yes", PDF forms are converted to PS pro-
+              cedures, and image data is  preloaded.   This  uses
+              more memory in the PostScript interpreter, but gen-
+              erates significantly smaller PS files in situations
+              where,  e.g., the same image is drawn on every page
+              of a long document.  This defaults to "no".
+
        psOPI yes | no
-              If  set to "yes", generates PostScript OPI comments
-              for all images and forms which  have  OPI  informa-
-              tion.   This  option  is only available if the Xpdf
-              tools  were  compiled  with  OPI   support.    This
+              If set to "yes", generates PostScript OPI  comments
+              for  all  images  and forms which have OPI informa-
+              tion.  This option is only available  if  the  Xpdf
+              tools   were   compiled  with  OPI  support.   This
               defaults to "no".
 
        psASCIIHex yes | no
-              If  set to "yes", the ASCIIHexEncode filter will be
-              used instead  of  ASCII85Encode  for  binary  data.
+              If set to "yes", the ASCIIHexEncode filter will  be
+              used  instead  of  ASCII85Encode  for  binary data.
               This defaults to "no".
 
        psFile file-or-command
-              Sets  the  default PostScript file or print command
-              for xpdf.  Commands start  with  a  '|'  character;
-              anything  else is a file.  If the file name or com-
-              mand contains  spaces  it  must  be  quoted.   This
-              defaults  to  unset, which tells xpdf to generate a
-              name  of  the  form  <file>.ps  for  a   PDF   file
+              Sets the default PostScript file or  print  command
+              for  xpdf.   Commands  start  with a '|' character;
+              anything else is a file.  If the file name or  com-
+              mand  contains  spaces  it  must  be  quoted.  This
+              defaults to unset, which tells xpdf to  generate  a
+              name   of   the  form  <file>.ps  for  a  PDF  file
               <file>.pdf.
 
        fontDir dir
-              See  the  description  above,  in the DISPLAY FONTS
+              See the description above,  in  the  DISPLAY  FONTS
               section.
 
 TEXT CONTROL
        textEncoding encoding-name
-              Sets the encoding to use for  text  output.   (This
-              can  be  overridden  with  the "-enc" switch on the
-              command line.)  The encoding-name must  be  defined
-              with  the  unicodeMap  command  (see  above).  This
+              Sets  the  encoding  to use for text output.  (This
+              can be overridden with the  "-enc"  switch  on  the
+              command  line.)   The encoding-name must be defined
+              with the  unicodeMap  command  (see  above).   This
               defaults to "Latin1".
 
        textEOL unix | dos | mac
-              Sets the end-of-line convention  to  use  for  text
+              Sets  the  end-of-line  convention  to use for text
               output.  The options are:
 
                   unix = LF
                   dos  = CR+LF
                   mac  = CR
 
-              (This  can  be overridden with the "-eol" switch on
-              the command line.)  The default value is  based  on
+              (This can be overridden with the "-eol"  switch  on
+              the  command  line.)  The default value is based on
               the OS where xpdf and pdftotext were built.
 
        textPageBreaks yes | no
-              If  set  to "yes", text extraction will insert page
-              breaks (form feed characters) between pages.   This
+              If set to "yes", text extraction will  insert  page
+              breaks  (form feed characters) between pages.  This
               defaults to "yes".
 
        textKeepTinyChars yes | no
-              If  set  to  "yes",  text  extraction will keep all
-              characters.  If set to "no", text  extraction  will
-              discard  tiny  (smaller  than  3  point) characters
-              after the first 50000 per page, avoiding  extremely
+              If set to "yes",  text  extraction  will  keep  all
+              characters.   If  set to "no", text extraction will
+              discard tiny  (smaller  than  3  point)  characters
+              after  the first 50000 per page, avoiding extremely
               slow run times for PDF files that use special fonts
-              to do shading or cross-hatching.  This defaults  to
+              to  do shading or cross-hatching.  This defaults to
               "no".
 
 MISCELLANEOUS SETTINGS
        initialZoom percentage | page | width
               Sets the initial zoom factor.  A number specifies a
-              zoom percentage, where 100 means 72 dpi.   You  may
-              also  specify 'page', to fit the page to the window
+              zoom  percentage,  where 100 means 72 dpi.  You may
+              also specify 'page', to fit the page to the  window
               size, or 'width', to fit the page width to the win-
               dow width.
 
+       continuousView yes | no
+              If set to "yes", xpdf will start in continuous view
+              mode,  i.e.,  with one vertical screoll bar for the
+              whole document.  This defaults to "no".
+
        enableT1lib yes | no
-              Enables  or  disables  use  of t1lib (a Type 1 font
-              rasterizer).  This is only  relevant  if  the  Xpdf
+              Enables or disables use of t1lib  (a  Type  1  font
+              rasterizer).   This  is  only  relevant if the Xpdf
               tools    were    built    with    t1lib    support.
-              ("enableT1lib"  replaces  the  old   "t1libControl"
+              ("enableT1lib"   replaces  the  old  "t1libControl"
               option.)  This option defaults to "yes".
 
        enableFreeType yes | no
-              Enables  or  disables use of FreeType (a TrueType /
-              Type 1 font rasterizer).  This is only relevant  if
-              the  Xpdf  tools  were built with FreeType support.
-              ("enableFreeType" replaces  the  old  "freetypeCon-
+              Enables or disables use of FreeType (a  TrueType  /
+              Type  1 font rasterizer).  This is only relevant if
+              the Xpdf tools were built  with  FreeType  support.
+              ("enableFreeType"  replaces  the  old "freetypeCon-
               trol" option.)  This option defaults to "yes".
 
        antialias yes | no
-              Enables  or  disables font anti-aliasing in the PDF
+              Enables or disables font anti-aliasing in  the  PDF
               rasterizer.  This option affects all font rasteriz-
-              ers.   ("antialias" replaces the anti-aliasing con-
-              trol  provided  by  the  old   "t1libControl"   and
+              ers.  ("antialias" replaces the anti-aliasing  con-
+              trol   provided   by  the  old  "t1libControl"  and
               "freetypeControl" options.)  This default to "yes".
+
+       vectorAntialias yes | no
+              Enables  or disables anti-aliasing of vector graph-
+              ics in the PDF rasterizer.  This defaults to "yes".
+
+       strokeAdjust yes | no
+              Enables   or   disables  stroke  adjustment.   This
+              defaults to "yes".
+
+       screenType dispersed | clustered | stochasticClustered
+              Sets the halftone screen type, which will  be  used
+              when  generating  a monochrome (1-bit) bitmap.  The
+              three options are  dispersed-dot  dithering,  clus-
+              tered-dot dithering (with a round dot and 45-degree
+              screen angle), and stochastic clustered-dot dither-
+              ing.  By default, "stochasticClustered" is used for
+              resolutions of 300 dpi and higher, and  "dispersed"
+              is used for resolutions lower then 300 dpi.
+
+       screenSize integer
+              Sets  the  size  of  the  (square)  halftone screen
+              threshold matrix.  By default, this is 4  for  dis-
+              persed-dot  dithering, 10 for clustered-dot dither-
+              ing, and 100 for stochastic  clustered-dot  dither-
+              ing.
+
+       screenDotRadius integer
+              Sets  the halftone screen dot radius.  This is only
+              used when screenType is set to stochasticClustered,
+              and  it  defaults to 2.  In clustered-dot mode, the
+              dot radius is half of the screen size.   Dispersed-
+              dot dithering doesn't have a dot radius.
+
+       screenGamma float
+              Sets  the  halftone screen gamma correction parame-
+              ter.  Gamma values greater than 1 make  the  output
+              brighter;  gamma values less than 1 make it darker.
+              The default value is 1.
+
+       screenBlackThreshold float
+              When halftoning, all values  below  this  threshold
+              are  forced  to  solid  black.  This parameter is a
+              floating  point  value  between  0  (black)  and  1
+              (white).  The default value is 0.
+
+       screenWhiteThreshold float
+              When  halftoning,  all  values above this threshold
+              are forced to solid white.   This  parameter  is  a
+              floating  point  value  between  0  (black)  and  1
+              (white).  The default value is 1.
 
        urlCommand command
               Sets the command executed when you click on  a  URL
@@ -384,6 +447,83 @@ MISCELLANEOUS SETTINGS
               text, and in other cases it leads to  gibberish  --
               there is no way for Xpdf to tell.  This defaults to
               "yes".
+
+       mapUnknownCharNames yes | no
+              If set to "yes", and mapNumericCharNames is set  to
+              "no",  the  Xpdf  tools  will  apply a simple pass-
+              through mapping (Unicode index  =  character  code)
+              for  all  unrecognized glyph names.  In some cases,
+              this leads to usable text, and in  other  cases  it
+              leads  to  gibberish -- there is no way for Xpdf to
+              tell.  This defaults to "no".
+
+       bind modifiers-key context command ...
+              Add a key or mouse button binding.   Modifiers  can
+              be zero or more of:
+
+                  shift-
+                  ctrl-
+                  alt-
+
+              Key  can  be  a regular ASCII character, or any one
+              of:
+
+                  space
+                  tab
+                  return
+                  enter
+                  backspace
+                  insert
+                  delete
+                  home
+                  end
+                  pgup
+                  pgdn
+                  left / right / up / down        (arrow keys)
+                  f1 .. f35                       (function keys)
+                  mousePress1 .. mousePress7      (mouse buttons)
+                  mouseRelease1 .. mouseRelease7  (mouse buttons)
+
+              Context is either "any" or a comma-separated combi-
+              nation of:
+
+                  fullScreen / window       (full screen mode on/off)
+                  continuous / singlePage   (continuous mode on/off)
+                  overLink / offLink        (mouse over link or not)
+                  scrLockOn / scrLockOff    (scroll lock on/off)
+
+              The  context  string  can  include only one of each
+              pair in the above list.
+
+              Command is an Xpdf command (see the  COMMANDS  sec-
+              tion  of the xpdf(1) man page for details).  Multi-
+              ple commands are separated by whitespace.
+
+              The bind command replaces any existing binding, but
+              only  if  it  was  defined for the exact same modi-
+              fiers, key, and context.   All  tokens  (modifiers,
+              key, context, commands) are case-sensitive.
+
+              Example key bindings:
+
+                  # bind ctrl-a in any context to the nextPage
+                  # command
+                  bind ctrl-a any nextPage
+
+                  # bind uppercase B, when in continuous mode
+                  # with scroll lock on, to the reload command
+                  # followed by the prevPage command
+                  bind B continuous,scrLockOn reload prevPage
+
+              See the xpdf(1) man page for more examples.
+
+       unbind modifiers-key context
+              Removes  a  key  binding  established with the bind
+              command.  This is most useful to remove default key
+              bindings before establishing new ones (e.g., if the
+              default key binding is given for "any" context, and
+              you  want  to  create new key bindings for multiple
+              contexts).
 
        printCommands yes | no
               If set to "yes", drawing commands  are  printed  as
@@ -462,7 +602,7 @@ FILES
 
 AUTHOR
        The  Xpdf  software  and   documentation   are   copyright
-       1996-2005 Glyph & Cog, LLC.
+       1996-2007 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),     pdftops(1),     pdftotext(1),     pdfinfo(1),
@@ -471,4 +611,4 @@ SEE ALSO
 
 
 
-                          17 August 2005                xpdfrc(5)
+                         27 February 2007               xpdfrc(5)

@@ -4,7 +4,7 @@ pdfimages(1)                                         pdfimages(1)
 
 NAME
        pdfimages - Portable Document Format (PDF) image extractor
-       (version 3.01)
+       (version 3.02)
 
 SYNOPSIS
        pdfimages [options] PDF-file image-root
@@ -80,7 +80,7 @@ EXIT CODES
 
 AUTHOR
        The pdfimages software  and  documentation  are  copyright
-       1998-2005 Glyph & Cog, LLC.
+       1998-2007 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),   pdftops(1),   pdftotext(1),   pdfinfo(1),  pdf-
@@ -89,4 +89,4 @@ SEE ALSO
 
 
 
-                          17 August 2005             pdfimages(1)
+                         27 February 2007            pdfimages(1)

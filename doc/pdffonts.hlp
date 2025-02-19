@@ -34,11 +34,16 @@
 
               Type 1
               Type 1C -- aka Compact Font Format (CFF)
+              Type 1C (OT) -- OpenType with 8-bit CFF data
               Type 3
               TrueType
+              TrueType (OT) -- OpenType with 8-bit TrueType data
               CID Type 0 -- 16-bit font with no specified type
               CID Type 0C -- 16-bit PostScript CFF font
+              CID Type 0C (OT) -- OpenType with CID CFF data
               CID TrueType -- 16-bit TrueType font
+              CID  TrueType  (OT)  --  OpenType with CID TrueType
+              data
 
                                                                ()
 
@@ -103,7 +108,7 @@
 2 AUTHOR
 
        The  pdffonts  software  and  documentation  are copyright
-       1996-2005 Glyph & Cog, LLC.
+       1996-2007 Glyph & Cog, LLC.
 
                                                                ()
 

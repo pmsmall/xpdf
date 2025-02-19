@@ -70,8 +70,8 @@
 
        -level3
               Generate  Level  3  PostScript.   This  enables all
-              Level 2 features plus CID font embedding.   [config
-              file: psLevel]
+              Level 2 features plus CID font embedding and masked
+              image generation.  [config file: psLevel]
 
        -level3Sep
               Generate Level 3 separable PostScript.  The separa-
@@ -131,41 +131,49 @@
               TrueType  fonts.  [config file: psEmbedCIDTrueType-
               Fonts]
 
+       -preload
+              Convert PDF forms to  PS  procedures,  and  preload
+              image   data.    This   uses  more  memory  in  the
+              PostScript interpreter, but generates significantly
+              smaller  PS  files  in  situations where, e.g., the
+              same image is drawn on every page of a  long  docu-
+              ment.
+
        -paper size
-              Set the paper size to  one  of  "letter",  "legal",
-              "A4",  or  "A3".   This can also be set to "match",
-              which will set the paper size  to  match  the  size
-              specified  in the PDF file.  [config file: psPaper-
+              Set  the  paper  size  to one of "letter", "legal",
+              "A4", or "A3".  This can also be  set  to  "match",
+              which  will  set  the  paper size to match the size
+              specified in the PDF file.  [config file:  psPaper-
               Size]
 
        -paperw size
-              Set the paper  width,  in  points.   [config  file:
+              Set  the  paper  width,  in  points.  [config file:
               psPaperSize]
 
        -paperh size
-              Set  the  paper  height,  in points.  [config file:
+              Set the paper height,  in  points.   [config  file:
               psPaperSize]
 
        -nocrop
               By default, output is cropped to the CropBox speci-
-              fied  in  the PDF file.  This option disables crop-
-              ping.  [config file: psCrop]
+              fied  in  the  PDF  file.   This  option   disables
+              cropping.  [config file: psCrop]
 
        -expand
               Expand PDF pages smaller than the paper to fill the
-              paper.   By  default,  these  pages are not scaled.
+              paper.  By default, these  pages  are  not  scaled.
               [config file: psExpandSmaller]
 
        -noshrink
-              Don't scale PDF pages which  are  larger  than  the
+              Don't  scale  PDF  pages  which are larger than the
               paper.  By default, pages larger than the paper are
               shrunk to fit.  [config file: psShrinkLarger]
 
        -nocenter
               By default, PDF pages smaller than the paper (after
-              any  scaling)  are  centered  on  the  paper.  This
-              option causes them to be aligned to the  lower-left
-              corner  of the paper instead.  [config file: psCen-
+              any scaling)  are  centered  on  the  paper.   This
+              option  causes them to be aligned to the lower-left
+              corner of the paper instead.  [config file:  psCen-
               ter]
 
        -pagecrop
@@ -173,27 +181,27 @@
               default, the MediaBox is used as the page size.
 
        -duplex
-              Set  the  Duplex pagedevice entry in the PostScript
+              Set the Duplex pagedevice entry in  the  PostScript
               file.  This tells duplex-capable printers to enable
               duplexing.  [config file: psDuplex]
 
        -opw password
-              Specify  the owner password for the PDF file.  Pro-
-              viding this will bypass all security  restrictions.
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
-       -q     Don't  print any messages or errors.  [config file:
+       -q     Don't print any messages or errors.  [config  file:
               errQuiet]
 
        -cfg config-file
-              Read config-file in place of ~/.xpdfrc or the  sys-
+              Read  config-file in place of ~/.xpdfrc or the sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print  usage  information.   (-help  and --help are
+       -h     Print usage information.   (-help  and  --help  are
               equivalent.)
 
                                                                ()
@@ -217,7 +225,7 @@
 2 AUTHOR
 
        The  pdftops  software  and  documentation  are  copyright
-       1996-2005 Glyph & Cog, LLC.
+       1996-2007 Glyph & Cog, LLC.
 
                                                                ()
 

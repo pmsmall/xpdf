@@ -4,7 +4,7 @@ pdftoppm(1)                                           pdftoppm(1)
 
 NAME
        pdftoppm  -  Portable  Document  Format  (PDF) to Portable
-       Pixmap (PPM) converter (version 3.01)
+       Pixmap (PPM) converter (version 3.02)
 
 SYNOPSIS
        pdftoppm [options] PDF-file PPM-root
@@ -62,20 +62,23 @@ OPTIONS
               Enable  or  disable   font   anti-aliasing.    This
               defaults to "yes".  [config file: antialias]
 
+       -aaVector yes | no
+              Enable   or  disable  vector  anti-aliasing.   This
+              defaults to "yes".  [config file: vectorAntialias]
+
        -opw password
-              Specify  the  owner  password  for  the  PDF  file.
-              Providing this will bypass  all  security  restric-
-              tions.
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
-       -q     Don't  print any messages or errors.  [config file:
+       -q     Don't print any messages or errors.  [config  file:
               errQuiet]
 
        -v     Print copyright and version information.
 
-       -h     Print usage information.   (-help  and  --help  are
+       -h     Print  usage  information.   (-help  and --help are
               equivalent.)
 
 EXIT CODES
@@ -92,14 +95,14 @@ EXIT CODES
        99     Other error.
 
 AUTHOR
-       The  pdftoppm  software  and  documentation  are copyright
-       1996-2005 Glyph & Cog, LLC.
+       The pdftoppm  software  and  documentation  are  copyright
+       1996-2007 Glyph & Cog, LLC.
 
 SEE ALSO
-       xpdf(1),  pdftops(1),   pdftotext(1),   pdfinfo(1),   pdf-
+       xpdf(1),   pdftops(1),   pdftotext(1),   pdfinfo(1),  pdf-
        fonts(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
 
 
-                          17 August 2005              pdftoppm(1)
+                         27 February 2007             pdftoppm(1)

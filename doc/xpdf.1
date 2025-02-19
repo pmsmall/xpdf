@@ -1,7 +1,7 @@
-.\" Copyright 1996-2005 Glyph & Cog, LLC
-.TH xpdf 1 "17 August 2005"
+.\" Copyright 1996-2007 Glyph & Cog, LLC
+.TH xpdf 1 "27 February 2007"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 3.01)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 3.02)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -86,7 +86,8 @@ white behind the text.
 .TP
 .BI \-mattecolor " color"
 Set the matte color, i.e., the color used for background outside the
-actual page area.
+actual page area.  (There is a separate setting,
+xpdf.fullScreenMatteColor, for full-screen mode.)
 .RB "[X resource: " xpdf.matteColor ]
 .TP
 .BI \-z " zoom"
@@ -114,6 +115,10 @@ This defaults to "yes".
 .BI \-aa " yes | no"
 Enable or disable font anti-aliasing.  This defaults to "yes".
 .RB "[config file: " antialias ]
+.TP
+.BI \-aaVector " yes | no"
+Enable or disable vector anti-aliasing.  This defaults to "yes".
+.RB "[config file: " vectorAntialias ]
 .TP
 .BI \-ps " PS-file"
 Set the default file name for PostScript output (i.e., the name which
@@ -161,15 +166,17 @@ bypass all security restrictions.
 Specify the user password for the PDF file.
 .TP
 .B \-fullscreen
-Open xpdf in a full-screen mode, useful for presentations.  You may
-also want to specify '-bg black' (or similar) with this.  (There is
-currently no way to switch between window and full-screen modes on the
-fly.)
+Open xpdf in full-screen mode, useful for presentations.
 .TP
 .BI \-remote " name"
 Start/contact xpdf remote server with specified name (see the
 .B "REMOTE SERVER MODE"
 section below).
+.TP
+.BI \-exec " command"
+Execute a command (see the
+.B COMMANDS
+section below) in an xpdf remote server window (with -remote only).
 .TP
 .B \-reload
 Reload xpdf remote server window (with -remote only).
@@ -228,13 +235,13 @@ not the PDF display (the \'paper').
 .PP
 The following X resources do not have command line option equivalents:
 .TP
-.B xpdf.viKeys
-Enables the \'h', \'l', \'k' and \'j' keys for left, right, up, and
-down scrolling.
-.TP
 .B xpdf.toolTipEnable
 Enables (if set to true) or disables (if set to false) the tool-tips
 on the toolbar buttons.
+.TP
+.B xpdf.fullScreenMatteColor
+Sets the matte color to be used in full-screen mode.  The default
+setting is "black".
 .SH CONTROLS
 .SS On-screen controls, at the bottom of the xpdf window
 .TP
@@ -301,6 +308,9 @@ Rotate the page 90 degrees counterclockwise.
 Rotate the page 90 degrees clockwise.  The two rotate commands are
 intended primarily for PDF files where the rotation isn't correctly
 specified in the file.
+.TP
+.B "Zoom to selection"
+Zoom in to the currently selected rectangle.
 .TP
 .B "Close"
 Close the current window.  If this is the only open window, the
@@ -413,6 +423,9 @@ Set the zoom factor to 'page' (fit page to window).
 .B w
 Set the zoom factor to 'width' (fit page width to window).
 .TP
+.B alt-F
+Toggle full-screen mode.
+.TP
 .B q
 Quit xpdf.
 .SH "WEB BROWSERS"
@@ -451,6 +464,343 @@ the URL, add this line to your config file:
 .RS
 urlCommand "netscape -remote 'openURL(%s)'"
 .RE
+.SH COMMANDS
+Xpdf's key and mouse bindings are user-configurable, using the bind and
+unbind options in the config file (see
+.BR xpdfrc (5)).
+The bind command allows you to bind a key or mouse button to a
+sequence of one or more commands.
+.SS Available Commands
+The following commands are supported:
+.TP
+.BI gotoPage( page )
+Go to the specified page.
+.TP
+.BI gotoPageNoScroll( page )
+Go to the specified page, with the current relative scroll position.
+.TP
+.BI gotoDest( dest )
+Go to a named destination.
+.TP
+.B gotoLastPage
+Go to the last page in the PDF file.
+.TP
+.B gotoLastPageNoScroll
+Go to the last page in the PDF file, with the current relative scroll
+position.
+.TP
+.B nextPage
+Go to the next page.
+.TP
+.B nextPageNoScroll
+Go to the next page, with the current relative scroll position.
+.TP
+.B prevPage
+Go to the previous page.
+.TP
+.B prevPageNoScroll
+Go to the previous page, with the current relative scroll position.
+.TP
+.B pageUp
+Scroll up by one screenful.
+.TP
+.B pageDown
+Scroll down by one screenful.
+.TP
+.BI scrollLeft( n )
+Scroll left by
+.I n
+pixels.
+.TP
+.BI scrollRight( n )
+Scroll right by
+.I n
+pixels.
+.TP
+.BI scrollUp( n )
+Scroll up by
+.I n
+pixels.
+.TP
+.BI scrollDown( n )
+Scroll down by
+.I n
+pixels.
+.TP
+.BI scrollUpPrevPage( n )
+Scroll up by
+.I n
+pixels, moving to the previous page if appropriate.
+.TP
+.BI scrollDownPrevPage( n )
+Scroll down by
+.I n
+pixels, moving to the next page if appropriate.
+.TP
+.B scrollToTopEdge
+Scroll to the top edge of the current page, with no horizontal
+movement.
+.TP
+.B scrollToBottomEdge
+Scroll to the bottom edge of the current page, with no horizontal
+movement.
+.TP
+.B scrollToLeftEdge
+Scroll to the left edge of the current page, with no vertical
+movement.
+.TP
+.B scrollToRightEdge
+Scroll to the right edge of the current page, with no vertical
+movement.
+.TP
+.B scrollToTopLeft
+Scroll to the top-left corner of the current page.
+.TP
+.B scrollToBottomRight
+Scroll to the bottom-right corner of the current page.
+.TP
+.B goForward
+Move forward along the history path.
+.TP
+.B goBackward
+Move backward along the history path.
+.TP
+.BI zoomPercent( z )
+Set the zoom factor to
+.IR z %.
+.TP
+.B zoomFitPage
+Set the zoom factor to fit-page.
+.TP
+.B zoomFitWidth
+Set the zoom factor to fit-width.
+.TP
+.B zoomIn
+Zoom in - go to the next higher zoom factor.
+.TP
+.B zoomOut
+Zoom out - go the next lower zoom factor.
+.TP
+.B continuousMode
+Go to continuous view mode.
+.TP
+.B singlePageMode
+Go to single-page view mode.
+.TP
+.B toggleContinuousMode
+Toggle between continuous and single page view modes.
+.TP
+.B fullScreenMode
+Go to full-screen mode.
+.TP
+.B windowMode
+Go to window (non-full-screen) mode.
+.TP
+.B toggleFullScreenMode
+Toggle between full-screen and window modes.
+.TP
+.B open
+Open a PDF file in this window, using the open dialog.
+.TP
+.B openInNewWin
+Open a PDF file in a new window, using the open dialog.
+.TP
+.BI openFile( file )
+Open a specified PDF file in this window.
+.TP
+.BI openFileInNewWin( file )
+Open a specified PDF file in a new window.
+.TP
+.BI openFileAtDest( file , dest )
+Open a specified PDF file in this window and go to a named
+destination.
+.TP
+.BI openFileAtDestInNewWin( file , dest )
+Open a specified PDF file in a new window and go to a named
+destination.
+.TP
+.B reload
+Reload the current PDF file.
+.TP
+.B redraw
+Redraw the window.
+.TP
+.B raise
+Raise the window to the front.
+.TP
+.B closeWindow
+Close the window.
+.TP
+.BI run( external-command-string )
+Run an external command.  The following escapes are allowed in the
+command string:
+.nf
+
+    %f => PDF file name (or an empty string if no
+          file is open)
+    %b => PDF file base name, i.e., file name minus
+          the extension (or an empty string if no
+          file is open)
+    %u => link URL (or an empty string if not over
+          a URL link)
+    %x => selection upper-left x coordinate
+          (or 0 if there is no selection)
+    %y => selection upper-left y coordinate
+          (or 0 if there is no selection)
+    %X => selection lower-right x coordinate
+          (or 0 if there is no selection)
+    %Y => selection lower-right y coordinate
+          (or 0 if there is no selection)
+    %% => %
+
+.fi
+.TP
+.B openOutline
+Open the outline pane.
+.TP
+.B closeOutline
+Close the outline pane.
+.TP
+.B toggleOutline
+Toggle the outline pane between open and closed.
+.TP
+.BI scrollOutlineDown( n )
+Scroll the outline down by
+.I n
+increments.
+.TP
+.BI scrollOutlineUp( n )
+Scroll the outline up by
+.I n
+increments.
+.TP
+.B focusToDocWin
+Set the keyboard focus to the main document window.
+.TP
+.B focusToPageNum
+Set the keyboard focus to the page number text box.
+.TP
+.B find
+Open the 'find' dialog.
+.TP
+.B findNext
+Finds the next occurrence of the search string (no dialog).
+.TP
+.B print
+Open the 'print' dialog.
+.TP
+.B about
+Open the 'about' dialog.
+.TP
+.B quit
+Quit from xpdf.
+.PP
+The following commands depend on the current mouse position:
+.TP
+.B startSelection
+Start a selection, which will be extended as the mouse moves.
+.TP
+.B endSelection
+End a selection.
+.TP
+.B startPan
+Start a pan, which will scroll the document as the mouse moves
+.TP
+.B endPan
+End a pan.
+.TP
+.B postPopupMenu
+Display the popup menu.
+.TP
+.B followLink
+Follow a hyperlink (does nothing if the mouse is not over a link).
+.TP
+.B followLinkInNewWin
+Follow a hyperlink, opening PDF files in a new window (does nothing if
+the mouse is not over a link).  For links to non-PDF files, this
+command is identical to followLink.
+.TP
+.B followLinkNoSel
+Same as followLink, but does nothing if there is a non-empty selection.
+(This is useful as a mouse button binding.)
+.TP
+.B followLinkInNewWinNoSel
+Same as followLinkInNewWin, but does nothing if there is a non-empty
+selection.  (This is useful as a mouse button binding.)
+.SS Default Bindings
+The default mouse bindings are as follows:
+.nf
+
+    bind mousePress1    any         startSelection
+    bind mouseRelease1  any         endSelection followLinkNoSel
+    bind mousePress2    any         startPan
+    bind mouseRelease2  any         endPan
+    bind mousePress3    any         postPopupMenu
+    bind mousePress4    any         scrollUpPrevPage(16)
+    bind mousePress5    any         scrollDownNextPage(16)
+    bind mousePress6    any         scrollLeft(16)
+    bind mousePress7    any         scrollRight(16)
+
+.fi
+The default key bindings are as follows:
+.nf
+
+    bind ctrl-home      any         gotoPage(1)
+    bind home           any         scrollToTopLeft
+    bind ctrl-end       any         gotoLastPage
+    bind end            any         scrollToBottomRight
+    bind pgup           any         pageUp
+    bind backspace      any         pageUp
+    bind delete         any         pageUp
+    bind pgdn           any         pageDown
+    bind space          any         pageDown
+    bind left           any         scrollLeft(16)
+    bind right          any         scrollRight(16)
+    bind up             any         scrollUp(16)
+    bind down           any         scrollDown(16)
+    bind o              any         open
+    bind O              any         open
+    bind r              any         reload
+    bind R              any         reload
+    bind f              any         find
+    bind F              any         find
+    bind ctrl-f         any         find
+    bind ctrl-g         any         findNext
+    bind ctrl-p         any         print
+    bind n              scrLockOff  nextPage
+    bind N              scrLockOff  nextPage
+    bind n              scrLockOn   nextPageNoScroll
+    bind N              scrLockOn   nextPageNoScroll
+    bind p              scrLockOff  prevPage
+    bind P              scrLockOff  prevPage
+    bind p              scrLockOn   prevPageNoScroll
+    bind P              scrLockOn   prevPageNoScroll
+    bind v              any         goForward
+    bind b              any         goBackward
+    bind g              any         focusToPageNum
+    bind 0              any         zoomPercent(125)
+    bind +              any         zoomIn
+    bind -              any         zoomOut
+    bind z              any         zoomFitPage
+    bind w              any         zoomFitWidth
+    bind alt-f          any         toggleFullScreenMode
+    bind ctrl-l         any         redraw
+    bind ctrl-w         any         closeWindow
+    bind ?              any         about
+    bind q              any         quit
+    bind Q              any         quit
+
+.fi
+Previous versions of xpdf included a "viKeys" X resource.  It is no
+longer available, but the following bindings are equivalent:
+.nf
+
+    bind h any scrollLeft(16)
+    bind l any scrollRight(16)
+    bind k any scrollUp(16)
+    bind j any scrollDown(16)
+
+.fi
 .SH "REMOTE SERVER MODE"
 Xpdf can be started in remote server mode by specifying a server name
 (in addition to the file name and page number).  For example:
@@ -499,7 +849,7 @@ Error related to PDF permissions.
 99
 Other error.
 .SH AUTHOR
-The xpdf software and documentation are copyright 1996-2005 Glyph &
+The xpdf software and documentation are copyright 1996-2007 Glyph &
 Cog, LLC.
 .SH "SEE ALSO"
 .BR pdftops (1),

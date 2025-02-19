@@ -1,8 +1,8 @@
-.\" Copyright 1999-2005 Glyph & Cog, LLC
-.TH pdffonts 1 "17 August 2005"
+.\" Copyright 1999-2007 Glyph & Cog, LLC
+.TH pdffonts 1 "27 February 2007"
 .SH NAME
 pdffonts \- Portable Document Format (PDF) font analyzer (version
-3.01)
+3.02)
 .SH SYNOPSIS
 .B pdffonts
 [options]
@@ -44,10 +44,16 @@ Type 1
 Type 1C -- aka Compact Font Format (CFF)
 .RE
 .RS
+Type 1C (OT) -- OpenType with 8-bit CFF data
+.RE
+.RS
 Type 3
 .RE
 .RS
 TrueType
+.RE
+.RS
+TrueType (OT) -- OpenType with 8-bit TrueType data
 .RE
 .RS
 CID Type 0 -- 16-bit font with no specified type
@@ -56,7 +62,13 @@ CID Type 0 -- 16-bit font with no specified type
 CID Type 0C -- 16-bit PostScript CFF font
 .RE
 .RS
+CID Type 0C (OT) -- OpenType with CID CFF data
+.RE
+.RS
 CID TrueType -- 16-bit TrueType font
+.RE
+.RS
+CID TrueType (OT) -- OpenType with CID TrueType data
 .RE
 .SH CONFIGURATION FILE
 Pdffonts reads a configuration file at startup.  It first tries to
@@ -116,7 +128,7 @@ Error related to PDF permissions.
 99
 Other error.
 .SH AUTHOR
-The pdffonts software and documentation are copyright 1996-2005 Glyph
+The pdffonts software and documentation are copyright 1996-2007 Glyph
 & Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),

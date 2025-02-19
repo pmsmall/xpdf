@@ -1,7 +1,7 @@
-.\" Copyright 2002-2005 Glyph & Cog, LLC
-.TH xpdfrc 5 "17 August 2005"
+.\" Copyright 2002-2007 Glyph & Cog, LLC
+.TH xpdfrc 5 "27 February 2007"
 .SH NAME
-xpdfrc \- configuration file for Xpdf tools (version 3.01)
+xpdfrc \- configuration file for Xpdf tools (version 3.02)
 .SH DESCRIPTION
 All of the Xpdf tools read a single configuration file.  If you have a
 .I .xpdfrc
@@ -302,6 +302,13 @@ If set to "no", prevents embedding of CID PostScript fonts in
 generated PostScript.  For Level 3 PostScript, this generates a CID
 font, for lower levels it generates a non-CID composite font.
 .TP
+.BR psPreload " yes | no"
+If set to "yes", PDF forms are converted to PS procedures, and image
+data is preloaded.  This uses more memory in the PostScript
+interpreter, but generates significantly smaller PS files in
+situations where, e.g., the same image is drawn on every page of a
+long document.  This defaults to "no".
+.TP
 .BR psOPI " yes | no"
 If set to "yes", generates PostScript OPI comments for all images and
 forms which have OPI information.  This option is only available if
@@ -361,6 +368,11 @@ where 100 means 72 dpi.  You may also specify \'page', to fit the page
 to the window size, or \'width', to fit the page width to the window
 width.
 .TP
+.BR continuousView " yes | no"
+If set to "yes", xpdf will start in continuous view mode, i.e., with
+one vertical screoll bar for the whole document.  This defaults to
+"no".
+.TP
 .BR enableT1lib " yes | no"
 Enables or disables use of t1lib (a Type 1 font rasterizer).  This is
 only relevant if the Xpdf tools were built with t1lib support.
@@ -379,6 +391,47 @@ option affects all font rasterizers.  ("antialias" replaces the
 anti-aliasing control provided by the old "t1libControl" and
 "freetypeControl" options.)  This default to "yes".
 .TP
+.BR vectorAntialias " yes | no"
+Enables or disables anti-aliasing of vector graphics in the PDF
+rasterizer.  This defaults to "yes".
+.TP
+.BR strokeAdjust " yes | no"
+Enables or disables stroke adjustment.  This defaults to "yes".
+.TP
+.BR screenType " dispersed | clustered | stochasticClustered"
+Sets the halftone screen type, which will be used when generating a
+monochrome (1-bit) bitmap.  The three options are dispersed-dot
+dithering, clustered-dot dithering (with a round dot and 45-degree
+screen angle), and stochastic clustered-dot dithering.  By default,
+"stochasticClustered" is used for resolutions of 300 dpi and higher,
+and "dispersed" is used for resolutions lower then 300 dpi.
+.TP
+.BI screenSize " integer"
+Sets the size of the (square) halftone screen threshold matrix.  By
+default, this is 4 for dispersed-dot dithering, 10 for clustered-dot
+dithering, and 100 for stochastic clustered-dot dithering.
+.TP
+.BI screenDotRadius " integer"
+Sets the halftone screen dot radius.  This is only used when
+screenType is set to stochasticClustered, and it defaults to 2.  In
+clustered-dot mode, the dot radius is half of the screen size.
+Dispersed-dot dithering doesn't have a dot radius.
+.TP
+.BI screenGamma " float"
+Sets the halftone screen gamma correction parameter.  Gamma values
+greater than 1 make the output brighter; gamma values less than 1 make
+it darker.  The default value is 1.
+.TP
+.BI screenBlackThreshold " float"
+When halftoning, all values below this threshold are forced to solid
+black.  This parameter is a floating point value between 0 (black) and
+1 (white).  The default value is 0.
+.TP
+.BI screenWhiteThreshold " float"
+When halftoning, all values above this threshold are forced to solid
+white.  This parameter is a floating point value between 0 (black) and
+1 (white).  The default value is 1.
+.TP
 .BI urlCommand " command"
 Sets the command executed when you click on a URL link.  The string
 "%s" will be replaced with the URL.  (See the example below.)  This
@@ -394,6 +447,90 @@ If set to "yes", the Xpdf tools will attempt to map various numeric
 character names sometimes used in font subsets.  In some cases this
 leads to usable text, and in other cases it leads to gibberish --
 there is no way for Xpdf to tell.  This defaults to "yes".
+.TP
+.BI mapUnknownCharNames " yes | no"
+If set to "yes", and mapNumericCharNames is set to "no", the Xpdf
+tools will apply a simple pass-through mapping (Unicode index =
+character code) for all unrecognized glyph names.  In some cases, this
+leads to usable text, and in other cases it leads to gibberish --
+there is no way for Xpdf to tell.  This defaults to "no".
+.TP
+.BI bind " modifiers-key context command ..."
+Add a key or mouse button binding.
+.I Modifiers
+can be zero or more of:
+.nf
+
+    shift-
+    ctrl-
+    alt-
+
+.fi
+.I Key
+can be a regular ASCII character, or any one of:
+.nf
+
+    space
+    tab
+    return
+    enter
+    backspace
+    insert
+    delete
+    home
+    end
+    pgup
+    pgdn
+    left / right / up / down        (arrow keys)
+    f1 .. f35                       (function keys)
+    mousePress1 .. mousePress7      (mouse buttons)
+    mouseRelease1 .. mouseRelease7  (mouse buttons)
+
+.fi
+.I Context
+is either "any" or a comma-separated combination of:
+.nf
+
+    fullScreen / window       (full screen mode on/off)
+    continuous / singlePage   (continuous mode on/off)
+    overLink / offLink        (mouse over link or not)
+    scrLockOn / scrLockOff    (scroll lock on/off)
+
+.fi
+The context string can include only one of each pair in the above
+list.
+
+.I Command
+is an Xpdf command (see the COMMANDS section of the
+.BR xpdf (1)
+man page for details).  Multiple commands are separated by whitespace.
+
+The bind command replaces any existing binding, but only if it was
+defined for the exact same modifiers, key, and context.  All tokens
+(modifiers, key, context, commands) are case-sensitive.
+
+Example key bindings:
+.nf
+
+    # bind ctrl-a in any context to the nextPage
+    # command
+    bind ctrl-a any nextPage
+
+    # bind uppercase B, when in continuous mode
+    # with scroll lock on, to the reload command
+    # followed by the prevPage command
+    bind B continuous,scrLockOn reload prevPage
+
+.fi
+See the
+.BR xpdf (1)
+man page for more examples.
+.TP
+.BI unbind " modifiers-key context"
+Removes a key binding established with the bind command.  This is most
+useful to remove default key bindings before establishing new ones
+(e.g., if the default key binding is given for "any" context, and you
+want to create new key bindings for multiple contexts).
 .TP
 .BI printCommands " yes | no"
 If set to "yes", drawing commands are printed as they're executed
@@ -467,7 +604,7 @@ Depending on build options, it may be placed elsewhere.
 This is the user's configuration file.  If it exists, it will be read
 in place of the system-wide file.
 .SH AUTHOR
-The Xpdf software and documentation are copyright 1996-2005 Glyph &
+The Xpdf software and documentation are copyright 1996-2007 Glyph &
 Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),

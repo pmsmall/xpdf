@@ -4,7 +4,7 @@ pdftotext(1)                                         pdftotext(1)
 
 NAME
        pdftotext  -  Portable  Document Format (PDF) to text con-
-       verter (version 3.01)
+       verter (version 3.02)
 
 SYNOPSIS
        pdftotext [options] [PDF-file [text-file]]
@@ -108,7 +108,7 @@ EXIT CODES
 
 AUTHOR
        The  pdftotext  software  and  documentation are copyright
-       1996-2005 Glyph & Cog, LLC.
+       1996-2007 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1), pdftops(1), pdfinfo(1), pdffonts(1), pdftoppm(1),
@@ -117,4 +117,4 @@ SEE ALSO
 
 
 
-                          17 August 2005             pdftotext(1)
+                         27 Febuary 2007             pdftotext(1)
