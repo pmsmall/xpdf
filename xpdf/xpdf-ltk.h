@@ -104,8 +104,8 @@ LTKMenu *makeZoomMenu() {
     new LTKMenuItem("+4", NULL, 4, &zoomMenuCbk, NULL),
     new LTKMenuItem("+5", NULL, 5, &zoomMenuCbk, NULL),
     new LTKMenuItem(NULL, NULL, 0, NULL, NULL),
-    new LTKMenuItem("fit page", NULL, 100, &zoomMenuCbk, NULL),
-    new LTKMenuItem("fit width", NULL, 101, &zoomMenuCbk, NULL)
+    new LTKMenuItem("fit page", "z", 100, &zoomMenuCbk, NULL),
+    new LTKMenuItem("fit width", "w", 101, &zoomMenuCbk, NULL)
 
   );
 }

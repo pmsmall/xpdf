@@ -137,8 +137,8 @@ Menu(func:makeZoomMenu title:"zoom" n:14) {
   MenuItem(text:"+4" num: 4 select:&zoomMenuCbk)
   MenuItem(text:"+5" num: 5 select:&zoomMenuCbk)
   MenuItem(text:NULL)
-  MenuItem(text:"fit page"  num:100 select:&zoomMenuCbk)
-  MenuItem(text:"fit width" num:101 select:&zoomMenuCbk)
+  MenuItem(text:"fit page"  shortcut:"z" num:100 select:&zoomMenuCbk)
+  MenuItem(text:"fit width" shortcut:"w" num:101 select:&zoomMenuCbk)
 }
 
 #------------------------------------------------------------------------

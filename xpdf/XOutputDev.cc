@@ -182,7 +182,7 @@ static char *japan12DefFont =
 // CID 0 .. 96
 static Gushort japan12Map[96] = {
   0x2121, 0x2121, 0x212a, 0x2149, 0x2174, 0x2170, 0x2173, 0x2175, // 00 .. 07
-  0x2147, 0x214a, 0x214b, 0x2176, 0x215c, 0x2124, 0x213e, 0x2123, // 08 .. 0f
+  0x2147, 0x214a, 0x214b, 0x2176, 0x215c, 0x2124, 0x213e, 0x2125, // 08 .. 0f
   0x213f, 0x2330, 0x2331, 0x2332, 0x2333, 0x2334, 0x2335, 0x2336, // 10 .. 17
   0x2337, 0x2338, 0x2339, 0x2127, 0x2128, 0x2163, 0x2161, 0x2164, // 18 .. 1f
   0x2129, 0x2177, 0x2341, 0x2342, 0x2343, 0x2344, 0x2345, 0x2346, // 20 .. 27
@@ -521,9 +521,7 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
   if (!gfxFont->is16Bit()) {
     for (code = 0; code < 256; ++code) {
       if ((charName = gfxFont->getCharName(code))) {
-	if ((charName[0] == 'B' || charName[0] == 'C' ||
-	     charName[0] == 'G') &&
-	    strlen(charName) == 3 &&
+	if (isalpha(charName[0]) && strlen(charName) == 3 &&
 	    isxdigit(charName[1]) && isxdigit(charName[2]) &&
 	    ((charName[1] >= 'a' && charName[1] <= 'f') ||
 	     (charName[1] >= 'A' && charName[1] <= 'F') ||
@@ -623,9 +621,9 @@ void XOutputT1Font::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 // XOutputFTFont
 //------------------------------------------------------------------------
 
-XOutputFTFont::XOutputFTFont(GfxFont *gfxFont, double m11, double m12,
-			     double m21, double m22, Display *display,
-			     XOutputFontCache *cache):
+XOutputFTFont::XOutputFTFont(GfxFont *gfxFont, GString *pdfBaseFont,
+			     double m11, double m12, double m21, double m22,
+			     Display *display, XOutputFontCache *cache):
   XOutputFont(gfxFont, m11, m12, m21, m22, display, cache)
 {
   Ref embRef;
@@ -635,24 +633,18 @@ XOutputFTFont::XOutputFTFont(GfxFont *gfxFont, double m11, double m12,
   font = NULL;
 
   // we can only handle 8-bit, Type 1/1C or TrueType, with embedded
-  // font file
-  if (!(!gfxFont->is16Bit() &&
-	(gfxFont->getType() == fontType1 ||
-	 gfxFont->getType() == fontType1C ||
-	 gfxFont->getType() == fontTrueType) &&
-	gfxFont->getEmbeddedFontID(&embRef))) {
+  // font file or user-specified base fonts
+  if (!(pdfBaseFont ||
+	(!gfxFont->is16Bit() &&
+	 (gfxFont->getType() == fontType1 ||
+	  gfxFont->getType() == fontType1C ||
+	  gfxFont->getType() == fontTrueType) &&
+	 gfxFont->getEmbeddedFontID(&embRef)))) {
     return;
   }
-#if 1 //~
-  if (gfxFont->getType() == fontType1) {
-    printf("using FT for T1 font\n");
-  } else if (gfxFont->getType() == fontType1C) {
-    printf("using FT for T1C font\n");
-  }
-#endif
 
   // load the font
-  if (!(fontFile = cache->getFTFont(gfxFont))) {
+  if (!(fontFile = cache->getFTFont(gfxFont, pdfBaseFont))) {
     return;
   }
 
@@ -793,9 +785,7 @@ XOutputServerFont::XOutputServerFont(GfxFont *gfxFont, char *fontNameFmt,
 	if ((charName = gfxFont->getCharName(code))) {
 	  if ((code2 = encoding->getCharCode(charName)) < 0) {
 	    n = strlen(charName);
-	    if (hex && n == 3 &&
-		(charName[0] == 'B' || charName[0] == 'C' ||
-		 charName[0] == 'G') &&
+	    if (hex && n == 3 && isalpha(charName[0]) &&
 		isxdigit(charName[1]) && isxdigit(charName[2])) {
 	      sscanf(charName+1, "%x", &code2);
 	    } else if (hex && n == 2 &&
@@ -1380,7 +1370,8 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 #if FREETYPE2
   // try to create a new FreeType font
   if (useFreeType) {
-    ftFont = new XOutputFTFont(gfxFont, m11, m12, m21, m22, display, this);
+    ftFont = new XOutputFTFont(gfxFont, t1FontName, m11, m12, m21, m22,
+			       display, this);
     if (ftFont->isOk()) {
 
       // insert in cache
@@ -1585,10 +1576,12 @@ T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 #if FREETYPE2
 
-FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont) {
+FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont,
+					GString *pdfBaseFont) {
   Ref id;
   FTFontFile *fontFile;
   GString *fileName;
+  GString *tmpFileName;
   FILE *f;
   Ref embRef;
   Object refObj, strObj;
@@ -1620,24 +1613,30 @@ FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont) {
     }
 
     // create the font file
-    if (!openTempFile(&fileName, &f, "wb", NULL)) {
-      error(-1, "Couldn't create temporary TrueType font file");
-      return NULL;
+    tmpFileName = NULL;
+    if (gfxFont->getEmbeddedFontID(&embRef)) {
+      if (!openTempFile(&tmpFileName, &f, "wb", NULL)) {
+	error(-1, "Couldn't create temporary TrueType font file");
+	return NULL;
+      }
+      refObj.initRef(embRef.num, embRef.gen);
+      refObj.fetch(&strObj);
+      refObj.free();
+      strObj.streamReset();
+      while ((c = strObj.streamGetChar()) != EOF) {
+	fputc(c, f);
+      }
+      strObj.streamClose();
+      strObj.free();
+      fclose(f);
+      fileName = tmpFileName;
+    } else {
+      fileName = pdfBaseFont;
     }
-    gfxFont->getEmbeddedFontID(&embRef);
-    refObj.initRef(embRef.num, embRef.gen);
-    refObj.fetch(&strObj);
-    refObj.free();
-    strObj.streamReset();
-    while ((c = strObj.streamGetChar()) != EOF) {
-      fputc(c, f);
-    }
-    strObj.streamClose();
-    strObj.free();
-    fclose(f);
 
     // create the FreeType font file
-    fontFile = new FTFontFile(ftEngine, fileName->getCString());
+    fontFile = new FTFontFile(ftEngine, fileName->getCString(),
+			      gfxFont->getEncoding());
     if (fontFile->isOk()) {
       ftFontFiles[i].num = id.num;
       ftFontFiles[i].gen = id.gen;
@@ -1650,8 +1649,10 @@ FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont) {
     }
 
     // remove the font file
-    unlink(fileName->getCString());
-    delete fileName;
+    if (tmpFileName) {
+      unlink(tmpFileName->getCString());
+      delete tmpFileName;
+    }
   }
 
   return fontFile;
@@ -3118,20 +3119,22 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
   }
   tx = xoutRound(ctm[2] + ctm[4]);
   ty = xoutRound(ctm[3] + ctm[5]);
-  scaledWidth = abs(xoutRound(xScale)) - 1;
+  // use ceil() to avoid gaps between "striped" images
+  scaledWidth = (int)ceil(fabs(xScale));
   xSign = (xScale < 0) ? -1 : 1;
-  scaledHeight = abs(xoutRound(yScale)) - 1;
+  scaledHeight = (int)ceil(fabs(yScale));
   ySign = (yScale < 0) ? -1 : 1;
 
   // compute corners in device space
   ulx1 = 0;
   uly1 = 0;
-  urx1 = xSign * scaledWidth;
+  urx1 = xSign * (scaledWidth - 1);
   ury1 = xoutRound(yShear * urx1);
-  llx1 = xoutRound(xShear * ySign * scaledHeight);
-  lly1 = ySign * scaledHeight + xoutRound(yShear * llx1);
-  lrx1 = xSign * scaledWidth + xoutRound(xShear * ySign * scaledHeight);
-  lry1 = ySign * scaledHeight + xoutRound(yShear * lrx1);
+  llx1 = xoutRound(xShear * ySign * (scaledHeight - 1));
+  lly1 = ySign * (scaledHeight - 1) + xoutRound(yShear * llx1);
+  lrx1 = xSign * (scaledWidth - 1) +
+           xoutRound(xShear * ySign * (scaledHeight - 1));
+  lry1 = ySign * (scaledHeight - 1) + xoutRound(yShear * lrx1);
   if (rot) {
     ulx = tx + uly1;    uly = ty - ulx1;
     urx = tx + ury1;    ury = ty - urx1;
@@ -3194,7 +3197,7 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 
   // check for tiny (zero width or height) images
   // and off-page images
-  if (scaledWidth < 0 || scaledHeight < 0 || cw <= 0 || ch <= 0) {
+  if (scaledWidth <= 0 || scaledHeight <= 0 || cw <= 0 || ch <= 0) {
     if (inlineImg) {
       j = height * ((width + 7) / 8);
       str->reset();
@@ -3206,18 +3209,10 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
   }
 
   // compute Bresenham parameters for x and y scaling
-  if (scaledHeight == 0) {
-    yp = yq = 0;
-  } else {
-    yp = (height - 1) / scaledHeight;
-    yq = (height - 1) % scaledHeight;
-  }
-  if (scaledWidth == 0) {
-    xp = xq = 0;
-  } else {
-    xp = (width - 1) / scaledWidth;
-    xq = (width - 1) % scaledWidth;
-  }
+  yp = height / scaledHeight;
+  yq = height % scaledHeight;
+  xp = width / scaledWidth;
+  xq = width % scaledWidth;
 
   // allocate pixel buffer
   pixBuf = (Guchar *)gmalloc((yp + 1) * width * sizeof(Guchar));
@@ -3250,12 +3245,11 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 
   // init y scale Bresenham
   yt = 0;
-  yStep = 1;
+  lastYStep = 1;
 
-  for (y = 0; y <= scaledHeight; ++y) {
+  for (y = 0; y < scaledHeight; ++y) {
 
     // y scale Bresenham
-    lastYStep = yStep;
     yStep = yp;
     yt += yq;
     if (yt >= scaledHeight) {
@@ -3264,11 +3258,7 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     }
 
     // read row(s) from image
-    if (yp == 0) {
-      n = (lastYStep == 1) ? 1 : 0;
-    } else {
-      n = yStep;
-    }
+    n = (yp > 0) ? yStep : lastYStep;
     if (n > 0) {
       p = pixBuf;
       for (i = 0; i < n; ++i) {
@@ -3281,12 +3271,13 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 	}
       }
     }
+    lastYStep = yStep;
 
     // init x scale Bresenham
     xt = 0;
     xSrc = 0;
 
-    for (x = 0; x <= scaledWidth; ++x) {
+    for (x = 0; x < scaledWidth; ++x) {
 
       // x scale Bresenham
       xStep = xp;
@@ -3422,20 +3413,22 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   }
   tx = xoutRound(ctm[2] + ctm[4]);
   ty = xoutRound(ctm[3] + ctm[5]);
-  scaledWidth = abs(xoutRound(xScale)) - 1;
+  // use ceil() to avoid gaps between "striped" images
+  scaledWidth = (int)ceil(fabs(xScale));
   xSign = (xScale < 0) ? -1 : 1;
-  scaledHeight = abs(xoutRound(yScale)) - 1;
+  scaledHeight = (int)ceil(fabs(yScale));
   ySign = (yScale < 0) ? -1 : 1;
 
   // compute corners in device space
   ulx1 = 0;
   uly1 = 0;
-  urx1 = xSign * scaledWidth;
+  urx1 = xSign * (scaledWidth - 1);
   ury1 = xoutRound(yShear * urx1);
-  llx1 = xoutRound(xShear * ySign * scaledHeight);
-  lly1 = ySign * scaledHeight + xoutRound(yShear * llx1);
-  lrx1 = xSign * scaledWidth + xoutRound(xShear * ySign * scaledHeight);
-  lry1 = ySign * scaledHeight + xoutRound(yShear * lrx1);
+  llx1 = xoutRound(xShear * ySign * (scaledHeight - 1));
+  lly1 = ySign * (scaledHeight - 1) + xoutRound(yShear * llx1);
+  lrx1 = xSign * (scaledWidth - 1) +
+           xoutRound(xShear * ySign * (scaledHeight - 1));
+  lry1 = ySign * (scaledHeight - 1) + xoutRound(yShear * lrx1);
   if (rot) {
     ulx = tx + uly1;    uly = ty - ulx1;
     urx = tx + ury1;    ury = ty - urx1;
@@ -3498,7 +3491,7 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 
   // check for tiny (zero width or height) images
   // and off-page images
-  if (scaledWidth < 0 || scaledHeight < 0 || cw <= 0 || ch <= 0) {
+  if (scaledWidth <= 0 || scaledHeight <= 0 || cw <= 0 || ch <= 0) {
     if (inlineImg) {
       str->reset();
       j = height * ((nVals * nBits + 7) / 8);
@@ -3509,18 +3502,10 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   }
 
   // compute Bresenham parameters for x and y scaling
-  if (scaledHeight == 0) {
-    yp = yq = 0;
-  } else {
-    yp = (height - 1) / scaledHeight;
-    yq = (height - 1) % scaledHeight;
-  }
-  if (scaledWidth == 0) {
-    xp = xq = 0;
-  } else {
-    xp = (width - 1) / scaledWidth;
-    xq = (width - 1) % scaledWidth;
-  }
+  yp = height / scaledHeight;
+  yq = height % scaledHeight;
+  xp = width / scaledWidth;
+  xq = width % scaledWidth;
 
   // allocate pixel buffer
   pixBuf = (GfxRGB *)gmalloc((yp + 1) * width * sizeof(GfxRGB));
@@ -3561,12 +3546,11 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 
   // init y scale Bresenham
   yt = 0;
-  yStep = 1;
+  lastYStep = 1;
 
-  for (y = 0; y <= scaledHeight; ++y) {
+  for (y = 0; y < scaledHeight; ++y) {
 
     // y scale Bresenham
-    lastYStep = yStep;
     yStep = yp;
     yt += yq;
     if (yt >= scaledHeight) {
@@ -3575,11 +3559,7 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     }
 
     // read row(s) from image
-    if (yp == 0) {
-      n = (lastYStep == 1) ? 1 : 0;
-    } else {
-      n = yStep;
-    }
+    n = (yp > 0) ? yStep : lastYStep;
     if (n > 0) {
       p = pixBuf;
       q = alphaBuf;
@@ -3602,12 +3582,13 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 	}
       }
     }
+    lastYStep = yStep;
 
     // init x scale Bresenham
     xt = 0;
     xSrc = 0;
 
-    for (x = 0; x <= scaledWidth; ++x) {
+    for (x = 0; x < scaledWidth; ++x) {
 
       // x scale Bresenham
       xStep = xp;

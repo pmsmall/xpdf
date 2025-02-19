@@ -2044,25 +2044,27 @@ struct BuiltinFont {
   char *name;
   Gushort *widths;
   FontEncoding *encoding;
+  short ascent;
+  short descent;
 };
 
 #define numBuiltinFonts ((int)(sizeof(builtinFonts)/sizeof(BuiltinFont)))
 
 static BuiltinFont builtinFonts[] = {
-  {"Courier",               courierWidths,              &standardEncoding},
-  {"Courier-Bold",          courierBoldWidths,          &standardEncoding},
-  {"Courier-BoldOblique",   courierBoldObliqueWidths,   &standardEncoding},
-  {"Courier-Oblique",       courierObliqueWidths,       &standardEncoding},
-  {"Helvetica",             helveticaWidths,            &standardEncoding},
-  {"Helvetica-Bold",        helveticaBoldWidths,        &standardEncoding},
-  {"Helvetica-BoldOblique", helveticaBoldObliqueWidths, &standardEncoding},
-  {"Helvetica-Oblique",     helveticaObliqueWidths,     &standardEncoding},
-  {"Symbol",                symbolWidths,               &symbolEncoding},
-  {"Times-Bold",            timesBoldWidths,            &standardEncoding},
-  {"Times-BoldItalic",      timesBoldItalicWidths,      &standardEncoding},
-  {"Times-Italic",          timesItalicWidths,          &standardEncoding},
-  {"Times-Roman",           timesRomanWidths,           &standardEncoding},
-  {"ZapfDingbats",          zapfDingbatsWidths,         &zapfDingbatsEncoding}
+  {"Courier",               courierWidths,              &standardEncoding,       624,  -207},
+  {"Courier-Bold",          courierBoldWidths,          &standardEncoding,       674,  -257},
+  {"Courier-BoldOblique",   courierBoldObliqueWidths,   &standardEncoding,       674,  -257},
+  {"Courier-Oblique",       courierObliqueWidths,       &standardEncoding,       624,  -207},
+  {"Helvetica",             helveticaWidths,            &standardEncoding,       729,  -219},
+  {"Helvetica-Bold",        helveticaBoldWidths,        &standardEncoding,       729,  -219},
+  {"Helvetica-BoldOblique", helveticaBoldObliqueWidths, &standardEncoding,       729,  -219},
+  {"Helvetica-Oblique",     helveticaObliqueWidths,     &standardEncoding,       729,  -219},
+  {"Symbol",                symbolWidths,               &symbolEncoding,        1010,  -293},
+  {"Times-Bold",            timesBoldWidths,            &standardEncoding,       670,  -210},
+  {"Times-BoldItalic",      timesBoldItalicWidths,      &standardEncoding,       682,  -203},
+  {"Times-Italic",          timesItalicWidths,          &standardEncoding,       684,  -206},
+  {"Times-Roman",           timesRomanWidths,           &standardEncoding,       682,  -217},
+  {"ZapfDingbats",          zapfDingbatsWidths,         &zapfDingbatsEncoding,   820,  -143}
 };
 
 #endif

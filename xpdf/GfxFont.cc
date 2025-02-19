@@ -104,7 +104,7 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
   // without embedding them, so munge the names into the equivalent
   // PostScript names.  This is a kludge -- it would be nice if Adobe
   // followed their own spec.
-  if (type == fontTrueType) {
+  if (type == fontTrueType && name) {
     p = name->getCString();
     name2 = NULL;
     if (!strncmp(p, "Arial", 5)) {
@@ -157,6 +157,15 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
 
   // assume Times-Roman by default (for substitution purposes)
   flags = fontSerif;
+
+  // default ascent/descent values
+  if (builtinFont) {
+    ascent = 0.001 * builtinFont->ascent;
+    descent = 0.001 * builtinFont->descent;
+  } else {
+    ascent = 0.95;
+    descent = -0.35;
+  }
 
   // get info from font descriptor
   embFontName = NULL;
@@ -219,6 +228,18 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
     obj1.dictLookup("MissingWidth", &obj2);
     if (obj2.isInt()) {
       missingWidth = obj2.getInt();
+    }
+    obj2.free();
+
+    // get Ascent and Descent
+    obj1.dictLookup("Ascent", &obj2);
+    if (obj2.isNum()) {
+      ascent = 0.001 * obj2.getNum();
+    }
+    obj2.free();
+    obj1.dictLookup("Descent", &obj2);
+    if (obj2.isNum()) {
+      descent = 0.001 * obj2.getNum();
     }
     obj2.free();
   }

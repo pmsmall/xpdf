@@ -1460,8 +1460,9 @@ void Gfx::doShowText(GString *s) {
   Parser *oldParser;
   int i;
 #else
-  double dx, dy, width, height, w, h, sWidth, sHeight;
+  double dx, dy, width, height, w, h;
 #endif
+  double sWidth, sHeight;
 
   if (fontChanged) {
     out->updateFont(state);
@@ -1549,6 +1550,8 @@ void Gfx::doShowText(GString *s) {
 	c8 = *p;
 	font->getCharProc(c8, &charProc);
 	state->transform(state->getCurX() + dx, state->getCurY() + dy, &x, &y);
+	out->saveState(state);
+	state = state->save();
 	state->setCTM(newCTM[0], newCTM[1], newCTM[2], newCTM[3], x, y);
 	//~ out->updateCTM(???)
 	if (charProc.isStream()) {
@@ -1556,9 +1559,8 @@ void Gfx::doShowText(GString *s) {
 	} else {
 	  error(getPos(), "Missing or bad Type3 CharProc entry");
 	}
-	state->setCTM(oldCTM[0], oldCTM[1], oldCTM[2],
-		      oldCTM[3], oldCTM[4], oldCTM[5]);
-	//~ out->updateCTM(???) - use gsave/grestore instead?
+	state = state->restore();
+	out->restoreState(state);
 	charProc.free();
 	width = state->getFontSize() * state->getHorizScaling() *
 	        font->getWidth(c8) +

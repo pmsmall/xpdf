@@ -23,6 +23,8 @@
 #endif
 #include "SFont.h"
 
+class FontEncoding;
+
 //------------------------------------------------------------------------
 
 class FTFontEngine: public SFontEngine {
@@ -49,7 +51,8 @@ private:
 class FTFontFile: public SFontFile {
 public:
 
-  FTFontFile(FTFontEngine *engine, char *fontFileName);
+  FTFontFile(FTFontEngine *engine, char *fontFileName,
+	     FontEncoding *fontEnc);
   GBool isOk() { return ok; }
   virtual ~FTFontFile();
 
@@ -57,8 +60,9 @@ private:
 
   FTFontEngine *engine;
   FT_Face face;
-  FT_CharMap charMap;
   int charMapOffset;
+  Guint glyphMap[256];
+  GBool useGlyphMap;
   GBool ok;
 
   friend class FTFont;

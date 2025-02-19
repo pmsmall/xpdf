@@ -277,7 +277,7 @@ GBool TTFont::drawChar(Drawable d, int w, int h, GC gc,
   if (engine->aa) {
 
     // compute the colors
-    xcolor.pixel = XGetPixel(image, x1, y1);
+    xcolor.pixel = XGetPixel(image, x1 + w0/2, y1 + h0/2);
     XQueryColor(engine->display, engine->colormap, &xcolor);
     bgR = xcolor.red;
     bgG = xcolor.green;

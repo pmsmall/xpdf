@@ -170,7 +170,7 @@ static char **isoLatin5Subst = isoLatin1Subst;
 // CID 0 .. 96
 static Gushort japan12Map[96] = {
   0x2121, 0x2121, 0x212a, 0x2149, 0x2174, 0x2170, 0x2173, 0x2175, // 00 .. 07
-  0x2147, 0x214a, 0x214b, 0x2176, 0x215c, 0x2124, 0x213e, 0x2123, // 08 .. 0f
+  0x2147, 0x214a, 0x214b, 0x2176, 0x215c, 0x2124, 0x213e, 0x2125, // 08 .. 0f
   0x213f, 0x2330, 0x2331, 0x2332, 0x2333, 0x2334, 0x2335, 0x2336, // 10 .. 17
   0x2337, 0x2338, 0x2339, 0x2127, 0x2128, 0x2163, 0x2161, 0x2164, // 18 .. 1f
   0x2129, 0x2177, 0x2341, 0x2342, 0x2343, 0x2344, 0x2345, 0x2346, // 20 .. 27
@@ -322,9 +322,7 @@ void TextString::addChar(GfxState *state, double x, double y,
     }
     if (c1 < 0) {
       m = strlen(charName);
-      if (hexCodes && m == 3 &&
-	  (charName[0] == 'B' || charName[0] == 'C' ||
-	   charName[0] == 'G') &&
+      if (hexCodes && m == 3 && isalpha(charName[0]) &&
 	  isxdigit(charName[1]) && isxdigit(charName[2])) {
 	sscanf(charName+1, "%x", &c1);
       } else if (hexCodes && m == 2 &&
@@ -1222,9 +1220,7 @@ void TextOutputDev::updateFont(GfxState *state) {
   if ((font = state->getFont()) && !font->is16Bit()) {
     for (c = 0; c < 256; ++c) {
       if ((charName = font->getCharName(c))) {
-	if ((charName[0] == 'B' || charName[0] == 'C' ||
-	     charName[0] == 'G') &&
-	    strlen(charName) == 3 &&
+	if (isalpha(charName[0]) && strlen(charName) == 3 &&
 	    isxdigit(charName[1]) && isxdigit(charName[2]) &&
 	    ((charName[1] >= 'a' && charName[1] <= 'f') ||
 	     (charName[1] >= 'A' && charName[1] <= 'F') ||

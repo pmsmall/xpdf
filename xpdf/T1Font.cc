@@ -64,6 +64,8 @@ T1FontFile::T1FontFile(T1FontEngine *engine, char *fontFileName,
 
   ok = gFalse;
   this->engine = engine;
+  enc = NULL;
+  encStr = NULL;
 
   // load the font file
   if ((id = T1_AddFont(fontFileName)) < 0) {
@@ -102,7 +104,9 @@ T1FontFile::T1FontFile(T1FontEngine *engine, char *fontFileName,
 T1FontFile::~T1FontFile() {
   gfree(enc);
   gfree(encStr);
-  T1_DeleteFont(id);
+  if (id >= 0) {
+    T1_DeleteFont(id);
+  }
 }
 
 //------------------------------------------------------------------------
@@ -174,6 +178,18 @@ T1Font::T1Font(T1FontFile *fontFile, double *m) {
     xMax = (int)size;
   }
   if (yMax == yMin) {
+    yMin = 0;
+    yMax = (int)(1.2 * size);
+  }
+#endif
+#if 1 //~
+  //~ Another kludge: t1lib doesn't correctly handle fonts with
+  //~ real (non-integer) bounding box coordinates.
+  if (xMax - xMin > 5000) {
+    xMin = 0;
+    xMax = (int)size;
+  }
+  if (yMax - yMin > 5000) {
     yMin = 0;
     yMax = (int)(1.2 * size);
   }
@@ -292,7 +308,7 @@ GBool T1Font::drawChar(Drawable d, int w, int h, GC gc,
   if (engine->aa) {
 
     // compute the colors
-    xcolor.pixel = XGetPixel(image, x1, y1);
+    xcolor.pixel = XGetPixel(image, x1 + w0/2, y1 + h0/2);
     XQueryColor(engine->display, engine->colormap, &xcolor);
     bgR = xcolor.red;
     bgG = xcolor.green;

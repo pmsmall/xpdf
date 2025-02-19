@@ -318,6 +318,17 @@
 
        arrows Scroll the current page.
 
+       0      Set the zoom factor to zero (72 dpi).
+
+       +      Zoom in (increment the zoom factor by 1).
+
+       -      Zoom out (decrement the zoom factor by 1).
+
+       z      Set the zoom factor to 'page' (fit page to window).
+
+       w      Set the zoom factor to 'width' (fit page  width  to
+              window).
+
        control-L
               Redraw the current page.
 

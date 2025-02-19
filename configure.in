@@ -130,7 +130,8 @@ fi
 
 dnl ##### Look for header that defines FD_ZERO.
 AC_MSG_CHECKING([FD_ZERO and strings.h or bstring.h])
-AC_TRY_COMPILE([#include <sys/types.h>
+AC_TRY_COMPILE([#include <stdlib.h>
+#include <sys/types.h>
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif],
@@ -138,7 +139,8 @@ AC_TRY_COMPILE([#include <sys/types.h>
 if test $xpdf_ok = yes; then
   AC_MSG_RESULT([not needed])
 else
-  AC_TRY_COMPILE([#include <sys/types.h>
+  AC_TRY_COMPILE([#include <stdlib.h>
+#include <sys/types.h>
 #include <strings.h>
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
@@ -148,7 +150,8 @@ else
     AC_DEFINE(HAVE_STRINGS_H)
     AC_MSG_RESULT([need strings.h])
   else
-    AC_TRY_COMPILE([#include <sys/types.h>
+    AC_TRY_COMPILE([#include <stdlib.h>
+#include <sys/types.h>
 #include <bstring.h>
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>

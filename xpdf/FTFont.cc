@@ -15,7 +15,14 @@
 #include <string.h>
 #include "gmem.h"
 #include "freetype/internal/ftobjs.h"
+#include "freetype/internal/t1types.h"
+#include "freetype/internal/cfftypes.h"
+#include "freetype/internal/tttypes.h"
+#include "FontEncoding.h"
 #include "FTFont.h"
+
+typedef TT_Face CFF_Face;
+extern "C" int CFF_Find_Char(CFF_Face face, char *name);
 
 //------------------------------------------------------------------------
 
@@ -37,8 +44,11 @@ FTFontEngine::~FTFontEngine() {
 
 //------------------------------------------------------------------------
 
-FTFontFile::FTFontFile(FTFontEngine *engine, char *fontFileName) {
-  int i;
+FTFontFile::FTFontFile(FTFontEngine *engine, char *fontFileName,
+		       FontEncoding *fontEnc) {
+  T1_Face t1Face;
+  char *name1, *name2;
+  int i, j;
 
   ok = gFalse;
   this->engine = engine;
@@ -57,58 +67,90 @@ FTFontFile::FTFontFile(FTFontEngine *engine, char *fontFileName) {
   printf("FT module = %s\n", face->driver->root.clazz->module_name);
 #endif
 
-  // Choose a cmap:
-  // 1. If the font contains an Adobe cmap (which means it's a Type 1
-  //    or Type 1C font), use it.
-  // 2. If the font contains a Windows-symbol cmap, use it.
-  // 3. Otherwise, use the first cmap in the TTF file.
-  // 4. If the Windows-Symbol cmap is used (from either step 1 or step
-  //    2), offset all character indexes by 0xf000.
-  // This seems to match what acroread does, but may need further
-  // tweaking.
+  if (!strcmp(face->driver->root.clazz->module_name, "type1")) {
+
 #if 0 //~
-  printf("available cmaps:\n");
-  for (i = 0; i < face->num_charmaps; ++i) {
-    printf("  %d: %d %d\n", i,
-	   face->charmaps[i]->platform_id,
-	   face->charmaps[i]->encoding_id);
-  }
+    printf("FT2: type1\n");
 #endif
-  for (i = 0; i < face->num_charmaps; ++i) {
-    if (face->charmaps[i]->platform_id == 7) {
-      break;
+    useGlyphMap = gTrue;
+    t1Face = (T1_Face)face;
+    for (i = 0; i < 256; ++i) {
+      glyphMap[i] = 0;
+      if ((name1 = fontEnc->getCharName(i))) {
+	for (j = 0; j < t1Face->type1.num_glyphs; ++j) {
+	  if ((name2 = t1Face->type1.glyph_names[j]) &&
+	      !strcmp(name1, name2)) {
+	    glyphMap[i] = j;
+	    break;
+	  }
+	}
+      }
     }
-  }
-  if (i >= face->num_charmaps) {
+
+  } else if (!strcmp(face->driver->root.clazz->module_name, "cff")) {
+
+#if 0 //~
+    printf("FT2: type1c\n");
+#endif
+    useGlyphMap = gTrue;
+    for (i = 0; i < 256; ++i) {
+      glyphMap[i] = 0;
+      if ((name1 = fontEnc->getCharName(i))) {
+	glyphMap[i] = CFF_Find_Char((CFF_Face)face, name1);
+      }
+    }
+
+  } else {
+
+    useGlyphMap = gFalse;
+
+    // Choose a cmap:
+    // 1. If the font contains an Adobe cmap (which means it's a Type 1
+    //    or Type 1C font), use it.
+    // 2. If the font contains a Windows-symbol cmap, use it.
+    // 3. Otherwise, use the first cmap in the TTF file.
+    // 4. If the Windows-Symbol cmap is used (from either step 1 or step
+    //    2), offset all character indexes by 0xf000.
+    // This seems to match what acroread does, but may need further
+    // tweaking.
+#if 0 //~
+    printf("available cmaps:\n");
     for (i = 0; i < face->num_charmaps; ++i) {
-      if (face->charmaps[i]->platform_id == 3 &&
-	  face->charmaps[i]->encoding_id == 0) {
+      printf("  %d: %d %d\n", i,
+	     face->charmaps[i]->platform_id,
+	     face->charmaps[i]->encoding_id);
+    }
+#endif
+    for (i = 0; i < face->num_charmaps; ++i) {
+      if (face->charmaps[i]->platform_id == 7) {
 	break;
       }
     }
     if (i >= face->num_charmaps) {
-      i = 0;
+      for (i = 0; i < face->num_charmaps; ++i) {
+	if (face->charmaps[i]->platform_id == 3 &&
+	    face->charmaps[i]->encoding_id == 0) {
+	  break;
+	}
+      }
+      if (i >= face->num_charmaps) {
+	i = 0;
+      }
     }
-  }
 #if 0 //~
-  printf("chose cmap %d\n", i);
+    printf("chose cmap %d\n", i);
 #endif
-  charMapOffset = 0;
-#if 1 //~ CFF (Type 1C) fonts don't get a charmap ???
-  if (face->num_charmaps == 0) {
-    ok = gTrue;
-    return;
-  }
+    charMapOffset = 0;
+    if (face->charmaps[i]->platform_id == 3 &&
+	face->charmaps[i]->encoding_id == 0) {
+      charMapOffset = 0xf000;
+    }
+    if (FT_Set_Charmap(face, face->charmaps[i])) {
+#if 0 //~
+      fprintf(stderr, "failed at FT_Set_Charmap\n");
 #endif
-  if (face->charmaps[i]->platform_id == 3 &&
-      face->charmaps[i]->encoding_id == 0) {
-    charMapOffset = 0xf000;
-  }
-  if (FT_Set_Charmap(face, face->charmaps[i])) {
-#if 1 //~
-    fprintf(stderr, "failed at FT_Set_Charmap\n");
-#endif
-    return;
+      return;
+    }
   }
 
   ok = gTrue;
@@ -395,7 +437,19 @@ Guchar *FTFont::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
   fontFile->face->size = sizeObj;
   FT_Set_Transform(fontFile->face, &matrix, NULL);
   slot = fontFile->face->glyph;
+#if 1 //~
+  if (fontFile->useGlyphMap) {
+    if (c < 256) {
+      idx = fontFile->glyphMap[c];
+    } else {
+      idx = 0;
+    }
+  } else {
+    idx = FT_Get_Char_Index(fontFile->face, fontFile->charMapOffset + c);
+  }
+#else
   idx = FT_Get_Char_Index(fontFile->face, fontFile->charMapOffset + c);
+#endif
   if (FT_Load_Glyph(fontFile->face, idx, FT_LOAD_DEFAULT) ||
       FT_Render_Glyph(slot,
 		      fontFile->engine->aa ? ft_render_mode_normal :

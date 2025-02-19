@@ -34,6 +34,7 @@ Catalog::Catalog(Object *catDict) {
   pages = NULL;
   pageRefs = NULL;
   numPages = pagesSize = 0;
+  baseURI = NULL;
 
   if (!catDict->isDict()) {
     error(-1, "Catalog object is wrong type (%s)", catDict->getTypeName());
@@ -81,7 +82,6 @@ Catalog::Catalog(Object *catDict) {
   obj.free();
 
   // read base URI
-  baseURI = NULL;
   if (catDict->dictLookup("URI", &obj)->isDict()) {
     if (obj.dictLookup("Base", &obj2)->isString()) {
       baseURI = obj2.getString()->copy();

@@ -136,6 +136,7 @@ static Guchar rc4DecryptByte(Guchar *state, Guchar *x, Guchar *y, Guchar c) {
 // MD5 message digest
 //------------------------------------------------------------------------
 
+// this works around a bug in older Sun compilers
 static inline Gulong rotateLeft(Gulong x, int r) {
   x &= 0xffffffff;
   return ((x << r) | (x >> (32 - r))) & 0xffffffff;

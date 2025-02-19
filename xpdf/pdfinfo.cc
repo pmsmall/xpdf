@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
   GString *fileName;
   GString *userPW;
   Object info;
+  double w, h;
   GBool ok;
 
   // parse args
@@ -115,6 +116,21 @@ int main(int argc, char *argv[]) {
 
   // print linearization info
   printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
+
+  // print page size
+  if (doc->getNumPages() >= 1) {
+    w = doc->getPageWidth(1);
+    h = doc->getPageHeight(1);
+    printf("Page size:    %g x %g pts", w, h);
+    if ((fabs(w - 612) < 0.1 && fabs(h - 792) < 0.1) ||
+	(fabs(w - 792) < 0.1 && fabs(h - 612) < 0.1)) {
+      printf(" (letter)");
+    } else if ((fabs(w - 595) < 0.1 && fabs(h - 842) < 0.1) ||
+	       (fabs(w - 842) < 0.1 && fabs(h - 595) < 0.1)) {
+      printf(" (A4)");
+    }
+    printf("\n");
+  } 
 
   // clean up
   delete doc;

@@ -210,9 +210,9 @@ private:
 class XOutputFTFont: public XOutputFont {
 public:
 
-  XOutputFTFont(GfxFont *gfxFont, double m11, double m12,
-		double m21, double m22, Display *display,
-		XOutputFontCache *cache);
+  XOutputFTFont(GfxFont *gfxFont, GString *pdfBaseFont,
+		double m11, double m12, double m21, double m22,
+		Display *display, XOutputFontCache *cache);
 
   virtual ~XOutputFTFont();
 
@@ -355,7 +355,7 @@ public:
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 #if FREETYPE2
   // Get a FreeType font file.
-  FTFontFile *getFTFont(GfxFont *gfxFont);
+  FTFontFile *getFTFont(GfxFont *gfxFont, GString *pdfBaseFont);
 #else
   // Get a FreeType font file.
   TTFontFile *getTTFont(GfxFont *gfxFont);

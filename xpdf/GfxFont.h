@@ -174,6 +174,10 @@ public:
   // Return the font matrix.
   double *getFontMatrix() { return fontMat; }
 
+  // Return the ascent and descent values.
+  double getAscent() { return ascent; }
+  double getDescent() { return descent; }
+
   // Read an external or embedded font file into a buffer.
   char *readExtFontFile(int *len);
   char *readEmbFontFile(int *len);
@@ -198,6 +202,8 @@ private:
   GString *extFontFile;		// external font file name
   Object charProcs;		// Type3 CharProcs dictionary
   double fontMat[6];		// font matrix
+  double ascent;		// max height above baseline
+  double descent;		// max depth below baseline
   union {
     FontEncoding *encoding;	// 8-bit font encoding
     struct {

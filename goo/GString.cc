@@ -60,6 +60,13 @@ GString::GString(const char *s1, int length1) {
   s[length] = '\0';
 }
 
+GString::GString(GString *str, int idx, int length1) {
+  s = NULL;
+  resize(length = length1);
+  memcpy(s, str->getCString() + idx, length);
+  s[length] = '\0';
+}
+
 GString::GString(GString *str) {
   s = NULL;
   resize(length = str->getLength());

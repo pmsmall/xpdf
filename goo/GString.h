@@ -28,7 +28,10 @@ public:
 
   // Create a string from <length1> chars at <s1>.  This string
   // can contain null characters.
-  GString (const char *s1, int length1);
+  GString(const char *s1, int length1);
+
+  // Create a string from <length1> chars at <idx> in <str>.
+  GString(GString *str, int idx, int length1);
 
   // Copy a string.
   GString(GString *str);

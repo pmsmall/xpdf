@@ -722,3 +722,33 @@ Fixed a bug in the error-checking code in the Separation/DeviceN color
 Added wheel mouse support (mouse buttons 4 and 5).  [Thanks to
   Thorsten Schreiner.]
 Added preliminary support for FreeType 2 (disabled by default).
+
+0.92c (2001-jun-04)
+-------------------
+Fixed a bug in the new image transformation code.
+Look for character names of the form "<letter><digit><digit>", instead
+  of looking for names beginning with a few specific letters.
+T1FontFile::T1FontFile wasn't initializing vars, and ~T1FontFile
+  wasn't checking before calling T1_DeleteFont -- this caused crashes
+  if it tried to open a nonexistent font file.
+Catalog::Catalog didn't set baseURI to NULL early enough.
+Tweak the check for strings.h in the configure script.
+Yet another fix for the image rotation code in XOutputDev --
+  off-by-one problem when upsampling.
+Handle Type 1/1C encodings when using FreeType 2.
+Allow FreeType2 to render user-supplied Type 1 base fonts.
+Opening a new file from full-screen mode tried to scroll.
+Fixed a bug in GfxFont constructor (missing check for NULL base font
+  name).
+Don't crash if a Type 1 font's FontBBox is non-integer.
+Pdfinfo prints page size.
+Tweak for the alpha hack in T1Font/TTFont: sample the middle pixel
+  instead of the top-left pixel.
+Automatically activate the text input widget in the find window.
+Changed a Japanese char code mapping in XOutputDev and TextOutputDev:
+  period was being incorrectly mapped to small circle (end-of-sentence
+  character).
+Add the 0/+/-/z/w key bindings to control the zoom setting.
+Fixed ImageOutputDev (pdfimages) to correctly handle inline image
+  masks.
+Extract ascent/descent info from font descriptor.

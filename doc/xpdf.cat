@@ -383,11 +383,11 @@ xpdf(1)                                                   xpdf(1)
 
        arrows Scroll the current page.
 
-       control-L
-              Redraw the current page.
+       0      Set the zoom factor to zero (72 dpi).
 
-       q      Quit xpdf.
+       +      Zoom in (increment the zoom factor by 1).
 
+       -      Zoom out (decrement the zoom factor by 1).
 
 
 
@@ -399,6 +399,16 @@ xpdf(1)                                                   xpdf(1)
 
 xpdf(1)                                                   xpdf(1)
 
+
+       z      Set the zoom factor to 'page' (fit page to window).
+
+       w      Set  the  zoom factor to 'width' (fit page width to
+              window).
+
+       control-L
+              Redraw the current page.
+
+       q      Quit xpdf.
 
 WEB BROWSERS
        If you want to run xpdf  automatically  from  netscape  or
@@ -445,16 +455,6 @@ REMOTE SERVER MODE
 
        the xpdf server will simply display the specified page.
 
-       The -raise option tells the server to raise its window; it
-       can be specified with or without a file name and page num-
-       ber.
-
-       The -quit option tells the server to close its window  and
-       exit.
-
-CONFIGURATION FILE
-       Xpdf  will  read  a  file  called  .xpdfrc  from your home
-
 
 
                            03 Dec 2000                          7
@@ -466,8 +466,17 @@ CONFIGURATION FILE
 xpdf(1)                                                   xpdf(1)
 
 
-       directory (if it exists).  This file can contain two types
-       of entries.
+       The -raise option tells the server to raise its window; it
+       can be specified with or without a file name and page num-
+       ber.
+
+       The -quit option tells the server to close its window  and
+       exit.
+
+CONFIGURATION FILE
+       Xpdf will read a file called .xpdfrc from your home direc-
+       tory (if it exists).  This file can contain two  types  of
+       entries.
 
        fontpath directory
               Look for Type 1 fonts in directory.  Xpdf uses this
@@ -511,15 +520,6 @@ SEE ALSO
        pdftops(1),  pdftotext(1), pdfinfo(1), pdftopbm(1), pdfim-
        ages(1)
        http://www.foolabs.com/xpdf/
-
-
-
-
-
-
-
-
-
 
 
 

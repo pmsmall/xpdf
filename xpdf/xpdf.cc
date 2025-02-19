@@ -363,6 +363,7 @@ static LTKWindow *psDialog;
 static LTKWindow *openDialog;
 static LTKWindow *saveDialog;
 static LTKWindow *findWin;
+static LTKTextIn *findTextIn;
 static Atom remoteAtom;
 static GC selectGC;
 
@@ -1074,6 +1075,45 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
 	vScrollbar->setPos(vScrollbar->getPos() + 16, canvas->getHeight());
 	canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
       }
+      break;
+    case '0':
+      if (fullScreen) {
+	break;
+      }
+      zoom = 0;
+      displayPage(page, zoom, rotate, gFalse);
+      break;
+    case '+':
+      if (fullScreen) {
+	break;
+      }
+      if (zoom >= minZoom && zoom < maxZoom) {
+	++zoom;
+	displayPage(page, zoom, rotate, gFalse);
+      }
+      break;
+    case '-':
+      if (fullScreen) {
+	break;
+      }
+      if (zoom > minZoom && zoom <= maxZoom) {
+	--zoom;
+	displayPage(page, zoom, rotate, gFalse);
+      }
+      break;
+    case 'z':
+      if (fullScreen) {
+	break;
+      }
+      zoom = zoomPage;
+      displayPage(page, zoom, rotate, gFalse);
+      break;
+    case 'w':
+      if (fullScreen) {
+	break;
+      }
+      zoom = zoomWidth;
+      displayPage(page, zoom, rotate, gFalse);
       break;
     case '\014':		// ^L
       win->redraw();
@@ -2021,8 +2061,10 @@ static void openSelectCbk(LTKWidget *widget, int n, GString *name) {
     openDialog = NULL;
   }
   if (loadFile(name1)) {
-    vScrollbar->setPos(0, canvas->getHeight());
-    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    if (!fullScreen) {
+      vScrollbar->setPos(0, canvas->getHeight());
+      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    }
     displayPage(1, zoom, rotate, gTrue);
   }
 }
@@ -2205,17 +2247,16 @@ static void mapFindWin() {
     findWin = makeFindWindow(app);
     findWin->layout(-1, -1, -1, -1);
     findWin->map();
+    findTextIn = (LTKTextIn *)findWin->findWidget("text");
   }
+  findTextIn->activate(gTrue);
 }
 
 static void findButtonCbk(LTKWidget *button, int n, GBool on) {
-  LTKTextIn *textIn;
-
   if (!doc || doc->getNumPages() == 0)
     return;
   if (n == 1) {
-    textIn = (LTKTextIn *)findWin->findWidget("text");
-    doFind(textIn->getText()->getCString());
+    doFind(findTextIn->getText()->getCString());
   } else {
     delete findWin;
     findWin = NULL;

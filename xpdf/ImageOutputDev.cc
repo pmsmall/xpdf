@@ -40,9 +40,10 @@ void ImageOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   GBool inlineImg) {
   FILE *f;
   int c;
+  int size, i;
 
   // dump JPEG file
-  if (dumpJPEG && str->getKind() == strDCT) {
+  if (dumpJPEG && str->getKind() == strDCT && !inlineImg) {
 
     // open the image file
     sprintf(fileName, "%s-%03d.jpg", fileRoot, imgNum);
@@ -79,8 +80,10 @@ void ImageOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     str->reset();
 
     // copy the stream
-    while ((c = str->getChar()) != EOF)
-      fputc(c, f);
+    size = height * ((width + 7) / 8);
+    for (i = 0; i < size; ++i) {
+      fputc(str->getChar(), f);
+    }
 
     fclose(f);
   }
@@ -99,7 +102,8 @@ void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 
   // dump JPEG file
   if (dumpJPEG && str->getKind() == strDCT &&
-      colorMap->getNumPixelComps() == 3) {
+      colorMap->getNumPixelComps() == 3 &&
+      !inlineImg) {
 
     // open the image file
     sprintf(fileName, "%s-%03d.jpg", fileRoot, imgNum);
