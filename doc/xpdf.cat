@@ -354,12 +354,16 @@ xpdf(1)                                                   xpdf(1)
    Key bindings
        o      Open a new PDF file via a file requester.
 
+       r      Reload the current PDF file.  Note that  Xpdf  will
+              reload  the file automatically (on a page change or
+              redraw) if it has changed since it was last loaded.
+
        f      Find a text string.
 
-       n      Move to the next page.  Scrolls to the top  of  the
+       n      Move  to  the next page.  Scrolls to the top of the
               page, unless scroll lock is turned on.
 
-       p      Move  to  the previous page.  Scrolls to the top of
+       p      Move to the previous page.  Scrolls to the  top  of
               the page, unless scroll lock is turned on.
 
        <Space> or <PageDown> or <Next>
@@ -367,7 +371,7 @@ xpdf(1)                                                   xpdf(1)
               tom, move to next page.
 
        <Backspace> or <Delete> or <PageUp> or <Previous>
-              Scroll  up  on the current page; if already at top,
+              Scroll up on the current page; if already  at  top,
               move to previous page.
 
        <Home> Scroll to top of current page.
@@ -382,12 +386,8 @@ xpdf(1)                                                   xpdf(1)
        q      Quit xpdf.
 
 WEB BROWSERS
-       If you want to run xpdf  automatically  from  netscape  or
-       mosaic  (and  probably other browsers) when you click on a
-       link to a PDF file, you need to edit (or create) the files
-       .mime.types  and  .mailcap  in  your  home  directory.  In
-       .mime.types add the line:
-
+       If  you  want  to  run xpdf automatically from netscape or
+       mosaic (and probably other browsers) when you click  on  a
 
 
 
@@ -400,6 +400,10 @@ WEB BROWSERS
 xpdf(1)                                                   xpdf(1)
 
 
+       link to a PDF file, you need to edit (or create) the files
+       .mime.types and  .mailcap  in  your  home  directory.   In
+       .mime.types add the line:
+
               application/pdf pdf
 
        In .mailcap add the lines:
@@ -410,27 +414,27 @@ xpdf(1)                                                   xpdf(1)
        Make sure that xpdf is on your executable search path.
 
        When you click on a URL link in a PDF file, xpdf will exe-
-       cute   the   command   specified  by  the  xpdf.urlCommand
-       resource, replacing an occurrence of '%s'  with  the  URL.
-       For  example,  to  call  netscape  with  the URL, use this
+       cute  the  command  specified   by   the   xpdf.urlCommand
+       resource,  replacing  an  occurrence of '%s' with the URL.
+       For example, to call  netscape  with  the  URL,  use  this
        resource setting:
 
               xpdf.urlCommand: netscape -remote 'openURL(%s)'
 
 REMOTE SERVER MODE
-       Xpdf can be started in remote server mode by specifying  a
-       server  name  (in  addition to the file name and page num-
+       Xpdf  can be started in remote server mode by specifying a
+       server name (in addition to the file name  and  page  num-
        ber).  For example:
 
               xpdf -remote myServer file.pdf
 
-       If there is currently no xpdf running in server mode  with
+       If  there is currently no xpdf running in server mode with
        the name 'myServer', a new xpdf window will be opened.  If
        another command:
 
               xpdf -remote myServer another.pdf 9
 
-       is issued, a  new  copy  of  xpdf  will  not  be  started.
+       is  issued,  a  new  copy  of  xpdf  will  not be started.
        Instead, the first xpdf (the server) will load another.pdf
        and display page nine.  If the file name is the same:
 
@@ -442,18 +446,14 @@ REMOTE SERVER MODE
        can be specified with or without a file name and page num-
        ber.
 
-       The -quit option tells the server to close its window  and
+       The  -quit option tells the server to close its window and
        exit.
 
 CONFIGURATION FILE
        Xpdf will read a file called .xpdfrc from your home direc-
-       tory (if it exists).  This file can contain two  types  of
+       tory  (if  it exists).  This file can contain two types of
        entries.
 
-       fontpath directory
-              Look for Type 1 fonts in directory.  Xpdf uses this
-              only to get the font encoding.   For  display,  the
-              font must also be mapped with a fontmap entry.
 
 
 
@@ -466,19 +466,24 @@ CONFIGURATION FILE
 xpdf(1)                                                   xpdf(1)
 
 
+       fontpath directory
+              Look for Type 1 fonts in directory.  Xpdf uses this
+              only  to  get  the font encoding.  For display, the
+              font must also be mapped with a fontmap entry.
+
        fontmap PDF-font X-font
-              Map  PDF-font  (as  referenced in a PDF file) to X-
-              font, which should be a standard X font  descriptor
+              Map PDF-font (as referenced in a PDF  file)  to  X-
+              font,  which should be a standard X font descriptor
               with '%s' in the pixel size position.
 
        For example, use:
 
-              fontmap        TimesCE-Roman       -*-times-medium-
+              fontmap       TimesCE-Roman        -*-times-medium-
               r-*-*-%s-*-*-*-*-*-iso8859-2
 
-       to map the  Central  European  (Latin-2)  version  of  the
-       Times-Roman  font.  This assumes that you've installed the
-       appropriate X fonts (see mkfontdir(1)).  Xpdf knows  about
+       to  map  the  Central  European  (Latin-2)  version of the
+       Times-Roman font.  This assumes that you've installed  the
+       appropriate  X fonts (see mkfontdir(1)).  Xpdf knows about
        the ISO8859-2 encoding, so you don't need a fontpath entry
        for these fonts.  To use the Bakoma Type 1 fonts, do this:
 
@@ -489,25 +494,20 @@ xpdf(1)                                                   xpdf(1)
               mal--%s-*-*-*-p-*-adobe-fontspecific
               etc...
 
-       This  assumes  that the Type 1 font files are available in
+       This assumes that the Type 1 font files are  available  in
        the directory /home/derekn/fonts/bakoma.
 
 BUGS
        No support for Type 3 fonts.
 
 AUTHOR
-       The  xpdf  software  and   documentation   are   copyright
+       The   xpdf   software   and  documentation  are  copyright
        1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
-       pdftops(1),  pdftotext(1), pdfinfo(1), pdftopbm(1), pdfim-
+       pdftops(1), pdftotext(1), pdfinfo(1), pdftopbm(1),  pdfim-
        ages(1)
        http://www.foolabs.com/xpdf/
-
-
-
-
-
 
 
 

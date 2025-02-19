@@ -271,6 +271,20 @@ GBool GfxResources::lookupXObject(char *name, Object *obj) {
   return gFalse;
 }
 
+GBool GfxResources::lookupXObjectNF(char *name, Object *obj) {
+  GfxResources *resPtr;
+
+  for (resPtr = this; resPtr; resPtr = resPtr->next) {
+    if (resPtr->xObjDict.isDict()) {
+      if (!resPtr->xObjDict.dictLookupNF(name, obj)->isNull())
+	return gTrue;
+      obj->free();
+    }
+  }
+  error(-1, "XObject '%s' is unknown", name);
+  return gFalse;
+}
+
 void GfxResources::lookupColorSpace(char *name, Object *obj) {
   GfxResources *resPtr;
 
@@ -1620,7 +1634,7 @@ int Gfx::getNextChar16(GfxFontEncoding16 *enc, Guchar *p, int *c16) {
 //------------------------------------------------------------------------
 
 void Gfx::opXObject(Object args[], int numArgs) {
-  Object obj1, obj2;
+  Object obj1, obj2, refObj;
 #if OPI_SUPPORT
   Object opiDict;
 #endif
@@ -1640,14 +1654,17 @@ void Gfx::opXObject(Object args[], int numArgs) {
   }
 #endif
   obj1.streamGetDict()->lookup("Subtype", &obj2);
-  if (obj2.isName("Image"))
-    doImage(obj1.getStream(), gFalse);
-  else if (obj2.isName("Form"))
+  if (obj2.isName("Image")) {
+    res->lookupXObjectNF(args[0].getName(), &refObj);
+    doImage(&refObj, obj1.getStream(), gFalse);
+    refObj.free();
+  } else if (obj2.isName("Form")) {
     doForm(&obj1);
-  else if (obj2.isName())
+  } else if (obj2.isName()) {
     error(getPos(), "Unknown XObject subtype '%s'", obj2.getName());
-  else
+  } else {
     error(getPos(), "XObject subtype is missing or wrong type");
+  }
   obj2.free();
 #if OPI_SUPPORT
   if (opiDict.isDict()) {
@@ -1658,7 +1675,7 @@ void Gfx::opXObject(Object args[], int numArgs) {
   obj1.free();
 }
 
-void Gfx::doImage(Stream *str, GBool inlineImg) {
+void Gfx::doImage(Object *ref, Stream *str, GBool inlineImg) {
   Dict *dict;
   Object obj1, obj2;
   int width, height;
@@ -1738,7 +1755,7 @@ void Gfx::doImage(Stream *str, GBool inlineImg) {
     obj1.free();
 
     // draw it
-    out->drawImageMask(state, str, width, height, invert, inlineImg);
+    out->drawImageMask(state, ref, str, width, height, invert, inlineImg);
 
   } else {
 
@@ -1775,7 +1792,7 @@ void Gfx::doImage(Stream *str, GBool inlineImg) {
     }
 
     // draw it
-    out->drawImage(state, str, width, height, colorMap, inlineImg);
+    out->drawImage(state, ref, str, width, height, colorMap, inlineImg);
     delete colorMap;
     str->close();
   }
@@ -1983,7 +2000,7 @@ void Gfx::opBeginImage(Object args[], int numArgs) {
 
   // display the image
   if (str) {
-    doImage(str, gTrue);
+    doImage(NULL, str, gTrue);
   
     // skip 'EI' tag
     c1 = str->getBaseStream()->getChar();

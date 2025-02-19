@@ -35,7 +35,7 @@ ImageOutputDev::~ImageOutputDev() {
   gfree(fileRoot);
 }
 
-void ImageOutputDev::drawImageMask(GfxState *state, Stream *str,
+void ImageOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) {
   FILE *f;
@@ -86,9 +86,9 @@ void ImageOutputDev::drawImageMask(GfxState *state, Stream *str,
   }
 }
 
-void ImageOutputDev::drawImage(GfxState *state, Stream *str, int width,
-			       int height, GfxImageColorMap *colorMap,
-			       GBool inlineImg) {
+void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
+			       int width, int height,
+			       GfxImageColorMap *colorMap, GBool inlineImg) {
   FILE *f;
   ImageStream *imgStr;
   Guchar pixBuf[4];

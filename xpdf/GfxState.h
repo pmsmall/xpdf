@@ -485,7 +485,8 @@ public:
   double *getBBox() { return bbox; }
   double getXStep() { return xStep; }
   double getYStep() { return yStep; }
-  Dict *getResDict() { return resDict.isDict() ? resDict.getDict() : NULL; }
+  Dict *getResDict()
+    { return resDict.isDict() ? resDict.getDict() : (Dict *)NULL; }
   double *getMatrix() { return matrix; }
   Object *getContentStream() { return &contentStream; }
 

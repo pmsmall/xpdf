@@ -679,3 +679,19 @@ Renamed Pattern to GfxPattern to avoid clashes with Windows and MacOS
   types.
 Added CNS (Big5) Chinese font support (CHINESE_CNS_SUPPORT); renamed
   CHINESE_SUPPORT to CHINESE_GB_SUPPORT.
+
+0.91c (2000-nov-19)
+-------------------
+Fix an endianness problem in the Type 1 font code which resulted in an
+  incorrect display with "-t1lib plain" on big-endian systems.
+CCITTFax stream decoder will skip over extra zero bits at end of line,
+  even if EncodedByteAlign flag wasn't set.
+Added Big5 support to pdftotext (with CHINESE_CNS_SUPPORT enabled).
+Fixed a typo in the CNS/Big5 encoding translation table.
+Change the form code in PSOutputDev to store images in arrays of
+  strings.
+The xref reconstruction (for damaged files) now also looks for
+  'endstream' tags, and the parser uses this information when setting
+  up stream objects.
+In pdfinfo, convert Unicode chars in the 00xx range into 8-bit chars;
+  print a warning if there are any other Unicode chars.

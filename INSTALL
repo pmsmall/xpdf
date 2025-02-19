@@ -165,9 +165,27 @@ With cygwin, the build procedure is the same as for Unix:
 
 With djgpp:
 
+  * You'll need several of the Unix tool ports (cat, sed, etc.)
+    available from http://www.delorie.com/ .
+
   * Open a DOS window.
 
   * ./dj_make
+
+With djgpp, for DOS 6 (instead of Win32):
+
+  * ./dj_make
+
+  * EXE2COFF pdftops.exe
+
+  * COPY /B CWSDSTUB.EXE+pdftops pdftops.exe
+
+  * and similarly for the other executables
+
+  * CWSDSTUB.EXE comes from:
+        ftp://ftp.simtel.net/pub/simtelnet/gnu/djgpp/v2misc/csdpmi5b.zip
+    EXE2COFF comes from:
+        ftp://ftp.simtel.net/pub/simtelnet/gnu/djgpp/v2/djdev203.zip
 
 With the Microsoft tools:
 

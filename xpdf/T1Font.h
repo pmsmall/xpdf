@@ -35,7 +35,6 @@ private:
 
   GBool aa;			// use anti-aliasing?
   GBool aaHigh;			// use high-res anti-aliasing?
-  GBool bigEndian;
   GBool ok;
 
   friend class T1FontFile;

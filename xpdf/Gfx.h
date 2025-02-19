@@ -67,6 +67,7 @@ public:
 
   GfxFont *lookupFont(char *name);
   GBool lookupXObject(char *name, Object *obj);
+  GBool lookupXObjectNF(char *name, Object *obj);
   void lookupColorSpace(char *name, Object *obj);
   GfxPattern *lookupPattern(char *name);
   GBool lookupGState(char *name, Object *obj);
@@ -206,7 +207,7 @@ private:
 
   // XObject operators
   void opXObject(Object args[], int numArgs);
-  void doImage(Stream *str, GBool inlineImg);
+  void doImage(Object *ref, Stream *str, GBool inlineImg);
   void doForm(Object *str);
   void doForm1(Object *str, Dict *resDict, double *matrix, double *bbox);
 

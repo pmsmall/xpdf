@@ -1277,8 +1277,9 @@ int CCITTFaxStream::lookChar() {
 #if 0 //~
   GBool err;
 #endif
+  GBool gotEOL;
   int ret;
-  int bits, i, n;
+  int bits, i;
 
   // if at eof just return EOF
   if (eof && codingLine[a0] >= columns) {
@@ -1433,58 +1434,53 @@ int CCITTFaxStream::lookChar() {
       inputBits &= ~7;
     }
 
-    // check for end-of-line marker, end-of-block marker, and
-    // 2D encoding tag
-    if (endOfBlock) {
+    // check for end-of-line marker, skipping over any extra zero bits
+    gotEOL = gFalse;
+    if (!endOfBlock && row == rows - 1) {
+      eof = gTrue;
+    } else {
       code1 = lookBits(12);
-      if (code1 == EOF) {
+      while (code1 == 0) {
+	eatBits(1);
+	code1 = lookBits(12);
+      }
+      if (code1 == 0x001) {
+	eatBits(12);
+	gotEOL = gTrue;
+      } else if (code1 == EOF) {
 	eof = gTrue;
-      } else if (code1 == 0x001) {
+      }
+    }
+
+    // get 2D encoding tag
+    if (!eof && encoding > 0) {
+      nextLine2D = !lookBits(1);
+      eatBits(1);
+    }
+
+    // check for end-of-block marker
+    if (endOfBlock && gotEOL) {
+      code1 = lookBits(12);
+      if (code1 == 0x001) {
 	eatBits(12);
 	if (encoding > 0) {
-	  nextLine2D = !lookBits(1);
+	  lookBits(1);
 	  eatBits(1);
 	}
-	code1 = lookBits(12);
-	if (code1 == 0x001) {
-	  eatBits(12);
-	  if (encoding > 0) {
-	    lookBits(1);
-	    eatBits(1);
-	  }
-	  if (encoding >= 0) {
-	    for (i = 0; i < 4; ++i) {
-	      code1 = lookBits(12);
-	      if (code1 != 0x001) {
-		error(getPos(), "Bad RTC code in CCITTFax stream");
-	      }
-	      eatBits(12);
-	      if (encoding > 0) {
-		lookBits(1);
-		eatBits(1);
-	      }
+	if (encoding >= 0) {
+	  for (i = 0; i < 4; ++i) {
+	    code1 = lookBits(12);
+	    if (code1 != 0x001) {
+	      error(getPos(), "Bad RTC code in CCITTFax stream");
+	    }
+	    eatBits(12);
+	    if (encoding > 0) {
+	      lookBits(1);
+	      eatBits(1);
 	    }
 	  }
-	  eof = gTrue;
 	}
-      } else {
-	if (encoding > 0) {
-	  nextLine2D = !lookBits(1);
-	  eatBits(1);
-	}
-      }
-    } else {
-      if (row == rows - 1) {
 	eof = gTrue;
-      } else {
-	for (n = 0; n < 11 && lookBits(n) == 0; ++n) ;
-	if (n == 11 && lookBits(12) == 0x001) {
-	  eatBits(12);
-	}
-	if (encoding > 0) {
-	  nextLine2D = !lookBits(1);
-	  eatBits(1);
-	}
       }
     }
 
@@ -1597,10 +1593,11 @@ short CCITTFaxStream::getWhiteCode() {
   code = 0; // make gcc happy
   if (endOfBlock) {
     code = lookBits(12);
-    if ((code >> 5) == 0)
+    if ((code >> 5) == 0) {
       p = &whiteTab1[code];
-    else
+    } else {
       p = &whiteTab2[code >> 3];
+    }
     if (p->bits > 0) {
       eatBits(p->bits);
       return p->n;
@@ -1630,8 +1627,9 @@ short CCITTFaxStream::getWhiteCode() {
     }
   }
   error(getPos(), "Bad white code (%04x) in CCITTFax stream", code);
-  // return a positive number so that the caller doesn't go into an
-  // infinite loop
+  // eat a bit and return a positive number so that the caller doesn't
+  // go into an infinite loop
+  eatBits(1);
   return 1;
 }
 
@@ -1643,12 +1641,13 @@ short CCITTFaxStream::getBlackCode() {
   code = 0; // make gcc happy
   if (endOfBlock) {
     code = lookBits(13);
-    if ((code >> 7) == 0)
+    if ((code >> 7) == 0) {
       p = &blackTab1[code];
-    else if ((code >> 9) == 0)
+    } else if ((code >> 9) == 0) {
       p = &blackTab2[(code >> 1) - 64];
-    else
+    } else {
       p = &blackTab3[code >> 7];
+    }
     if (p->bits > 0) {
       eatBits(p->bits);
       return p->n;
@@ -1691,8 +1690,9 @@ short CCITTFaxStream::getBlackCode() {
     }
   }
   error(getPos(), "Bad black code (%04x) in CCITTFax stream", code);
-  // return a positive number so that the caller doesn't go into an
-  // infinite loop
+  // eat a bit and return a positive number so that the caller doesn't
+  // go into an infinite loop
+  eatBits(1);
   return 1;
 }
 
@@ -1701,9 +1701,14 @@ short CCITTFaxStream::lookBits(int n) {
 
   while (inputBits < n) {
     if ((c = str->getChar()) == EOF) {
-      if (inputBits == 0)
+      if (inputBits == 0) {
 	return EOF;
-      c = 0;
+      }
+      // near the end of the stream, the caller may ask for more bits
+      // than are available, but there may still be a valid code in
+      // however many bits are available -- we need to return correct
+      // data in this case
+      return (inputBuf << (n - inputBits)) & (0xffff >> (16 - n));
     }
     inputBuf = (inputBuf << 8) + c;
     inputBits += 8;

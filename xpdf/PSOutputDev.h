@@ -126,11 +126,11 @@ public:
   virtual void drawString16(GfxState *state, GString *s);
 
   //----- image drawing
-  virtual void drawImageMask(GfxState *state, Stream *str,
+  virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			     int width, int height, GBool invert,
 			     GBool inlineImg);
-  virtual void drawImage(GfxState *state, Stream *str, int width,
-			 int height, GfxImageColorMap *colorMap,
+  virtual void drawImage(GfxState *state, Object *ref, Stream *str,
+			 int width, int height, GfxImageColorMap *colorMap,
 			 GBool inlineImg);
 
 #if OPI_SUPPORT
@@ -146,6 +146,8 @@ private:
   void setupEmbeddedType1Font(Ref *id, char *psName);
   void setupEmbeddedType1Font(GString *fileName, char *psName);
   void setupEmbeddedType1CFont(GfxFont *font, Ref *id, char *psName);
+  void setupImages(Dict *resDict);
+  void setupImage(Ref id, Stream *str);
   void doPath(GfxPath *path);
   void doImageL1(GfxImageColorMap *colorMap,
 		 GBool invert, GBool inlineImg,
@@ -153,7 +155,7 @@ private:
   void doImageL1Sep(GfxImageColorMap *colorMap,
 		    GBool invert, GBool inlineImg,
 		    Stream *str, int width, int height, int len);
-  void doImageL2(GfxImageColorMap *colorMap,
+  void doImageL2(Object *ref, GfxImageColorMap *colorMap,
 		 GBool invert, GBool inlineImg,
 		 Stream *str, int width, int height, int len);
   void dumpColorSpaceL2(GfxColorSpace *colorSpace);

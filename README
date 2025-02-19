@@ -338,12 +338,12 @@ Adobe Systems Inc., _Supporting the DCT Filters in PostScript Level
 http://www.adobe.com/supportservice/devrelations/PDFS/TN/5116.PS2_DCT.PDF
 [Description of the DCTDecode filter parameters.]
 
-Aldus Corp., _OPI: Open Prepress Interface Specification 1.3_.  1993.
-http://partners.adobe.com/asn/developer/PDFS/TN/OPI_13.pdf
-
 Adobe Systems Inc., _Open Prepress Interface (OPI) Specification -
 Version 2.0_, Adobe Developer Support Technical Note #5660.  2000.
 http://partners.adobe.com/asn/developer/PDFS/TN/5660.OPI_2.0.pdf
+
+Aldus Corp., _OPI: Open Prepress Interface Specification 1.3_.  1993.
+http://partners.adobe.com/asn/developer/PDFS/TN/OPI_13.pdf
 
 Anonymous, RC4 source code.
 ftp://ftp.ox.ac.uk/pub/crypto/misc/rc4.tar.gz

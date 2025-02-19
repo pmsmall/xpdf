@@ -47,7 +47,6 @@ T1FontEngine::T1FontEngine(Display *display, Visual *visual, int depth,
   } else {
     T1_AANSetGrayValues(0, 1);
   }
-  bigEndian = (GBool)T1_CheckEndian();
   ok = gTrue;
 }
 
@@ -342,17 +341,10 @@ GBool T1Font::drawChar(Drawable d, int w, int h, GC gc,
       for (xx = 0; xx < gw; xx += 8) {
 	pix = *p++;
 	for (xx1 = xx; xx1 < xx + 8 && xx1 < gw; ++xx1) {
-	  if (engine->bigEndian) {
-	    if (pix & 0x80) {
-	      XPutPixel(image, xx1, yy, colors[1]);
-	    }
-	    pix <<= 1;
-	  } else {
-	    if (pix & 0x01) {
-	      XPutPixel(image, xx1, yy, colors[1]);
-	    }
-	    pix >>= 1;
+	  if (pix & 0x01) {
+	    XPutPixel(image, xx1, yy, colors[1]);
 	  }
+	  pix >>= 1;
 	}
       }
     }

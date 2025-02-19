@@ -1078,7 +1078,8 @@ GfxPatternColorSpace::~GfxPatternColorSpace() {
 }
 
 GfxColorSpace *GfxPatternColorSpace::copy() {
-  return new GfxPatternColorSpace(under ? under->copy() : NULL);
+  return new GfxPatternColorSpace(under ? under->copy() :
+				          (GfxColorSpace *)NULL);
 }
 
 GfxColorSpace *GfxPatternColorSpace::parse(Array *arr) {

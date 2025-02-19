@@ -397,7 +397,7 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
   if (!doForm)
     writePS("%%%%EndProlog\n");
 
-  // set up fonts
+  // set up fonts and images
   type3Warning = gFalse;
   if (!doForm)
     writePS("%%%%BeginSetup\n");
@@ -406,6 +406,7 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
     page = catalog->getPage(pg);
     if ((resDict = page->getResourceDict())) {
       setupFonts(resDict);
+      setupImages(resDict);
     }
     formWidgets = new FormWidgets(page->getAnnots(&obj1));
     obj1.free();
@@ -414,6 +415,7 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
 	obj1.streamGetDict()->lookup("Resources", &obj2);
 	if (obj2.isDict()) {
 	  setupFonts(obj2.getDict());
+	  setupImages(obj2.getDict());
 	}
 	obj2.free();
       }
@@ -871,6 +873,122 @@ void PSOutputDev::setupEmbeddedType1CFont(GfxFont *font, Ref *id,
   }
 }
 
+void PSOutputDev::setupImages(Dict *resDict) {
+  Object xObjDict, xObj, xObjRef, resObj, subtypeObj;
+  int i;
+
+  if (!doForm) {
+    return;
+  }
+
+  resDict->lookup("XObject", &xObjDict);
+  if (xObjDict.isDict()) {
+    for (i = 0; i < xObjDict.dictGetLength(); ++i) {
+      xObjDict.dictGetValNF(i, &xObjRef);
+      xObjDict.dictGetVal(i, &xObj);
+      if (xObj.isStream()) {
+	xObj.streamGetDict()->lookup("Resources", &resObj);
+	if (resObj.isDict()) {
+	  setupImages(resObj.getDict());
+	}
+	resObj.free();
+	xObj.streamGetDict()->lookup("Subtype", &subtypeObj);
+	if (subtypeObj.isName("Image")) {
+	  if (xObjRef.isRef()) {
+	    setupImage(xObjRef.getRef(), xObj.getStream());
+	  } else {
+	    error(-1, "Image in resource dict is not an indirect reference");
+	  }
+	}
+	subtypeObj.free();
+      }
+      xObj.free();
+      xObjRef.free();
+    }
+  }
+  xObjDict.free();
+}
+
+void PSOutputDev::setupImage(Ref id, Stream *str) {
+  int c;
+  int size, line, col, i;
+
+  // construct an encoder stream
+  str = new ASCII85Encoder(str);
+
+  // compute image data size
+  str->reset();
+  col = size = 0;
+  do {
+    do {
+      c = str->getChar();
+    } while (c == '\n' || c == '\r');
+    if (c == '~' || c == EOF) {
+      break;
+    }
+    if (c == 'z') {
+      ++col;
+    } else {
+      ++col;
+      for (i = 1; i <= 4; ++i) {
+	do {
+	  c = str->getChar();
+	} while (c == '\n' || c == '\r');
+	if (c == '~' || c == EOF) {
+	  break;
+	}
+	++col;
+      }
+    }
+    if (col > 245) {
+      ++size;
+      col = 0;
+    }
+  } while (c != '~' && c != EOF);
+  ++size;
+  writePS("%d array dup /ImData_%d_%d exch def\n", size, id.num, id.gen);
+
+  // write the data into the array
+  str->reset();
+  line = col = 0;
+  writePS("dup 0 <~");
+  do {
+    do {
+      c = str->getChar();
+    } while (c == '\n' || c == '\r');
+    if (c == '~' || c == EOF) {
+      break;
+    }
+    if (c == 'z') {
+      fputc(c, f);
+      ++col;
+    } else {
+      fputc(c, f);
+      ++col;
+      for (i = 1; i <= 4; ++i) {
+	do {
+	  c = str->getChar();
+	} while (c == '\n' || c == '\r');
+	if (c == '~' || c == EOF) {
+	  break;
+	}
+	fputc(c, f);
+	++col;
+      }
+    }
+    if (col > 245) {
+      writePS("~> put\n");
+      ++line;
+      writePS("dup %d <~", line);
+      col = 0;
+    }
+  } while (c != '~' && c != EOF);
+  writePS("~> put\n");
+  writePS("pop\n");
+
+  delete str;
+}
+
 void PSOutputDev::startPage(int pageNum, GfxState *state) {
   int x1, y1, x2, y2, width, height, t;
 
@@ -1210,7 +1328,7 @@ void PSOutputDev::drawString16(GfxState *state, GString *s) {
   }
 }
 
-void PSOutputDev::drawImageMask(GfxState *state, Stream *str,
+void PSOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				int width, int height, GBool invert,
 				GBool inlineImg) {
   int len;
@@ -1219,12 +1337,12 @@ void PSOutputDev::drawImageMask(GfxState *state, Stream *str,
   if (psOutLevel1 || psOutLevel1Sep) {
     doImageL1(NULL, invert, inlineImg, str, width, height, len);
   } else {
-    doImageL2(NULL, invert, inlineImg, str, width, height, len);
+    doImageL2(ref, NULL, invert, inlineImg, str, width, height, len);
   }
 }
 
-void PSOutputDev::drawImage(GfxState *state, Stream *str, int width,
-			    int height, GfxImageColorMap *colorMap,
+void PSOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
+			    int width, int height, GfxImageColorMap *colorMap,
 			    GBool inlineImg) {
   int len;
 
@@ -1236,7 +1354,7 @@ void PSOutputDev::drawImage(GfxState *state, Stream *str, int width,
     //~ handle indexed, separation, ... color spaces
     doImageL1Sep(colorMap, gFalse, inlineImg, str, width, height, len);
   } else {
-    doImageL2(colorMap, gFalse, inlineImg, str, width, height, len);
+    doImageL2(ref, colorMap, gFalse, inlineImg, str, width, height, len);
   }
 }
 
@@ -1360,7 +1478,7 @@ void PSOutputDev::doImageL1Sep(GfxImageColorMap *colorMap,
   gfree(lineBuf);
 }
 
-void PSOutputDev::doImageL2(GfxImageColorMap *colorMap,
+void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
 			    GBool invert, GBool inlineImg,
 			    Stream *str, int width, int height, int len) {
   GString *s;
@@ -1373,6 +1491,11 @@ void PSOutputDev::doImageL2(GfxImageColorMap *colorMap,
   if (colorMap) {
     dumpColorSpaceL2(colorMap->getColorSpace());
     writePS(" setcolorspace\n");
+  }
+
+  // set up to use the array created by setupImages()
+  if (doForm && !inlineImg) {
+    writePS("ImData_%d_%d 0\n", ref->getRefNum(), ref->getRefGen());
   }
 
   // image dictionary
@@ -1410,22 +1533,32 @@ void PSOutputDev::doImageL2(GfxImageColorMap *colorMap,
 
   if (doForm) {
 
-    // data source
-    writePS("  /DataSource <~\n");
-
-    // write image data stream, using ASCII85 encode filter
     if (inlineImg) {
+
+      // data source
+      writePS("  /DataSource <~\n");
+
+      // write image data stream, using ASCII85 encode filter
       str = new FixedLengthEncoder(str, len);
+      str = new ASCII85Encoder(str);
+      str->reset();
+      while ((c = str->getChar()) != EOF) {
+	fputc(c, f);
+      }
+      fputc('\n', f);
+      delete str;
+
+    } else {
+      writePS("  /DataSource { 2 copy get exch 1 add exch }\n");
     }
-    str = new ASCII85Encoder(str);
-    str->reset();
-    while ((c = str->getChar()) != EOF)
-      fputc(c, f);
-    fputc('\n', f);
-    delete str;
 
     // end of image dictionary
     writePS(">>\n%s\n", colorMap ? "image" : "imagemask");
+
+    // get rid of the array and index
+    if (!inlineImg) {
+      writePS("pop pop\n");
+    }
 
   } else {
 

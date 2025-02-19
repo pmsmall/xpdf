@@ -227,6 +227,43 @@ static char *japan12Abbrev1[6] = {
 
 #endif
 
+#if CHINESE_CNS_SUPPORT
+
+static Gushort cns13Map1[99] = {
+  // 0-98
+  0,      0xa140, 0xa149, 0xa1a8, 0xa1ad, 0xa243, 0xa248, 0xa1ae,
+  0xa1a6, 0xa15d, 0xa15e, 0xa1af, 0xa1cf, 0xa141, 0xa1df, 0xa144,
+  0xa241, 0xa2af, 0xa2b0, 0xa2b1, 0xa2b2, 0xa2b3, 0xa2b4, 0xa2b5,
+  0xa2b6, 0xa2b7, 0xa2b8, 0xa147, 0xa146, 0xa1d5, 0xa1d7, 0xa1d6,
+  0xa148, 0xa249, 0xa2cf, 0xa2d0, 0xa2d1, 0xa2d2, 0xa2d3, 0xa2d4,
+  0xa2d5, 0xa2d6, 0xa2d7, 0xa2d8, 0xa2d9, 0xa2da, 0xa2db, 0xa2dc,
+  0xa2dd, 0xa2de, 0xa2df, 0xa2e0, 0xa2e1, 0xa2e2, 0xa2e3, 0xa2e4,
+  0xa2e5, 0xa2e6, 0xa2e7, 0xa2e8, 0xa165, 0xa242, 0xa166, 0xa173,
+  0xa15a, 0xa1a5, 0xa2e9, 0xa2ea, 0xa2eb, 0xa2ec, 0xa2ed, 0xa2ee,
+  0xa2ef, 0xa2f0, 0xa2f1, 0xa2f2, 0xa2f3, 0xa2f4, 0xa2f5, 0xa2f6,
+  0xa2f7, 0xa2f8, 0xa2f9, 0xa2fa, 0xa2fb, 0xa2fc, 0xa2fd, 0xa2fe,
+  0xa340, 0xa341, 0xa342, 0xa343, 0xa161, 0xa159, 0xa162, 0xa1e3,
+  0,      0,      0xa14b
+};
+
+static Gushort cns13Map2[95] = {
+  // 13648-13742
+          0xa140, 0xa149, 0xa1a8, 0xa1ad, 0xa244, 0xa248, 0xa1ae,
+  0xa1a6, 0xa15d, 0xa15e, 0xa1af, 0xa1cf, 0xa141, 0xa1df, 0xa144,
+  0xa241, 0xa2af, 0xa2b0, 0xa2b1, 0xa2b2, 0xa2b3, 0xa2b4, 0xa2b5,
+  0xa2b6, 0xa2b7, 0xa2b8, 0xa147, 0xa146, 0xa1d5, 0xa1d7, 0xa1d6,
+  0xa148, 0xa249, 0xa2cf, 0xa2d0, 0xa2d1, 0xa2d2, 0xa2d3, 0xa2d4,
+  0xa2d5, 0xa2d6, 0xa2d7, 0xa2d8, 0xa2d9, 0xa2da, 0xa2db, 0xa2dc,
+  0xa2dd, 0xa2de, 0xa2df, 0xa2e0, 0xa2e1, 0xa2e2, 0xa2e3, 0xa2e4,
+  0xa2e5, 0xa2e6, 0xa2e7, 0xa2e8, 0xa165, 0xa242, 0xa166, 0xa173,
+  0xa15a, 0xa1a5, 0xa2e9, 0xa2ea, 0xa2eb, 0xa2ec, 0xa2ed, 0xa2ee,
+  0xa2ef, 0xa2f0, 0xa2f1, 0xa2f2, 0xa2f3, 0xa2f4, 0xa2f5, 0xa2f6,
+  0xa2f7, 0xa2f8, 0xa2f9, 0xa2fa, 0xa2fb, 0xa2fc, 0xa2fd, 0xa2fe,
+  0xa340, 0xa341, 0xa342, 0xa343, 0xa161, 0xa159, 0xa162, 0xa1c3
+};
+
+#endif
+
 //------------------------------------------------------------------------
 // TextString
 //------------------------------------------------------------------------
@@ -500,9 +537,179 @@ void TextString::addChar16(GfxState *state, double x, double y,
     break;
 
   case font16AdobeGB12:
+#if CHINESE_GB_SUPPORT
+#endif
     break;
 
   case font16AdobeCNS13:
+#if CHINESE_CNS_SUPPORT
+    if (c <= 98) {
+      c1 = cns13Map1[c];
+    } else if (c <= 502) {
+      if (c == 247) {
+	c1 = 0xa1f7;
+      } else if (c == 248) {
+	c1 = 0xa1f6;
+      } else {
+	t1 = (c - 99) / 157;
+	t2 = (c - 99) % 157;
+	if (t2 <= 62) {
+	  c1 = 0xa140 + (t1 << 8) + t2;
+	} else {
+	  c1 = 0xa162 + (t1 << 8) + t2;
+	}
+      }
+    } else if (c <= 505) {
+      c1 = 0xa3bd + (c - 503);
+    } else if (c <= 594) {
+      c1 = 0;
+    } else if (c <= 5995) {
+      if (c == 2431) {
+	c1 = 0xacfe;
+      } else if (c == 4308) {
+	c1 = 0xbe52;
+      } else if (c == 5221) {
+	c1 = 0xc2cb;
+      } else if (c == 5495) {
+	c1 = 0xc456;
+      } else if (c == 5550) {
+	c1 = 0xc3ba;
+      } else if (c == 5551) {
+	c1 = 0xc3b9;
+      } else {
+	if (c >= 2007 && c <= 2430) {
+	  t1 = c - 594;
+	} else if (c >= 4309 && c <= 4695) {
+	  t1 = c - 596;
+	} else if (c >= 5222 && c <= 5410) {
+	  t1 = c - 596;
+	} else if (c >= 5496 && c <= 5641) {
+	  t1 = c - 596;
+	} else {
+	  t1 = c - 595;
+	}
+	t2 = t1 % 157;
+	t1 /= 157;
+	if (t2 <= 62) {
+	  c1 = 0xa440 + (t1 << 8) + t2;
+	} else {
+	  c1 = 0xa462 + (t1 << 8) + t2;
+	}
+      }
+    } else if (c <= 13645) {
+      if (c == 6039) {
+	c1 = 0xc9be;
+      } else if (c == 6134) {
+	c1 = 0xcaf7;
+      } else if (c == 8142) {
+	c1 = 0xdadf;
+      } else if (c == 8788) {
+	c1 = 0xd6cc;
+      } else if (c == 8889) {
+	c1 = 0xd77a;
+      } else if (c == 10926) {
+	c1 = 0xebf1;
+      } else if (c == 11073) {
+	c1 = 0xecde;
+      } else if (c == 11361) {
+	c1 = 0xf0cb;
+      } else if (c == 11719) {
+	c1 = 0xf056;
+      } else if (c == 12308) {
+	c1 = 0xeeeb;
+      } else if (c == 12526) {
+	c1 = 0xf4b5;
+      } else if (c == 12640) {
+	c1 = 0xf16b;
+      } else if (c == 12783) {
+	c1 = 0xf268;
+      } else if (c == 12900) {
+	c1 = 0xf663;
+      } else if (c == 13585) {
+	c1 = 0xf9c4;
+      } else if (c == 13641) {
+	c1 = 0xf9c6;
+      } else {
+	if (c >= 6006 && c <= 6038) {
+	  t1 = c - 5995;
+	} else if (c >= 6088 && c <= 6133) {
+	  t1 = c - 5995;
+	} else if (c >= 6302 && c <= 8250) {
+	  t1 = c - 5995;
+	} else if (c >= 8251 && c <= 8888) {
+	  t1 = c - 5994;
+	} else if (c >= 8890 && c <= 9288) {
+	  t1 = c - 5995;
+	} else if (c >= 9289 && c <= 10925) {
+	  t1 = c - 5994;
+	} else if (c >= 10927 && c <= 11072) {
+	  t1 = c - 5995;
+	} else if (c >= 11362 && c <= 11477) {
+	  t1 = c - 5997;
+	} else if (c >= 11615 && c <= 11718) {
+	  t1 = c - 5995;
+	} else if (c >= 11942 && c <= 12139) {
+	  t1 = c - 5995;
+	} else if (c >= 12140 && c <= 12221) {
+	  t1 = c - 5994;
+	} else if (c >= 12222 && c <= 12307) {
+	  t1 = c - 5993;
+	} else if (c >= 12309 && c <= 12316) {
+	  t1 = c - 5994;
+	} else if (c >= 12317 && c <= 12469) {
+	  t1 = c - 5993;
+	} else if (c >= 12470 && c <= 12525) {
+	  t1 = c - 5992;
+	} else if (c >= 12527 && c <= 12639) {
+	  t1 = c - 5993;
+	} else if (c >= 12641 && c <= 12782) {
+	  t1 = c - 5994;
+	} else if (c >= 12784 && c <= 12828) {
+	  t1 = c - 5995;
+	} else if (c >= 12829 && c <= 12899) {
+	  t1 = c - 5994;
+	} else if (c >= 12901 && c <= 13094) {
+	  t1 = c - 5995;
+	} else if (c >= 13095 && c <= 13584) {
+	  t1 = c - 5994;
+	} else if (c >= 13586 && c <= 13628) {
+	  t1 = c - 5995;
+	} else if (c == 13629) {
+	  t1 = c - 5994;
+	} else if (c >= 13630 && c <= 13640) {
+	  t1 = c - 5993;
+	} else if (c >= 13642 && c <= 13645) {
+	  t1 = c - 5994;
+	} else {
+	  t1 = c - 5996;
+	}
+	t2 = t1 % 157;
+	t1 /= 157;
+	if (t2 <= 62) {
+	  c1 = 0xc940 + (t1 << 8) + t2;
+	} else {
+	  c1 = 0xc962 + (t1 << 8) + t2;
+	}
+      }
+    } else if (c == 13646) {
+      c1 = 0xa14b;
+    } else if (c == 13647) {
+      c1 = 0xa1e3;
+    } else if (c <= 13742) {
+      c1 = cns13Map2[c - 13648];
+    } else if (c <= 13746) {
+      c1 = 0xa159 + (c - 13743);
+    } else if (c <= 14055) {
+      c1 = 0;
+    } else if (c <= 14062) {
+      c1 = 0xf9d6 + (c - 14056);
+    }
+#if 1 //~
+    if (c1 == 0) {
+      error(-1, "Unsupported Adobe-CNS1-3 character: %d", c);
+    }
+#endif
+#endif
     break;
   }
 

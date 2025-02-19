@@ -287,12 +287,16 @@
    Key bindings
        o      Open a new PDF file via a file requester.
 
+       r      Reload the current PDF file.  Note that  Xpdf  will
+              reload  the file automatically (on a page change or
+              redraw) if it has changed since it was last loaded.
+
        f      Find a text string.
 
-       n      Move to the next page.  Scrolls to the top  of  the
+       n      Move  to  the next page.  Scrolls to the top of the
               page, unless scroll lock is turned on.
 
-       p      Move  to  the previous page.  Scrolls to the top of
+       p      Move to the previous page.  Scrolls to the  top  of
               the page, unless scroll lock is turned on.
 
        <Space> or <PageDown> or <Next>
@@ -300,7 +304,7 @@
               tom, move to next page.
 
        <Backspace> or <Delete> or <PageUp> or <Previous>
-              Scroll  up  on the current page; if already at top,
+              Scroll up on the current page; if already  at  top,
               move to previous page.
 
        <Home> Scroll to top of current page.

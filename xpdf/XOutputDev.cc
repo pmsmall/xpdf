@@ -397,7 +397,7 @@ static char *cns13DefFont =
 
 static Gushort cns13Map1[99] = {
   // 0-98
-  0,      0x1a40, 0xa149, 0xa1a8, 0xa1ad, 0xa243, 0xa248, 0xa1ae,
+  0,      0xa140, 0xa149, 0xa1a8, 0xa1ad, 0xa243, 0xa248, 0xa1ae,
   0xa1a6, 0xa15d, 0xa15e, 0xa1af, 0xa1cf, 0xa141, 0xa1df, 0xa144,
   0xa241, 0xa2af, 0xa2b0, 0xa2b1, 0xa2b2, 0xa2b3, 0xa2b4, 0xa2b5,
   0xa2b6, 0xa2b7, 0xa2b8, 0xa147, 0xa146, 0xa1d5, 0xa1d7, 0xa1d6,
@@ -2808,7 +2808,7 @@ Gulong XOutputDev::findColor(GfxRGB *rgb) {
   return pixel;
 }
 
-void XOutputDev::drawImageMask(GfxState *state, Stream *str,
+void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			       int width, int height, GBool invert,
 			       GBool inlineImg) {
   ImageStream *imgStr;
@@ -3168,8 +3168,8 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   XDestroyImage(image);
 }
 
-void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
-			   int height, GfxImageColorMap *colorMap,
+void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
+			   int width, int height, GfxImageColorMap *colorMap,
 			   GBool inlineImg) {
   ImageStream *imgStr;
   XImage *image;
