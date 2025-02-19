@@ -1,0 +1,138 @@
+xpdf
+====
+
+version 0.90
+99-aug-02
+
+The xpdf software and documentation are
+copyright 1996-1999 Derek B. Noonburg.
+
+Email: derekn@foolabs.com
+WWW: http://www.foolabs.com/xpdf/
+
+
+Compiling xpdf
+--------------
+
+Xpdf is written in C++ (with a little bit of C).  It should work with
+any ANSI-compliant C++ and C compilers.  The systems and compilers
+it's been tested with are listed on the xpdf web page.
+
+The following notes give specific instructions for compiling on
+different systems.
+
+
+**************
+***  UNIX  ***
+**************
+
+* Install t1lib (if desired).  The resulting libraries (libt1 and
+  libt1x) and include files (t1lib.h and t1libx.h) should be placed
+  somewhere on the standard search paths.  Alternatively, when you
+  configure xpdf, you can use the following options to tell configure
+  where to find the t1lib files:
+
+    --with-t1-library=PATH
+    --with-t1-includes=PATH
+    --with-t1x-library=PATH
+    --with-t1x-includes=PATH
+
+* Run the configure script:
+
+    ./configure
+
+  This should produce a set of makefiles customized for your system.
+  The configure script accepts the following options (in addition to
+  the usual things accepted by autoconf configure scripts):
+
+    --prefix=PREFIX
+        Changes the directory where xpdf is installed.  The default is
+        /usr/local.
+
+    --enable-a4-paper
+        Switches the default paper size for PostScript output (xpdf
+        and pdftops) to A4.  The default is Letter size.
+
+    --enable-japanese
+        Enables support for 16-bit Japanese fonts.  This increases the
+        size of the binary (mostly with decoding tables).  The default
+        is no Japanese font support.
+
+    --enable-no-text-select
+        With this option, xpdf will not copy text.  (This is only
+        useful on closed systems where the user can't get at the PDF
+        file directly.)
+
+    --with-gzip
+        Use gzip instead of uncompress.
+
+* Type 'make'.  This should build the executables:
+
+    xpdf/xpdf
+    xpdf/pdftops
+    xpdf/pdftotext
+    xpdf/pdfinfo
+    xpdf/pdftopbm
+    xpdf/pdfimages
+
+* If desired, type 'make install' to install the binaries and man
+  pages.
+
+The old Makefile.config and Makefiles are no longer provided or
+supported.
+
+
+*************
+***  VMS  ***
+*************
+
+* The 'stddef.h' include file which comes with older versions of gcc
+  may be missing a definition for wchar_t.  In this case, add the
+  following lines:
+  -----
+  File GNU_CC:[INCLUDE]STDDEF.H;2
+   44   /* Wide characters, not yet supported by VAXCRTL [match VAXC's <stddef.
+   45   #if !defined(_WCHAR_T) && !defined(_WCHAR_T_)
+   46   typedef unsigned int wchar_t;
+   47   #endif
+   48   #define _WCHAR_T
+   49   #define _WCHAR_T_
+   50
+  -----
+
+* Type '@vms_make' in the top-level directory.  If you have the Xpm
+  library and you want xpdf's color icon, type '@vms_make xpm'
+  instead.
+
+* The executables will be left in '[.xpdf]'.
+
+
+**************
+***  OS/2  ***
+**************
+
+Xpdf is known to run under OS/2 with the EMX runtime environment and
+XFree86.  The configure script has not been tested on OS/2, however.
+
+
+***************
+***  Win32  ***
+***************
+
+The non-X programs (pdftops, pdftotext, pdfinfo, and pdfimages) have
+been tested with both DJGPP (the Delorie port of gcc) and cygwin
+(Cygnus port of gcc and other Unix tools).  You'll need to rename
+'makefile.w32' (in the top-level, goo, and xpdf directories) to
+'makefile' before running make.
+
+You can also compile these tools with Microsoft Visual C++:
+
+* Open a DOS window.
+
+* Type "cl". If you get the message "Bad command or file name", you
+  must run VCVARS32.BAT. (The location of this BAT file can be
+  determined with Explorer.)
+
+* Set the default directory to goo and type "microsof".
+
+* Set the default directory to xpdf and type "microsof".

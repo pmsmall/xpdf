@@ -6,6 +6,8 @@
 #
 #========================================================================
 
+SHELL = /bin/sh
+
 srcdir = @srcdir@
 VPATH = @srcdir@
 
@@ -14,14 +16,15 @@ GOOLIBDIR = ../goo
 LTKSRCDIR = $(srcdir)/../ltk
 LTKLIBDIR = ../ltk
 
-CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOOSRCDIR) -I$(LTKSRCDIR) -I$(srcdir) @X_CFLAGS@ @Xpm_CFLAGS@
+CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOOSRCDIR) -I$(LTKSRCDIR) -I$(srcdir) @X_CFLAGS@ @Xpm_CFLAGS@ @t1_CFLAGS@ @t1x_CFLAGS@
 
-XLIBS = @Xpm_LIBS@ @X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
+LDFLAGS = @LDFLAGS@
+
+XLIBS = @Xpm_LIBS@ @t1_LIBS@ @t1x_LIBS@ @X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
 
 OTHERLIBS = @LIBS@
 
 CXX = @CXX@
-STRIP = @STRIP@
 
 LIBPREFIX = @LIBPREFIX@
 EXE = @EXE@
@@ -40,6 +43,8 @@ CXX_SRC = \
 	$(srcdir)/Catalog.cc \
 	$(srcdir)/Dict.cc \
 	$(srcdir)/Error.cc \
+	$(srcdir)/FontEncoding.cc \
+	$(srcdir)/FontFile.cc \
 	$(srcdir)/Gfx.cc \
 	$(srcdir)/GfxFont.cc \
 	$(srcdir)/GfxState.cc \
@@ -71,17 +76,21 @@ CXX_SRC = \
 all: xpdf$(EXE) pdftops$(EXE) pdftotext$(EXE) pdfinfo$(EXE) \
 	pdftopbm$(EXE) pdfimages$(EXE)
 
+all-no-x: pdftops$(EXE) pdftotext$(EXE) pdfinfo$(EXE) \
+	pdfimages$(EXE)
+
 #------------------------------------------------------------------------
 
-XPDF_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
-	GfxState.o Lexer.o Link.o LTKOutputDev.o Object.o OutputDev.o \
-	Page.o Params.o Parser.o PDFDoc.o PSOutputDev.o Stream.o \
-	TextOutputDev.o XOutputDev.o XRef.o xpdf.o
+XPDF_OBJS = Array.o Catalog.o Dict.o Error.o FontEncoding.o \
+	FontFile.o Gfx.o GfxFont.o GfxState.o Lexer.o Link.o \
+	LTKOutputDev.o Object.o OutputDev.o Page.o Params.o \
+	Parser.o PDFDoc.o PSOutputDev.o Stream.o TextOutputDev.o \
+	XOutputDev.o XRef.o xpdf.o
 XPDF_LIBS = -L$(LTKLIBDIR) -lLTK -L$(GOOLIBDIR) -lGoo $(XLIBS) $(OTHERLIBS) -lm
 
-xpdf$(EXE): $(XPDF_OBJS)
-	$(CXX) $(CXXFLAGS) -o xpdf$(EXE) $(XPDF_OBJS) $(XPDF_LIBS)
-	$(STRIP) xpdf$(EXE)
+xpdf$(EXE): $(XPDF_OBJS) \
+	    $(GOOLIBDIR)/$(LIBPREFIX)Goo.a $(LTKLIBDIR)/$(LIBPREFIX)LTK.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o xpdf$(EXE) $(XPDF_OBJS) $(XPDF_LIBS)
 
 xpdf-ltk.h: xpdf.ltk
 	rm -f $@
@@ -90,61 +99,64 @@ xpdf-ltk.h: xpdf.ltk
 
 #------------------------------------------------------------------------
 
-PDFTOPS_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
-	GfxState.o Lexer.o Link.o Object.o OutputDev.o Page.o Params.o \
-	Parser.o PDFDoc.o PSOutputDev.o Stream.o XRef.o pdftops.o
+PDFTOPS_OBJS = Array.o Catalog.o Dict.o Error.o FontEncoding.o \
+	FontFile.o Gfx.o GfxFont.o GfxState.o Lexer.o Link.o \
+	Object.o OutputDev.o Page.o Params.o Parser.o PDFDoc.o \
+	PSOutputDev.o Stream.o XRef.o pdftops.o
 PDFTOPS_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
-pdftops$(EXE): $(PDFTOPS_OBJS)
-	$(CXX) $(CXXFLAGS) -o pdftops$(EXE) $(PDFTOPS_OBJS) $(PDFTOPS_LIBS)
-	$(STRIP) pdftops$(EXE)
+pdftops$(EXE): $(PDFTOPS_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o pdftops$(EXE) $(PDFTOPS_OBJS) \
+		$(PDFTOPS_LIBS)
 
 #------------------------------------------------------------------------
 
-PDFTOTEXT_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
-	GfxState.o Lexer.o Link.o Object.o OutputDev.o Page.o Params.o \
-	Parser.o PDFDoc.o TextOutputDev.o Stream.o XRef.o pdftotext.o
+PDFTOTEXT_OBJS = Array.o Catalog.o Dict.o Error.o FontEncoding.o \
+	FontFile.o Gfx.o GfxFont.o GfxState.o Lexer.o Link.o \
+	Object.o OutputDev.o Page.o Params.o Parser.o PDFDoc.o \
+	TextOutputDev.o Stream.o XRef.o pdftotext.o
 PDFTOTEXT_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
-pdftotext$(EXE): $(PDFTOTEXT_OBJS)
-	$(CXX) $(CXXFLAGS) -o pdftotext$(EXE) $(PDFTOTEXT_OBJS) \
+pdftotext$(EXE): $(PDFTOTEXT_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o pdftotext$(EXE) $(PDFTOTEXT_OBJS) \
 		$(PDFTOTEXT_LIBS)
-	$(STRIP) pdftotext$(EXE)
 
 #------------------------------------------------------------------------
 
-PDFINFO_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
-	GfxState.o Lexer.o Link.o Object.o OutputDev.o Page.o \
-	Params.o Parser.o PDFDoc.o Stream.o XRef.o pdfinfo.o
+PDFINFO_OBJS = Array.o Catalog.o Dict.o Error.o FontEncoding.o \
+	FontFile.o Gfx.o GfxFont.o GfxState.o Lexer.o Link.o \
+	Object.o OutputDev.o Page.o Params.o Parser.o PDFDoc.o \
+	Stream.o XRef.o pdfinfo.o
 PDFINFO_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
-pdfinfo$(EXE): $(PDFINFO_OBJS)
-	$(CXX) $(CXXFLAGS) -o pdfinfo$(EXE) $(PDFINFO_OBJS) $(PDFINFO_LIBS)
-	$(STRIP) pdfinfo$(EXE)
+pdfinfo$(EXE): $(PDFINFO_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o pdfinfo$(EXE) $(PDFINFO_OBJS) \
+		$(PDFINFO_LIBS)
 
 #------------------------------------------------------------------------
 
-PDFTOPBM_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
-	GfxState.o Lexer.o Link.o Object.o OutputDev.o PBMOutputDev.o \
-	Page.o Params.o Parser.o PDFDoc.o Stream.o TextOutputDev.o \
-	XOutputDev.o XRef.o pdftopbm.o
+PDFTOPBM_OBJS = Array.o Catalog.o Dict.o Error.o FontEncoding.o \
+	FontFile.o Gfx.o GfxFont.o GfxState.o Lexer.o Link.o \
+	Object.o OutputDev.o PBMOutputDev.o Page.o Params.o \
+	Parser.o PDFDoc.o Stream.o TextOutputDev.o XOutputDev.o \
+	XRef.o pdftopbm.o
 PDFTOPBM_LIBS = -L$(GOOLIBDIR) -lGoo $(XLIBS) $(OTHERLIBS) -lm
 
-pdftopbm$(EXE): $(PDFTOPBM_OBJS)
-	$(CXX) $(CXXFLAGS) -o pdftopbm$(EXE) $(PDFTOPBM_OBJS) $(PDFTOPBM_LIBS)
-	$(STRIP) pdftopbm$(EXE)
+pdftopbm$(EXE): $(PDFTOPBM_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o pdftopbm$(EXE) $(PDFTOPBM_OBJS) \
+		$(PDFTOPBM_LIBS)
 
 #------------------------------------------------------------------------
 
-PDFIMAGES_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
-	GfxState.o ImageOutputDev.o Lexer.o Link.o Object.o OutputDev.o \
-	Page.o Params.o Parser.o PDFDoc.o Stream.o XRef.o pdfimages.o
+PDFIMAGES_OBJS = Array.o Catalog.o Dict.o Error.o FontEncoding.o \
+	FontFile.o Gfx.o GfxFont.o GfxState.o ImageOutputDev.o \
+	Lexer.o Link.o Object.o OutputDev.o Page.o Params.o \
+	Parser.o PDFDoc.o Stream.o XRef.o pdfimages.o
 PDFIMAGES_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
-pdfimages$(EXE): $(PDFIMAGES_OBJS)
-	$(CXX) $(CXXFLAGS) -o pdfimages$(EXE) $(PDFIMAGES_OBJS) \
+pdfimages$(EXE): $(PDFIMAGES_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o pdfimages$(EXE) $(PDFIMAGES_OBJS) \
 		$(PDFIMAGES_LIBS)
-	$(STRIP) pdfimages$(EXE)
 
 #------------------------------------------------------------------------
 
@@ -172,12 +184,17 @@ Catalog.o: ./Catalog.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
 Dict.o: ./Dict.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h XRef.h
 Error.o: ./Error.cc ../goo/gtypes.h Params.h Error.h config.h
+FontEncoding.o: ./FontEncoding.cc ../goo/gmem.h FontEncoding.h \
+ ../goo/gtypes.h
+FontFile.o: ./FontFile.cc ../goo/gmem.h Error.h config.h FontFile.h \
+ ../goo/gtypes.h ../goo/GString.h FontEncoding.h StdFontInfo.h \
+ CompactFontInfo.h
 Gfx.o: ./Gfx.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h Lexer.h Parser.h GfxFont.h \
- GfxState.h OutputDev.h Params.h Error.h config.h Gfx.h
+ FontEncoding.h GfxState.h OutputDev.h Params.h Error.h config.h Gfx.h
 GfxFont.o: ./GfxFont.cc ../goo/GString.h ../goo/gmem.h ../goo/gfile.h \
  ../goo/gtypes.h config.h Object.h Array.h Dict.h Stream.h Error.h \
- Params.h GfxFont.h FontInfo.h
+ Params.h FontFile.h FontEncoding.h GfxFont.h FontInfo.h
 GfxState.o: ./GfxState.cc ../goo/gmem.h Error.h config.h Object.h \
  ../goo/gtypes.h ../goo/GString.h Array.h Dict.h Stream.h GfxState.h
 ImageOutputDev.o: ./ImageOutputDev.cc ../goo/gmem.h config.h Error.h \
@@ -190,8 +207,8 @@ Link.o: ./Link.cc ../goo/gmem.h ../goo/GString.h Error.h config.h \
 LTKOutputDev.o: ./LTKOutputDev.cc ../goo/gmem.h ../goo/GString.h \
  ../ltk/LTKWindow.h ../goo/gtypes.h ../ltk/LTKScrollingCanvas.h \
  ../ltk/LTKWidget.h Object.h Array.h Dict.h Stream.h GfxState.h \
- GfxFont.h Error.h config.h Params.h LTKOutputDev.h XOutputDev.h \
- OutputDev.h
+ GfxFont.h FontEncoding.h Error.h config.h Params.h LTKOutputDev.h \
+ XOutputDev.h OutputDev.h
 Object.o: ./Object.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
  ../goo/GString.h Array.h Dict.h Stream.h Error.h config.h XRef.h
 OutputDev.o: ./OutputDev.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
@@ -206,24 +223,26 @@ Parser.o: ./Parser.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
  config.h
 PBMOutputDev.o: ./PBMOutputDev.cc ../goo/gmem.h ../goo/GString.h \
  Object.h ../goo/gtypes.h Array.h Dict.h Stream.h GfxState.h GfxFont.h \
- Error.h config.h Params.h PBMOutputDev.h XOutputDev.h OutputDev.h
+ FontEncoding.h Error.h config.h Params.h PBMOutputDev.h XOutputDev.h \
+ OutputDev.h
 PDFDoc.o: ./PDFDoc.cc ../goo/GString.h config.h Page.h Object.h \
  ../goo/gtypes.h ../goo/gmem.h Array.h Dict.h Stream.h Catalog.h \
  XRef.h Link.h OutputDev.h Params.h Error.h PDFDoc.h
 PSOutputDev.o: ./PSOutputDev.cc ../goo/GString.h config.h Object.h \
  ../goo/gtypes.h ../goo/gmem.h Array.h Dict.h Stream.h Error.h \
- GfxState.h GfxFont.h Catalog.h Page.h PSOutputDev.h OutputDev.h
+ GfxState.h GfxFont.h FontEncoding.h FontFile.h Catalog.h Page.h \
+ PSOutputDev.h OutputDev.h
 Stream.o: ./Stream.cc ../goo/gmem.h config.h Error.h Object.h \
  ../goo/gtypes.h ../goo/GString.h Array.h Dict.h Stream.h \
  Stream-CCITT.h
 TextOutputDev.o: ./TextOutputDev.cc ../goo/GString.h ../goo/gmem.h \
- config.h Error.h GfxState.h ../goo/gtypes.h GfxFont.h Object.h \
- Array.h Dict.h Stream.h TextOutputDev.h OutputDev.h \
- TextOutputFontInfo.h
+ config.h Error.h GfxState.h ../goo/gtypes.h FontEncoding.h \
+ TextOutputDev.h GfxFont.h Object.h Array.h Dict.h Stream.h \
+ OutputDev.h TextOutputFontInfo.h
 XOutputDev.o: ./XOutputDev.cc ../goo/gmem.h ../goo/GString.h Object.h \
- ../goo/gtypes.h Array.h Dict.h Stream.h GfxState.h GfxFont.h Error.h \
- config.h Params.h TextOutputDev.h OutputDev.h XOutputDev.h \
- XOutputFontInfo.h
+ ../goo/gtypes.h Array.h Dict.h Stream.h GfxState.h GfxFont.h \
+ FontEncoding.h FontFile.h Error.h config.h Params.h TextOutputDev.h \
+ OutputDev.h XOutputDev.h XOutputFontInfo.h
 XRef.o: ./XRef.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h Lexer.h Parser.h Error.h \
  config.h XRef.h
@@ -233,21 +252,22 @@ xpdf.o: ./xpdf.cc ../goo/gtypes.h ../goo/GString.h ../goo/parseargs.h \
  ../ltk/LTKCompoundWidget.h ../ltk/LTKBox.h ../ltk/LTKBorder.h \
  ../ltk/LTKButtonDialog.h ../ltk/LTKButton.h ../ltk/LTKCanvas.h \
  ../ltk/LTKDblBufCanvas.h ../ltk/LTKEmpty.h ../ltk/LTKFileReq.h \
- ../ltk/LTKLabel.h ../ltk/LTKList.h ../ltk/LTKScrollbar.h \
- ../ltk/LTKScrollingCanvas.h ../ltk/LTKTextIn.h ../ltk/LTKResources.h \
- Object.h Array.h Dict.h Stream.h XRef.h Catalog.h Page.h Link.h \
- PDFDoc.h XOutputDev.h config.h OutputDev.h LTKOutputDev.h \
- PSOutputDev.h TextOutputDev.h Params.h Error.h xpdfIcon.xpm \
- leftArrow.xbm dblLeftArrow.xbm rightArrow.xbm dblRightArrow.xbm \
- zoomIn.xbm zoomOut.xbm find.xbm postscript.xbm about.xbm xpdf-ltk.h
+ ../ltk/LTKLabel.h ../ltk/LTKList.h ../ltk/LTKMenuButton.h \
+ ../ltk/LTKScrollbar.h ../ltk/LTKScrollingCanvas.h ../ltk/LTKTextIn.h \
+ ../ltk/LTKResources.h Object.h Array.h Dict.h Stream.h XRef.h \
+ Catalog.h Page.h Link.h PDFDoc.h XOutputDev.h config.h OutputDev.h \
+ LTKOutputDev.h PSOutputDev.h TextOutputDev.h GfxFont.h FontEncoding.h \
+ Params.h Error.h xpdfIcon.xpm leftArrow.xbm dblLeftArrow.xbm \
+ rightArrow.xbm dblRightArrow.xbm backArrow.xbm forwardArrow.xbm \
+ find.xbm postscript.xbm about.xbm xpdf-ltk.h
 pdftops.o: ./pdftops.cc ../goo/parseargs.h ../goo/gtypes.h \
  ../goo/GString.h ../goo/gmem.h Object.h Array.h Dict.h Stream.h \
  XRef.h Catalog.h Page.h PDFDoc.h Link.h PSOutputDev.h config.h \
  OutputDev.h Params.h Error.h
 pdftotext.o: ./pdftotext.cc ../goo/parseargs.h ../goo/gtypes.h \
  ../goo/GString.h ../goo/gmem.h Object.h Array.h Dict.h Stream.h \
- XRef.h Catalog.h Page.h PDFDoc.h Link.h TextOutputDev.h OutputDev.h \
- Params.h Error.h config.h
+ XRef.h Catalog.h Page.h PDFDoc.h Link.h TextOutputDev.h GfxFont.h \
+ FontEncoding.h OutputDev.h Params.h Error.h config.h
 pdfinfo.o: ./pdfinfo.cc ../goo/parseargs.h ../goo/gtypes.h \
  ../goo/GString.h ../goo/gmem.h Object.h Array.h Dict.h Stream.h \
  XRef.h Catalog.h Page.h PDFDoc.h Link.h Params.h Error.h config.h

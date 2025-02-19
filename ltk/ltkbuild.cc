@@ -9,7 +9,7 @@
 //
 //========================================================================
 
-#define VERSION "0.80"
+#define VERSION "0.90"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,8 +107,8 @@ static GBool readTopLevel() {
 static GBool readWindow(Block *block) {
   int i;
 
-  printf("%s *%s(LTKApp *app) {\n", block->type, block->args[0].s);
-  printf("  return new %s(app, ", block->type);
+  printf("%s *%s(LTKApp *a) {\n", block->type, block->args[0].s);
+  printf("  return new %s(a, ", block->type);
   for (i = 1; i < block->numArgs; ++i) {
     printf("%s,%c", block->args[i].s,
 	   i < block->numArgs - 1 ? ' ' : '\n');

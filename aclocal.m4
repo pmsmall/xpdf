@@ -151,7 +151,7 @@ CPPFLAGS="$CPPFLAGS ${[$1]_CFLAGS}"
 if test "$smr_test_CPPFLAGS" = set; then
     CPPFLAGS=$smr_save_CPPFLAGS
 else
-    unset CPPFLAGS
+    CPPFLAGS=
 fi
 ])
 

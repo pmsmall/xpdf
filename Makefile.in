@@ -6,6 +6,8 @@
 #
 #========================================================================
 
+SHELL = /bin/sh
+
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 srcdir = @srcdir@
@@ -17,44 +19,56 @@ EXE = @EXE@
 
 all:
 	cd goo; $(MAKE)
-	cd ltk; $(MAKE)
-	cd xpdf; $(MAKE) all
+@X@	cd @UP_DIR@ltk; $(MAKE)
+	cd @UP_DIR@xpdf; $(MAKE) @XPDF_TARGET@
 
 xpdf: dummy
 	cd goo; $(MAKE)
-	cd ltk; $(MAKE)
-	cd xpdf; $(MAKE) xpdf$(EXE)
+	cd @UP_DIR@ltk; $(MAKE)
+	cd @UP_DIR@xpdf; $(MAKE) xpdf$(EXE)
 
 pdftops: dummy
 	cd goo; $(MAKE)
-	cd xpdf; $(MAKE) pdftops$(EXE)
+	cd @UP_DIR@xpdf; $(MAKE) pdftops$(EXE)
 
 pdftotext: dummy
 	cd goo; $(MAKE)
-	cd xpdf; $(MAKE) pdftotext$(EXE)
+	cd @UP_DIR@xpdf; $(MAKE) pdftotext$(EXE)
+
+pdfinfo:
+	cd goo; $(MAKE)
+	cd @UP_DIR@xpdf; $(MAKE) pdfinfo$(EXE)
+
+pdftopbm:
+	cd goo; $(MAKE)
+	cd @UP_DIR@xpdf; $(MAKE) pdftopbm$(EXE)
+
+pdfimages:
+	cd goo; $(MAKE)
+	cd @UP_DIR@xpdf; $(MAKE) pdfimages$(EXE)
 
 dummy:
 
 install:
-	mkdir -p @bindir@
-	$(INSTALL) xpdf/xpdf$(EXE) @bindir@/xpdf$(EXE)
+	-mkdir -p @bindir@
+@X@	$(INSTALL) xpdf/xpdf$(EXE) @bindir@/xpdf$(EXE)
 	$(INSTALL) xpdf/pdftops$(EXE) @bindir@/pdftops$(EXE)
 	$(INSTALL) xpdf/pdftotext$(EXE) @bindir@/pdftotext$(EXE)
 	$(INSTALL) xpdf/pdfinfo$(EXE) @bindir@/pdfinfo$(EXE)
-	$(INSTALL) xpdf/pdftopbm$(EXE) @bindir@/pdftopbm$(EXE)
+@X@	$(INSTALL) xpdf/pdftopbm$(EXE) @bindir@/pdftopbm$(EXE)
 	$(INSTALL) xpdf/pdfimages$(EXE) @bindir@/pdfimages$(EXE)
-	mkdir -p @mandir@/man1
-	$(INSTALL_DATA) $(srcdir)/doc/xpdf.1 @mandir@/man1/xpdf.1
+	-mkdir -p @mandir@/man1
+@X@	$(INSTALL_DATA) $(srcdir)/doc/xpdf.1 @mandir@/man1/xpdf.1
 	$(INSTALL_DATA) $(srcdir)/doc/pdftops.1 @mandir@/man1/pdftops.1
 	$(INSTALL_DATA) $(srcdir)/doc/pdftotext.1 @mandir@/man1/pdftotext.1
 	$(INSTALL_DATA) $(srcdir)/doc/pdfinfo.1 @mandir@/man1/pdfinfo.1
-	$(INSTALL_DATA) $(srcdir)/doc/pdftopbm.1 @mandir@/man1/pdftopbm.1
+@X@	$(INSTALL_DATA) $(srcdir)/doc/pdftopbm.1 @mandir@/man1/pdftopbm.1
 	$(INSTALL_DATA) $(srcdir)/doc/pdfimages.1 @mandir@/man1/pdfimages.1
 
 clean:
 	-cd goo; $(MAKE) clean
-	-cd ltk; $(MAKE) clean
-	-cd xpdf; $(MAKE) clean
+	-cd @UP_DIR@ltk; $(MAKE) clean
+	-cd @UP_DIR@xpdf; $(MAKE) clean
 
 distclean: clean
 	rm -f config.log config.status config.cache
@@ -63,5 +77,5 @@ distclean: clean
 
 distdepend:
 	cd goo; $(MAKE) distdepend
-	cd ltk; $(MAKE) distdepend
-	cd xpdf; $(MAKE) distdepend
+	cd @UP_DIR@ltk; $(MAKE) distdepend
+	cd @UP_DIR@xpdf; $(MAKE) distdepend

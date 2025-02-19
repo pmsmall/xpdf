@@ -446,3 +446,63 @@ Added resetImage(), getImagePixel(), and skipImageLine() to Stream
 Implemented predictor for LZW and Flate filters.
 In pdfImM1 in PSOutputDev prolog: div should be idiv.
 Changed output from printUsage() function in parseargs to look nicer.
+
+0.90 (99-aug-02)
+----------------
+Added Type 1/1C font rendering, using t1lib.
+Added "backward" and "forward" buttons.
+Added fit-page and fit-page-width zoom factors; replaced zoom-in and
+  zoom-out buttons with a zoom popup menu.
+Type 1C fonts are converted to Type 1 and embedded in PostScript.
+Support vertical Japanese text.
+Added Japanese text support (EUC-JP) to pdftotext.
+Bumped PDF version to 1.3.  Added stub functions for ri and sh
+  operators. (But there are still some missing 1.3 features.)
+Added -raw option to pdftotext.
+Minor changes to allow compiling under MS Visual C++ 5.0.
+Top-level makefile: changed 'mkdir -p' to '-mkdir -p'.
+Configure script: added X_CFLAGS to smr_CHECK_LIB(Xpm).
+Added Xpm_CFLAGS to xpdf/Makefile.in (this is needed to get the -I for
+  the xpm includes).
+Rewrote code that handles font encodings; added support for Type 1C
+  fonts.
+In the setpagedevice dictionary in PostScript output - added a
+  /Policies entry which tells the PS interpreter to scale the page to
+  fit the available paper.
+Changed PageUp behavior slightly: move to bottom (instead of top) of
+  previous page.
+TextPage used character's dx (width + char space) instead of just its
+  width.
+Read base URI from document Catalog (for URI-type links).
+Minor change to configure script to avoid using 'unset'.
+Fixed bugs in CropBox inheritance.
+Fixed a bug in resource stack handling for form objects.
+Display forms even if they have a missing/incorrect FormType.
+Fixed a bug in stream predictors -- the predictor parameters (width,
+  comps, bits) don't need to match the actual image parameters.
+  Completely rearranged the predictor code.
+Fixed PostScript output to correctly handle stream predictors.
+Don't segfault on empty (zero-page) documents.
+Added the xpdf.viKeys feature.
+Added the ffi and ffl ligatures to XOutputDev and TextOutputDev.
+Pdftotext and pdfimages now check okToCopy().
+Added a '-q' flag to all programs (except pdfinfo) to suppress
+  messages and errors.
+Deal with DeviceN colorspaces by using their alternate colorspace
+  entry.
+Change PostScript output so setpagedevice is only called once, at the
+  very beginning of the document (to avoid problems on duplex
+  printers).
+Changes to configure script and makefiles for DOS/DJGPP.
+FontEncoding::getCharCode() looked for (code>0) instead of (code>=0).
+Added keypad arrow keys, etc. to xpdf.
+Minor changes to gfile.{h,cpp} (<windows.h>) to compile under VC++.
+Fixed CCITTFaxStream to correctly handle all parameters.
+Modifications to gfile.{h,cc} for Acorn.
+Some minor changes for OS/2.
+Added 'SHELL = /bin/sh' to Makefiles.
+Compare file version to pdfVersionNum+0.0001 to avoid floating point
+  precision problems.
+Added LDFLAGS to Makefiles.
+Removed strip entirely from configure and Makefiles.
+Fixed a bug in choosing the correct DCTStream color transform.

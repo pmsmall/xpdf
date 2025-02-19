@@ -1,8 +1,8 @@
 .\" Copyright 1998 Derek B. Noonburg
-.TH pdftopbm 1 "27 Nov 1998"
+.TH pdftopbm 1 "02 Aug 1999"
 .SH NAME
 pdftopbm \- Portable Document Format (PDF) to Portable Bitmap (PBM)
-converter (version 0.80)
+converter (version 0.90)
 .SH SYNOPSIS
 .B pdftopbm
 [options]
@@ -30,6 +30,9 @@ Specifies the last page to convert.
 .BI \-r " number"
 Specifies the resolution, in DPI.  The default is 150 DPI.
 .TP
+.B \-q
+Don't print any messages or errors.
+.TP
 .B \-h
 Print usage information.
 .RB ( \-help
@@ -40,7 +43,7 @@ capabilities and performance of the X server.  In particular,
 high-resolution output requires lots of memory.  Also, non-scalable
 fonts will not look great.
 .SH AUTHOR
-The pdftopbm software and documentation are copyright 1996-1998 Derek
+The pdftopbm software and documentation are copyright 1996-1999 Derek
 B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR xpdf (1),

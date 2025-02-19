@@ -10,9 +10,10 @@ $!
 $ LTK_OBJS = "LTKApp.obj,LTKBorder.obj,LTKBox.obj,LTKButton.obj," + -
              "LTKButtonDialog.obj,LTKCanvas.obj,LTKCompoundWidget.obj," + -
              "LTKDblBufCanvas.obj,LTKEmpty.obj,LTKFileReq.obj," + -
-             "LTKLabel.obj,LTKList.obj,LTKMenu.obj,LTKMisc.obj," + -
-             "LTKResources.obj,LTKScrollbar.obj,LTKScrollingCanvas.obj," + -
-             "LTKTextIn.obj,LTKWidget.obj,LTKWindow.obj"
+             "LTKLabel.obj,LTKList.obj,LTKMenu.obj,LTKMenuButton.obj," + -
+             "LTKMisc.obj,LTKResources.obj,LTKScrollbar.obj," + -
+             "LTKScrollingCanvas.obj,LTKTextIn.obj,LTKWidget.obj," + -
+             "LTKWindow.obj"
 $!
 $ CXXCOMP LTKApp.cc
 $ CXXCOMP LTKBorder.cc
@@ -27,6 +28,7 @@ $ CXXCOMP LTKFileReq.cc
 $ CXXCOMP LTKLabel.cc
 $ CXXCOMP LTKList.cc
 $ CXXCOMP LTKMenu.cc
+$ CXXCOMP LTKMenuButton.cc
 $ CXXCOMP LTKMisc.cc
 $ CXXCOMP LTKResources.cc
 $ CXXCOMP LTKScrollbar.cc

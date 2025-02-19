@@ -13,8 +13,13 @@
 
 #include <stdlib.h>
 #include <stddef.h>
-#ifdef WIN32
-#  include <kpathsea/win32lib.h>
+#if defined(WIN32)
+#  ifdef _MSC_VER
+#    include <windows.h>
+#  else
+#    include <kpathsea/win32lib.h>
+#  endif
+#elif defined(ACORN)
 #else
 #  include <unistd.h>
 #  include <sys/types.h>
@@ -94,14 +99,15 @@ private:
 
   GString *path;		// directory path
   GBool doStat;			// call stat() for each entry?
+#if defined(WIN32)
+  WIN32_FIND_DATA ffd;
+  HANDLE hnd;
+#elif defined(ACORN)
+#else
+  DIR *dir;			// the DIR structure from opendir()
 #ifdef VMS
   GBool needParent;		// need to return an entry for [-]
 #endif
-#ifdef WIN32
-  WIN32_FIND_DATA ffd;
-  HANDLE hnd;
-#else
-  DIR *dir;			// the DIR structure from opendir()
 #endif
 };
 

@@ -91,6 +91,7 @@ public:
   void setRepeatEvent(LTKWidget *repeatWidget1, int repeatDelay1,
 		      int repeatPeriod1);
   void setKillCbk(LTKAppKillCbk cbk) { killCbk = cbk; }
+  void clearButton() { pressedBtn = 0; }
 
   //---------- event handler ----------
 

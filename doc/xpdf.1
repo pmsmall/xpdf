@@ -1,7 +1,7 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH xpdf 1 "27 Nov 1998"
+.TH xpdf 1 "02 Aug 1999"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 0.80)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 0.90)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -43,8 +43,11 @@ Send error messages to /dev/tty instead of stderr (useful if xpdf is
 started from another application, e.g., netscape which otherwise pops
 up an annoying little window for every error).
 .TP
-.BI \-z " number"
-Set the initial zoom factor (-5 .. 5).
+.BI \-z " zoom"
+Set the initial zoom factor.  A number (-5 .. 5) specifies a zoom
+factor, where 0 means 72 dpi.  You may also specify \'page', to fit
+the page to the window size, or \'width', to fit the page width to the
+window width.
 .RB [ xpdf.initialZoom ]
 .TP
 .BI \-g " geometry"
@@ -80,6 +83,21 @@ will not work too well with PDF files that do things like filling in
 white behind the text.
 .RB [ xpdf.paperColor ]
 .TP
+.B \-eucjp
+When copying text, convert Japanese text to EUC-JP.  This is currently
+the only option for converting Japanese text -- the only effect is to
+switch to 7-bit ASCII for non-Japanese text, in order to fit into the
+EUC-JP encoding.  (This option is only available if pdftotext was
+compiled with Japanese support.)
+.RB [ xpdf.eucjp ]
+.TP
+.BI \-t1lib " font-type"
+Set the type of font rendering for t1lib (the Type 1 rasterizer) to
+use.  Options are \'none' (don't use t1lib at all), \'plain' (use
+non-anti-aliased fonts), \'low' or \'high' (use low-level or
+high-level anti-aliased fonts).
+.RB [ xpdf.t1libControl ]
+.TP
 .BI \-ps " PS-file"
 Set the default file name for PostScript output.  This can also be of
 the form \'|command' to pipe the PostScript through a command.
@@ -101,6 +119,9 @@ significantly larger (if they contain images), but will print on Level
 .TP
 .B \-cmd
 Print commands as they're executed (useful for debugging).
+.TP
+.B \-q
+Don't print any messages or errors.
 .TP
 .B \-h
 Print usage information.
@@ -136,6 +157,54 @@ The following X resources do not have command line option equivalents:
 Set the command executed when you click on a URL link.  See the
 .B "WEB BROWSERS"
 section below for details.
+.TP
+.B xpdf.japaneseFont
+Sets the X font name pattern to use for Japanese text.  The default
+is:
+.PP
+.RS
+-*-fixed-medium-r-normal-*-%s-*-*-*-*-*-jisx0208.1983-0
+.RE
+.TP
+.B xpdf.viKeys
+Enables the \'h', \'l', \'k' and \'j' keys for left, right, up, and
+down scrolling.
+.PP
+The following resources set the file names of the Type 1 fonts to use
+for the Base 14 fonts:
+.PP
+.RS
+.B xpdf.t1TimesRoman
+.br
+.B xpdf.t1TimesItalic
+.br
+.B xpdf.t1TimesBold
+.br
+.B xpdf.t1TimesBoldItalic
+.br
+.B xpdf.t1Helvetica
+.br
+.B xpdf.t1HelveticaOblique
+.br
+.B xpdf.t1HelveticaBold
+.br
+.B xpdf.t1HelveticaBoldOblique
+.br
+.B xpdf.t1Courier
+.br
+.B xpdf.t1CourierOblique
+.br
+.B xpdf.t1CourierBold
+.br
+.B xpdf.t1CourierBoldOblique
+.br
+.B xpdf.t1Symbol
+.br
+.B xpdf.t1ZapfDingbats
+.RE
+.PP
+If t1lib is enabled, these Type 1 fonts will be used instead of X
+server fonts.
 .SH CONTROLS
 .SS On-screen controls, at the bottom of the xpdf window
 .TP
@@ -145,12 +214,15 @@ Move to the previous/next page.
 .B "double left/right arrow buttons"
 Move backward or forward by ten pages.
 .TP
+.B "dashed left/right arrow buttons"
+Move backward or forward along the history path.
+.TP
 .B "\'Page' entry box"
 Move to a specific page number.  Click in the box to activate it, type
 the page number, then hit return.
 .TP
-.B "magnifying glass buttons"
-Increase and decrease the resolution, i.e., zoom in and zoom out.
+.B "zoom popup menu"
+Change the zoom factor (see the description of the -z option above).
 .TP
 .B "binoculars button"
 Find a text string.
@@ -361,13 +433,9 @@ etc...
 This assumes that the Type 1 font files are available in the directory
 .IR /home/derekn/fonts/bakoma .
 .SH BUGS
-This is a beta release of xpdf, and there are still a bunch of PDF
-features which I have yet to implement.
-.PP
-At this point, the biggest problem is that embedded fonts are not
-handled properly.
+No support for TrueType and Type 3 fonts.
 .SH AUTHOR
-The xpdf software and documentation are copyright 1996-1998 Derek
+The xpdf software and documentation are copyright 1996-1999 Derek
 B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR pdftops (1),

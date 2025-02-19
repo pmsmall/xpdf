@@ -6,7 +6,7 @@ pdftops(1)                                             pdftops(1)
 
 NAME
        pdftops  -  Portable  Document  Format (PDF) to PostScript
-       converter (version 0.80)
+       converter (version 0.90)
 
 SYNOPSIS
        pdftops [options] [PDF-file [PS-file]]
@@ -54,14 +54,14 @@ OPTIONS
               pages)  and  the -l option is ignored.  The -level1
               option cannot be used with -form.
 
+       -q     Don't print any messages or errors.
+
        -h     Print usage information.  (-help is equivalent.)
 
-BUGS
-       This is a beta release of pdftops, and there are  still  a
 
 
 
-                           27 Nov 1998                          1
+                           02 Aug 1999                          1
 
 
 
@@ -70,11 +70,12 @@ BUGS
 pdftops(1)                                             pdftops(1)
 
 
-       bunch of PDF features which I have yet to implement.
+BUGS
+       No support for TrueType and Type 3 fonts.
 
 AUTHOR
        The  pdftops  software  and  documentation  are  copyright
-       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
        xpdf(1),  pdftotext(1),  pdfinfo(1),  pdftopbm(1),  pdfim-
@@ -126,7 +127,6 @@ SEE ALSO
 
 
 
-
-                           27 Nov 1998                          2
+                           02 Aug 1999                          2
 
 

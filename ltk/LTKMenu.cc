@@ -98,9 +98,12 @@ LTKMenu::LTKMenu(char *title1, int numItems1, ...) {
   numItems = numItems1;
   items = (LTKMenuItem **)gmalloc(numItems * sizeof(LTKMenuItem *));
   va_start(args, numItems1);
-  for (i = 0; i < numItems; ++i)
+  for (i = 0; i < numItems; ++i) {
     items[i] = va_arg(args, LTKMenuItem *);
+    items[i]->setParent(this);
+  }
   xwin = None;
+  widget = NULL;
 }
 
 LTKMenu::~LTKMenu() {
@@ -327,15 +330,22 @@ void LTKMenu::redraw() {
 
 void LTKMenu::buttonPress(int mx, int my, int button, GBool dblClick) {
   done();
-  if (currentItem >= 0 && items[currentItem]->cbk)
+  if (currentItem >= 0 && items[currentItem]->cbk) {
     (*items[currentItem]->cbk)(items[currentItem]);
+  }
+
+  // The matching button release event may not happen because
+  // the window is destroyed by done(), so tell the LTKApp that
+  // the button is no longer pressed.
+  win->getApp()->clearButton();
 }
 
 void LTKMenu::buttonRelease(int mx, int my, int button, GBool click) {
   if (!click) {
     done();
-    if (currentItem >= 0 && items[currentItem]->cbk)
+    if (currentItem >= 0 && items[currentItem]->cbk) {
       (*items[currentItem]->cbk)(items[currentItem]);
+    }
   }
 }
 
@@ -404,4 +414,5 @@ LTKMenuItem::LTKMenuItem(char *text1, char *shortcut1, int itemNum1,
   itemNum = itemNum1;
   cbk = cbk1;
   submenu = submenu1;
+  parent = NULL;
 }

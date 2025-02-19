@@ -25,6 +25,7 @@
 #include "LTKFileReq.h"
 #include "LTKLabel.h"
 #include "LTKList.h"
+#include "LTKMenuButton.h"
 #include "LTKScrollbar.h"
 #include "LTKScrollingCanvas.h"
 #include "LTKTextIn.h"

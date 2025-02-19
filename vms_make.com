@@ -59,7 +59,7 @@ $!
 $! Build the option file
 $!
 $ open/write optf xpdf.opt
-$ write optf "Identification=""xpdf 0.80"""
+$ write optf "Identification=""xpdf 0.90"""
 $ if (p1 .eqs. "xpm") then write optf "X11:libxpm.olb/lib"
 $ write optf "SYS$SHARE:DECW$XLIBSHR.EXE/SHARE"
 $!

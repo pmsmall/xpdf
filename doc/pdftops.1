@@ -1,8 +1,8 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH pdftops 1 "27 Nov 1998"
+.TH pdftops 1 "02 Aug 1999"
 .SH NAME
 pdftops \- Portable Document Format (PDF) to PostScript converter
-(version 0.80)
+(version 0.90)
 .SH SYNOPSIS
 .B pdftops
 [options]
@@ -59,15 +59,17 @@ understands forms.  Only one page is converted (since forms cannot
 contain multiple pages) and the -l option is ignored.  The -level1
 option cannot be used with -form.
 .TP
+.B \-q
+Don't print any messages or errors.
+.TP
 .B \-h
 Print usage information.
 .RB ( \-help
 is equivalent.)
 .SH BUGS
-This is a beta release of pdftops, and there are still a bunch of PDF
-features which I have yet to implement.
+No support for TrueType and Type 3 fonts.
 .SH AUTHOR
-The pdftops software and documentation are copyright 1996-1998 Derek
+The pdftops software and documentation are copyright 1996-1999 Derek
 B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR xpdf (1),

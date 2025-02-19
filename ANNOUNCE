@@ -1,4 +1,4 @@
-Subject: ANNOUNCE: xpdf 0.80 - a PDF viewer for X
+Subject: ANNOUNCE: xpdf 0.90 - a PDF viewer for X
 
 
 I've just released a new version of xpdf, my Portable Document Format
@@ -8,21 +8,23 @@ Xpdf runs under the X Window System on Unix, VMS, and OS/2.  The non-X
 components of the package (pdftops, pdftotext, etc.) also run on Win32
 systems.
 
-!!! Please note my new email/web/ftp addresses. !!!
+*** NEW -- Anti-aliased fonts!
+*** This release uses t1lib to render embedded Type 1/1C fonts (and
+*** the base 14 fonts).
 
-The most noticeable changes are:
+Other noticeable changes:
 
-* Support for some Japanese fonts (Type 0 fonts using the
-  Adobe-Japan1-2 character collection, horizontal only).
-* Added pdfinfo application.
-* Added pdftopbm application.
-* Added pdfimages application.
-* Xpdf is now licensed under the GPL.
+* Added "backward" and "forward" buttons.
+* Added fit-page and fit-page-width zoom factors.
+* Type 1C fonts are converted to Type 1 and embedded in PostScript.
+* Support vertical Japanese text.
+* Added Japanese text support (EUC-JP) to pdftotext.
+* Initial support for PDF 1.3.
 
 See the `CHANGES' file for a complete list.
 
 Source (C++ and C) is available, and it should be fairly easy to
-compile for UNIX, VMS, or OS/2.
+compile for UNIX, VMS, OS/2, and Win32.
 
 More information, source code, and precompiled binaries are on the
 xpdf web page and ftp site:

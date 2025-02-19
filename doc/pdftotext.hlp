@@ -26,17 +26,33 @@
               Convert  the text to 7-bit ASCII; the default is to
               use the 8-bit ISO Latin-1 character set.
 
+       -eucjp Convert Japanese text to EUC-JP.  This is currently
+              the only option for converting Japanese text -- the
+              only effect is to switch to 7-bit  ASCII  for  non-
+              Japanese  text,  in  order  to  fit into the EUC-JP
+              encoding.  (This option is only available if pdfto-
+              text was compiled with Japanese support.)
+
+       -raw   Keep  the  text in content stream order.  This is a
+              hack which often "undoes" column  formatting,  etc.
+              This  option will likely be replaced with something
+              more sophisticated when pdftotext is  rewritten  to
+              use a smarter text placement algorithm.
+
+       -q     Don't print any messages or errors.
+
        -h     Print usage information.  (-help is equivalent.)
 
 2 BUGS
 
-       This is a beta release of pdftotext, and there are still a
-       bunch of PDF features which I have yet to implement.
+       Some  PDF  files  contain  fonts whose encodings have been
+       mangled beyond recognition.  There is  no  way  (short  of
+       OCR) to extract text from these files.
 
 2 AUTHOR
 
        The  pdftotext  software  and  documentation are copyright
-       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 

@@ -6,9 +6,9 @@
 //
 //========================================================================
 
-#define windowType "LTKWindow"
-#define menuType   "LTKMenu"
-#define boxType    "LTKBox"
+#define windowType     "LTKWindow"
+#define menuType       "LTKMenu"
+#define boxType        "LTKBox"
 
 ArgDesc windowArgs[] = {
   {"func",           argVal,     gTrue,  "missingFunc"},
@@ -129,6 +129,13 @@ ArgDesc listArgs[] = {
   {NULL}
 };
 
+ArgDesc menuButtonArgs[] = {
+  {"name",           argVal,     gFalse, "NULL"},
+  {"num",            argVal,     gFalse, "0"},
+  {"menu",           argVal,     gTrue,  "NULL"},
+  {NULL}
+};
+
 ArgDesc scrollbarArgs[] = {
   {"name",           argVal,     gFalse, "NULL"},
   {"num",            argVal,     gFalse, "0"},
@@ -201,6 +208,7 @@ BlockDesc widgetTab[] = {
   {"FileReq",             "LTKFileReq",             fileReqArgs},
   {"Label",               "LTKLabel",               labelArgs},
   {"List",                "LTKList",                listArgs},
+  {"MenuButton",          "LTKMenuButton",          menuButtonArgs},
   {"Scrollbar",           "LTKScrollbar",           scrollbarArgs},
   {"ScrollingCanvas",     "LTKScrollingCanvas",     scrollingCanvasArgs},
   {"TextIn",              "LTKTextIn",              textInArgs},

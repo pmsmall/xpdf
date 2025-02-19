@@ -1,8 +1,8 @@
-.\" Copyright 1998 Derek B. Noonburg
-.TH pdfinfo 1 "27 Nov 1998"
+.\" Copyright 1999 Derek B. Noonburg
+.TH pdfinfo 1 "02 Aug 1999"
 .SH NAME
 pdfinfo \- Portable Document Format (PDF) document information
-extractor (version 0.80)
+extractor (version 0.90)
 .SH SYNOPSIS
 .B pdfinfo
 [options]
@@ -45,7 +45,10 @@ In addition, the following information is printed:
 page count
 .RE
 .RS
-encrypted flag (yes or no)
+encrypted flag (yes/no)
+.RE
+.RS
+print and copy permissions (if encrypted)
 .RE
 .SH OPTIONS
 .TP
@@ -56,7 +59,7 @@ is equivalent.)
 .SH BUGS
 No known bugs.
 .SH AUTHOR
-The pdfinfo software and documentation are copyright 1996-1998 Derek
+The pdfinfo software and documentation are copyright 1996-1999 Derek
 B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR xpdf (1),

@@ -24,7 +24,8 @@
        In addition, the following information is printed:
 
               page count
-              encrypted flag (yes or no)
+              encrypted flag (yes/no)
+              print and copy permissions (if encrypted)
 
 2 OPTIONS
 
@@ -37,7 +38,7 @@
 2 AUTHOR
 
        The  pdfinfo  software  and  documentation  are  copyright
-       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 

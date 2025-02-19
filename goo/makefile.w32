@@ -9,8 +9,8 @@
 
 srcdir = .
 
-CFLAGS = -O2  -DHAVE_DIRENT_H=1   -I$(srcdir)
-CXXFLAGS = -O2  -DHAVE_DIRENT_H=1   -I$(srcdir)
+CFLAGS = -O2  -DHAVE_DIRENT_H=1 -I$(srcdir)
+CXXFLAGS = -O2  -DHAVE_DIRENT_H=1 -I$(srcdir)
 
 CC = gcc
 CXX = gcc
@@ -44,21 +44,26 @@ GOO_C_OBJS = gmem.o parseargs.o
 GOO_OBJS = $(GOO_CXX_OBJS) $(GOO_C_OBJS)
 
 $(LIBPREFIX)Goo.a: $(GOO_OBJS)
-	del $(LIBPREFIX)Goo.a
+#	rm -f $(LIBPREFIX)Goo.a
 	$(AR) $(LIBPREFIX)Goo.a $(GOO_OBJS)
 	$(RANLIB) $(LIBPREFIX)Goo.a
 
 #------------------------------------------------------------------------
 
 clean:
-	del *.o
-	del $(LIBPREFIX)Goo.a
-#	rm -f Makefile.bak
+#	rm -f $(GOO_OBJS) $(LIBPREFIX)Goo.a
 
 #------------------------------------------------------------------------
 
-depend:
-	$(CXX) $(CXXFLAGS) -M $(CXX_SRC) >Makefile.dep
-	$(CC) $(CFLAGS) -M $(C_SRC) >>Makefile.dep
+distdepend:
+	cp Makefile.in Makefile.in.bak
+	sed '/^#----- dependences -----/q' Makefile.in.bak >Makefile.in
+	$(CXX) $(CXXFLAGS) -MM $(CXX_SRC) >>Makefile.in
+	$(CC) $(CFLAGS) -MM $(C_SRC) >>Makefile.in
 
-#include Makefile.dep
+#----- dependences -----
+GString.o: ./GString.cc GString.h
+gmempp.o: ./gmempp.cc gmem.h
+gfile.o: ./gfile.cc GString.h gfile.h gtypes.h
+gmem.o: ./gmem.c gmem.h
+parseargs.o: ./parseargs.c parseargs.h gtypes.h

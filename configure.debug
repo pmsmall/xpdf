@@ -1,0 +1,3 @@
+#!/bin/sh
+
+STRIP=: CFLAGS="-g -O -Wall -Wshadow -DDEBUG_MEM" CXXFLAGS="-g -O -Wall -Wshadow -DDEBUG_MEM" ./configure

@@ -6,6 +6,8 @@
 #
 #========================================================================
 
+SHELL = /bin/sh
+
 srcdir = @srcdir@
 VPATH = @srcdir@
 
@@ -13,6 +15,8 @@ GOOSRCDIR = $(srcdir)/../goo
 GOOLIBDIR = ../goo
 
 CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOOSRCDIR) -I$(srcdir) @X_CFLAGS@
+
+LDFLAGS = @LDFLAGS@
 
 OTHERLIBS = @LIBS@
 
@@ -46,6 +50,7 @@ CXX_SRC = \
 	$(srcdir)/LTKLabel.cc \
 	$(srcdir)/LTKList.cc \
 	$(srcdir)/LTKMenu.cc \
+	$(srcdir)/LTKMenuButton.cc \
 	$(srcdir)/LTKMisc.cc \
 	$(srcdir)/LTKResources.cc \
 	$(srcdir)/LTKScrollbar.cc \
@@ -74,6 +79,7 @@ LTK_OBJS =	LTKApp.o \
 		LTKLabel.o \
 		LTKList.o \
 		LTKMenu.o \
+		LTKMenuButton.o \
 		LTKMisc.o \
 		LTKResources.o \
 		LTKScrollbar.o \
@@ -93,7 +99,8 @@ LTKBUILD_OBJS = ltkbuild.o
 LTKBUILD_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS)
 
 ltkbuild$(EXE): $(LTKBUILD_OBJS)
-	$(CXX) $(CXXFLAGS) -o ltkbuild$(EXE) $(LTKBUILD_OBJS) $(LTKBUILD_LIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o ltkbuild$(EXE) $(LTKBUILD_OBJS) \
+		$(LTKBUILD_LIBS)
 
 #------------------------------------------------------------------------
 
@@ -138,6 +145,9 @@ LTKList.o: ./LTKList.cc ../goo/gmem.h LTKList.h ../goo/GString.h \
  LTKWidget.h ../goo/gtypes.h LTKWindow.h
 LTKMenu.o: ./LTKMenu.cc ../goo/gmem.h LTKConfig.h LTKApp.h \
  ../goo/gtypes.h ../goo/GString.h LTKWindow.h LTKBorder.h LTKMenu.h
+LTKMenuButton.o: ./LTKMenuButton.cc ../goo/gmem.h LTKWindow.h \
+ ../goo/gtypes.h ../goo/GString.h LTKMenuButton.h LTKWidget.h \
+ LTKMenu.h LTKBorder.h
 LTKMisc.o: ./LTKMisc.cc LTKMisc.h ../goo/GString.h LTKWindow.h \
  ../goo/gtypes.h LTKWidget.h
 LTKResources.o: ./LTKResources.cc ../goo/gtypes.h ../goo/GString.h \

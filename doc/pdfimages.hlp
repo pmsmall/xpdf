@@ -28,6 +28,8 @@
               format are saved as JPEG files.  All non-DCT images
               are saved in PBM/PPM format as usual.
 
+       -q     Don't print any messages or errors.
+
        -h     Print usage information.  (-help is equivalent.)
 
 2 BUGS
@@ -40,7 +42,7 @@
 2 AUTHOR
 
        The  pdfimages  software  and  documentation are copyright
-       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 

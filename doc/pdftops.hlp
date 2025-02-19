@@ -49,17 +49,18 @@
               pages) and the -l option is ignored.   The  -level1
               option cannot be used with -form.
 
+       -q     Don't print any messages or errors.
+
        -h     Print usage information.  (-help is equivalent.)
 
 2 BUGS
 
-       This  is  a beta release of pdftops, and there are still a
-       bunch of PDF features which I have yet to implement.
+       No support for TrueType and Type 3 fonts.
 
 2 AUTHOR
 
        The  pdftops  software  and  documentation  are  copyright
-       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 

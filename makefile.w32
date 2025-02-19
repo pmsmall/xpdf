@@ -18,21 +18,33 @@ EXE =
 
 all:
 	cd goo; $(MAKE)
-	cd ..\ltk; $(MAKE)
-	cd ..\xpdf; $(MAKE) all
+#	cd ../ltk; $(MAKE)
+	cd ../xpdf; $(MAKE) all
 
 xpdf: dummy
 	cd goo; $(MAKE)
-	cd ..\ltk; $(MAKE)
-	cd ..\xpdf; $(MAKE) xpdf$(EXE)
+#	cd ../ltk; $(MAKE)
+	cd ../xpdf; $(MAKE) xpdf$(EXE)
 
 pdftops: dummy
 	cd goo; $(MAKE)
-	cd ..\xpdf; $(MAKE) pdftops$(EXE)
+	cd ../xpdf; $(MAKE) pdftops$(EXE)
 
 pdftotext: dummy
 	cd goo; $(MAKE)
-	cd ..\xpdf; $(MAKE) pdftotext$(EXE)
+	cd ../xpdf; $(MAKE) pdftotext$(EXE)
+
+pdfinfo:
+	cd goo; $(MAKE)
+	cd ../xpdf; $(MAKE) pdfinfo$(EXE)
+
+pdftopbm:
+	cd goo; $(MAKE)
+	cd ../xpdf; $(MAKE) pdftopbm$(EXE)
+
+pdfimages:
+	cd goo; $(MAKE)
+	cd ../xpdf; $(MAKE) pdfimages$(EXE)
 
 dummy:
 
@@ -54,15 +66,15 @@ install:
 
 clean:
 	cd goo; $(MAKE) clean
-#	cd ..\ltk; $(MAKE) clean
-	cd ..\xpdf; $(MAKE) clean
+#	cd ../ltk; $(MAKE) clean
+	cd ../xpdf; $(MAKE) clean
 
 #distclean: clean
 #	rm -f config.log config.status config.cache
 #	rm -f Makefile goo/Makefile ltk/Makefile xpdf/Makefile
-#	rm -f goo/Makefile.dep ltk/Makefile.dep xpdf/Makefile.dep
+#	rm -f goo/Makefile.in.bak ltk/Makefile.in.bak xpdf/Makefile.in.bak
 
-#depend:
-#	cd goo; touch Makefile.dep; $(MAKE) depend
-#	cd ..\ltk; touch Makefile.dep; $(MAKE) depend
-#	cd ..\xpdf; touch Makefile.dep; $(MAKE) depend
+#distdepend:
+#	cd ../goo; $(MAKE) distdepend
+#	cd ../ltk; $(MAKE) distdepend
+#	cd ../xpdf; $(MAKE) distdepend

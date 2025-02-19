@@ -21,10 +21,11 @@
 #include "GString.h"
 
 class LTKWindow;
+class LTKWidget;
 class LTKMenuItem;
 
 //------------------------------------------------------------------------
-// callback type
+// callback types
 //------------------------------------------------------------------------
 
 // Menu item selection.
@@ -48,6 +49,10 @@ public:
   //---------- access ----------
 
   Window getXWindow() { return xwin; }
+  int getNumItems() { return numItems; }
+  LTKMenuItem *getItem(int i) { return items[i]; }
+  void setParentWidget(LTKWidget *widget) { this->widget = widget; }
+  LTKWidget *getParentWidget() { return widget; }
 
   //---------- drawing ----------
 
@@ -85,6 +90,8 @@ private:
   int currentItem;		// currently selected item or -1 if none
   int currentY;			// y coordinate of current item
   LTKMenu *currentSubmenu;	// currently posted submenu
+
+  LTKWidget *widget;		// parent widget (if any)
 };
 
 //------------------------------------------------------------------------
@@ -103,6 +110,11 @@ public:
   //---------- access ----------
 
   int getItemNum() { return itemNum; }
+  char *getText() { return text; }
+  LTKMenuCbk getCbk() { return cbk; }
+  void setCbk(LTKMenuCbk cbk) { this->cbk = cbk; }
+  LTKMenu *getParent() { return parent; }
+  void setParent(LTKMenu *parent) { this->parent = parent; }
 
 private:
 
@@ -114,6 +126,7 @@ private:
   int itemNum;			// item number
   LTKMenuCbk cbk;		// selection callback
   LTKMenu *submenu;		// pointer to submenu, or NULL if none
+  LTKMenu *parent;		// parent menu
 
   friend class LTKMenu;
 };

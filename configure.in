@@ -28,7 +28,12 @@ AM_PROG_CC_STDC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_RANLIB
-AC_CHECK_PROG(STRIP, strip, strip, :)
+
+dnl ##### Default values for Unix.
+EXE=""
+LIBPREFIX="lib"
+AR="ar rc"
+UP_DIR=""
 
 dnl ##### Check for OS/2.
 AC_CACHE_CHECK([for OS/2 (with EMX)],
@@ -40,14 +45,26 @@ if test "$xpdf_cv_sys_os2" = yes; then
   EXE=".exe"
   LIBPREFIX=""
   AR="ar -rc"
-else
-  EXE=""
-  LIBPREFIX="lib"
-  AR="ar rc"
 fi
+
+dnl ##### Check for DOS (with DJGPP).
+AC_CACHE_CHECK([for DOS (with DJGPP)],
+xpdf_cv_sys_dos,
+[AC_TRY_COMPILE([],
+[__DJGPP__],
+xpdf_cv_sys_dos=yes, xpdf_cv_sys_dos=no)])
+if test "$xpdf_cv_sys_dos" = yes; then
+  EXE=".exe"
+  LIBPREFIX="lib"
+  AR="ar -rc"
+  UP_DIR="../"
+fi
+
+dnl ##### Do substitutions.
 AC_SUBST(EXE)
 AC_SUBST(LIBPREFIX)
 AC_SUBST(AR)
+AC_SUBST(UP_DIR)
 
 dnl ##### Checks for header files.
 AC_PATH_XTRA
@@ -142,11 +159,39 @@ fi
 AC_LANG_C
 
 dnl ##### Check for libXpm.
-smr_CHECK_LIB(Xpm, Xpm, [pixmap library, used only for icon], 
-              XpmCreatePixmapFromData, X11/xpm.h,
-              $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS)
-AC_SUBST(Xpm_LIBS)
-AC_SUBST(Xpm_CFLAGS)
+if test -z "$no_x"; then
+  smr_CHECK_LIB(Xpm, Xpm, [pixmap library, used only for icon], 
+                XpmCreatePixmapFromData, X11/xpm.h,
+                $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS, $X_CFLAGS)
+  AC_SUBST(Xpm_LIBS)
+  AC_SUBST(Xpm_CFLAGS)
+fi
+
+dnl ##### Check for t1lib.
+if test -z "$no_x"; then
+  smr_CHECK_LIB(t1, t1, [Type 1 font rasterizer], 
+                T1_InitLib, t1lib.h,
+                $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+  AC_SUBST(t1_LIBS)
+  AC_SUBST(t1_CFLAGS)
+  smr_CHECK_LIB(t1x, t1x, [Type 1 font rasterizer], 
+                T1_SetX11Params, t1libx.h,
+                $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS $t1_LIBS -lm,
+                $X_CFLAGS $t1_CFLAGS)
+  AC_SUBST(t1x_LIBS)
+  AC_SUBST(t1x_CFLAGS)
+fi
+
+dnl ##### Disable X-specific stuff in top-level Makefile.
+if test -n "$no_x"; then
+  X="#"
+  XPDF_TARGET="all-no-x"
+else
+  X=""
+  XPDF_TARGET="all"
+fi
+AC_SUBST(X)
+AC_SUBST(XPDF_TARGET)
 
 dnl ##### Write the makefiles.
 AC_OUTPUT(Makefile xpdf/Makefile ltk/Makefile goo/Makefile)
@@ -154,5 +199,5 @@ AC_OUTPUT(Makefile xpdf/Makefile ltk/Makefile goo/Makefile)
 dnl ##### Warn user if X is missing.
 if test -n "$no_x"; then
   AC_MSG_WARN([Couldn't find X -- you will be able to compile
-        pdftops, pdftotext, and pdfinfo, but not xpdf])
+        pdftops, pdftotext, pdfinfo, and pdfimages, but not xpdf])
 fi
