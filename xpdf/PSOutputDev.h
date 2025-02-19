@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include "config.h"
 #include "Object.h"
+#include "GlobalParams.h"
 #include "OutputDev.h"
 
 class GfxPath;
@@ -27,13 +28,6 @@ class PSOutCustomColor;
 //------------------------------------------------------------------------
 // PSOutputDev
 //------------------------------------------------------------------------
-
-enum PSOutLevel {
-  psLevel1,
-  psLevel1Sep,
-  psLevel2,
-  psLevel2Sep
-};
 
 enum PSOutMode {
   psModePS,
@@ -52,10 +46,7 @@ public:
 
   // Open a PostScript output file, and write the prolog.
   PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
-	      int firstPage, int lastPage,
-	      PSOutLevel levelA, PSOutMode modeA, GBool doOPIA,
-	      GBool embedType1A, GBool embedTrueTypeA,
-	      int paperWidthA, int paperHeightA);
+	      int firstPage, int lastPage, PSOutMode modeA);
 
   // Destructor -- writes the trailer and closes the file.
   virtual ~PSOutputDev();
@@ -118,7 +109,6 @@ public:
 
   //----- text drawing
   virtual void drawString(GfxState *state, GString *s);
-  virtual void drawString16(GfxState *state, GString *s);
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
@@ -168,11 +158,8 @@ private:
   void writePS(const char *fmt, ...);
   void writePSString(GString *s);
 
-  PSOutLevel level;		// PostScript level (1, 2, separation)
+  PSLevel level;		// PostScript level (1, 2, separation)
   PSOutMode mode;		// PostScript mode (PS, EPS, form)
-  GBool doOPI;			// generate OPI comments?
-  GBool embedType1;		// embed Type 1 fonts?
-  GBool embedTrueType;		// embed TrueType fonts?
   int paperWidth;		// width of paper, in pts
   int paperHeight;		// height of paper, in pts
 

@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stddef.h>
 #include "Object.h"
 #include "Array.h"
@@ -22,8 +23,6 @@
 #include "FormWidget.h"
 #endif
 #include "Error.h"
-
-#include "Params.h"
 #include "Page.h"
 
 //------------------------------------------------------------------------

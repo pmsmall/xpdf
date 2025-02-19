@@ -12,6 +12,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>

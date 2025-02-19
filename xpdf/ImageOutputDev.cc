@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -61,6 +62,7 @@ void ImageOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     while ((c = str->getChar()) != EOF)
       fputc(c, f);
 
+    str->close();
     fclose(f);
 
   // dump PBM file
@@ -85,6 +87,7 @@ void ImageOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
       fputc(str->getChar(), f);
     }
 
+    str->close();
     fclose(f);
   }
 }
@@ -122,6 +125,7 @@ void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     while ((c = str->getChar()) != EOF)
       fputc(c, f);
 
+    str->close();
     fclose(f);
 
   // dump PBM file
@@ -147,6 +151,7 @@ void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
       fputc(str->getChar(), f);
     }
 
+    str->close();
     fclose(f);
 
   // dump PPM file

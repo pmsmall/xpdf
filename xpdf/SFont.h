@@ -16,6 +16,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include "gtypes.h"
+#include "CharTypes.h"
 
 //------------------------------------------------------------------------
 
@@ -114,12 +115,13 @@ public:
 
   virtual ~SFont();
 
-  // Draw a character <c> at <x>,<y> in color (<r>,<g>,<b>).  The RGB
-  // values should each be in the range [0,65535].  Draws into <d>,
-  // clipped to the rectangle (0,0)-(<w>-1,<h>-1).  Returns true if
-  // the character was drawn successfully.
+  // Draw a character <c>/<u> at <x>,<y> in color (<r>,<g>,<b>).  The
+  // RGB values should each be in the range [0,65535].  Draws into
+  // <d>, clipped to the rectangle (0,0)-(<w>-1,<h>-1).  Returns true
+  // if the character was drawn successfully.
   virtual GBool drawChar(Drawable d, int w, int h, GC gc,
-			 int x, int y, int r, int g, int b, Gushort c) = 0;
+			 int x, int y, int r, int g, int b,
+			 CharCode c, Unicode u) = 0;
 
 protected:
 };

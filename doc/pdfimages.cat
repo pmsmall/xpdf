@@ -6,7 +6,7 @@ pdfimages(1)                                         pdfimages(1)
 
 NAME
        pdfimages - Portable Document Format (PDF) image extractor
-       (version 0.93)
+       (version 1.00)
 
 SYNOPSIS
        pdfimages [options] PDF-file image-root
@@ -21,7 +21,20 @@ DESCRIPTION
        image, image-root-nnn.xxx, where nnn is the  image  number
        and xxx is the image type (.ppm, .pbm, .jpg).
 
+CONFIGURATION FILE
+       Pdfimages reads a configuration file at startup.  It first
+       tries to find the user's private config  file,  ~/.xpdfrc.
+       If  that  doesn't exist, it looks for a system-wide config
+       file, typically /usr/local/etc/xpdfrc (but  this  location
+       can   be  changed  when  pdfimages  is  built).   See  the
+       xpdfrc(5) man page for details.
+
 OPTIONS
+       Many of the following options can be set  with  configura-
+       tion  file  commands.  These are listed in square brackets
+       with the description of  the  corresponding  command  line
+       option.
+
        -f number
               Specifies the first page to scan.
 
@@ -41,11 +54,24 @@ OPTIONS
        -upw password
               Specify the user password for the PDF file.
 
-       -q     Don't print any messages or errors.
+       -q     Don't  print any messages or errors.  [config file:
+              errQuiet]
 
        -v     Print copyright and version information.
 
-       -h     Print usage information.  (-help is equivalent.)
+
+
+                           01 Feb 2002                          1
+
+
+
+
+
+pdfimages(1)                                         pdfimages(1)
+
+
+       -h     Print usage information.   (-help  and  --help  are
+              equivalent.)
 
 BUGS
        With  the  -j  option,  the  PDF  image streams are copied
@@ -55,23 +81,11 @@ BUGS
 
 AUTHOR
        The pdfimages software  and  documentation  are  copyright
-       1996-2001 Derek B. Noonburg (derekn@foolabs.com).
-
-
-
-
-
-                           25 Oct 2001                          1
-
-
-
-
-
-pdfimages(1)                                         pdfimages(1)
-
+       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
-       xpdf(1), pdftops(1), pdftotext(1), pdfinfo(1), pdftopbm(1)
+       xpdf(1),   pdftops(1),   pdftotext(1),   pdfinfo(1),  pdf-
+       fonts(1), pdftopbm(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
 
@@ -113,20 +127,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                           25 Oct 2001                          2
+                           01 Feb 2002                          2
 
 

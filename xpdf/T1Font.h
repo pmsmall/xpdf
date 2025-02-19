@@ -19,8 +19,6 @@
 #include <t1lib.h>
 #include "SFont.h"
 
-class FontEncoding;
-
 //------------------------------------------------------------------------
 
 class T1FontEngine: public SFontEngine {
@@ -47,7 +45,7 @@ class T1FontFile: public SFontFile {
 public:
 
   T1FontFile(T1FontEngine *engineA, char *fontFileName,
-	     FontEncoding *fontEnc, double *bboxA);
+	     char **fontEnc, double *bboxA);
   GBool isOk() { return ok; }
   virtual ~T1FontFile();
 
@@ -78,11 +76,12 @@ public:
   GBool isOk() { return ok; }
   virtual ~T1Font();
   virtual GBool drawChar(Drawable d, int w, int h, GC gc,
-			 int x, int y, int r, int g, int b, Gushort c);
+			 int x, int y, int r, int g, int b,
+			 CharCode c, Unicode u);
 
 private:
 
-  Guchar *getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h);
+  Guchar *getGlyphPixmap(CharCode c, int *x, int *y, int *w, int *h);
 
   T1FontFile *fontFile;
   int id;

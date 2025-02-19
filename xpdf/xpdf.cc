@@ -6,6 +6,7 @@
 //
 //========================================================================
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -19,6 +20,7 @@
 #include "parseargs.h"
 #include "gfile.h"
 #include "gmem.h"
+#include "GlobalParams.h"
 #include "LTKAll.h"
 #include "Object.h"
 #include "Stream.h"
@@ -33,7 +35,6 @@
 #include "LTKOutputDev.h"
 #include "PSOutputDev.h"
 #include "TextOutputDev.h"
-#include "Params.h"
 #include "Error.h"
 #include "config.h"
 
@@ -96,7 +97,7 @@ typedef char *XPointer;
 // misc constants / enums
 //------------------------------------------------------------------------
 
-#define remoteCmdLength 256
+#define remoteCmdLength 512
 
 enum XpdfMenuItem {
   menuOpen,
@@ -113,7 +114,9 @@ enum XpdfMenuItem {
 
 // loadFile / displayPage
 static GBool loadFile(GString *fileName);
-static void displayPage(int page1, int zoom1, int rotate1, GBool addToHist);
+static void displayPage(int page1, int zoomA, int rotateA, GBool addToHist);
+static void displayDest(LinkDest *dest, int zoomA, int rotateA,
+			GBool addToHist);
 
 // key press and menu callbacks
 static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
@@ -177,6 +180,9 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on);
 // "About" window
 static void mapAboutWin();
 static void closeAboutCbk(LTKWidget *button, int n, GBool on);
+static void aboutLayoutCbk(LTKWindow *winA);
+static void aboutScrollVertCbk(LTKWidget *scrollbar, int n, int val);
+static void aboutScrollHorizCbk(LTKWidget *scrollbar, int n, int val);
 
 // "Find" window
 static void findCbk(LTKWidget *button, int n, GBool on);
@@ -186,6 +192,61 @@ static void doFind(char *s);
 
 // app kill callback
 static void killCbk(LTKWindow *win1);
+
+//------------------------------------------------------------------------
+// "About" window text
+//------------------------------------------------------------------------
+
+static char *aboutWinText[] = {
+  "X     X           d   fff",
+  " X   X            d  f   f",
+  "  X X             d  f",
+  "   X    pppp   dddd ffff",
+  "  X X   p   p d   d  f",
+  " X   X  p   p d   d  f",
+  "X     X pppp   dddd  f      Version " xpdfVersion,
+  "        p",
+  "        p",
+  "        p",
+  "",
+  xpdfCopyright,
+  "",
+  "http://www.foolabs.com/xpdf/",
+  "derekn@foolabs.com",
+  "",
+  "Licensed under the GNU General Public License (GPL).",
+  "See the 'COPYING' file for details.",
+  "",
+  "Supports PDF version " supportedPDFVersionStr ".",
+  "",
+  "The PDF data structures, operators, and specification",
+  "are copyright 1985-2001 Adobe Systems Inc.",
+  "",
+  "Mouse bindings:",
+  "  button 1: select text / follow link",
+  "  button 2: pan window",
+  "  button 3: menu",
+  "",
+  "Key bindings:",
+  "  o              = open file",
+  "  r              = reload",
+  "  f              = find text",
+  "  n = <PgDn>     = next page",
+  "  p = <PgUp>     = previous page",
+  "  <space>        = scroll down",
+  "  <backspace>    = <delete> = scroll up",
+  "  v              = forward (history path)",
+  "  b              = backward (history path)",
+  "  0 / + / -      = zoom zero / in / out",
+  "  z / w          = zoom page / page width",
+  "  ctrl-L         = redraw",
+  "  q              = quit",
+  "  <home> / <end> = top / bottom of page",
+  "  <arrows>       = scroll",
+  "",
+  "For more information, please read the xpdf(1) man page.",
+  NULL
+};
 
 //------------------------------------------------------------------------
 // command line options
@@ -205,88 +266,87 @@ static XrmOptionDescRec opts[] = {
   {"-cmap",          ".installCmap",     XrmoptionNoArg,   (XPointer)"on"},
   {"-rgb",           ".rgbCubeSize",     XrmoptionSepArg,  NULL},
   {"-papercolor",    ".paperColor",      XrmoptionSepArg,  NULL},
-#if JAPANESE_SUPPORT
-  {"-eucjp",         ".eucjp",           XrmoptionNoArg,   (XPointer)"off"},
-#endif
-#if HAVE_T1LIB_H
-  {"-t1lib",         ".t1libControl",    XrmoptionSepArg,  NULL},
-#endif
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-  {"-freetype",      ".freeTypeControl", XrmoptionSepArg,  NULL},
-#endif
-  {"-z",             ".initialZoom",     XrmoptionSepArg,  NULL},
-  {"-ps",            ".psFile",          XrmoptionSepArg,  NULL},
-  {"-paperw",        ".psPaperWidth",    XrmoptionSepArg,  NULL},
-  {"-paperh",        ".psPaperHeight",   XrmoptionSepArg,  NULL},
-  {"-level1",        ".psLevel1",        XrmoptionNoArg,   (XPointer)"false"},
   {NULL}
 };
 
+static char zoomStr[16] = "";
+static char t1libControlStr[16] = "";
+static char freetypeControlStr[16] = "";
+static char psFileArg[256];
+static char paperSize[15] = "";
+static int paperWidth = 0;
+static int paperHeight = 0;
 static GBool level1 = gFalse;
-static int paperWidth = defPaperWidth;
-static int paperHeight = defPaperHeight;
-static GBool printCommands = gFalse;
-static GBool printVersion = gFalse;
-static GBool printHelp = gFalse;
-static char remoteName[100] = "xpdf_";
-static GBool doRemoteRaise = gFalse;
-static GBool doRemoteQuit = gFalse;
-static GBool viKeys = gFalse;
+static char textEncName[128] = "";
+static char textEOL[16] = "";
 static char ownerPassword[33] = "";
 static char userPassword[33] = "";
 static GBool fullScreen = gFalse;
+static char remoteName[100] = "xpdf_";
+static GBool doRemoteRaise = gFalse;
+static GBool doRemoteQuit = gFalse;
+static GBool printCommands = gFalse;
+static GBool quiet = gFalse;
+static char cfgFileName[256] = "";
+static GBool printVersion = gFalse;
+static GBool printHelp = gFalse;
+static GBool viKeys = gFalse;
 
 static ArgDesc argDesc[] = {
-  {"-z",          argStringDummy, NULL,           0,
-   "initial zoom level (-5..5, page, width)"},
   {"-g",          argStringDummy, NULL,           0,
    "initial window geometry"},
   {"-geometry",   argStringDummy, NULL,           0,
    "initial window geometry"},
   {"-title",      argStringDummy, NULL,           0,
    "window title"},
-  {"-remote",     argString,      remoteName + 5, sizeof(remoteName) - 5,
-   "start/contact xpdf remote server with specified name"},
-  {"-raise",      argFlag,        &doRemoteRaise, 0,
-   "raise xpdf remote server window (with -remote only)"},
-  {"-quit",       argFlag,        &doRemoteQuit,  0,
-   "kill xpdf remote server (with -remote only)"},
   {"-cmap",       argFlagDummy,   NULL,           0,
    "install a private colormap"},
   {"-rgb",        argIntDummy,    NULL,           0,
    "biggest RGB cube to allocate (default is 5)"},
   {"-papercolor", argStringDummy, NULL,           0,
    "color of paper background"},
-#if JAPANESE_SUPPORT
-  {"-eucjp",      argStringDummy, NULL,           0,
-   "convert Japanese text to EUC-JP"},
-#endif
+  {"-z",          argString,      zoomStr,        sizeof(zoomStr),
+   "initial zoom level (-5..5, page, width)"},
 #if HAVE_T1LIB_H
-  {"-t1lib",      argStringDummy, NULL,           0,
-   "t1lib font control: none, plain, low, high"},
+  {"-t1lib",      argString,      t1libControlStr, sizeof(t1libControlStr),
+   "t1lib font rasterizer control: none, plain, low, high"},
 #endif
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-  {"-freetype",   argStringDummy, NULL,           0,
-   "FreeType font control: none, plain, aa"},
+  {"-freetype",   argString,      freetypeControlStr, sizeof(freetypeControlStr),
+   "FreeType font rasterizer control: none, plain, low, high"},
 #endif
-  {"-ps",         argStringDummy, NULL,           0,
-   "default PostScript file/command name"},
-  {"-paperw",     argIntDummy,    NULL,           0,
+  {"-ps",         argString,      psFileArg,      sizeof(psFileArg),
+   "default PostScript file name or command"},
+  {"-paper",      argString,      paperSize,      sizeof(paperSize),
+   "paper size (letter, legal, A4, A3)"},
+  {"-paperw",     argInt,         &paperWidth,    0,
    "paper width, in points"},
-  {"-paperh",     argIntDummy,    NULL,           0,
+  {"-paperh",     argInt,         &paperHeight,   0,
    "paper height, in points"},
-  {"-level1",     argFlagDummy,   NULL,           0,
+  {"-level1",     argFlag,        &level1,        0,
    "generate Level 1 PostScript"},
+  {"-enc",    argString,   textEncName,    sizeof(textEncName),
+   "output text encoding name"},
+  {"-eol",    argString,   textEOL,        sizeof(textEOL),
+   "output end-of-line convention (unix, dos, or mac)"},
   {"-opw",        argString,      ownerPassword,  sizeof(ownerPassword),
    "owner password (for encrypted files)"},
   {"-upw",        argString,      userPassword,   sizeof(userPassword),
    "user password (for encrypted files)"},
   {"-fullscreen", argFlag,        &fullScreen,    0,
    "run in full-screen (presentation) mode"},
+  {"-remote",     argString,      remoteName + 5, sizeof(remoteName) - 5,
+   "start/contact xpdf remote server with specified name"},
+  {"-raise",      argFlag,        &doRemoteRaise, 0,
+   "raise xpdf remote server window (with -remote only)"},
+  {"-quit",       argFlag,        &doRemoteQuit,  0,
+   "kill xpdf remote server (with -remote only)"},
   {"-cmd",        argFlag,        &printCommands, 0,
    "print commands as they're executed"},
-  {"-q",          argFlag,        &errQuiet,      0,
+  {"-q",          argFlag,        &quiet,         0,
    "don't print any messages or errors"},
+  {"-cfg",        argString,      cfgFileName,    sizeof(cfgFileName),
+   "configuration file to use in place of .xpdfrc"},
   {"-v",          argFlag,        &printVersion,  0,
    "print copyright and version info"},
   {"-h",          argFlag,        &printHelp,     0,
@@ -349,7 +409,6 @@ static int historyBLen;		// number of valid entries backward from
 static int historyFLen;		// number of valid entries forward from
 				//   current entry
 
-static GString *defPSFileName;
 static GString *psFileName;
 static int psFirstPage, psLastPage;
 
@@ -370,6 +429,8 @@ static LTKLabel *numPagesLabel;
 static LTKLabel *linkLabel;
 static LTKMenuButton *zoomMenuBtn;
 static LTKWindow *aboutWin;
+static LTKList *aboutList;
+static LTKScrollbar *aboutHScrollbar, *aboutVScrollbar;
 static LTKWindow *psDialog;
 static LTKWindow *openDialog;
 static LTKWindow *saveDialog;
@@ -408,13 +469,12 @@ int main(int argc, char *argv[]) {
   unsigned long paperColor;
   GBool installCmap;
   int rgbCubeSize;
-  GString *t1libControlStr, *freetypeControlStr;
-  FontRastControl t1libControl, freetypeControl;
   int pg;
+  GString *destName;
+  LinkDest *dest;
   int x, y;
   Guint width, height;
   double width1, height1;
-  GString *zoomStr;
   GBool ok;
   char s[20];
   int i;
@@ -433,11 +493,47 @@ int main(int argc, char *argv[]) {
   // parse args
   ok = parseArgs(argDesc, &argc, argv);
 
-  // init error file
-  errorInit();
-
   // read config file
-  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
+  globalParams = new GlobalParams(cfgFileName);
+  if (psFileArg[0]) {
+    globalParams->setPSFile(psFileArg);
+  }
+  if (paperSize[0]) {
+    if (!globalParams->setPSPaperSize(paperSize)) {
+      fprintf(stderr, "Invalid paper size\n");
+    }
+  } else {
+    if (paperWidth) {
+      globalParams->setPSPaperWidth(paperWidth);
+    }
+    if (paperHeight) {
+      globalParams->setPSPaperHeight(paperHeight);
+    }
+  }
+  if (level1) {
+    globalParams->setPSLevel(psLevel1);
+  }
+  if (textEncName[0]) {
+    globalParams->setTextEncoding(textEncName);
+  }
+  if (textEOL[0]) {
+    if (!globalParams->setTextEOL(textEOL)) {
+      fprintf(stderr, "Bad '-eol' value on command line\n");
+    }
+  }
+  if (t1libControlStr[0]) {
+    if (!globalParams->setT1libControl(t1libControlStr)) {
+      fprintf(stderr, "Bad '-t1lib' value on command line\n");
+    }
+  }
+  if (freetypeControlStr[0]) {
+    if (!globalParams->setFreeTypeControl(freetypeControlStr)) {
+      fprintf(stderr, "Bad '-freetype' value on command line\n");
+    }
+  }
+  if (quiet) {
+    globalParams->setErrQuiet(quiet);
+  }
 
   // create LTKApp (and parse X-related args)
   app = new LTKApp("xpdf", "Xpdf", opts, &argc, argv);
@@ -455,19 +551,25 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "xpdf version %s\n", xpdfVersion);
     fprintf(stderr, "%s\n", xpdfCopyright);
     if (!printVersion) {
-      printUsage("xpdf", "[<PDF-file> [<page>]]", argDesc);
+      printUsage("xpdf", "[<PDF-file> [<page> | +<dest>]]", argDesc);
     }
     ret = 1;
     goto done2;
   }
-  if (argc >= 2)
+  if (argc >= 2) {
     name = new GString(argv[1]);
-  else
+  } else {
     name = NULL;
-  if (argc == 3)
-    pg = atoi(argv[2]);
-  else
-    pg = 1;
+  }
+  pg = 1;
+  destName = NULL;
+  if (argc == 3) {
+    if (argv[2][0] == '+') {
+      destName = new GString(&argv[2][1]);
+    } else {
+      pg = atoi(argv[2]);
+    }
+  }
 
   // look for already-running remote server
   if (remoteName[5]) {
@@ -475,8 +577,14 @@ int main(int argc, char *argv[]) {
     xwin = XGetSelectionOwner(display, remoteAtom);
     if (xwin != None) {
       if (name) {
-	sprintf(cmd, "%c %d %.200s", doRemoteRaise ? 'D' : 'd',
-		pg, name->getCString());
+	if (destName) {
+	  sprintf(cmd, "%c +%.256s %.200s", doRemoteRaise ? 'D' : 'd',
+		  destName->getCString(), name->getCString());
+	  delete destName;
+	} else {
+	  sprintf(cmd, "%c %d %.200s", doRemoteRaise ? 'D' : 'd',
+		  pg, name->getCString());
+	}
 	XChangeProperty(display, xwin, remoteAtom, remoteAtom, 8,
 			PropModeReplace, (Guchar *)cmd, strlen(cmd) + 1);
 	delete name;
@@ -489,8 +597,12 @@ int main(int argc, char *argv[]) {
       }
       goto done2;
     }
-    if (doRemoteQuit)
+    if (doRemoteQuit) {
+      if (destName) {
+	delete destName;
+      }
       goto done2;
+    }
   }
 
   // no history yet
@@ -500,7 +612,6 @@ int main(int argc, char *argv[]) {
     history[i].fileName = NULL;
 
   // open PDF file
-  defPSFileName = app->getStringResource("psFile", NULL);
   if (name) {
     if (!loadFile(name)) {
       ret = 1;
@@ -511,8 +622,9 @@ int main(int argc, char *argv[]) {
   }
 
   // check for legal page number
-  if (doc && (pg < 1 || pg > doc->getNumPages()))
+  if (doc && (pg < 1 || pg > doc->getNumPages())) {
     pg = 1;
+  }
 
   // create window
   menu = makeMenu();
@@ -543,11 +655,10 @@ int main(int argc, char *argv[]) {
     vScrollbar->setRepeatPeriod(0);
   }
 
+  // get parameters
+  urlCommand = globalParams->getURLCommand();
+
   // get X resources
-  level1 = app->getBoolResource("psLevel1", gFalse);
-  paperWidth = app->getIntResource("psPaperWidth", defPaperWidth);
-  paperHeight = app->getIntResource("psPaperHeight", defPaperHeight);
-  urlCommand = app->getStringResource("urlCommand", NULL);
   windowTitle = app->getStringResource("title", NULL);
   installCmap = app->getBoolResource("installCmap", gFalse);
   if (installCmap) {
@@ -557,82 +668,26 @@ int main(int argc, char *argv[]) {
   paperColor = app->getColorResource("paperColor", "white",
 				     WhitePixel(display, app->getScreenNum()),
 				     NULL);
-#if JAPANESE_SUPPORT
-  useEUCJP = app->getBoolResource("eucjp", gFalse);
-#else
-  useEUCJP = gFalse;
-#endif
-#if HAVE_T1LIB_H
-  t1libControlStr = app->getStringResource("t1libControl", "low");
-  if (!t1libControlStr->cmp("none")) {
-    t1libControl = fontRastNone;
-  } else if (!t1libControlStr->cmp("plain")) {
-    t1libControl = fontRastPlain;
-  } else if (!t1libControlStr->cmp("high")) {
-    t1libControl = fontRastAAHigh;
-  } else {
-    t1libControl = fontRastAALow;
-  }
-  delete t1libControlStr;
-#else
-  t1libControl = fontRastNone;
-#endif
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-  freetypeControlStr = app->getStringResource("freeTypeControl", "aa");
-  if (!freetypeControlStr->cmp("none")) {
-    freetypeControl = fontRastNone;
-  } else if (!freetypeControlStr->cmp("plain")) {
-    freetypeControl = fontRastPlain;
-  } else {
-    freetypeControl = fontRastAALow;
-  }
-  delete freetypeControlStr;
-#else
-  freetypeControl = fontRastNone;
-#endif
-  t1Courier = app->getStringResource("t1Courier", NULL);
-  t1CourierBold = app->getStringResource("t1CourierBold", NULL);
-  t1CourierBoldOblique = app->getStringResource("t1CourierBoldOblique", NULL);
-  t1CourierOblique = app->getStringResource("t1CourierOblique", NULL);
-  t1Helvetica = app->getStringResource("t1Helvetica", NULL);
-  t1HelveticaBold = app->getStringResource("t1HelveticaBold", NULL);
-  t1HelveticaBoldOblique =
-    app->getStringResource("t1HelveticaBoldOblique", NULL);
-  t1HelveticaOblique = app->getStringResource("t1HelveticaOblique", NULL);
-  t1Symbol = app->getStringResource("t1Symbol", NULL);
-  t1TimesBold = app->getStringResource("t1TimesBold", NULL);
-  t1TimesBoldItalic = app->getStringResource("t1TimesBoldItalic", NULL);
-  t1TimesItalic = app->getStringResource("t1TimesItalic", NULL);
-  t1TimesRoman = app->getStringResource("t1TimesRoman", NULL);
-  t1ZapfDingbats = app->getStringResource("t1ZapfDingbats", NULL);
-#if JAPANESE_SUPPORT
-  japan12Font = app->getStringResource("japaneseFont", NULL);
-#endif
-#if CHINESE_GB_SUPPORT
-  gb12Font = app->getStringResource("chineseGBFont", NULL);
-#endif
-#if CHINESE_CNS_SUPPORT
-  cns13Font = app->getStringResource("chineseCNSFont", NULL);
-#endif
   if (fullScreen) {
     zoom = zoomPage;
   } else {
-    zoomStr = app->getStringResource("initialZoom", defZoomStr);
-    if (!zoomStr->cmp("page")) {
+    if (!zoomStr[0]) {
+      strcpy(zoomStr, defZoomStr);
+    }
+    if (!strcmp(zoomStr, "page")) {
       zoom = zoomPage;
       i = maxZoom - minZoom + 2;
-    } else if (!zoomStr->cmp("width")) {
+    } else if (!strcmp(zoomStr, "width")) {
       zoom = zoomWidth;
       i = maxZoom - minZoom + 3;
     } else {
-      zoom = atoi(zoomStr->getCString());
+      zoom = atoi(zoomStr);
       if (zoom < minZoom)
 	zoom = minZoom;
       else if (zoom > maxZoom)
 	zoom = maxZoom;
       i = zoom - minZoom;
     }
-    delete zoomStr;
     zoomMenuBtn->setInitialMenuItem(zoomMenu->getItem(i));
   }
   viKeys = app->getBoolResource("viKeys", gFalse);
@@ -712,11 +767,24 @@ int main(int argc, char *argv[]) {
 
   // create output device
   out = new LTKOutputDev(win, paperColor, installCmap, rgbCubeSize,
-			 t1libControl, freetypeControl, !fullScreen);
+			 !fullScreen);
   out->startDoc(doc ? doc->getXRef() : (XRef *)NULL);
 
   // display first page
-  displayPage(pg, zoom, 0, gTrue);
+  if (destName) {
+    if (doc) {
+      if ((dest = doc->findDest(destName))) {
+	displayDest(dest, zoom, 0, gTrue);
+	delete dest;
+      } else {
+	error(-1, "Unknown named destination '%s'", destName->getCString());
+	displayPage(1, zoom, 0, gTrue);
+      }
+    }
+    delete destName;
+  } else {
+    displayPage(pg, zoom, 0, gTrue);
+  }
 
   // event loop
   quit = gFalse;
@@ -752,91 +820,28 @@ int main(int argc, char *argv[]) {
   if (psFileName) {
     delete psFileName;
   }
-  if (defPSFileName) {
-    delete defPSFileName;
-  }
   if (fileReqDir) {
     delete fileReqDir;
-  }
-  if (urlCommand) {
-    delete urlCommand;
   }
   if (windowTitle) {
     delete windowTitle;
   }
-  if (t1Courier) {
-    delete t1Courier;
-  }
-  if (t1CourierBold) {
-    delete t1CourierBold;
-  }
-  if (t1CourierBoldOblique) {
-    delete t1CourierBoldOblique;
-  }
-  if (t1CourierOblique) {
-    delete t1CourierOblique;
-  }
-  if (t1Helvetica) {
-    delete t1Helvetica;
-  }
-  if (t1HelveticaBold) {
-    delete t1HelveticaBold;
-  }
-  if (t1HelveticaBoldOblique) {
-    delete t1HelveticaBoldOblique;
-  }
-  if (t1HelveticaOblique) {
-    delete t1HelveticaOblique;
-  }
-  if (t1Symbol) {
-    delete t1Symbol;
-  }
-  if (t1TimesBold) {
-    delete t1TimesBold;
-  }
-  if (t1TimesBoldItalic) {
-    delete t1TimesBoldItalic;
-  }
-  if (t1TimesItalic) {
-    delete t1TimesItalic;
-  }
-  if (t1TimesRoman) {
-    delete t1TimesRoman;
-  }
-  if (t1ZapfDingbats) {
-    delete t1ZapfDingbats;
-  }
-#if JAPANESE_SUPPORT
-  if (japan12Font) {
-    delete japan12Font;
-  }
-#endif
-#if CHINESE_GB_SUPPORT
-  if (gb12Font) {
-    delete gb12Font;
-  }
-#endif
-#if CHINESE_CNS_SUPPORT
-  if (cns13Font) {
-    delete cns13Font;
-  }
-#endif
   for (i = 0; i < historySize; ++i) {
     if (history[i].fileName) {
       delete history[i].fileName;
     }
   }
-  freeParams();
+  delete globalParams;
 
   // check for memory leaks
-  Object::memCheck(errFile ? errFile : stderr);
-  gMemReport(errFile ? errFile : stderr);
+  Object::memCheck(stderr);
+  gMemReport(stderr);
 
   return ret;
 }
 
 //------------------------------------------------------------------------
-// loadFile / displayPage
+// loadFile / displayPage / displayDest
 //------------------------------------------------------------------------
 
 static GBool loadFile(GString *fileName) {
@@ -892,8 +897,8 @@ static GBool loadFile(GString *fileName) {
   // init PostScript output params
   if (psFileName)
     delete psFileName;
-  if (defPSFileName) {
-    psFileName = defPSFileName->copy();
+  if (globalParams->getPSFile()) {
+    psFileName = globalParams->getPSFile()->copy();
   } else {
     p = fileName->getCString() + fileName->getLength() - 4;
     if (!strcmp(p, ".pdf") || !strcmp(p, ".PDF"))
@@ -924,7 +929,7 @@ static GBool loadFile(GString *fileName) {
   return gTrue;
 }
 
-static void displayPage(int page1, int zoom1, int rotate1, GBool addToHist) {
+static void displayPage(int pageA, int zoomA, int rotateA, GBool addToHist) {
   time_t modTime1;
   double hDPI, vDPI, dpi;
   int rot;
@@ -939,8 +944,8 @@ static void displayPage(int page1, int zoom1, int rotate1, GBool addToHist) {
   modTime1 = getModTime(doc->getFileName()->getCString());
   if (modTime1 != modTime) {
     if (loadFile(doc->getFileName()->copy())) {
-      if (page1 > doc->getNumPages()) {
-	page1 = doc->getNumPages();
+      if (pageA > doc->getNumPages()) {
+	pageA = doc->getNumPages();
       }
     }
     modTime = modTime1;
@@ -951,9 +956,9 @@ static void displayPage(int page1, int zoom1, int rotate1, GBool addToHist) {
     win->setBusyCursor(gTrue);
 
   // new page/zoom/rotate values
-  page = page1;
-  zoom = zoom1;
-  rotate = rotate1;
+  page = pageA;
+  zoom = zoomA;
+  rotate = rotateA;
 
   // initialize mouse-related stuff
   linkAction = NULL;
@@ -1025,6 +1030,75 @@ static void displayPage(int page1, int zoom1, int rotate1, GBool addToHist) {
   win->setBusyCursor(gFalse);
 }
 
+static void displayDest(LinkDest *dest, int zoomA, int rotateA,
+			GBool addToHist) {
+  Ref pageRef;
+  int pg;
+  int dx, dy;
+
+  if (dest->isPageRef()) {
+    pageRef = dest->getPageRef();
+    pg = doc->findPage(pageRef.num, pageRef.gen);
+  } else {
+    pg = dest->getPageNum();
+  }
+  if (pg <= 0 || pg > doc->getNumPages()) {
+    pg = 1;
+  }
+  if (pg != page) {
+    displayPage(pg, zoomA, rotateA, addToHist);
+  }
+
+  if (fullScreen) {
+    return;
+  }
+  switch (dest->getKind()) {
+  case destXYZ:
+    out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
+    if (dest->getChangeLeft() || dest->getChangeTop()) {
+      if (dest->getChangeLeft()) {
+	hScrollbar->setPos(dx, canvas->getWidth());
+      }
+      if (dest->getChangeTop()) {
+	vScrollbar->setPos(dy, canvas->getHeight());
+      }
+      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    }
+    //~ what is the zoom parameter?
+    break;
+  case destFit:
+  case destFitB:
+    //~ do fit
+    hScrollbar->setPos(0, canvas->getWidth());
+    vScrollbar->setPos(0, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    break;
+  case destFitH:
+  case destFitBH:
+    //~ do fit
+    out->cvtUserToDev(0, dest->getTop(), &dx, &dy);
+    hScrollbar->setPos(0, canvas->getWidth());
+    vScrollbar->setPos(dy, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    break;
+  case destFitV:
+  case destFitBV:
+    //~ do fit
+    out->cvtUserToDev(dest->getLeft(), 0, &dx, &dy);
+    hScrollbar->setPos(dx, canvas->getWidth());
+    vScrollbar->setPos(0, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    break;
+  case destFitR:
+    //~ do fit
+    out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
+    hScrollbar->setPos(dx, canvas->getWidth());
+    vScrollbar->setPos(dy, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    break;
+  }
+}
+
 //------------------------------------------------------------------------
 // key press and menu callbacks
 //------------------------------------------------------------------------
@@ -1076,6 +1150,12 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
 	canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
       }
       break;
+    case 'v':
+      forwardCbk(NULL, 0, gTrue);
+      break;
+    case 'b':
+      backCbk(NULL, 0, gTrue);
+      break;
     case 'h':			// vi-style left
       if (fullScreen) {
 	break;
@@ -1116,8 +1196,9 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
       if (fullScreen) {
 	break;
       }
-      zoom = 0;
-      displayPage(page, zoom, rotate, gFalse);
+      if (zoom != defZoom) {
+	zoomMenuBtn->setMenuItem(zoomMenu->getItem(defZoom - minZoom));
+      }
       break;
     case '+':
       if (fullScreen) {
@@ -1361,10 +1442,7 @@ static void doLink(int mx, int my) {
   char *s;
   GString *fileName;
   GString *actionName;
-  Ref pageRef;
-  int pg;
   double x, y;
-  int dx, dy;
   LTKButtonDialog *dialog;
   int i;
 
@@ -1409,68 +1487,13 @@ static void doLink(int mx, int my) {
 	dest = doc->findDest(namedDest);
 	delete namedDest;
       }
-      if (!dest) {
-	if (kind == actionGoToR)
-	  displayPage(1, zoom, 0, gTrue);
-      } else {
-	if (dest->isPageRef()) {
-	  pageRef = dest->getPageRef();
-	  pg = doc->findPage(pageRef.num, pageRef.gen);
-	} else {
-	  pg = dest->getPageNum();
-	}
-	if (pg > 0 && pg != page)
-	  displayPage(pg, zoom, rotate, gTrue);
-	else if (pg <= 0)
-	  displayPage(1, zoom, rotate, gTrue);
-	if (fullScreen) {
-	  delete dest;
-	  break;
-	}
-	switch (dest->getKind()) {
-	case destXYZ:
-	  out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
-	  if (dest->getChangeLeft() || dest->getChangeTop()) {
-	    if (dest->getChangeLeft())
-	      hScrollbar->setPos(dx, canvas->getWidth());
-	    if (dest->getChangeTop())
-	      vScrollbar->setPos(dy, canvas->getHeight());
-	    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  }
-	  //~ what is the zoom parameter?
-	  break;
-	case destFit:
-	case destFitB:
-	  //~ do fit
-	  hScrollbar->setPos(0, canvas->getWidth());
-	  vScrollbar->setPos(0, canvas->getHeight());
-	  canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  break;
-	case destFitH:
-	case destFitBH:
-	  //~ do fit
-	  out->cvtUserToDev(0, dest->getTop(), &dx, &dy);
-	  hScrollbar->setPos(0, canvas->getWidth());
-	  vScrollbar->setPos(dy, canvas->getHeight());
-	  canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  break;
-	case destFitV:
-	case destFitBV:
-	  //~ do fit
-	  out->cvtUserToDev(dest->getLeft(), 0, &dx, &dy);
-	  hScrollbar->setPos(dx, canvas->getWidth());
-	  vScrollbar->setPos(0, canvas->getHeight());
-	  canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  break;
-	case destFitR:
-	  //~ do fit
-	  out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
-	  hScrollbar->setPos(dx, canvas->getWidth());
-	  vScrollbar->setPos(dy, canvas->getHeight());
-	  canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  break;
-	}
+      if (dest) {
+	displayDest(dest, zoom, rotate, gTrue);
 	delete dest;
+      } else {
+	if (kind == actionGoToR) {
+	  displayPage(1, zoom, 0, gTrue);
+	}
       }
       break;
 
@@ -1555,8 +1578,7 @@ static void doLink(int mx, int my) {
 	system(fileName->getCString());
 	delete fileName;
       } else {
-	fprintf(errFile, "URI: %s\n",
-		((LinkURI *)action)->getURI()->getCString());
+	printf("URI: %s\n", ((LinkURI *)action)->getURI()->getCString());
       }
       break;
 
@@ -1910,19 +1932,23 @@ static void propChangeCbk(LTKWindow *win1, Atom atom) {
   Atom type;
   int format;
   Gulong size, remain;
-  char *p;
+  char *p, *q;
   GString *newFileName;
   int newPage;
+  GString *destName;
+  LinkDest *dest;
 
   // get command
   xwin = win1->getXWindow();
   if (XGetWindowProperty(display, xwin, remoteAtom,
 			 0, remoteCmdLength/4, True, remoteAtom,
 			 &type, &format, &size, &remain,
-			 (Guchar **)&cmd) != Success)
+			 (Guchar **)&cmd) != Success) {
     return;
-  if (size == 0)
+  }
+  if (size == 0) {
     return;
+  }
 
   // raise window
   if (cmd[0] == 'D' || cmd[0] == 'r'){
@@ -1933,10 +1959,22 @@ static void propChangeCbk(LTKWindow *win1, Atom atom) {
   // display file / page
   if (cmd[0] == 'd' || cmd[0] == 'D') {
     p = cmd + 2;
-    newPage = atoi(p);
-    if (!(p = strchr(p, ' ')))
+    q = strchr(p, ' ');
+    if (!q) {
       return;
-    newFileName = new GString(p + 1);
+    }
+    *q++ = '\0';
+    newPage = 1;
+    destName = NULL;
+    if (*p == '+') {
+      destName = new GString(p + 1);
+    } else {
+      newPage = atoi(p);
+    }
+    if (!q) {
+      return;
+    }
+    newFileName = new GString(q);
     XFree((XPointer)cmd);
     if (!doc || newFileName->cmp(doc->getFileName())) {
       if (!loadFile(newFileName))
@@ -1944,8 +1982,16 @@ static void propChangeCbk(LTKWindow *win1, Atom atom) {
     } else {
       delete newFileName;
     }
-    if (newPage != page && newPage >= 1 && newPage <= doc->getNumPages())
+    if (destName) {
+      if ((dest = doc->findDest(destName))) {
+	displayDest(dest, zoom, rotate, gTrue);
+	delete dest;
+      }
+      delete destName;
+    } else if (newPage != page &&
+	       newPage >= 1 && newPage <= doc->getNumPages()) {
       displayPage(newPage, zoom, rotate, gTrue);
+    }
 
   // quit
   } else if (cmd[0] == 'q') {
@@ -2238,9 +2284,7 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on) {
     if (doc->okToPrint()) {
       psOut = new PSOutputDev(psFileName->getCString(), doc->getXRef(),
 			      doc->getCatalog(), psFirstPage, psLastPage,
-			      level1 ? psLevel1 : psLevel2,
-			      psModePS, gFalse, gTrue, gTrue,
-			      paperWidth, paperHeight);
+			      psModePS);
       if (psOut->isOk()) {
 	doc->displayPages(psOut, psFirstPage, psLastPage, 72, 0, gFalse);
       }
@@ -2263,10 +2307,19 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on) {
 //------------------------------------------------------------------------
 
 static void mapAboutWin() {
+  int i;
+
   if (aboutWin) {
     aboutWin->raise();
   } else {
     aboutWin = makeAboutWindow(app);
+    aboutWin->setLayoutCbk(&aboutLayoutCbk);
+    aboutList = (LTKList *)aboutWin->findWidget("list");
+    aboutHScrollbar = (LTKScrollbar *)aboutWin->findWidget("hScrollbar");
+    aboutVScrollbar = (LTKScrollbar *)aboutWin->findWidget("vScrollbar");
+    for (i = 0; aboutWinText[i]; ++i) {
+      aboutList->addLine(aboutWinText[i]);
+    }
     aboutWin->layout(-1, -1, -1, -1);
     aboutWin->map();
   }
@@ -2275,6 +2328,24 @@ static void mapAboutWin() {
 static void closeAboutCbk(LTKWidget *button, int n, GBool on) {
   delete aboutWin;
   aboutWin = NULL;
+}
+
+static void aboutLayoutCbk(LTKWindow *winA) {
+  aboutHScrollbar->setLimits(0, aboutList->getMaxWidth() - 1);
+  aboutHScrollbar->setPos(aboutHScrollbar->getPos(), aboutList->getWidth());
+  aboutVScrollbar->setLimits(0, aboutList->getNumLines() - 1);
+  aboutVScrollbar->setPos(aboutVScrollbar->getPos(),
+			  aboutList->getDisplayedLines());
+}
+
+static void aboutScrollVertCbk(LTKWidget *scrollbar, int n, int val) {
+  aboutList->scrollTo(val, aboutHScrollbar->getPos());
+  XSync(display, False);
+}
+
+static void aboutScrollHorizCbk(LTKWidget *scrollbar, int n, int val) {
+  aboutList->scrollTo(aboutVScrollbar->getPos(), val);
+  XSync(display, False);
 }
 
 //------------------------------------------------------------------------
@@ -2311,12 +2382,14 @@ static void findButtonCbk(LTKWidget *button, int n, GBool on) {
 }
 
 static void doFind(char *s) {
+  Unicode *u;
   TextOutputDev *textOut;
   int xMin, yMin, xMax, yMax;
   double xMin1, yMin1, xMax1, yMax1;
   int pg;
   GBool top;
   GString *s1;
+  int len, i;
 
   // check for zero-length string
   if (!s[0]) {
@@ -2328,6 +2401,15 @@ static void doFind(char *s) {
   win->setBusyCursor(gTrue);
   findWin->setBusyCursor(gTrue);
 
+  // convert to Unicode
+#if 1 //~ should do something more intelligent here
+  len = strlen(s);
+  u = (Unicode *)gmalloc(len * sizeof(Unicode));
+  for (i = 0; i < len; ++i) {
+    u[i] = (Unicode)(s[i] & 0xff);
+  }
+#endif
+
   // search current page starting at current selection or top of page
   xMin = yMin = xMax = yMax = 0;
   if (selectXMin < selectXMax && selectYMin < selectYMax) {
@@ -2337,28 +2419,31 @@ static void doFind(char *s) {
   } else {
     top = gTrue;
   }
-  if (out->findText(s, top, gTrue, &xMin, &yMin, &xMax, &yMax))
+  if (out->findText(u, len, top, gTrue, &xMin, &yMin, &xMax, &yMax)) {
     goto found;
+  }
 
   // search following pages
-  textOut = new TextOutputDev(NULL,
-			      useEUCJP ? textOutASCII7 : textOutLatin1,
-			      gFalse, gFalse);
+  textOut = new TextOutputDev(NULL, gFalse, gFalse);
   if (!textOut->isOk()) {
     delete textOut;
     goto done;
   }
   for (pg = page+1; pg <= doc->getNumPages(); ++pg) {
     doc->displayPage(textOut, pg, 72, 0, gFalse);
-    if (textOut->findText(s, gTrue, gTrue, &xMin1, &yMin1, &xMax1, &yMax1))
+    if (textOut->findText(u, len, gTrue, gTrue,
+			  &xMin1, &yMin1, &xMax1, &yMax1)) {
       goto foundPage;
+    }
   }
 
   // search previous pages
   for (pg = 1; pg < page; ++pg) {
     doc->displayPage(textOut, pg, 72, 0, gFalse);
-    if (textOut->findText(s, gTrue, gTrue, &xMin1, &yMin1, &xMax1, &yMax1))
+    if (textOut->findText(u, len, gTrue, gTrue,
+			  &xMin1, &yMin1, &xMax1, &yMax1)) {
       goto foundPage;
+    }
   }
   delete textOut;
 
@@ -2366,8 +2451,9 @@ static void doFind(char *s) {
   if (selectXMin < selectXMax && selectYMin < selectYMax) {
     xMax = selectXMin;
     yMax = (selectYMin + selectYMax) / 2;
-    if (out->findText(s, gTrue, gFalse, &xMin, &yMin, &xMax, &yMax))
+    if (out->findText(u, len, gTrue, gFalse, &xMin, &yMin, &xMax, &yMax)) {
       goto found;
+    }
   }
 
   // not found
@@ -2378,8 +2464,10 @@ static void doFind(char *s) {
  foundPage:
   delete textOut;
   displayPage(pg, zoom, rotate, gTrue);
-  if (!out->findText(s, gTrue, gTrue, &xMin, &yMin, &xMax, &yMax))
-    goto done; // this can happen if coalescing is bad
+  if (!out->findText(u, len, gTrue, gTrue, &xMin, &yMin, &xMax, &yMax)) {
+    // this can happen if coalescing is bad
+    goto done;
+  }
 
   // found: change the selection
  found:
@@ -2392,6 +2480,8 @@ static void doFind(char *s) {
 #endif
 
  done:
+  gfree(u);
+
   // reset cursors to normal
   win->setBusyCursor(gFalse);
   findWin->setBusyCursor(gFalse);

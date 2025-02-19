@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include "gmem.h"
 #include "Decrypt.h"
 

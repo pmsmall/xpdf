@@ -1,11 +1,11 @@
-xpdf
+Xpdf
 ====
 
-version 0.93
-2001-oct-25
+version 1.00
+2002-feb-01
 
-The xpdf software and documentation are
-copyright 1996-2001 Derek B. Noonburg.
+The Xpdf software and documentation are
+copyright 1996-2002 Derek B. Noonburg.
 
 Email: derekn@foolabs.com
 WWW: http://www.foolabs.com/xpdf/
@@ -35,27 +35,26 @@ different systems.
     --with-t1-library=PATH
     --with-t1-includes=PATH
 
-* Install FreeType (if desired).  The resulting library (libttf) and
-  include files (freetype/*.h) should be placed somewhere on the
-  standard search paths.  Alternatively, when you configure xpdf, you
+* Install FreeType 2 (if desired).  WARNING: You must have version
+  2.0.5 or newer.  Recent versions of XFree86 ship with an older
+  version, which means you'll need to explicitly set include and
+  library paths to get the correct version:
+
+    --with-freetype2-library=PATH
+    --with-freetype2-includes=PATH
+
+  (With the default installation, the library path is
+  /usr/local/include and the include path is
+  /usr/local/include/freetype2.)
+
+* Alternatively, you can use FreeType 1.  The resulting library
+  (libttf) and include files (freetype/*.h) should be placed somewhere
+  on the standard search paths.  If not, when you configure xpdf, you
   can use the following options to tell configure where to find the
   FreeType files:
 
     --with-freetype-library=PATH
     --with-freetype-includes=PATH
-
-* To use FreeType 2, you must have version 2.0.5 or newer.  Recent
-  versions of XFree86 ship with an older version, which means you'll
-  need to explicitly set include and library paths to get the correct
-  version:
-
-    --enable-freetype2
-    --with-freetype-library=PATH
-    --with-freetype-includes=PATH
-
-  (With the default installation, the library path is
-  /usr/local/include and the include path is
-  /usr/local/include/freetype2.)
 
 * Run the configure script:
 
@@ -73,23 +72,6 @@ different systems.
         Switches the default paper size for PostScript output (xpdf
         and pdftops) to A4.  The default is Letter size.
 
-    --enable-japanese
-        Enables support for 16-bit Japanese fonts.  This increases the
-        size of the binary (mostly with decoding tables).  The default
-        is no Japanese font support.
-
-    --enable-chinese-gb
-        Enables support for 16-bit Chinese GB fonts (Adobe-GB1-2
-        character set).  This increases the size of the binary (mostly
-        with decoding tables).  The default is no Chinese GB font
-        support.
-
-    --enable-chinese-cns
-        Enables support for 16-bit Chinese CNS fonts (Adobe-CNS1-3
-        character set).  This increases the size of the binary (mostly
-        with decoding tables).  The default is no Chinese CNS font
-        support.
-
     --enable-no-text-select
         With this option, xpdf will not copy text.  (This is only
         useful on closed systems where the user can't get at the PDF
@@ -102,6 +84,10 @@ different systems.
     --with-gzip
         Use gzip instead of uncompress.
 
+    --sysconfdir=DIR
+        Look for the system-wide xpdfrc config file in this directory.
+        The default is PREFIX/etc.
+
     --with-appdef-dir=DIR
         Use the specified app-defaults directory.  The default is
         /usr/lib/X11/app-defaults.
@@ -112,6 +98,7 @@ different systems.
     xpdf/pdftops
     xpdf/pdftotext
     xpdf/pdfinfo
+    xpdf/pdffonts
     xpdf/pdftopbm
     xpdf/pdfimages
 
@@ -167,9 +154,9 @@ configure script version.
 ***  Win32  ***
 ***************
 
-The non-X programs (pdftops, pdftotext, pdfinfo, and pdfimages) will
-compiled with both gcc (from cygwin), djgpp (the Delorie port of gcc)
-and Microsoft Visual C++.
+The non-X programs (pdftops, pdftotext, pdfinfo, pdffonts, and
+pdfimages) will compile with both gcc (from cygwin), djgpp (the
+Delorie port of gcc) and Microsoft Visual C++.
 
 With cygwin, the build procedure is the same as for Unix:
 

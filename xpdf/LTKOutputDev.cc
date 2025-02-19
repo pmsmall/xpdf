@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -23,20 +24,17 @@
 #include "GfxState.h"
 #include "GfxFont.h"
 #include "Error.h"
-#include "Params.h"
 #include "LTKOutputDev.h"
 
 //------------------------------------------------------------------------
 
 LTKOutputDev::LTKOutputDev(LTKWindow *winA, unsigned long paperColor,
 			   GBool installCmap, GBool rgbCubeSize,
-			   FontRastControl t1libControl,
-			   FontRastControl freetypeControl,
 			   GBool incrementalUpdateA):
   XOutputDev(winA->getDisplay(),
 	     ((LTKScrollingCanvas *)winA->findWidget("canvas"))->getPixmap(),
 	     0, winA->getColormap(), paperColor,
-	     installCmap, rgbCubeSize, t1libControl, freetypeControl)
+	     installCmap, rgbCubeSize)
 {
   win = winA;
   canvas = (LTKScrollingCanvas *)win->findWidget("canvas");

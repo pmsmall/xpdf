@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stddef.h>
 #include "gmem.h"
 #include "Object.h"

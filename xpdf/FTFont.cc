@@ -8,13 +8,19 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
+
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 #include <math.h>
 #include <string.h>
 #include "gmem.h"
 #include "freetype/internal/ftobjs.h"
-#include "FontEncoding.h"
+#if 1 //~ cff cid->gid map
+#include "freetype/internal/cfftypes.h"
+#include "freetype/internal/tttypes.h"
+#endif
+#include "GlobalParams.h"
 #include "FTFont.h"
 
 //------------------------------------------------------------------------
@@ -38,69 +44,88 @@ FTFontEngine::~FTFontEngine() {
 //------------------------------------------------------------------------
 
 FTFontFile::FTFontFile(FTFontEngine *engineA, char *fontFileName,
-		       FontEncoding *fontEnc) {
+		       char **fontEnc, GBool pdfFontHasEncoding) {
   char *name;
-  int i;
+  int unicodeCmap, macRomanCmap, msSymbolCmap;
+  int i, j;
 
   ok = gFalse;
   engine = engineA;
+  codeMap = NULL;
   if (FT_New_Face(engine->lib, fontFileName, 0, &face)) {
     return;
   }
 
-  if (!strcmp(face->driver->root.clazz->module_name, "type1")) {
+  if (!strcmp(face->driver->root.clazz->module_name, "type1") ||
+      !strcmp(face->driver->root.clazz->module_name, "cff")) {
 
-    useGlyphMap = gTrue;
+    mode = ftFontModeCodeMapDirect;
+    codeMap = (Guint *)gmalloc(256 * sizeof(Guint));
     for (i = 0; i < 256; ++i) {
-      glyphMap[i] = 0;
-      if ((name = fontEnc->getCharName(i))) {
-	glyphMap[i] = FT_Get_Name_Index(face, name);
-      }
-    }
-
-  } else if (!strcmp(face->driver->root.clazz->module_name, "cff")) {
-
-    useGlyphMap = gTrue;
-    for (i = 0; i < 256; ++i) {
-      glyphMap[i] = 0;
-      if ((name = fontEnc->getCharName(i))) {
-	glyphMap[i] = FT_Get_Name_Index(face, name);
+      codeMap[i] = 0;
+      if ((name = fontEnc[i])) {
+	codeMap[i] = FT_Get_Name_Index(face, name);
       }
     }
 
   } else {
 
-    useGlyphMap = gFalse;
-
-    // Choose a cmap:
-    // 1. If the font contains an Adobe cmap (which means it's a Type 1
-    //    or Type 1C font), use it.
-    // 2. If the font contains a Windows-symbol cmap, use it.
-    // 3. Otherwise, use the first cmap in the TTF file.
-    // 4. If the Windows-Symbol cmap is used (from either step 1 or step
-    //    2), offset all character indexes by 0xf000.
-    // This seems to match what acroread does, but may need further
-    // tweaking.
+    // To match up with the Adobe-defined behaviour, we choose a cmap
+    // like this:
+    // 1. If the PDF font has an encoding:
+    //    1a. If the TrueType font has a Microsoft Unicode cmap, use it,
+    //        and use the Unicode indexes, not the char codes.
+    //    1b. If the TrueType font has a Macintosh Roman cmap, use it,
+    //        and reverse map the char names through MacRomanEncoding to
+    //        get char codes.
+    // 2. If the PDF font does not have an encoding:
+    //    2a. If the TrueType font has a Macintosh Roman cmap, use it,
+    //        and use char codes directly.
+    //    2b. If the TrueType font has a Microsoft Symbol cmap, use it,
+    //        and use (0xf000 + char code).
+    // 3. If none of these rules apply, use the first cmap and hope for
+    //    the best (this shouldn't happen).
+    unicodeCmap = macRomanCmap = msSymbolCmap = 0xffff;
     for (i = 0; i < face->num_charmaps; ++i) {
-      if (face->charmaps[i]->platform_id == 7) {
-	break;
+      if (face->charmaps[i]->platform_id == 3 &&
+	  face->charmaps[i]->encoding_id == 1) {
+	unicodeCmap = i;
+      } else if (face->charmaps[i]->platform_id == 1 &&
+		 face->charmaps[i]->encoding_id == 0) {
+	macRomanCmap = i;
+      } else if (face->charmaps[i]->platform_id == 3 &&
+		 face->charmaps[i]->encoding_id == 0) {
+	msSymbolCmap = i;
       }
     }
-    if (i >= face->num_charmaps) {
-      for (i = 0; i < face->num_charmaps; ++i) {
-	if (face->charmaps[i]->platform_id == 3 &&
-	    face->charmaps[i]->encoding_id == 0) {
-	  break;
+    i = 0;
+    mode = ftFontModeCharCode;
+    charMapOffset = 0;
+    if (pdfFontHasEncoding) {
+      if (unicodeCmap != 0xffff) {
+	i = unicodeCmap;
+	mode = ftFontModeUnicode;
+      } else if (macRomanCmap != 0xffff) {
+	i = macRomanCmap;
+	mode = ftFontModeCodeMap;
+	codeMap = (Guint *)gmalloc(256 * sizeof(Guint));
+	for (j = 0; j < 256; ++j) {
+	  if (fontEnc[j]) {
+	    codeMap[j] = globalParams->getMacRomanCharCode(fontEnc[j]);
+	  } else {
+	    codeMap[j] = 0;
+	  }
 	}
       }
-      if (i >= face->num_charmaps) {
-	i = 0;
+    } else {
+      if (macRomanCmap != 0xffff) {
+	i = macRomanCmap;
+	mode = ftFontModeCharCode;
+      } else if (msSymbolCmap != 0xffff) {
+	i = msSymbolCmap;
+	mode = ftFontModeCharCodeOffset;
+	charMapOffset = 0xf000;
       }
-    }
-    charMapOffset = 0;
-    if (face->charmaps[i]->platform_id == 3 &&
-	face->charmaps[i]->encoding_id == 0) {
-      charMapOffset = 0xf000;
     }
     if (FT_Set_Charmap(face, face->charmaps[i])) {
       return;
@@ -110,9 +135,39 @@ FTFontFile::FTFontFile(FTFontEngine *engineA, char *fontFileName,
   ok = gTrue;
 }
 
+FTFontFile::FTFontFile(FTFontEngine *engineA, char *fontFileName,
+		       Gushort *cidToGIDA, int cidToGIDLenA) {
+  ok = gFalse;
+  engine = engineA;
+  codeMap = NULL;
+  if (FT_New_Face(engine->lib, fontFileName, 0, &face)) {
+    return;
+  }
+  cidToGID = cidToGIDA;
+  cidToGIDLen = cidToGIDLenA;
+  mode = ftFontModeCIDToGIDMap;
+  ok = gTrue;
+}
+
+FTFontFile::FTFontFile(FTFontEngine *engineA, char *fontFileName) {
+  ok = gFalse;
+  engine = engineA;
+  codeMap = NULL;
+  if (FT_New_Face(engine->lib, fontFileName, 0, &face)) {
+    return;
+  }
+  cidToGID = NULL;
+  cidToGIDLen = 0;
+  mode = ftFontModeCFFCharset;
+  ok = gTrue;
+}
+
 FTFontFile::~FTFontFile() {
   if (face) {
     FT_Done_Face(face);
+  }
+  if (codeMap) {
+    gfree(codeMap);
   }
 }
 
@@ -121,7 +176,7 @@ FTFontFile::~FTFontFile() {
 FTFont::FTFont(FTFontFile *fontFileA, double *m) {
   FTFontEngine *engine;
   FT_Face face;
-  double size;
+  double size, div;
   int x, xMin, xMax;
   int y, yMin, yMax;
   int i;
@@ -139,59 +194,60 @@ FTFont::FTFont(FTFontFile *fontFileA, double *m) {
     return;
   }
 
+  div = face->bbox.xMax > 20000 ? 65536 : 1;
+
   // transform the four corners of the font bounding box -- the min
   // and max values form the bounding box of the transformed font
   x = (int)((m[0] * face->bbox.xMin + m[2] * face->bbox.yMin) /
-	    (65536.0 * face->units_per_EM));
+	    (div * face->units_per_EM));
   xMin = xMax = x;
   y = (int)((m[1] * face->bbox.xMin + m[3] * face->bbox.yMin) /
-	    (65536.0 * face->units_per_EM));
+	    (div * face->units_per_EM));
   yMin = yMax = y;
   x = (int)((m[0] * face->bbox.xMin + m[2] * face->bbox.yMax) /
-	    (65536.0 * face->units_per_EM));
+	    (div * face->units_per_EM));
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
   y = (int)((m[1] * face->bbox.xMin + m[3] * face->bbox.yMax) /
-	    (65536.0 * face->units_per_EM));
+	    (div * face->units_per_EM));
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
     yMax = y;
   }
   x = (int)((m[0] * face->bbox.xMax + m[2] * face->bbox.yMin) /
-	    (65536.0 * face->units_per_EM));
+	    (div * face->units_per_EM));
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
   y = (int)((m[1] * face->bbox.xMax + m[3] * face->bbox.yMin) /
-	    (65536.0 * face->units_per_EM));
+	    (div * face->units_per_EM));
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
     yMax = y;
   }
   x = (int)((m[0] * face->bbox.xMax + m[2] * face->bbox.yMax) /
-	    (65536.0 * face->units_per_EM));
+	    (div * face->units_per_EM));
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
   y = (int)((m[1] * face->bbox.xMax + m[3] * face->bbox.yMax) /
-	    (65536.0 * face->units_per_EM));
+	    (div * face->units_per_EM));
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
     yMax = y;
   }
-#if 1 //~
-  //~ This is a kludge: some buggy PDF generators embed fonts with
-  //~ zero bounding boxes.
+  // This is a kludge: some buggy PDF generators embed fonts with
+  // zero bounding boxes.
   if (xMax == xMin) {
     xMin = 0;
     xMax = (int)size;
@@ -200,7 +256,6 @@ FTFont::FTFont(FTFontFile *fontFileA, double *m) {
     yMin = 0;
     yMax = (int)(1.2 * size);
   }
-#endif
   // this should be (max - min + 1), but we add some padding to
   // deal with rounding errors
   glyphW = xMax - xMin + 3;
@@ -254,7 +309,8 @@ FTFont::~FTFont() {
 }
 
 GBool FTFont::drawChar(Drawable d, int w, int h, GC gc,
-		       int x, int y, int r, int g, int b, Gushort c) {
+		       int x, int y, int r, int g, int b,
+		       CharCode c, Unicode u) {
   FTFontEngine *engine;
   XColor xcolor;
   int bgR, bgG, bgB;
@@ -267,7 +323,7 @@ GBool FTFont::drawChar(Drawable d, int w, int h, GC gc,
   engine = fontFile->engine;
 
   // generate the glyph pixmap
-  if (!(p = getGlyphPixmap(c, &xOffset, &yOffset, &gw, &gh))) {
+  if (!(p = getGlyphPixmap(c, u, &xOffset, &yOffset, &gw, &gh))) {
     return gFalse;
   }
 
@@ -333,7 +389,10 @@ GBool FTFont::drawChar(Drawable d, int w, int h, GC gc,
 	// this is a heuristic which seems to produce decent
 	// results -- the linear mapping would be:
 	// pix = (pix * 5) / 256;
-	pix = (pix * 4) / 230;
+	pix = ((pix + 10) * 5) / 256;
+	if (pix > 4) {
+	  pix = 4;
+	}
 	if (pix > 0) {
 	  XPutPixel(image, xx, yy, colors[pix]);
 	}
@@ -366,7 +425,8 @@ GBool FTFont::drawChar(Drawable d, int w, int h, GC gc,
   return gTrue;
 }
 
-Guchar *FTFont::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
+Guchar *FTFont::getGlyphPixmap(CharCode c, Unicode u,
+			       int *x, int *y, int *w, int *h) {
   FT_GlyphSlot slot;
   FT_UInt idx;
   int gSize;
@@ -396,16 +456,67 @@ Guchar *FTFont::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
   fontFile->face->size = sizeObj;
   FT_Set_Transform(fontFile->face, &matrix, NULL);
   slot = fontFile->face->glyph;
-  if (fontFile->useGlyphMap) {
-    if (c < 256) {
-      idx = fontFile->glyphMap[c];
+  idx = 0; // make gcc happy
+  switch (fontFile->mode) {
+  case ftFontModeUnicode:
+    idx = FT_Get_Char_Index(fontFile->face, (FT_ULong)u);
+    break;
+  case ftFontModeCharCode:
+    idx = FT_Get_Char_Index(fontFile->face, (FT_ULong)c);
+    break;
+  case ftFontModeCharCodeOffset:
+    idx = FT_Get_Char_Index(fontFile->face,
+			    (FT_ULong)(c + fontFile->charMapOffset));
+    break;
+  case ftFontModeCodeMap:
+    if (c <= 0xff) {
+      idx = FT_Get_Char_Index(fontFile->face, (FT_ULong)fontFile->codeMap[c]);
     } else {
       idx = 0;
     }
-  } else {
-    idx = FT_Get_Char_Index(fontFile->face, fontFile->charMapOffset + c);
+    break;
+  case ftFontModeCodeMapDirect:
+    if (c <= 0xff) {
+      idx = (FT_UInt)fontFile->codeMap[c];
+    } else {
+      idx = 0;
+    }
+    break;
+  case ftFontModeCIDToGIDMap:
+    if (fontFile->cidToGIDLen) {
+      if ((int)c < fontFile->cidToGIDLen) {
+	idx = (FT_UInt)fontFile->cidToGID[c];
+      } else {
+	idx = (FT_UInt)0;
+      }
+    } else {
+      idx = (FT_UInt)c;
+    }
+    break;
+  case ftFontModeCFFCharset:
+#if 1 //~ cff cid->gid map
+    CFF_Font *cff = (CFF_Font *)((TT_Face)fontFile->face)->extra.data;
+    idx = 0;
+    for (j = 0; j < (int)cff->num_glyphs; ++j) {
+      if (cff->charset.sids[j] == c) {
+	idx = j;
+	break;
+      }
+    }
+#endif
+    break;
   }
+#if 1
+  //~ the hinting in FT 2.0.6 appears to have some problems, so turn
+  //~ it off if anti-aliasing is enabled; if anti-aliasing is disabled,
+  //~ this seems to be a tossup - some fonts look better with hinting,
+  //~ some without, so leave hinting on
+  if (FT_Load_Glyph(fontFile->face, idx,
+		    fontFile->engine->aa ? FT_LOAD_NO_HINTING :
+		                           FT_LOAD_DEFAULT) ||
+#else
   if (FT_Load_Glyph(fontFile->face, idx, FT_LOAD_DEFAULT) ||
+#endif
       FT_Render_Glyph(slot,
 		      fontFile->engine->aa ? ft_render_mode_normal :
 		                             ft_render_mode_mono)) {
@@ -416,7 +527,7 @@ Guchar *FTFont::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
   *w = slot->bitmap.width;
   *h = slot->bitmap.rows;
   if (*w > glyphW || *h > glyphH) {
-#if 1 //~
+#if 1 //~ debug
     fprintf(stderr, "Weird FreeType glyph size: %d > %d or %d > %d\n",
 	    *w, glyphW, *h, glyphH);
 #endif

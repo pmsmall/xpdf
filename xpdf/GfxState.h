@@ -701,7 +701,7 @@ public:
 	       double x3, double y3);
 
   // Close the last subpath.
-  void close() { subpaths[n-1]->close(); }
+  void close();
 
 private:
 
@@ -866,7 +866,7 @@ public:
   void textMoveTo(double tx, double ty)
     { lineX = tx; lineY = ty; textTransform(tx, ty, &curX, &curY); }
   void textShift(double tx);
-  void textShift(double tx, double ty);
+  void shift(double dx, double dy);
 
   // Push/pop GfxState on/off stack.
   GfxState *save();

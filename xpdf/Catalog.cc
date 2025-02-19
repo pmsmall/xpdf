@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stddef.h>
 #include "gmem.h"
 #include "Object.h"
@@ -93,6 +94,12 @@ Catalog::Catalog(XRef *xrefA, GBool printCommands) {
   }
   obj.free();
 
+  // get the metadata stream
+  catDict.dictLookup("Metadata", &metadata);
+
+  // get the structure tree root
+  catDict.dictLookup("StructTreeRoot", &structTreeRoot);
+
   catDict.free();
   return;
 
@@ -124,6 +131,32 @@ Catalog::~Catalog() {
   if (baseURI) {
     delete baseURI;
   }
+  metadata.free();
+  structTreeRoot.free();
+}
+
+GString *Catalog::readMetadata() {
+  GString *s;
+  Dict *dict;
+  Object obj;
+  int c;
+
+  if (!metadata.isStream()) {
+    return NULL;
+  }
+  dict = metadata.streamGetDict();
+  if (!dict->lookup("Subtype", &obj)->isName("XML")) {
+    error(-1, "Unknown Metadata type: '%s'\n",
+	  obj.isName() ? obj.getName() : "???");
+  }
+  obj.free();
+  s = new GString();
+  metadata.streamReset();
+  while ((c = metadata.streamGetChar()) != EOF) {
+    s->append(c);
+  }
+  metadata.streamClose();
+  return s;
 }
 
 int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start,

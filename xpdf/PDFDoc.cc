@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -22,7 +23,6 @@
 #include "XRef.h"
 #include "Link.h"
 #include "OutputDev.h"
-#include "Params.h"
 #include "Error.h"
 #include "Lexer.h"
 #include "Parser.h"

@@ -17,17 +17,22 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include "config.h"
+#include "CharTypes.h"
+#include "GlobalParams.h"
 #include "OutputDev.h"
 
 class GString;
+class GList;
 struct GfxRGB;
 class GfxFont;
 class GfxSubpath;
 class TextPage;
-class FontEncoding;
 class XOutputFontCache;
 class Link;
 class Catalog;
+class DisplayFontParam;
+class UnicodeMap;
+class CharCodeToUnicode;
 
 #if HAVE_T1LIB_H
 class T1FontEngine;
@@ -61,57 +66,10 @@ class TTFont;
 // Misc types
 //------------------------------------------------------------------------
 
-// Font rasterizer control.
-enum FontRastControl {
-  fontRastNone,			// don't use this rasterizer
-  fontRastPlain,		// use it, without anti-aliasing
-  fontRastAALow,		// use it, with low-level anti-aliasing
-  fontRastAAHigh		// use it, with high-level anti-aliasing
-};
-
 struct BoundingRect {
   short xMin, xMax;		// min/max x values
   short yMin, yMax;		// min/max y values
 };
-
-//------------------------------------------------------------------------
-// Parameters
-//------------------------------------------------------------------------
-
-// If any of these are set, xpdf will use t1lib to render those font(s)
-// instead of using the X server font(s).
-extern GString *t1Courier;
-extern GString *t1CourierBold;
-extern GString *t1CourierBoldOblique;
-extern GString *t1CourierOblique;
-extern GString *t1Helvetica;
-extern GString *t1HelveticaBold;
-extern GString *t1HelveticaBoldOblique;
-extern GString *t1HelveticaOblique;
-extern GString *t1Symbol;
-extern GString *t1TimesBold;
-extern GString *t1TimesBoldItalic;
-extern GString *t1TimesItalic;
-extern GString *t1TimesRoman;
-extern GString *t1ZapfDingbats;
-
-// Use the EUC-JP encoding.
-extern GBool useEUCJP;
-
-#if JAPANESE_SUPPORT
-// X font name pattern to use for Japanese text.
-extern GString *japan12Font;
-#endif
-
-#if CHINESE_GB_SUPPORT
-// X font name pattern to use for Chinese GB text.
-extern GString *gb12Font;
-#endif
-
-#if CHINESE_CNS_SUPPORT
-// X font name pattern to use for Chinese CNS text.
-extern GString *cns13Font;
-#endif
 
 //------------------------------------------------------------------------
 // XOutputFont
@@ -120,16 +78,19 @@ extern GString *cns13Font;
 class XOutputFont {
 public:
 
-  XOutputFont(GfxFont *gfxFont, double m11, double m12,
-	      double m21, double m22, Display *displayA,
-	      XOutputFontCache *cache);
+  XOutputFont(Ref *idA, double m11OrigA, double m12OrigA,
+	      double m21OrigA, double m22OrigA,
+	      double m11A, double m12A, double m21A, double m22A,
+	      Display *displayA);
 
   virtual ~XOutputFont();
 
   // Does this font match the ID and transform?
-  GBool matches(Ref id1, double m11, double m12, double m21, double m22)
-    { return id.num == id1.num && id.gen == id1.gen &&
-	     m11 == tm11 && m12 == tm12 && m21 == tm21 && m22 == tm22; }
+  GBool matches(Ref *idA, double m11OrigA, double m12OrigA,
+		double m21OrigA, double m22OrigA)
+    { return id.num == idA->num && id.gen == idA->gen &&
+	     m11Orig == m11OrigA && m12Orig == m12OrigA &&
+	     m21Orig == m21OrigA && m22Orig == m22OrigA; }
 
   // Was font created successfully?
   virtual GBool isOk() = 0;
@@ -137,21 +98,19 @@ public:
   // Update <gc> with this font.
   virtual void updateGC(GC gc) = 0;
 
-  // Draw character <c> at <x>,<y>.
+  // Draw character <c>/<u> at <x>,<y>.
   virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
-			GC gc, double x, double y, int c) = 0;
-
-  // Does this font use hex char codes?
-  GBool isHex() { return hex; }
+			GC gc, double x, double y, double dx, double dy,
+			CharCode c, Unicode *u, int uLen) = 0;
 
 protected:
 
   Ref id;			// font ID
-  double tm11, tm12,		// original transform matrix
-         tm21, tm22;
+  double m11Orig, m12Orig,	// original transform matrix
+         m21Orig, m22Orig;
+  double m11, m12, m21, m22;	// actual transform matrix (possibly
+				//   modified for font substitution)
   Display *display;		// X display
-  GBool hex;			// subsetted font with hex char codes
-				//   (this flag is used for text output)
 };
 
 #if HAVE_T1LIB_H
@@ -162,10 +121,11 @@ protected:
 class XOutputT1Font: public XOutputFont {
 public:
 
-  XOutputT1Font(XRef *xref, GfxFont *gfxFont,
-		GString *pdfBaseFont,
-		double m11, double m12, double m21, double m22,
-		Display *displayA, XOutputFontCache *cache);
+  XOutputT1Font(Ref *idA, T1FontFile *fontFileA,
+		double m11OrigA, double m12OrigA,
+		double m21OrigA, double m22OrigA,
+		double m11A, double m12A,
+		double m21A, double m22A, Display *displayA);
 
   virtual ~XOutputT1Font();
 
@@ -175,9 +135,10 @@ public:
   // Update <gc> with this font.
   virtual void updateGC(GC gc);
 
-  // Draw character <c> at <x>,<y>.
+  // Draw character <c>/<u> at <x>,<y>.
   virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
-			GC gc, double x, double y, int c);
+			GC gc, double x, double y, double dx, double dy,
+			CharCode c, Unicode *u, int uLen);
 
 private:
 
@@ -194,10 +155,11 @@ private:
 class XOutputFTFont: public XOutputFont {
 public:
 
-  XOutputFTFont(XRef *xref, GfxFont *gfxFont,
-		GString *pdfBaseFont,
-		double m11, double m12, double m21, double m22,
-		Display *displayA, XOutputFontCache *cache);
+  XOutputFTFont(Ref *idA, FTFontFile *fontFileA,
+		double m11OrigA, double m12OrigA,
+		double m21OrigA, double m22OrigA,
+		double m11A, double m12A,
+		double m21A, double m22A, Display *displayA);
 
   virtual ~XOutputFTFont();
 
@@ -207,9 +169,10 @@ public:
   // Update <gc> with this font.
   virtual void updateGC(GC gc);
 
-  // Draw character <c> at <x>,<y>.
+  // Draw character <c>/<u> at <x>,<y>.
   virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
-			GC gc, double x, double y, int c);
+			GC gc, double x, double y, double dx, double dy,
+			CharCode c, Unicode *u, int uLen);
 
 private:
 
@@ -226,9 +189,11 @@ private:
 class XOutputTTFont: public XOutputFont {
 public:
 
-  XOutputTTFont(XRef *xref, GfxFont *gfxFont,
-		double m11, double m12, double m21, double m22,
-		Display *displayA, XOutputFontCache *cache);
+  XOutputTTFont(Ref *idA, TTFontFile *fontFileA,
+		double m11OrigA, double m12OrigA,
+		double m21OrigA, double m22OrigA,
+		double m11A, double m12A,
+		double m21A, double m22A, Display *displayA);
 
   virtual ~XOutputTTFont();
 
@@ -238,9 +203,10 @@ public:
   // Update <gc> with this font.
   virtual void updateGC(GC gc);
 
-  // Draw character <c> at <x>,<y>.
+  // Draw character <c>/<u> at <x>,<y>.
   virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
-			GC gc, double x, double y, int c);
+			GC gc, double x, double y, double dx, double dy,
+			CharCode c, Unicode *u, int uLen);
 
 private:
 
@@ -250,20 +216,20 @@ private:
 #endif // !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 //------------------------------------------------------------------------
-// XOutputServerFont
+// XOutputServer8BitFont
 //------------------------------------------------------------------------
 
-class XOutputServerFont: public XOutputFont {
+class XOutputServer8BitFont: public XOutputFont {
 public:
 
-  XOutputServerFont(GfxFont *gfxFont, char *fontNameFmt,
-		    FontEncoding *encoding,
-		    double m11, double m12, double m21, double m22,
-		    double size, double ntm11, double ntm12,
-		    double ntm21, double ntm22,
-		    Display *displayA, XOutputFontCache *cache);
+  XOutputServer8BitFont(Ref *idA, GString *xlfdFmt,
+			UnicodeMap *xUMapA, CharCodeToUnicode *fontUMap,
+			double m11OrigA, double m12OrigA,
+			double m21OrigA, double m22OrigA,
+			double m11A, double m12A, double m21A, double m22A,
+			Display *displayA);
 
-  virtual ~XOutputServerFont();
+  virtual ~XOutputServer8BitFont();
 
   // Was font created successfully?
   virtual GBool isOk();
@@ -271,15 +237,49 @@ public:
   // Update <gc> with this font.
   virtual void updateGC(GC gc);
 
-  // Draw character <c> at <x>,<y>.
+  // Draw character <c>/<u> at <x>,<y>.
   virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
-			GC gc, double x, double y, int c);
+			GC gc, double x, double y, double dx, double dy,
+			CharCode c, Unicode *u, int uLen);
 
 private:
 
   XFontStruct *xFont;		// the X font
-  Gushort map[256];		// forward map (PDF code -> font code)
-  Guchar revMap[256];		// reverse map (font code -> PDF code)
+  Gushort map[256];		// forward map (char code -> X font code)
+  UnicodeMap *xUMap;
+};
+
+//------------------------------------------------------------------------
+// XOutputServer16BitFont
+//------------------------------------------------------------------------
+
+class XOutputServer16BitFont: public XOutputFont {
+public:
+
+  XOutputServer16BitFont(Ref *idA, GString *xlfdFmt,
+			 UnicodeMap *xUMapA, CharCodeToUnicode *fontUMap,
+			 double m11OrigA, double m12OrigA,
+			 double m21OrigA, double m22OrigA,
+			 double m11A, double m12A, double m21A, double m22A,
+			 Display *displayA);
+
+  virtual ~XOutputServer16BitFont();
+
+  // Was font created successfully?
+  virtual GBool isOk();
+
+  // Update <gc> with this font.
+  virtual void updateGC(GC gc);
+
+  // Draw character <c>/<u> at <x>,<y>.
+  virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
+			GC gc, double x, double y, double dx, double dy,
+			CharCode c, Unicode *u, int uLen);
+
+private:
+
+  XFontStruct *xFont;		// the X font
+  UnicodeMap *xUMap;
 };
 
 //------------------------------------------------------------------------
@@ -287,22 +287,37 @@ private:
 //------------------------------------------------------------------------
 
 #if HAVE_T1LIB_H
-struct XOutputT1FontFile {
+class XOutputT1FontFile {
+public:
+  XOutputT1FontFile(int numA, int genA, GBool substA, T1FontFile *fontFileA)
+    { num = numA; gen = genA; subst = substA; fontFile = fontFileA; }
+  ~XOutputT1FontFile();
   int num, gen;
+  GBool subst;
   T1FontFile *fontFile;
 };
 #endif
 
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-struct XOutputFTFontFile {
+class XOutputFTFontFile {
+public:
+  XOutputFTFontFile(int numA, int genA, GBool substA, FTFontFile *fontFileA)
+    { num = numA; gen = genA; subst = substA; fontFile = fontFileA; }
+  ~XOutputFTFontFile();
   int num, gen;
+  GBool subst;
   FTFontFile *fontFile;
 };
 #endif
 
 #if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-struct XOutputTTFontFile {
+class XOutputTTFontFile {
+public:
+  XOutputTTFontFile(int numA, int genA, GBool substA, TTFontFile *fontFileA)
+    { num = numA; gen = genA; subst = substA; fontFile = fontFileA; }
+  ~XOutputTTFontFile();
   int num, gen;
+  GBool subst;
   TTFontFile *fontFile;
 };
 #endif
@@ -329,39 +344,64 @@ public:
   XOutputFont *getFont(XRef *xref, GfxFont *gfxFont, double m11, double m12,
 		       double m21, double m22);
 
-#if HAVE_T1LIB_H
-  // Get a t1lib font file.
-  T1FontFile *getT1Font(XRef *xref, GfxFont *gfxFont,
-			GString *pdfBaseFont);
-#endif
-
-#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-  // Get a FreeType font file.
-  FTFontFile *getFTFont(XRef *xref, GfxFont *gfxFont, GString *pdfBaseFont);
-#endif
-
-#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-  // Get a FreeType font file.
-  TTFontFile *getTTFont(XRef *xref, GfxFont *gfxFont);
-#endif
-
 private:
 
   void delFonts();
   void clear();
+  XOutputFont *tryGetFont(XRef *xref, DisplayFontParam *dfp, GfxFont *gfxFont,
+			  double m11Orig, double m12Orig,
+			  double m21Orig, double m22Orig,
+			  double m11, double m12, double m21, double m22,
+			  GBool subst);
+#if HAVE_T1LIB_H
+  XOutputFont *tryGetT1Font(XRef *xref, GfxFont *gfxFont,
+			    double m11, double m12, double m21, double m22);
+  XOutputFont *tryGetT1FontFromFile(XRef *xref, GString *fileName,
+				    GfxFont *gfxFont,
+				    double m11Orig, double m12Orig,
+				    double m21Orig, double m22Orig,
+				    double m11, double m12,
+				    double m21, double m22, GBool subst);
+#endif
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
+  XOutputFont *tryGetFTFont(XRef *xref, GfxFont *gfxFont,
+			    double m11, double m12, double m21, double m22);
+  XOutputFont *tryGetFTFontFromFile(XRef *xref, GString *fileName,
+				    GfxFont *gfxFont,
+				    double m11Orig, double m12Orig,
+				    double m21Orig, double m22Orig,
+				    double m11, double m12,
+				    double m21, double m22, GBool subst);
+#endif
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
+  XOutputFont *tryGetTTFont(XRef *xref, GfxFont *gfxFont,
+			    double m11, double m12, double m21, double m22);
+  XOutputFont *tryGetTTFontFromFile(XRef *xref, GString *fileName,
+				    GfxFont *gfxFont,
+				    double m11Orig, double m12Orig,
+				    double m21Orig, double m22Orig,
+				    double m11, double m12,
+				    double m21, double m22, GBool subst);
+#endif
+  XOutputFont *tryGetServerFont(GString *xlfd, GString *encodingName,
+				GfxFont *gfxFont,
+				double m11Orig, double m12Orig,
+				double m21Orig, double m22Orig,
+				double m11, double m12,
+				double m21, double m22);
 
   Display *display;		// X display pointer
   Guint depth;			// pixmap depth
 
+  XOutputFont *
+    fonts[xOutFontCacheSize];
+  int nFonts;
+
 #if HAVE_T1LIB_H
   FontRastControl t1libControl;	// t1lib settings
   T1FontEngine *t1Engine;	// Type 1 font engine
-  XOutputT1Font *		// Type 1 fonts in reverse-LRU order
-    t1Fonts[t1FontCacheSize];
-  int nT1Fonts;			// number of valid entries in t1Fonts[]
-  XOutputT1FontFile *		// list of Type 1 font files
-    t1FontFiles;
-  int t1FontFilesSize;		// size of t1FontFiles array
+  GList *t1FontFiles;		// list of Type 1 font files
+				//   [XOutputT1FontFile]
 #endif
 
 #if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
@@ -372,26 +412,14 @@ private:
 #endif
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   FTFontEngine *ftEngine;	// FreeType font engine
-  XOutputFTFont *		// FreeType fonts in reverse-LRU order
-    ftFonts[ftFontCacheSize];
-  int nFTFonts;			// number of valid entries in ftFonts[]
-  XOutputFTFontFile *		// list of FreeType font files
-    ftFontFiles;
-  int ftFontFilesSize;		// size of ftFontFiles array
+  GList *ftFontFiles;		// list of FreeType font files
+				//   [XOutputFTFontFile]
 #endif
 #if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   TTFontEngine *ttEngine;	// TrueType font engine
-  XOutputTTFont *		// TrueType fonts in reverse-LRU order
-    ttFonts[ttFontCacheSize];
-  int nTTFonts;			// number of valid entries in ttFonts[]
-  XOutputTTFontFile *		// list of TrueType font files
-    ttFontFiles;
-  int ttFontFilesSize;		// size of ttFontFiles array
+  GList *ttFontFiles;		// list of TrueType font files
+				//   [XOutputTTFontFile]
 #endif
-
-  XOutputServerFont *		// X server fonts in reverse-LRU order
-    serverFonts[serverFontCacheSize];
-  int nServerFonts;		// number of valid entries in serverFonts[]
 };
 
 //------------------------------------------------------------------------
@@ -415,9 +443,7 @@ public:
   // Constructor.
   XOutputDev(Display *displayA, Pixmap pixmapA, Guint depthA,
 	     Colormap colormapA, unsigned long paperColor,
-	     GBool installCmap, int rgbCubeSize,
-	     FontRastControl t1libControl,
-	     FontRastControl freeTypeControl);
+	     GBool installCmap, int rgbCubeSize);
 
   // Destructor.
   virtual ~XOutputDev();
@@ -475,9 +501,9 @@ public:
   virtual void beginString(GfxState *state, GString *s);
   virtual void endString(GfxState *state);
   virtual void drawChar(GfxState *state, double x, double y,
-			double dx, double dy, Guchar c);
-  virtual void drawChar16(GfxState *state, double x, double y,
-			  double dx, double dy, int c);
+			double dx, double dy,
+			double originX, double originY,
+			CharCode code, Unicode *u, int uLen);
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
@@ -497,7 +523,7 @@ public:
   // stops looking at <xMax>,<yMax>; otherwise stops looking at bottom
   // of page.  If found, sets the text bounding rectange and returns
   // true; otherwise returns false.
-  GBool findText(char *s, GBool top, GBool bottom,
+  GBool findText(Unicode *s, int len, GBool top, GBool bottom,
 		 int *xMin, int *yMin, int *xMax, int *yMax);
 
   // Get the text which is inside the specified rectangle.

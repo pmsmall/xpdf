@@ -22,15 +22,6 @@ class GfxState;
 class GString;
 
 //------------------------------------------------------------------------
-
-enum TextOutputCharSet {
-  textOutASCII7,
-  textOutLatin1,
-  textOutLatin2,
-  textOutLatin5
-};
-
-//------------------------------------------------------------------------
 // TextString
 //------------------------------------------------------------------------
 
@@ -38,31 +29,26 @@ class TextString {
 public:
 
   // Constructor.
-  TextString(GfxState *state, GBool hexCodesA, double fontSize);
+  TextString(GfxState *state, double fontSize);
 
   // Destructor.
   ~TextString();
 
   // Add a character to the string.
   void addChar(GfxState *state, double x, double y,
-	       double dx, double dy,
-	       Guchar c, TextOutputCharSet charSet);
-
-  // Add a 16-bit character to the string.
-  void addChar16(GfxState *state, double x, double y,
-		 double dx, double dy,
-		 int c, GfxFontCharSet16 charSet16);
+	       double dx, double dy, Unicode u);
 
 private:
 
   double xMin, xMax;		// bounding box x coordinates
   double yMin, yMax;		// bounding box y coordinates
   int col;			// starting column
-  GString *text;		// the text
+  Unicode *text;		// the text
   double *xRight;		// right-hand x coord of each char
+  int len;			// length of text and xRight
+  int size;			// size of text and xRight arrays
   TextString *yxNext;		// next string in y-major order
   TextString *xyNext;		// next string in x-major order
-  GBool hexCodes;		// subsetted font with hex char codes
 
   friend class TextPage;
 };
@@ -75,7 +61,7 @@ class TextPage {
 public:
 
   // Constructor.
-  TextPage(TextOutputCharSet charSetA, GBool rawOrderA);
+  TextPage(GBool rawOrderA);
 
   // Destructor.
   ~TextPage();
@@ -84,16 +70,11 @@ public:
   void updateFont(GfxState *state);
 
   // Begin a new string.
-  void beginString(GfxState *state, GString *s, GBool hexCodes);
+  void beginString(GfxState *state);
 
   // Add a character to the current string.
   void addChar(GfxState *state, double x, double y,
-	       double dx, double dy, Guchar c);
-
-  // Add a 16-bit character to the current string.
-  void addChar16(GfxState *state, double x, double y,
-		 double dx, double dy, int c,
-		 GfxFontCharSet16 charSet16);
+	       double dx, double dy, Unicode *u, int uLen);
 
   // End the current string, sorting it into the list of strings.
   void endString();
@@ -106,7 +87,8 @@ public:
   // stops looking at bottom of page; otherwise stops looking at
   // <xMax>,<yMax>.  If found, sets the text bounding rectange and
   // returns true; otherwise returns false.
-  GBool findText(char *s, GBool top, GBool bottom,
+  GBool findText(Unicode *s, int len,
+		 GBool top, GBool bottom,
 		 double *xMin, double *yMin,
 		 double *xMax, double *yMax);
 
@@ -122,7 +104,6 @@ public:
 
 private:
 
-  TextOutputCharSet charSet;	// character set
   GBool rawOrder;		// keep strings in content stream order
 
   TextString *curStr;		// currently active string
@@ -143,12 +124,9 @@ class TextOutputDev: public OutputDev {
 public:
 
   // Open a text output file.  If <fileName> is NULL, no file is
-  // written (this is useful, e.g., for searching text).  Text is
-  // converted to the character set specified by <charSet>.  This
-  // should be set to textOutASCII7 for Japanese (EUC-JP) text.  If
+  // written (this is useful, e.g., for searching text).  If
   // <rawOrder> is true, the text is kept in content stream order.
-  TextOutputDev(char *fileName, TextOutputCharSet charSet,
-		GBool rawOrderA, GBool append);
+  TextOutputDev(char *fileName, GBool rawOrderA, GBool append);
 
   // Destructor.
   virtual ~TextOutputDev();
@@ -165,6 +143,9 @@ public:
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar() { return gTrue; }
 
+  // Does this device need non-text content?
+  virtual GBool needNonText() { return gFalse; }
+
   //----- initialization and control
 
   // Start a page.
@@ -180,9 +161,9 @@ public:
   virtual void beginString(GfxState *state, GString *s);
   virtual void endString(GfxState *state);
   virtual void drawChar(GfxState *state, double x, double y,
-			double dx, double dy, Guchar c);
-  virtual void drawChar16(GfxState *state, double x, double y,
-			  double dx, double dy, int c);
+			double dx, double dy,
+			double originX, double originY,
+			CharCode c, Unicode *u, int uLen);
 
   //----- special access
 
@@ -191,7 +172,8 @@ public:
   // stops looking at bottom of page; otherwise stops looking at
   // <xMax>,<yMax>.  If found, sets the text bounding rectange and
   // returns true; otherwise returns false.
-  GBool findText(char *s, GBool top, GBool bottom,
+  GBool findText(Unicode *s, int len,
+		 GBool top, GBool bottom,
 		 double *xMin, double *yMin,
 		 double *xMax, double *yMax);
 
@@ -201,7 +183,6 @@ private:
   GBool needClose;		// need to close the file?
   TextPage *text;		// text for the current page
   GBool rawOrder;		// keep text in content stream order
-  GBool hexCodes;		// subsetted font with hex char codes
   GBool ok;			// set up ok?
 };
 

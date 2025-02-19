@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -487,11 +488,11 @@ GBool StreamPredictor::getNextLine() {
       if ((pc = p - upLeft) < 0)
 	pc = -pc;
       if (pa <= pb && pa <= pc)
-	predLine[i] = pa + (Guchar)c;
+	predLine[i] = left + (Guchar)c;
       else if (pb <= pc)
-	predLine[i] = pb + (Guchar)c;
+	predLine[i] = up + (Guchar)c;
       else
-	predLine[i] = pc + (Guchar)c;
+	predLine[i] = upLeft + (Guchar)c;
       break;
     case 10:			// PNG none
     default:			// no predictor or TIFF predictor
@@ -1287,7 +1288,7 @@ void CCITTFaxStream::reset() {
 int CCITTFaxStream::lookChar() {
   short code1, code2, code3;
   int a0New;
-#if 0 //~
+#if 0
   GBool err;
 #endif
   GBool gotEOL;
@@ -1300,7 +1301,7 @@ int CCITTFaxStream::lookChar() {
   }
 
   // read the next row
-#if 0 //~
+#if 0
   err = gFalse;
 #endif
   if (codingLine[a0] >= columns) {
@@ -1402,7 +1403,7 @@ int CCITTFaxStream::lookChar() {
 	  return EOF;
 	default:
 	  error(getPos(), "Bad 2D code %04x in CCITTFax stream", code1);
-#if 0 //~
+#if 0
 	  err = gTrue;
 	  break;
 #else
@@ -1437,7 +1438,7 @@ int CCITTFaxStream::lookChar() {
 
     if (codingLine[a0] != columns) {
       error(getPos(), "CCITTFax row is wrong length (%d)", codingLine[a0]);
-#if 0 //~
+#if 0
       err = gTrue;
 #endif
     }
@@ -1497,7 +1498,7 @@ int CCITTFaxStream::lookChar() {
       }
     }
 
-#if 0 //~
+#if 0
     // This looks for an end-of-line marker after an error, however
     // some (most?) CCITT streams in PDF files don't use end-of-line
     // markers, and the just-plow-on technique works better in those
@@ -2016,7 +2017,7 @@ GBool DCTStream::readMCURow() {
 	    pCr = rowBuf[2][y2][x1+x2] - 128;
 	    pR = ((pY << 16) + dctCrToR * pCr + 32768) >> 16;
 	    rowBuf[0][y2][x1+x2] = 255 - dctClip[dctClipOffset + pR];
-	    pG = ((pY << 16) + dctCbToG * pCb + dctCrToG * pCr + 32678) >> 16;
+	    pG = ((pY << 16) + dctCbToG * pCb + dctCrToG * pCr + 32768) >> 16;
 	    rowBuf[1][y2][x1+x2] = 255 - dctClip[dctClipOffset + pG];
 	    pB = ((pY << 16) + dctCbToB * pCb + 32768) >> 16;
 	    rowBuf[2][y2][x1+x2] = 255 - dctClip[dctClipOffset + pB];

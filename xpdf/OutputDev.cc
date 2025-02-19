@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stddef.h>
 #include "Object.h"
 #include "Stream.h"
@@ -68,6 +69,7 @@ void OutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     j = height * ((width + 7) / 8);
     for (i = 0; i < j; ++i)
       str->getChar();
+    str->close();
   }
 }
 
@@ -82,6 +84,7 @@ void OutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		   colorMap->getBits() + 7) / 8);
     for (i = 0; i < j; ++i)
       str->getChar();
+    str->close();
   }
 }
 

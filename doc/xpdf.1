@@ -1,12 +1,12 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH xpdf 1 "25 Oct 2001"
+.TH xpdf 1 "01 Feb 2002"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 0.93)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 1.00)
 .SH SYNOPSIS
 .B xpdf
 [options]
 .RI [ PDF-file
-.RI [ page ]]
+.RI [ page " | +" dest ]]
 .SH DESCRIPTION
 .B Xpdf
 is a viewer for Portable Document Format (PDF) files.  (These are also
@@ -29,98 +29,107 @@ specifying the page which should be displayed first, e.g.:
 xpdf file.pdf 18
 .RE
 .PP
+You can also give a named destination, prefixed with \'+' in place of
+the page number.
+.PP
 You can also start xpdf without opening any files:
 .PP
 .RS
 xpdf
 .RE
+.SH CONFIGURATION FILE
+Xpdf reads a configuration file at startup.  It first tries to find
+the user's private config file, ~/.xpdfrc.  If that doesn't exist, it
+looks for a system-wide config file, typically /usr/local/etc/xpdfrc
+(but this location can be changed when xpdf is built).  See the
+.BR xpdfrc (5)
+man page for details.
 .SH OPTIONS
-X resources are listed in square brackets with the corresponding
-option.
-.TP
-.BI \-z " zoom"
-Set the initial zoom factor.  A number (-5 .. 5) specifies a zoom
-factor, where 0 means 72 dpi.  You may also specify \'page', to fit
-the page to the window size, or \'width', to fit the page width to the
-window width.
-.RB [ xpdf.initialZoom ]
+Many of the following options can be set with configuration file
+commands or X resources.  These are listed in square brackets with the
+description of the corresponding command line option.
 .TP
 .BI \-g " geometry"
 Set the initial window geometry.
 .RB ( \-geometry
 is equivalent.)
-.RB [ xpdf.geometry ]
+.RB "[X resource: " xpdf.geometry ]
 .TP
 .BI \-title " title"
 Set the window title.  By default, the title will be "xpdf: foo.pdf".
-.RB [ xpdf.title ]
-.TP
-.BI \-remote " name"
-Start/contact xpdf remote server with specified name (see the
-.B "REMOTE SERVER MODE"
-section below).
-.TP
-.B \-raise
-Raise xpdf remote server window (with -remote only).
-.TP
-.B \-quit
-Kill xpdf remote server (with -remote only).
+.RB "[X resource: " xpdf.title ]
 .TP
 .B \-cmap
 Install a private colormap.  This is ignored on TrueColor visuals.
-.RB [ xpdf.installCmap ]
+.RB "[X resource: " xpdf.installCmap ]
 .TP
 .BI \-rgb " number"
 Set the size of largest RGB cube xpdf will try to allocate.  The
 default is 5 (for a 5x5x5 cube); set to a smaller number to conserve
 color table entries.  This is ignored with private colormaps and on
 TrueColor visuals.
+.RB "[X resource: " xpdf.rgbCubeSize ]
 .TP
 .BI \-papercolor " color"
 Set the "paper color", i.e., the background of the page display.  This
 will not work too well with PDF files that do things like filling in
 white behind the text.
-.RB [ xpdf.paperColor ]
+.RB "[X resource: " xpdf.paperColor ]
 .TP
-.B \-eucjp
-When copying text, convert Japanese text to EUC-JP.  This is currently
-the only option for converting Japanese text -- the only effect is to
-switch to 7-bit ASCII for non-Japanese text, in order to fit into the
-EUC-JP encoding.  (This option is only available if pdftotext was
-compiled with Japanese support.)
-.RB [ xpdf.eucjp ]
+.BI \-z " zoom"
+Set the initial zoom factor.  A number (-5 .. 5) specifies a zoom
+factor, where 0 means 72 dpi.  You may also specify \'page', to fit
+the page to the window size, or \'width', to fit the page width to the
+window width.
+.RB "[X resource: " xpdf.initialZoom ]
 .TP
 .BI \-t1lib " font-type"
 Set the type of font rendering for t1lib (the Type 1 rasterizer) to
 use.  Options are \'none' (don't use t1lib at all), \'plain' (use
 non-anti-aliased fonts), \'low' or \'high' (use low-level or
 high-level anti-aliased fonts).
-.RB [ xpdf.t1libControl ]
+.RB "[config file: " t1libControl ]
 .TP
 .BI \-freetype " font-type"
 Set the type of font rendering for FreeType (the TrueType rasterizer)
 to use.  Options are \'none' (don't use FreeType at all), \'plain'
 (use non-anti-aliased fonts), or \'aa' (use anti-aliased fonts).
-.RB [ xpdf.freeTypeControl ]
+.RB "[config file: " freetypeControl ]
 .TP
 .BI \-ps " PS-file"
 Set the default file name for PostScript output.  This can also be of
 the form \'|command' to pipe the PostScript through a command.
-.RB [ xpdf.psFile ]
+.RB "[config file: " psFile ]
+.TP
+.BI \-paper " size"
+Set the paper size to one of "letter", "legal", "A4", or "A3".
+.RB "[config file: " psPaperSize ]
 .TP
 .BI \-paperw " size"
 Set the paper width, in points.
-.RB [ xpdf.psPaperWidth ]
+.RB "[config file: " psPaperSize ]
 .TP
 .BI \-paperh " size"
 Set the paper height, in points.
-.RB [ xpdf.psPaperHeight ]
+.RB "[config file: " psPaperSize ]
 .TP
 .B \-level1
 Generate Level 1 PostScript.  The resulting PostScript files will be
 significantly larger (if they contain images), but will print on Level
 1 printers.  This also converts all images to black and white.
-.RB [ xpdf.psLevel1 ]
+.RB "[config file: " psLevel ]
+.TP
+.BI \-enc " encoding-name"
+Sets the encoding to use for text output.  The
+.I encoding\-name
+must be defined with the unicodeMap command (see
+.BR xpdfrc (5)).
+This defaults to "Latin1" (which is a built-in encoding).
+.RB "[config file: " textEncoding ]
+.TP
+.BI \-eol " unix | dos | mac"
+Sets the end-of-line convention to use for text output.
+.RB "[config file: " textEOL ]
 .TP
 .BI \-opw " password"
 Specify the owner password for the PDF file.  Providing this will
@@ -135,11 +144,28 @@ also want to specify '-bg black' (or similar) with this.  (There is
 currently no way to switch between window and full-screen modes on the
 fly.)
 .TP
+.BI \-remote " name"
+Start/contact xpdf remote server with specified name (see the
+.B "REMOTE SERVER MODE"
+section below).
+.TP
+.B \-raise
+Raise xpdf remote server window (with -remote only).
+.TP
+.B \-quit
+Kill xpdf remote server (with -remote only).
+.TP
 .B \-cmd
 Print commands as they're executed (useful for debugging).
 .TP
 .B \-q
 Don't print any messages or errors.
+.RB "[config file: " errQuiet ]
+.TP
+.BI \-cfg " config-file"
+Read
+.I config-file
+in place of ~/.xpdfrc or the system-wide config file.
 .TP
 .B \-v
 Print copyright and version information.
@@ -147,101 +173,38 @@ Print copyright and version information.
 .B \-h
 Print usage information.
 .RB ( \-help
-is equivalent.)
+and
+.B \-\-help
+are equivalent.)
 .PP
 Several other standard X options and resources will work as expected:
 .TP
 .BI \-display " display"
-.RB [ xpdf.display ]
+.RB "[X resource: " xpdf.display ]
 .TP
 .BI \-fg " color"
 .RB ( \-foreground
 is equivalent.)
-.RB [ xpdf.foreground ]
+.RB "[X resource: " xpdf.foreground ]
 .TP
 .BI \-bg " color"
 .RB ( \-background
 is equivalent.)
-.RB [ xpdf.background ]
+.RB "[X resource: " xpdf.background ]
 .TP
 .BI \-font " font"
 .RB ( \-fn
 is equivalent.)
-.RB [ xpdf.font ]
+.RB "[X resource: " xpdf.font ]
 .PP
 The color and font options only affect the user interface elements,
 not the PDF display (the \'paper').
 .PP
 The following X resources do not have command line option equivalents:
 .TP
-.B xpdf.urlCommand
-Set the command executed when you click on a URL link.  See the
-.B "WEB BROWSERS"
-section below for details.
-.TP
-.B xpdf.japaneseFont
-Sets the X font name pattern to use for Japanese text.  The default
-is:
-.PP
-.RS
--*-fixed-medium-r-normal-*-%s-*-*-*-*-*-jisx0208.1983-0
-.RE
-.TP
-.B xpdf.chineseGBFont
-Sets the X font name pattern to use for Chinese GB (simplified) text.
-The default is:
-.PP
-.RS
--*-fangsong ti-medium-r-normal-*-%s-*-*-*-*-*-gb2312.1980-0
-.RE
-.TP
-.B xpdf.chineseCNSFont
-Sets the X font name pattern to use for Chinese CNS (traditional)
-text.  The default is:
-.PP
-.RS
--*-fixed-medium-r-normal-*-%s-*-*-*-*-*-big5-0
-.RE
-.TP
 .B xpdf.viKeys
 Enables the \'h', \'l', \'k' and \'j' keys for left, right, up, and
 down scrolling.
-.PP
-The following resources set the file names of the Type 1 fonts to use
-for the Base 14 fonts:
-.PP
-.RS
-.B xpdf.t1TimesRoman
-.br
-.B xpdf.t1TimesItalic
-.br
-.B xpdf.t1TimesBold
-.br
-.B xpdf.t1TimesBoldItalic
-.br
-.B xpdf.t1Helvetica
-.br
-.B xpdf.t1HelveticaOblique
-.br
-.B xpdf.t1HelveticaBold
-.br
-.B xpdf.t1HelveticaBoldOblique
-.br
-.B xpdf.t1Courier
-.br
-.B xpdf.t1CourierOblique
-.br
-.B xpdf.t1CourierBold
-.br
-.B xpdf.t1CourierBoldOblique
-.br
-.B xpdf.t1Symbol
-.br
-.B xpdf.t1ZapfDingbats
-.RE
-.PP
-If t1lib is enabled, these Type 1 fonts will be used instead of X
-server fonts.
 .SH CONTROLS
 .SS On-screen controls, at the bottom of the xpdf window
 .TP
@@ -353,6 +316,12 @@ page.
 Scroll up on the current page; if already at top, move to previous
 page.
 .TP
+.B v
+Move forward along the history path.
+.TP
+.B b
+Move backward along the history path.
+.TP
 .B <Home>
 Scroll to top of current page.
 .TP
@@ -411,12 +380,12 @@ application/pdf; xpdf -q %s
 Make sure that xpdf is on your executable search path.
 .PP
 When you click on a URL link in a PDF file, xpdf will execute the
-command specified by the xpdf.urlCommand resource, replacing an
+command specified by the urlCommand config file option, replacing an
 occurrence of \'%s' with the URL.  For example, to call netscape with
-the URL, use this resource setting:
+the URL, add this line to your config file:
 .PP
 .RS
-xpdf.urlCommand: netscape -remote 'openURL(%s)'
+urlCommand "netscape -remote 'openURL(%s)'"
 .RE
 .SH "REMOTE SERVER MODE"
 Xpdf can be started in remote server mode by specifying a server name
@@ -448,64 +417,18 @@ The -raise option tells the server to raise its window; it can be
 specified with or without a file name and page number.
 .PP
 The -quit option tells the server to close its window and exit.
-.SH "CONFIGURATION FILE"
-Xpdf will read a file called
-.I .xpdfrc
-from your home directory (if it exists).  This file can contain two
-types of entries.
-.TP
-.BI fontpath " directory"
-Look for Type 1 fonts in
-.IR directory .
-Xpdf uses this only to get the font encoding.  For display, the font
-must also be mapped with a
-.B fontmap
-entry.
-.TP
-.BI fontmap " PDF-font" "" " X-font"
-Map
-.I PDF-font
-(as referenced in a PDF file) to
-.IR X-font ,
-which should be a standard X font descriptor with \'%s' in the pixel
-size position.
-.PP
-For example, use:
-.PP
-.RS
-fontmap TimesCE-Roman -*-times-medium-r-*-*-%s-*-*-*-*-*-iso8859-2
-.RE
-.PP
-to map the Central European (Latin-2) version of the Times-Roman
-font.  This assumes that you've installed the appropriate X fonts (see
-.BR mkfontdir (1)).
-Xpdf knows about the ISO8859-2 encoding, so you don't need a
-.B fontpath
-entry for these fonts.
-To use the Bakoma Type 1 fonts, do this:
-.PP
-.RS
-fontpath /home/derekn/fonts/bakoma
-.br
-fontmap cmb10 -bakoma-cmb10-medium-r-normal--%s-*-*-*-p-*-adobe-fontspecific
-.br
-fontmap cmbsy10 -bakoma-cmbsy10-medium-r-normal--%s-*-*-*-p-*-adobe-fontspecific
-.br
-etc...
-.RE
-.PP
-This assumes that the Type 1 font files are available in the directory
-.IR /home/derekn/fonts/bakoma .
 .SH BUGS
 No support for Type 3 fonts.
 .SH AUTHOR
-The xpdf software and documentation are copyright 1996-2001 Derek
+The xpdf software and documentation are copyright 1996-2002 Derek
 B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR pdftops (1),
 .BR pdftotext (1),
 .BR pdfinfo (1),
+.BR pdffonts (1),
 .BR pdftopbm (1),
-.BR pdfimages (1)
+.BR pdfimages (1),
+.BR xpdfrc (5)
 .br
 .B http://www.foolabs.com/xpdf/

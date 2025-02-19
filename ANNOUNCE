@@ -1,29 +1,35 @@
-Subject: ANNOUNCE: xpdf 0.93 - a PDF viewer for X
+Subject: ANNOUNCE: Xpdf 1.00 - a PDF viewer for X
 
 
-I've just released a new version of xpdf, my Portable Document Format
+I've just released a new version of Xpdf, my Portable Document Format
 (PDF) viewer for X.
 
 Xpdf runs under the X Window System on Unix, VMS, and OS/2.  The non-X
 components of the package (pdftops, pdftotext, etc.) also run on Win32
 systems.
 
-Noticeable changes:
+WARNING: Xpdf 1.x uses a completely different config file setup than
+Xpdf 0.9x.  Please see the "Upgrading from Xpdf 0.9x" section in the
+README file.
 
-* Embed TrueType fonts in PostScript output.  (Added a "-noembtt" flag
-  to pdftops.)
-* Implement PDF 1.4 (128-bit) decryption.
-* Bump supported PDF version number to 1.4.
-* Text output for Simplified Chinese.  [Thanks to Cheung Siu Fai.]
-* Read an app-defaults file for Xpdf.  Read a system-wide config file
-  (<prefix>/etc/xpdfrc) if ~/.xpdfrc doesn't exist.
-* Accept and verify owner password; if correct, allow all actions.
-* Added a "-level2sep" option to pdftops to generate Level 2 separable
-  PostScript.  The PostScript separation convention operators are used
-  to handle custom (spot) colors.  [Thanks to Thomas Freitag for help
-  on this.]
-* Add support for FreeType 2 to the configure script.  Warning: this
-  requires FT 2.0.5 or newer (see the INSTALL file for details).
+Noticeable changes:
+* Completely rewrote the code that handles font encodings:
+  - everything is Unicode-based
+  - 16-bit fonts are handled much more cleanly
+  - text output encoding can be set more flexibly
+* New .xpdfrc config files.
+* Implemented the sh (shaded fill) operator for the axial shading
+  type.
+* Added a duplex option to PSOutputDev and a -duplex switch to
+  pdftops.
+* Added key bindings for forward ('v') and backward ('b').
+* Added the pdffonts program which lists the fonts used in a PDF
+  file.
+* Fixed several problems in the TrueType font embedding code (for
+  PostScript output).
+* Accept named destination on command line.
+* Added several new items to pdfinfo: file size, PDF version, tagged
+  (yes or no), XML metadata (with the -meta option).
 
 See the `CHANGES' file for a complete list.
 

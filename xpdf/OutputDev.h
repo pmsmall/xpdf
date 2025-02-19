@@ -14,6 +14,7 @@
 #endif
 
 #include "gtypes.h"
+#include "CharTypes.h"
 
 class GString;
 class GfxState;
@@ -44,6 +45,9 @@ public:
 
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar() = 0;
+
+  // Does this device need non-text content?
+  virtual GBool needNonText() { return gTrue; }
 
   //----- initialization and control
 
@@ -111,11 +115,10 @@ public:
   virtual void beginString(GfxState *state, GString *s) {}
   virtual void endString(GfxState *state) {}
   virtual void drawChar(GfxState *state, double x, double y,
-			double dx, double dy, Guchar c) {}
-  virtual void drawChar16(GfxState *state, double x, double y,
-			  double dx, double dy, int c) {}
+			double dx, double dy,
+			double originX, double originY,
+			CharCode code, Unicode *u, int uLen) {}
   virtual void drawString(GfxState *state, GString *s) {}
-  virtual void drawString16(GfxState *state, GString *s) {}
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,

@@ -1,8 +1,8 @@
 .\" Copyright 1997 Derek B. Noonburg
-.TH pdftotext 1 "25 Oct 2001"
+.TH pdftotext 1 "01 Feb 2002"
 .SH NAME
 pdftotext \- Portable Document Format (PDF) to text converter
-(version 0.93)
+(version 1.00)
 .SH SYNOPSIS
 .B pdftotext
 [options]
@@ -25,7 +25,18 @@ to
 If 
 .I text-file
 is \'-', the text is sent to stdout.
+.SH CONFIGURATION FILE
+Pdftotext reads a configuration file at startup.  It first tries to
+find the user's private config file, ~/.xpdfrc.  If that doesn't
+exist, it looks for a system-wide config file, typically
+/usr/local/etc/xpdfrc (but this location can be changed when pdftotext
+is built).  See the
+.BR xpdfrc (5)
+man page for details.
 .SH OPTIONS
+Many of the following options can be set with configuration file
+commands.  These are listed in square brackets with the description of
+the corresponding command line option.
 .TP
 .BI \-f " number"
 Specifies the first page to convert.
@@ -33,32 +44,28 @@ Specifies the first page to convert.
 .BI \-l " number"
 Specifies the last page to convert.
 .TP
-.B \-ascii7
-Convert the text to 7-bit ASCII; the default is to use the 8-bit
-ISO Latin-1 character set.
-.TP
-.B \-latin2
-Convert the text to the Latin-2 (ISO-8859-2) character set.  (This
-will only be useful if the font encodings are specified correctly in
-the PDF file.)
-.TP
-.B \-latin5
-Convert the text to the Latin-5 (ISO-8859-9) character set.  (This
-will only be useful if the font encodings are specified correctly in
-the PDF file.)
-.TP
-.B \-eucjp
-Convert Japanese text to EUC-JP.  This is currently the only option
-for converting Japanese text -- the only effect is to switch to 7-bit
-ASCII for non-Japanese text, in order to fit into the EUC-JP encoding.
-(This option is only available if pdftotext was compiled with Japanese
-support.)
-.TP
 .B \-raw
 Keep the text in content stream order.  This is a hack which often
 "undoes" column formatting, etc.  This option will likely be replaced
 with something more sophisticated when pdftotext is rewritten to use a
 smarter text placement algorithm.
+.TP
+.B \-htmlmeta
+Generate a simple HTML file, including the meta information.  This
+simply wraps the text in <pre> and </pre> and prepends the meta
+headers.
+.TP
+.BI \-enc " encoding-name"
+Sets the encoding to use for text output.  The
+.I encoding\-name
+must be defined with the unicodeMap command (see
+.BR xpdfrc (5)).
+This defaults to "Latin1" (which is a built-in encoding).
+.RB "[config file: " textEncoding ]
+.TP
+.BI \-eol " unix | dos | mac"
+Sets the end-of-line convention to use for text output.
+.RB "[config file: " textEOL ]
 .TP
 .BI \-opw " password"
 Specify the owner password for the PDF file.  Providing this will
@@ -69,6 +76,12 @@ Specify the user password for the PDF file.
 .TP
 .B \-q
 Don't print any messages or errors.
+.RB "[config file: " errQuiet ]
+.TP
+.BI \-cfg " config-file"
+Read
+.I config-file
+in place of ~/.xpdfrc or the system-wide config file.
 .TP
 .B \-v
 Print copyright and version information.
@@ -76,19 +89,23 @@ Print copyright and version information.
 .B \-h
 Print usage information.
 .RB ( \-help
-is equivalent.)
+and
+.B \-\-help
+are equivalent.)
 .SH BUGS
 Some PDF files contain fonts whose encodings have been mangled beyond
 recognition.  There is no way (short of OCR) to extract text from
 these files.
 .SH AUTHOR
-The pdftotext software and documentation are copyright 1996-2001
+The pdftotext software and documentation are copyright 1996-2002
 Derek B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR xpdf (1),
 .BR pdftops (1),
 .BR pdfinfo (1),
+.BR pdffonts (1),
 .BR pdftopbm (1),
-.BR pdfimages (1)
+.BR pdfimages (1),
+.BR xpdfrc (5)
 .br
 .B http://www.foolabs.com/xpdf/

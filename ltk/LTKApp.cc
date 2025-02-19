@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <unistd.h>

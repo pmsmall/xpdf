@@ -14,7 +14,21 @@
        converts  file.pdf  to file.txt.  If text-file is '-', the
        text is sent to stdout.
 
+2 ONFIGURATION_FIL
+
+       Pdftotext reads a configuration file at startup.  It first
+       tries to find the user's private config  file,  ~/.xpdfrc.
+       If  that  doesn't exist, it looks for a system-wide config
+       file, typically /usr/local/etc/xpdfrc (but  this  location
+       can   be  changed  when  pdftotext  is  built).   See  the
+       xpdfrc(5) man page for details.
+
 2 OPTIONS
+
+       Many  of  the following options can be set with configura-
+       tion file commands.  These are listed in  square  brackets
+       with  the  description  of  the corresponding command line
+       option.
 
        -f number
               Specifies the first page to convert.
@@ -22,32 +36,27 @@
        -l number
               Specifies the last page to convert.
 
-       -ascii7
-              Convert  the text to 7-bit ASCII; the default is to
-              use the 8-bit ISO Latin-1 character set.
-
-       -latin2
-              Convert the text to the Latin-2 (ISO-8859-2)  char-
-              acter  set.   (This will only be useful if the font
-              encodings are specified correctly in the PDF file.)
-
-       -latin5
-              Convert  the text to the Latin-5 (ISO-8859-9) char-
-              acter set.  (This will only be useful if  the  font
-              encodings are specified correctly in the PDF file.)
-
-       -eucjp Convert Japanese text to EUC-JP.  This is currently
-              the only option for converting Japanese text -- the
-              only effect is to switch to 7-bit  ASCII  for  non-
-              Japanese  text,  in  order  to  fit into the EUC-JP
-              encoding.  (This option is only available if pdfto-
-              text was compiled with Japanese support.)
-
-       -raw   Keep  the  text in content stream order.  This is a
-              hack which often "undoes" column  formatting,  etc.
-              This  option will likely be replaced with something
-              more sophisticated when pdftotext is  rewritten  to
+       -raw   Keep the text in content stream order.  This  is  a
+              hack  which  often "undoes" column formatting, etc.
+              This option will likely be replaced with  something
+              more  sophisticated  when pdftotext is rewritten to
               use a smarter text placement algorithm.
+
+       -htmlmeta
+              Generate a simple HTML  file,  including  the  meta
+              information.   This  simply wraps the text in <pre>
+              and </pre> and prepends the meta headers.
+
+       -enc encoding-name
+              Sets the encoding to  use  for  text  output.   The
+              encoding-name  must  be defined with the unicodeMap
+              command (see xpdfrc(5)).  This defaults to "Latin1"
+              (which is a built-in encoding).  [config file: tex-
+              tEncoding]
+
+       -eol unix | dos | mac
+              Sets the end-of-line convention  to  use  for  text
+              output.  [config file: textEOL]
 
        -opw password
               Specify  the owner password for the PDF file.  Pro-
@@ -56,11 +65,17 @@
        -upw password
               Specify the user password for the PDF file.
 
-       -q     Don't print any messages or errors.
+       -q     Don't  print any messages or errors.  [config file:
+              errQuiet]
+
+       -cfg config-file
+              Read config-file in place of ~/.xpdfrc or the  sys-
+              tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print usage information.  (-help is equivalent.)
+       -h     Print  usage  information.   (-help  and --help are
+              equivalent.)
 
 2 BUGS
 
@@ -71,10 +86,11 @@
 2 AUTHOR
 
        The  pdftotext  software  and  documentation are copyright
-       1996-2001 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 
-       xpdf(1), pdftops(1), pdfinfo(1), pdftopbm(1), pdfimages(1)
+       xpdf(1), pdftops(1), pdfinfo(1), pdffonts(1), pdftopbm(1),
+       pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 

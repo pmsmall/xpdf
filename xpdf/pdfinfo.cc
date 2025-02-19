@@ -6,14 +6,17 @@
 //
 //========================================================================
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <time.h>
 #include <math.h>
 #include "parseargs.h"
 #include "GString.h"
 #include "gmem.h"
+#include "GlobalParams.h"
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -22,23 +25,31 @@
 #include "Catalog.h"
 #include "Page.h"
 #include "PDFDoc.h"
-#include "Params.h"
+#include "CharTypes.h"
+#include "UnicodeMap.h"
 #include "Error.h"
 #include "config.h"
 
-static void printInfoString(Dict *infoDict, char *key, char *fmt);
-static void printInfoDate(Dict *infoDict, char *key, char *fmt);
+static void printInfoString(Dict *infoDict, char *key, char *text,
+			    UnicodeMap *uMap);
+static void printInfoDate(Dict *infoDict, char *key, char *text);
 
+static GBool printMetadata = gFalse;
 static char ownerPassword[33] = "";
 static char userPassword[33] = "";
+static char cfgFileName[256] = "";
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
 
 static ArgDesc argDesc[] = {
+  {"-meta",   argFlag,     &printMetadata,    0,
+   "print the document metadata (XML)"},
   {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
    "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,   sizeof(userPassword),
    "user password (for encrypted files)"},
+  {"-cfg",        argString,      cfgFileName,    sizeof(cfgFileName),
+   "configuration file to use in place of .xpdfrc"},
   {"-v",      argFlag,     &printVersion,  0,
    "print copyright and version info"},
   {"-h",      argFlag,     &printHelp,     0,
@@ -56,8 +67,11 @@ int main(int argc, char *argv[]) {
   PDFDoc *doc;
   GString *fileName;
   GString *ownerPW, *userPW;
+  UnicodeMap *uMap;
   Object info;
   double w, h;
+  FILE *f;
+  GString *metadata;
   GBool ok;
 
   // parse args
@@ -72,11 +86,15 @@ int main(int argc, char *argv[]) {
   }
   fileName = new GString(argv[1]);
 
-  // init error file
-  errorInit();
-
   // read config file
-  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
+  globalParams = new GlobalParams(cfgFileName);
+
+  // get mapping to output encoding
+  if (!(uMap = globalParams->getTextEncoding())) {
+    error(-1, "Couldn't get text encoding");
+    delete fileName;
+    goto err1;
+  }
 
   // open PDF file
   if (ownerPassword[0]) {
@@ -97,22 +115,26 @@ int main(int argc, char *argv[]) {
     delete ownerPW;
   }
   if (!doc->isOk()) {
-    exit(1);
+    goto err2;
   }
 
   // print doc info
   doc->getDocInfo(&info);
   if (info.isDict()) {
-    printInfoString(info.getDict(), "Title",        "Title:        %s\n");
-    printInfoString(info.getDict(), "Subject",      "Subject:      %s\n");
-    printInfoString(info.getDict(), "Keywords",     "Keywords:     %s\n");
-    printInfoString(info.getDict(), "Author",       "Author:       %s\n");
-    printInfoString(info.getDict(), "Creator",      "Creator:      %s\n");
-    printInfoString(info.getDict(), "Producer",     "Producer:     %s\n");
-    printInfoDate(info.getDict(),   "CreationDate", "CreationDate: %s\n");
-    printInfoDate(info.getDict(),   "ModDate",      "ModDate:      %s\n");
+    printInfoString(info.getDict(), "Title",        "Title:        ", uMap);
+    printInfoString(info.getDict(), "Subject",      "Subject:      ", uMap);
+    printInfoString(info.getDict(), "Keywords",     "Keywords:     ", uMap);
+    printInfoString(info.getDict(), "Author",       "Author:       ", uMap);
+    printInfoString(info.getDict(), "Creator",      "Creator:      ", uMap);
+    printInfoString(info.getDict(), "Producer",     "Producer:     ", uMap);
+    printInfoDate(info.getDict(),   "CreationDate", "CreationDate: ");
+    printInfoDate(info.getDict(),   "ModDate",      "ModDate:      ");
   }
   info.free();
+
+  // print tagging info
+  printf("Tagged:       %s\n",
+	 doc->getStructTreeRoot()->isDict() ? "yes" : "no");
 
   // print page count
   printf("Pages:        %d\n", doc->getNumPages());
@@ -129,9 +151,6 @@ int main(int argc, char *argv[]) {
     printf("no\n");
   }
 
-  // print linearization info
-  printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
-
   // print page size
   if (doc->getNumPages() >= 1) {
     w = doc->getPageWidth(1);
@@ -147,9 +166,38 @@ int main(int argc, char *argv[]) {
     printf("\n");
   } 
 
+  // print file size
+#ifdef VMS
+  f = fopen(fileName->getCString(), "rb", "ctx=stm");
+#else
+  f = fopen(fileName->getCString(), "rb");
+#endif
+  if (f) {
+    fseek(f, 0, SEEK_END);
+    printf("File size:    %d bytes\n", (int)ftell(f));
+    fclose(f);
+  }
+
+  // print linearization info
+  printf("Optimized:    %s\n", doc->isLinearized() ? "yes" : "no");
+
+  // print PDF version
+  printf("PDF version:  %.1f\n", doc->getPDFVersion());
+
+  // print the metadata
+  if (printMetadata && (metadata = doc->readMetadata())) {
+    fputs("Metadata:\n", stdout);
+    fputs(metadata->getCString(), stdout);
+    fputc('\n', stdout);
+    delete metadata;
+  }
+
   // clean up
+ err2:
+  uMap->decRefCnt();
   delete doc;
-  freeParams();
+ err1:
+  delete globalParams;
 
   // check for memory leaks
   Object::memCheck(stderr);
@@ -158,44 +206,77 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-static void printInfoString(Dict *infoDict, char *key, char *fmt) {
+static void printInfoString(Dict *infoDict, char *key, char *text,
+			    UnicodeMap *uMap) {
   Object obj;
-  GString *s1, *s2;
-  int i;
+  GString *s1;
+  GBool isUnicode;
+  Unicode u;
+  char buf[8];
+  int i, n;
 
   if (infoDict->lookup(key, &obj)->isString()) {
+    fputs(text, stdout);
     s1 = obj.getString();
     if ((s1->getChar(0) & 0xff) == 0xfe &&
 	(s1->getChar(1) & 0xff) == 0xff) {
-      s2 = new GString();
-      for (i = 2; i < obj.getString()->getLength(); i += 2) {
-	if (s1->getChar(i) == '\0') {
-	  s2->append(s1->getChar(i+1));
-	} else {
-	  delete s2;
-	  s2 = new GString("<unicode>");
-	  break;
-	}
-      }
-      printf(fmt, s2->getCString());
-      delete s2;
+      isUnicode = gTrue;
+      i = 2;
     } else {
-      printf(fmt, s1->getCString());
+      isUnicode = gFalse;
+      i = 0;
     }
+    while (i < obj.getString()->getLength()) {
+      if (isUnicode) {
+	u = ((s1->getChar(i) & 0xff) << 8) |
+	    (s1->getChar(i+1) & 0xff);
+	i += 2;
+      } else {
+	u = s1->getChar(i) & 0xff;
+	++i;
+      }
+      n = uMap->mapUnicode(u, buf, sizeof(buf));
+      fwrite(buf, 1, n, stdout);
+    }
+    fputc('\n', stdout);
   }
   obj.free();
 }
 
-static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
+static void printInfoDate(Dict *infoDict, char *key, char *text) {
   Object obj;
   char *s;
+  int year, mon, day, hour, min, sec;
+  struct tm tmStruct;
+  char buf[256];
 
   if (infoDict->lookup(key, &obj)->isString()) {
+    fputs(text, stdout);
     s = obj.getString()->getCString();
     if (s[0] == 'D' && s[1] == ':') {
       s += 2;
     }
-    printf(fmt, s);
+    if (sscanf(s, "%4d%2d%2d%2d%2d%2d",
+	       &year, &mon, &day, &hour, &min, &sec) == 6) {
+      tmStruct.tm_year = year - 1900;
+      tmStruct.tm_mon = mon - 1;
+      tmStruct.tm_mday = day;
+      tmStruct.tm_hour = hour;
+      tmStruct.tm_min = min;
+      tmStruct.tm_sec = sec;
+      tmStruct.tm_wday = -1;
+      tmStruct.tm_yday = -1;
+      tmStruct.tm_isdst = -1;
+      mktime(&tmStruct); // compute the tm_wday and tm_yday fields
+      if (strftime(buf, sizeof(buf), "%c", &tmStruct)) {
+	fputs(buf, stdout);
+      } else {
+	fputs(s, stdout);
+      }
+    } else {
+      fputs(s, stdout);
+    }
+    fputc('\n', stdout);
   }
   obj.free();
 }

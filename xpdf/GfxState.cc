@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stddef.h>
 #include <math.h>
 #include <string.h> // for memcpy()
@@ -915,15 +916,10 @@ GfxColorSpace *GfxSeparationColorSpace::parse(Array *arr) {
   if (!(funcA = Function::parse(&obj1))) {
     goto err4;
   }
-  if (!funcA->isOk()) {
-    goto err5;
-  }
   obj1.free();
   cs = new GfxSeparationColorSpace(nameA, altA, funcA);
   return cs;
 
- err5:
-  delete funcA;
  err4:
   delete altA;
  err3:
@@ -1027,9 +1023,6 @@ GfxColorSpace *GfxDeviceNColorSpace::parse(Array *arr) {
   if (!(funcA = Function::parse(&obj1))) {
     goto err4;
   }
-  if (!funcA->isOk()) {
-    goto err5;
-  }
   obj1.free();
   cs = new GfxDeviceNColorSpace(nCompsA, altA, funcA);
   for (i = 0; i < nCompsA; ++i) {
@@ -1037,8 +1030,6 @@ GfxColorSpace *GfxDeviceNColorSpace::parse(Array *arr) {
   }
   return cs;
 
- err5:
-  delete funcA;
  err4:
   delete altA;
  err3:
@@ -1338,6 +1329,8 @@ GfxShading *GfxShading::parse(Object *obj) {
       shading->xMax = xMaxA;
       shading->yMax = yMaxA;
       shading->hasBBox = hasBBoxA;
+    } else {
+      delete colorSpaceA;
     }
   }
 
@@ -1437,11 +1430,6 @@ GfxAxialShading *GfxAxialShading::parse(Dict *dict) {
     }
   }
   obj1.free();
-  for (i = 0; i < nFuncsA; ++i) {
-    if (!funcsA[i]->isOk()) {
-      goto err2;
-    }
-  }
 
   extend0A = extend1A = gFalse;
   if (dict->lookup("Extend", &obj1)->isArray() &&
@@ -1456,10 +1444,6 @@ GfxAxialShading *GfxAxialShading::parse(Dict *dict) {
   return new GfxAxialShading(x0A, y0A, x1A, y1A, t0A, t1A,
 			     funcsA, nFuncsA, extend0A, extend1A);
 
- err2:
-  for (i = 0; i < nFuncsA; ++i) {
-    delete funcsA[i];
-  }
  err1:
   return NULL;
 }
@@ -1521,18 +1505,6 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
   } else {
     goto err1;
   }
-
-#if 0 //~
-  // handle the case where fewer than 2^n palette entries of an n-bit
-  // indexed color space are populated (this happens, e.g., in files
-  // optimized by Distiller)
-  if (colorSpace->getMode() == csIndexed) {
-    i = ((GfxIndexedColorSpace *)colorSpace)->getIndexHigh();
-    if (i < maxPixel) {
-      maxPixel = i;
-    }
-  }
-#endif
 
   // Construct a lookup table -- this stores pre-computed decoded
   // values for each component, i.e., the result of applying the
@@ -1792,6 +1764,21 @@ void GfxPath::curveTo(double x1, double y1, double x2, double y2,
   subpaths[n-1]->curveTo(x1, y1, x2, y2, x3, y3);
 }
 
+void GfxPath::close() {
+  // this is necessary to handle the pathological case of
+  // moveto/closepath/clip, which defines an empty clipping region
+  if (justMoved) {
+    if (n >= size) {
+      size += 16;
+      subpaths = (GfxSubpath **)
+	           grealloc(subpaths, size * sizeof(GfxSubpath *));
+    }
+    subpaths[n] = new GfxSubpath(firstX, firstY);
+    ++n;
+    justMoved = gFalse;
+  }
+  subpaths[n-1]->close();
+}
 
 //------------------------------------------------------------------------
 // GfxState
@@ -1900,7 +1887,10 @@ GfxState::~GfxState() {
     delete strokePattern;
   }
   gfree(lineDash);
-  delete path;
+  if (path) {
+    // this gets set to NULL by restore()
+    delete path;
+  }
   if (saved) {
     delete saved;
   }
@@ -1925,7 +1915,6 @@ GfxState::GfxState(GfxState *state) {
     lineDash = (double *)gmalloc(lineDashLength * sizeof(double));
     memcpy(lineDash, state->lineDash, lineDashLength * sizeof(double));
   }
-  path = state->path->copy();
   saved = NULL;
 }
 
@@ -2070,10 +2059,7 @@ void GfxState::textShift(double tx) {
   curY += dy;
 }
 
-void GfxState::textShift(double tx, double ty) {
-  double dx, dy;
-
-  textTransformDelta(tx, ty, &dx, &dy);
+void GfxState::shift(double dx, double dy) {
   curX += dx;
   curY += dy;
 }
@@ -2091,10 +2077,21 @@ GfxState *GfxState::restore() {
 
   if (saved) {
     oldState = saved;
+
+    // these attributes aren't saved/restored by the q/Q operators
+    oldState->path = path;
+    oldState->curX = curX;
+    oldState->curY = curY;
+    oldState->lineX = lineX;
+    oldState->lineY = lineY;
+
+    path = NULL;
     saved = NULL;
     delete this;
+
   } else {
     oldState = this;
   }
+
   return oldState;
 }

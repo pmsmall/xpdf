@@ -6,6 +6,7 @@
 //
 //========================================================================
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -13,6 +14,7 @@
 #include "parseargs.h"
 #include "GString.h"
 #include "gmem.h"
+#include "GlobalParams.h"
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -22,7 +24,6 @@
 #include "Page.h"
 #include "PDFDoc.h"
 #include "PSOutputDev.h"
-#include "Params.h"
 #include "Error.h"
 #include "config.h"
 
@@ -33,13 +34,19 @@ static GBool level1Sep = gFalse;
 static GBool level2Sep = gFalse;
 static GBool doEPS = gFalse;
 static GBool doForm = gFalse;
+#if OPI_SUPPORT
 static GBool doOPI = gFalse;
-static GBool noEmbedFonts = gFalse;
+#endif
+static GBool noEmbedT1Fonts = gFalse;
 static GBool noEmbedTTFonts = gFalse;
-static int paperWidth = defPaperWidth;
-static int paperHeight = defPaperHeight;
+static char paperSize[15] = "";
+static int paperWidth = 0;
+static int paperHeight = 0;
+static GBool duplex = gFalse;
 static char ownerPassword[33] = "";
 static char userPassword[33] = "";
+static GBool quiet = gFalse;
+static char cfgFileName[256] = "";
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
 
@@ -62,29 +69,35 @@ static ArgDesc argDesc[] = {
   {"-opi",    argFlag,     &doOPI,          0,
    "generate OPI comments"},
 #endif
-  {"-noemb",  argFlag,     &noEmbedFonts,   0,
+  {"-noembt1", argFlag,     &noEmbedT1Fonts, 0,
    "don't embed Type 1 fonts"},
   {"-noembtt", argFlag,    &noEmbedTTFonts, 0,
    "don't embed TrueType fonts"},
+  {"-paper",  argString,   paperSize,       sizeof(paperSize),
+   "paper size (letter, legal, A4, A3)"},
   {"-paperw", argInt,      &paperWidth,     0,
    "paper width, in points"},
   {"-paperh", argInt,      &paperHeight,    0,
    "paper height, in points"},
-  {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
+  {"-duplex", argFlag,     &duplex,         0,
+   "enable duplex printing"},
+  {"-opw",    argString,   ownerPassword,   sizeof(ownerPassword),
    "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,    sizeof(userPassword),
    "user password (for encrypted files)"},
-  {"-q",      argFlag,     &errQuiet,       0,
+  {"-q",      argFlag,     &quiet,          0,
    "don't print any messages or errors"},
+  {"-cfg",        argString,      cfgFileName,    sizeof(cfgFileName),
+   "configuration file to use in place of .xpdfrc"},
   {"-v",      argFlag,     &printVersion,   0,
    "print copyright and version info"},
   {"-h",      argFlag,     &printHelp,      0,
    "print usage information"},
   {"-help",   argFlag,     &printHelp,      0,
    "print usage information"},
-  {"--help",  argFlag,     &printHelp,     0,
+  {"--help",  argFlag,     &printHelp,      0,
    "print usage information"},
-  {"-?",      argFlag,     &printHelp,     0,
+  {"-?",      argFlag,     &printHelp,      0,
    "print usage information"},
   {NULL}
 };
@@ -93,7 +106,7 @@ int main(int argc, char *argv[]) {
   PDFDoc *doc;
   GString *fileName;
   GString *psFileName;
-  PSOutLevel level;
+  PSLevel level;
   PSOutMode mode;
   GString *ownerPW, *userPW;
   PSOutputDev *psOut;
@@ -133,11 +146,41 @@ int main(int argc, char *argv[]) {
                : doForm ? psModeForm
                         : psModePS;
 
-  // init error file
-  errorInit();
-
   // read config file
-  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
+  globalParams = new GlobalParams(cfgFileName);
+  if (paperSize[0]) {
+    if (!globalParams->setPSPaperSize(paperSize)) {
+      fprintf(stderr, "Invalid paper size\n");
+      exit(1);
+    }
+  } else {
+    if (paperWidth) {
+      globalParams->setPSPaperWidth(paperWidth);
+    }
+    if (paperHeight) {
+      globalParams->setPSPaperHeight(paperHeight);
+    }
+  }
+  if (duplex) {
+    globalParams->setPSDuplex(duplex);
+  }
+  if (level1 || level1Sep || level2Sep) {
+    globalParams->setPSLevel(level);
+  }
+  if (noEmbedT1Fonts) {
+    globalParams->setPSEmbedType1(!noEmbedT1Fonts);
+  }
+  if (noEmbedTTFonts) {
+    globalParams->setPSEmbedTrueType(!noEmbedTTFonts);
+  }
+#if OPI_SUPPORT
+  if (doOPI) {
+    globalParams->setPSOPI(doOPI);
+  }
+#endif
+  if (quiet) {
+    globalParams->setErrQuiet(quiet);
+  }
 
   // open PDF file
   if (ownerPassword[0]) {
@@ -197,10 +240,7 @@ int main(int argc, char *argv[]) {
 
   // write PostScript file
   psOut = new PSOutputDev(psFileName->getCString(), doc->getXRef(),
-			  doc->getCatalog(), firstPage, lastPage,
-			  level, mode, doOPI,
-			  !noEmbedFonts, !noEmbedTTFonts,
-			  paperWidth, paperHeight);
+			  doc->getCatalog(), firstPage, lastPage, mode);
   if (psOut->isOk()) {
     doc->displayPages(psOut, firstPage, lastPage, 72, 0, gFalse);
   }
@@ -211,7 +251,7 @@ int main(int argc, char *argv[]) {
   delete psFileName;
  err1:
   delete doc;
-  freeParams();
+  delete globalParams;
 
   // check for memory leaks
   Object::memCheck(stderr);

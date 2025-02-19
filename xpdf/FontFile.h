@@ -16,7 +16,9 @@
 #include <stdio.h>
 #include "gtypes.h"
 #include "GString.h"
-#include "FontEncoding.h"
+#include "CharTypes.h"
+
+class CharCodeToUnicode;
 
 //------------------------------------------------------------------------
 // FontFile
@@ -32,10 +34,9 @@ public:
   // Returns NULL if no name is available.
   virtual char *getName() = 0;
 
-  // Returns the custom font encoding, or NULL if the encoding is
-  // not available.  If <taken> is set, the caller of this function
-  // will be responsible for freeing the encoding object.
-  virtual FontEncoding *getEncoding(GBool taken) = 0;
+  // Returns the custom font encoding, or NULL if the encoding is not
+  // available.
+  virtual char **getEncoding() = 0;
 };
 
 //------------------------------------------------------------------------
@@ -48,13 +49,12 @@ public:
   Type1FontFile(char *file, int len);
   virtual ~Type1FontFile();
   virtual char *getName() { return name; }
-  virtual FontEncoding *getEncoding(GBool taken);
+  virtual char **getEncoding() { return encoding; }
 
 private:
 
   char *name;
-  FontEncoding *encoding;
-  GBool freeEnc;
+  char **encoding;
 };
 
 //------------------------------------------------------------------------
@@ -67,13 +67,12 @@ public:
   Type1CFontFile(char *file, int len);
   virtual ~Type1CFontFile();
   virtual char *getName() { return name; }
-  virtual FontEncoding *getEncoding(GBool taken);
+  virtual char **getEncoding() { return encoding; }
 
 private:
 
   char *name;
-  FontEncoding *encoding;
-  GBool freeEnc;
+  char **encoding;
 };
 
 //------------------------------------------------------------------------
@@ -131,22 +130,28 @@ public:
   // font file.
   virtual char *getName();
 
-  virtual FontEncoding *getEncoding(GBool taken);
+  virtual char **getEncoding();
 
   // Convert to a Type 42 font, suitable for embedding in a PostScript
   // file.  The name will be used as the PostScript font name (so we
   // don't need to depend on the 'name' table in the font).  The
   // encoding is needed because the PDF Font object can modify the
   // encoding.
-  void convertToType42(char *name, FontEncoding *encodingA, FILE *out);
+  void convertToType42(char *name, char **encodingA,
+		       CharCodeToUnicode *toUnicode,
+		       GBool pdfFontHasEncoding, FILE *out);
+
+  // Write a TTF file, filling in any missing tables that are required
+  // by the TrueType spec.  If the font already has all the required
+  // tables, it will be written unmodified.
+  void writeTTF(FILE *out);
 
 private:
 
   char *file;
   int len;
 
-  FontEncoding *encoding;
-  GBool freeEnc;
+  char **encoding;
 
   TTFontTableHdr *tableHdrs;
   int nTables;
@@ -161,10 +166,14 @@ private:
   Guint getULong(int pos);
   double getFixed(int pos);
   int seekTable(char *tag);
-  void cvtEncoding(FontEncoding *encodingA, FILE *out);
-  void cvtCharStrings(FontEncoding *encodingA, FILE *out);
+  int seekTableIdx(char *tag);
+  void cvtEncoding(char **encodingA, FILE *out);
+  void cvtCharStrings(char **encodingA, CharCodeToUnicode *toUnicode,
+		      GBool pdfFontHasEncoding, FILE *out);
+  int getCmapEntry(int cmapFmt, int pos, int code);
   void cvtSfnts(FILE *out);
-  void dumpString(char *s, int n, FILE *out);
+  void dumpString(char *s, int length, FILE *out);
+  Guint computeTableChecksum(char *data, int length);
 };
 
 #endif

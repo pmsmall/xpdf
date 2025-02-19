@@ -1,37 +1,38 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(xpdf/xpdf.cc)
+AC_CONFIG_HEADER(aconf.h)
 
 dnl ##### Optional features.
-OPTIONS=""
 AC_ARG_ENABLE(a4-paper,
 [  --enable-a4-paper       use A4 paper size instead of Letter for
                           PostScript output],
-OPTIONS="$OPTIONS -DA4_PAPER")
-AC_ARG_ENABLE(japanese,
-[  --enable-japanese       enable Japanese font support],
-OPTIONS="$OPTIONS -DJAPANESE_SUPPORT")
-AC_ARG_ENABLE(chinese-gb,
-[  --enable-chinese-gb     enable Chinese GB font support],
-OPTIONS="$OPTIONS -DCHINESE_GB_SUPPORT")
-AC_ARG_ENABLE(chinese-cns,
-[  --enable-chinese-cns    enable Chinese CNS font support],
-OPTIONS="$OPTIONS -DCHINESE_CNS_SUPPORT")
+AC_DEFINE(A4_PAPER))
 AC_ARG_ENABLE(no-text-select,
 [  --enable-no-text-select do not allow text selection],
-OPTIONS="$OPTIONS -DNO_TEXT_SELECT")
+AC_DEFINE(NO_TEXT_SELECT))
 AC_ARG_ENABLE(opi,
 [  --enable-opi            include support for OPI comments],
-OPTIONS="$OPTIONS -DOPI_SUPPORT")
+AC_DEFINE(OPI_SUPPORT))
 AC_ARG_WITH(gzip,
 [  --with-gzip             use gzip instead of uncompress],
-OPTIONS="$OPTIONS -DUSE_GZIP")
+AC_DEFINE(USE_GZIP))
 AC_ARG_WITH(appdef-dir,
 [  --with-appdef-dir       set app-defaults directory],
-OPTIONS="$OPTIONS -DAPPDEFDIR='\"$with_appdef_dir\"'")
-AC_ARG_ENABLE(freetype2,
-[  --enable-freetype2      enable use of FreeType 2 (version 2.0.5 or newer)],
-OPTIONS="$OPTIONS -DFREETYPE2")
-AC_SUBST(OPTIONS)
+AC_DEFINE_UNQUOTED(APPDEFDIR, "$with_appdef_dir"))
+
+dnl ##### Path to xpdfrc.
+dnl This ugly kludge to get the sysconfdir path is needed because
+dnl autoconf doesn't actually set the prefix variable until later.
+if test "$sysconfdir" = '${prefix}/etc'; then
+  if test "x$prefix" = xNONE; then
+    system_xpdfrc="$ac_default_prefix/etc/xpdfrc"
+  else
+    system_xpdfrc="$prefix/etc/xpdfrc"
+  fi
+else
+  system_xpdfrc="$sysconfdir/xpdfrc"
+fi
+AC_DEFINE_UNQUOTED(SYSTEM_XPDFRC, "$system_xpdfrc")
 
 dnl ##### Checks for programs.
 AC_PROG_CC
@@ -232,19 +233,24 @@ if test -z "$no_x"; then
 fi
 
 dnl ##### Check for FreeType.
+dnl ##### Look for FreeType 2.0.5+ first, and then FreeType 1.x.
+dnl ##### (Note: FT_Get_Name_Index was added in FT 2.0.5, and is
+dnl ##### the reason that Xpdf requires 2.0.5+.)
 if test -z "$no_x"; then
-  if test -n "$enable_freetype2"; then
-    smr_CHECK_LIB(freetype2, freetype, [FreeType2 font rasterizer],
-                  FT_Init_FreeType, freetype/freetype.h,
+  smr_CHECK_LIB(freetype2, freetype, [FreeType2 font rasterizer - version 2.0.5+],
+                FT_Get_Name_Index, freetype/freetype.h,
+                $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+  if test x"$freetype2_LIBS" = x; then
+    smr_CHECK_LIB(freetype2, freetype, [FreeType2 font rasterizer - version 2.0.5+],
+                  FT_Get_Name_Index, freetype.h,
                   $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
-    if test x"$freetype2_LIBS" = x; then
-      smr_CHECK_LIB(freetype2, freetype, [FreeType2 font rasterizer],
-                    FT_Init_FreeType, freetype.h,
-                    $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
-    fi
-    AC_SUBST(freetype2_LIBS)
-    AC_SUBST(freetype2_CFLAGS)
-  else
+  fi
+  if test x"$freetype2_LIBS" != x; then
+    AC_DEFINE(FREETYPE2)
+  fi
+  AC_SUBST(freetype2_LIBS)
+  AC_SUBST(freetype2_CFLAGS)
+  if test x"$freetype2_LIBS" = x; then
     smr_CHECK_LIB(freetype, ttf, [FreeType font rasterizer],
                   TT_Init_FreeType, freetype/freetype.h,
                   $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
@@ -257,6 +263,11 @@ if test -z "$no_x"; then
     AC_SUBST(freetype_CFLAGS)
   fi
 fi
+
+dnl ##### Check for libpaper (Debian).
+smr_CHECK_LIB(libpaper, paper, [Debian libpaper], paperinit, paper.h)
+AC_SUBST(libpaper_LIBS)
+AC_SUBST(libpaper_CFLAGS)
 
 dnl ##### Disable X-specific stuff in top-level Makefile.
 if test -n "$no_x"; then
@@ -275,5 +286,5 @@ AC_OUTPUT(Makefile xpdf/Makefile ltk/Makefile goo/Makefile)
 dnl ##### Warn user if X is missing.
 if test -n "$no_x"; then
   AC_MSG_WARN([Couldn't find X -- you will be able to compile
-        pdftops, pdftotext, pdfinfo, and pdfimages, but not xpdf])
+        pdftops, pdftotext, pdfinfo, pdffonts, and pdfimages, but not xpdf])
 fi

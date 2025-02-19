@@ -9,8 +9,9 @@
 //
 //========================================================================
 
-#define VERSION "0.93"
+#define VERSION "1.00"
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>

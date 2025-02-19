@@ -1,8 +1,8 @@
 .\" Copyright 1998 Derek B. Noonburg
-.TH pdfimages 1 "25 Oct 2001"
+.TH pdfimages 1 "01 Feb 2002"
 .SH NAME
 pdfimages \- Portable Document Format (PDF) image extractor
-(version 0.93)
+(version 1.00)
 .SH SYNOPSIS
 .B pdfimages
 [options]
@@ -21,7 +21,18 @@ where
 is the image number and
 .I xxx
 is the image type (.ppm, .pbm, .jpg).
+.SH CONFIGURATION FILE
+Pdfimages reads a configuration file at startup.  It first tries to
+find the user's private config file, ~/.xpdfrc.  If that doesn't
+exist, it looks for a system-wide config file, typically
+/usr/local/etc/xpdfrc (but this location can be changed when pdfimages
+is built).  See the
+.BR xpdfrc (5)
+man page for details.
 .SH OPTIONS
+Many of the following options can be set with configuration file
+commands.  These are listed in square brackets with the description of
+the corresponding command line option.
 .TP
 .BI \-f " number"
 Specifies the first page to scan.
@@ -44,6 +55,7 @@ Specify the user password for the PDF file.
 .TP
 .B \-q
 Don't print any messages or errors.
+.RB "[config file: " errQuiet ]
 .TP
 .B \-v
 Print copyright and version information.
@@ -51,19 +63,23 @@ Print copyright and version information.
 .B \-h
 Print usage information.
 .RB ( \-help
-is equivalent.)
+and
+.B \-\-help
+are equivalent.)
 .SH BUGS
 With the -j option, the PDF image streams are copied directly to the
 output files.  DCT images in PDF files may use some non-standard JPEG
 features, so the resulting .jpg files may not be too useful.
 .SH AUTHOR
-The pdfimages software and documentation are copyright 1996-2001 Derek
+The pdfimages software and documentation are copyright 1996-2002 Derek
 B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR xpdf (1),
 .BR pdftops (1),
 .BR pdftotext (1),
 .BR pdfinfo (1),
-.BR pdftopbm (1)
+.BR pdffonts (1),
+.BR pdftopbm (1),
+.BR xpdfrc (5)
 .br
 .B http://www.foolabs.com/xpdf/

@@ -8,13 +8,14 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
+
 #if HAVE_T1LIB_H
 
 #include <math.h>
 #include <string.h>
 #include <X11/Xlib.h>
 #include "gmem.h"
-#include "FontEncoding.h"
 #include "T1Font.h"
 
 //------------------------------------------------------------------------
@@ -57,7 +58,7 @@ T1FontEngine::~T1FontEngine() {
 //------------------------------------------------------------------------
 
 T1FontFile::T1FontFile(T1FontEngine *engineA, char *fontFileName,
-		       FontEncoding *fontEnc, double *bboxA) {
+		       char **fontEnc, double *bboxA) {
   int encStrSize;
   char *encPtr;
   int i;
@@ -78,25 +79,22 @@ T1FontFile::T1FontFile(T1FontEngine *engineA, char *fontFileName,
 
   // reencode it
   encStrSize = 0;
-  for (i = 0; i < 256 && i < fontEnc->getSize(); ++i) {
-    if (fontEnc->getCharName(i)) {
-      encStrSize += strlen(fontEnc->getCharName(i)) + 1;
+  for (i = 0; i < 256; ++i) {
+    if (fontEnc[i]) {
+      encStrSize += strlen(fontEnc[i]) + 1;
     }
   }
   enc = (char **)gmalloc(257 * sizeof(char *));
   encStr = (char *)gmalloc(encStrSize * sizeof(char));
   encPtr = encStr;
-  for (i = 0; i < 256 && i < fontEnc->getSize(); ++i) {
-    if (fontEnc->getCharName(i)) {
-      strcpy(encPtr, fontEnc->getCharName(i));
+  for (i = 0; i < 256; ++i) {
+    if (fontEnc[i]) {
+      strcpy(encPtr, fontEnc[i]);
       enc[i] = encPtr;
       encPtr += strlen(encPtr) + 1;
     } else {
       enc[i] = ".notdef";
     }
-  }
-  for (; i < 256; ++i) {
-    enc[i] = ".notdef";
   }
   enc[256] = "custom";
   T1_ReencodeFont(id, enc);
@@ -135,10 +133,10 @@ T1Font::T1Font(T1FontFile *fontFileA, double *m) {
   // and max values form the bounding box of the transformed font
   if (fontFile->bbox[0] != 0 || fontFile->bbox[1] != 0 ||
       fontFile->bbox[2] != 0 || fontFile->bbox[3] != 0) {
-    bbx0 = 0.001 * fontFile->bbox[0];
-    bby0 = 0.001 * fontFile->bbox[1];
-    bbx1 = 0.001 * fontFile->bbox[2];
-    bby1 = 0.001 * fontFile->bbox[3];
+    bbx0 = fontFile->bbox[0];
+    bby0 = fontFile->bbox[1];
+    bbx1 = fontFile->bbox[2];
+    bby1 = fontFile->bbox[3];
   } else {
     bbox = T1_GetFontBBox(id);
     if (bbox.llx != 0 || bbox.lly != 0 &&
@@ -194,9 +192,8 @@ T1Font::T1Font(T1FontFile *fontFileA, double *m) {
   } else if (y > yMax) {
     yMax = y;
   }
-#if 1 //~
-  //~ This is a kludge: some buggy PDF generators embed fonts with
-  //~ zero bounding boxes.
+  // This is a kludge: some buggy PDF generators embed fonts with
+  // zero bounding boxes.
   if (xMax == xMin) {
     xMin = 0;
     xMax = (int)size;
@@ -205,20 +202,16 @@ T1Font::T1Font(T1FontFile *fontFileA, double *m) {
     yMin = 0;
     yMax = (int)(1.2 * size);
   }
-#endif
-#if 1 //~
-  //~ Another kludge: an unusually large xMin or yMin coordinate is
-  //~ probably wrong.
+  // Another kludge: an unusually large xMin or yMin coordinate is
+  // probably wrong.
   if (xMin > 0) {
     xMin = 0;
   }
   if (yMin > 0) {
     yMin = 0;
   }
-#endif
-#if 1 //~
-  //~ Another kludge: t1lib doesn't correctly handle fonts with
-  //~ real (non-integer) bounding box coordinates.
+  // Another kludge: t1lib doesn't correctly handle fonts with
+  // real (non-integer) bounding box coordinates.
   if (xMax - xMin > 5000) {
     xMin = 0;
     xMax = (int)size;
@@ -227,7 +220,6 @@ T1Font::T1Font(T1FontFile *fontFileA, double *m) {
     yMin = 0;
     yMax = (int)(1.2 * size);
   }
-#endif
   // this should be (max - min + 1), but we add some padding to
   // deal with rounding errors
   glyphW = xMax - xMin + 3;
@@ -285,7 +277,8 @@ T1Font::~T1Font() {
 }
 
 GBool T1Font::drawChar(Drawable d, int w, int h, GC gc,
-		       int x, int y, int r, int g, int b, Gushort c) {
+		       int x, int y, int r, int g, int b,
+		       CharCode c, Unicode u) {
   T1FontEngine *engine;
   XColor xcolor;
   int bgR, bgG, bgB;
@@ -407,7 +400,7 @@ GBool T1Font::drawChar(Drawable d, int w, int h, GC gc,
   return gTrue;
 }
 
-Guchar *T1Font::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
+Guchar *T1Font::getGlyphPixmap(CharCode c, int *x, int *y, int *w, int *h) {
   T1FontEngine *engine;
   GLYPH *glyph;
   int gSize;
@@ -449,7 +442,7 @@ Guchar *T1Font::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
   *w = glyph->metrics.rightSideBearing - glyph->metrics.leftSideBearing;
   *h = glyph->metrics.ascent - glyph->metrics.descent;
   if (*w > glyphW || *h > glyphH) {
-#if 1 //~
+#if 1 //~ debug
     fprintf(stderr, "Weird t1lib glyph size: %d > %d or %d > %d\n",
 	    *w, glyphW, *h, glyphH);
 #endif

@@ -27,8 +27,6 @@ public:
 
   LTKOutputDev(LTKWindow *winA, unsigned long paperColor,
 	       GBool installCmap, GBool rgbCubeSize,
-	       FontRastControl t1libControl,
-	       FontRastControl freetypeControl,
 	       GBool incrementalUpdateA);
 
   ~LTKOutputDev();

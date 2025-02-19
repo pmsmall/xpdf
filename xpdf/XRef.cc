@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
@@ -610,6 +611,11 @@ Object *XRef::fetch(int num, int gen, Object *obj) {
 
 Object *XRef::getDocInfo(Object *obj) {
   return trailerDict.dictLookup("Info", obj);
+}
+
+// Added for the pdftex project.
+Object *XRef::getDocInfoNF(Object *obj) {
+  return trailerDict.dictLookupNF("Info", obj);
 }
 
 int XRef::getStreamEnd(int streamStart) {

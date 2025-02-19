@@ -11,8 +11,8 @@ SHELL = /bin/sh
 srcdir = @srcdir@
 VPATH = @srcdir@
 
-CFLAGS = @CFLAGS@ @DEFS@ @OPTIONS@ -I$(srcdir)
-CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(srcdir)
+CFLAGS = @CFLAGS@ @DEFS@ -I.. -I$(srcdir)
+CXXFLAGS = @CXXFLAGS@ @DEFS@ -I.. -I$(srcdir)
 
 CC = @CC@
 CXX = @CXX@
@@ -31,6 +31,8 @@ LIBPREFIX = @LIBPREFIX@
 #------------------------------------------------------------------------
 
 CXX_SRC = \
+	$(srcdir)/GHash.cc \
+	$(srcdir)/GList.cc \
 	$(srcdir)/GString.cc \
 	$(srcdir)/gmempp.cc \
 	$(srcdir)/gfile.cc
@@ -41,7 +43,7 @@ C_SRC = \
 
 #------------------------------------------------------------------------
 
-GOO_CXX_OBJS = GString.o gmempp.o gfile.o
+GOO_CXX_OBJS = GHash.o GList.o GString.o gmempp.o gfile.o
 GOO_C_OBJS = gmem.o parseargs.o
 GOO_OBJS = $(GOO_CXX_OBJS) $(GOO_C_OBJS)
 
@@ -57,15 +59,8 @@ clean:
 
 #------------------------------------------------------------------------
 
-distdepend:
-	cp Makefile.in Makefile.in.bak
-	sed '/^#----- dependences -----/q' Makefile.in.bak >Makefile.in
-	$(CXX) $(CXXFLAGS) -MM $(CXX_SRC) >>Makefile.in
-	$(CC) $(CFLAGS) -MM $(C_SRC) >>Makefile.in
+depend:
+	$(CXX) $(CXXFLAGS) -MM $(CXX_SRC) >Makefile.dep
+	$(CC) $(CFLAGS) -MM $(C_SRC) >>Makefile.dep
 
-#----- dependences -----
-GString.o: ./GString.cc gtypes.h GString.h
-gmempp.o: ./gmempp.cc gmem.h
-gfile.o: ./gfile.cc GString.h gfile.h gtypes.h
-gmem.o: ./gmem.c gmem.h
-parseargs.o: ./parseargs.c parseargs.h gtypes.h
+-include Makefile.dep

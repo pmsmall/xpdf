@@ -6,6 +6,7 @@
  * Copyright 1996 Derek B. Noonburg
  */
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>

@@ -16,11 +16,6 @@
 #include <stdio.h>
 #include "config.h"
 
-// File to send error (and other) messages to.
-extern FILE *errFile;
-
-extern void errorInit();
-
 extern void CDECL error(int pos, char *msg, ...);
 
 #endif

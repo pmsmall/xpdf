@@ -6,6 +6,7 @@
 //
 //========================================================================
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -13,6 +14,7 @@
 #include "parseargs.h"
 #include "GString.h"
 #include "gmem.h"
+#include "GlobalParams.h"
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -22,7 +24,6 @@
 #include "Page.h"
 #include "PDFDoc.h"
 #include "ImageOutputDev.h"
-#include "Params.h"
 #include "Error.h"
 #include "config.h"
 
@@ -31,6 +32,8 @@ static int lastPage = 0;
 static GBool dumpJPEG = gFalse;
 static char ownerPassword[33] = "";
 static char userPassword[33] = "";
+static GBool quiet = gFalse;
+static char cfgFileName[256] = "";
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
 
@@ -45,8 +48,10 @@ static ArgDesc argDesc[] = {
    "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,   sizeof(userPassword),
    "user password (for encrypted files)"},
-  {"-q",      argFlag,     &errQuiet,      0,
+  {"-q",      argFlag,     &quiet,         0,
    "don't print any messages or errors"},
+  {"-cfg",        argString,      cfgFileName,    sizeof(cfgFileName),
+   "configuration file to use in place of .xpdfrc"},
   {"-v",      argFlag,     &printVersion,  0,
    "print copyright and version info"},
   {"-h",      argFlag,     &printHelp,     0,
@@ -81,11 +86,11 @@ int main(int argc, char *argv[]) {
   fileName = new GString(argv[1]);
   imgRoot = argv[2];
 
-  // init error file
-  errorInit();
-
   // read config file
-  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
+  globalParams = new GlobalParams(cfgFileName);
+  if (quiet) {
+    globalParams->setErrQuiet(quiet);
+  }
 
   // open PDF file
   if (ownerPassword[0]) {
@@ -130,7 +135,7 @@ int main(int argc, char *argv[]) {
   // clean up
  err:
   delete doc;
-  freeParams();
+  delete globalParams;
 
   // check for memory leaks
   Object::memCheck(stderr);

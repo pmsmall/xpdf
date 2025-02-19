@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include "gmem.h"
 #include "Object.h"
 #include "Gfx.h"
@@ -20,24 +21,32 @@
 //------------------------------------------------------------------------
 
 FormWidget::FormWidget(XRef *xrefA, Dict *dict) {
-  Object obj1, obj2;
+  Object apObj, asObj, obj1, obj2;
   double t;
 
   ok = gFalse;
   xref = xrefA;
 
-  if (dict->lookup("AP", &obj1)->isDict()) {
-    obj1.dictLookupNF("N", &obj2);
-    //~ this doesn't handle appearances with multiple states --
-    //~ need to look at AS key to get state and then get the
-    //~ corresponding entry from the N dict
-    if (obj2.isRef()) {
-      obj2.copy(&appearance);
-      ok = gTrue;
+  if (dict->lookup("AP", &apObj)->isDict()) {
+    if (dict->lookup("AS", &asObj)->isName()) {
+      if (apObj.dictLookup("N", &obj1)->isDict()) {
+	if (obj1.dictLookupNF(asObj.getName(), &obj2)->isRef()) {
+	  obj2.copy(&appearance);
+	  ok = gTrue;
+	}
+	obj2.free();
+      }
+      obj1.free();
+    } else {
+      if (apObj.dictLookupNF("N", &obj1)->isRef()) {
+	obj1.copy(&appearance);
+	ok = gTrue;
+      }
+      obj1.free();
     }
-    obj2.free();
+    asObj.free();
   }
-  obj1.free();
+  apObj.free();
 
   if (dict->lookup("Rect", &obj1)->isArray() &&
       obj1.arrayGetLength() == 4) {

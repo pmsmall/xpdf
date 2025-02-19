@@ -24,7 +24,6 @@ class Dict;
 class OutputDev;
 class GfxFontDict;
 class GfxFont;
-struct GfxFontEncoding16;
 class GfxPattern;
 class GfxShading;
 class GfxAxialShading;
@@ -211,7 +210,6 @@ private:
   void opMoveSetShowText(Object args[], int numArgs);
   void opShowSpaceText(Object args[], int numArgs);
   void doShowText(GString *s);
-  int getNextChar16(GfxFontEncoding16 *enc, Guchar *p, int *c16);
 
   // XObject operators
   void opXObject(Object args[], int numArgs);

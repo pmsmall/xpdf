@@ -8,6 +8,8 @@
 //
 //========================================================================
 
+#include <aconf.h>
+
 #ifdef WIN32
    extern "C" {
 #  ifndef _MSC_VER
@@ -448,15 +450,11 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
   char buf[_MAX_PATH];
   char *fp;
 
-  // There is a security hole here: an attacker can create a symlink
-  // with this file name after the tmpnam call and before the fopen
-  // call.  I will happily accept fixes to this function for non-Unix
-  // OSs.
-  if (!(s = tmpnam(NULL))) {
+  if (!(s = _tempnam(getenv("TEMP"), NULL))) {
     return gFalse;
   }
-  GetFullPathName(s, _MAX_PATH, buf, &fp);
-  *name = new GString(buf);
+  *name = new GString(s);
+  free(s);
   if (ext) {
     (*name)->append(ext);
   }
@@ -524,6 +522,35 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
   }
   return gTrue;
 #endif
+}
+
+char *getLine(char *buf, int size, FILE *f) {
+  int c, i;
+
+  i = 0;
+  while (i < size - 1) {
+    if ((c = fgetc(f)) == EOF) {
+      break;
+    }
+    buf[i++] = (char)c;
+    if (c == '\x0a') {
+      break;
+    }
+    if (c == '\x0d') {
+      c = fgetc(f);
+      if (c == '\x0a' && i < size - 1) {
+	buf[i++] = (char)c;
+      } else if (c != EOF) {
+	ungetc(c, f);
+      }
+      break;
+    }
+  }
+  buf[i] = '\0';
+  if (i == 0) {
+    return NULL;
+  }
+  return buf;
 }
 
 //------------------------------------------------------------------------

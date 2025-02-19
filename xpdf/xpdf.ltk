@@ -243,42 +243,21 @@ Window(func:makeFindWindow defWidget:"find" title:"xpdf: Find") {
 #------------------------------------------------------------------------
 
 Window(func:makeAboutWindow defWidget:"close" title:"About xpdf") {
-  Box(x:1 y:2) {
-    Box(x:1 y:11 left:2 right:2 top:2 bottom:2 sunken) {
-      Box1(bottom:0) {
-        Label(text:"xpdf"
-              font:"-*-times-bold-i-normal-*-24-*-*-*-*-*-*-*")
+  Box(x:1 y:2 xfill:1 yfill:1) {
+    Box(x:2 y:2 xfill:1 yfill:1) {
+      Box1(xfill:1 yfill:1 sunken) {
+        List(name:"list" w:400 h:30
+             font:"-*-courier-medium-r-normal-*-12-*-*-*-*-*-*-*")
       }
-      Box1(bottom:12) {
-        Label(text:["Version " xpdfVersion])
+      Box1(yfill:1) {
+        Scrollbar(name:"vScrollbar" vert min:0 max:100
+                  move:&aboutScrollVertCbk)
       }
-      Box1(bottom:0) {
-        Label(text:xpdfCopyright)
+      Box1(xfill:1) {
+        Scrollbar(name:"hScrollbar" horiz min:0 max:100
+                  move:&aboutScrollHorizCbk)
       }
-      Box1(bottom:12) {
-        Label(text:"derekn@foolabs.com")
-      }
-      Box1(bottom:2) {
-        Label(text:["Supports PDF version " supportedPDFVersionStr "."])
-      }
-      Box1(bottom:0) {
-        Label(text:"The PDF data structures, operators, and specification")
-      }
-      Box1(bottom:12) {
-        Label(text:"are copyright 1995 Adobe Systems Inc.")
-      }
-      Box1(bottom:0) {
-        Label(text:"Mouse button 1: select text / follow link")
-      }
-      Box1(bottom:0) {
-        Label(text:"Mouse button 2: pan window")
-      }
-      Box1(bottom:12) {
-        Label(text:"Mouse button 3: menu")
-      }
-      Box1(bottom:12) {
-        Label(text:"http://www.foolabs.com/xpdf/")
-      }
+      Box1() { Empty() }
     }
     Box(x:2 y:1) {
       Box1(xfill:1) { Empty() }

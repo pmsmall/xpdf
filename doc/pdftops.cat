@@ -6,7 +6,7 @@ pdftops(1)                                             pdftops(1)
 
 NAME
        pdftops  -  Portable  Document  Format (PDF) to PostScript
-       converter (version 0.93)
+       converter (version 1.00)
 
 SYNOPSIS
        pdftops [options] [PDF-file [PS-file]]
@@ -21,7 +21,20 @@ DESCRIPTION
        -eps option).  If PS-file is '-', the PostScript  is  sent
        to stdout.
 
+CONFIGURATION FILE
+       Pdftops  reads  a configuration file at startup.  It first
+       tries to find the user's private config  file,  ~/.xpdfrc.
+       If  that  doesn't exist, it looks for a system-wide config
+       file, typically /usr/local/etc/xpdfrc (but  this  location
+       can  be changed when pdftops is built).  See the xpdfrc(5)
+       man page for details.
+
 OPTIONS
+       Many of the following options can be set  with  configura-
+       tion  file  commands.  These are listed in square brackets
+       with the description of  the  corresponding  command  line
+       option.
+
        -f number
               Specifies the first page to print.
 
@@ -37,18 +50,31 @@ OPTIONS
               Level 2 PostScript.  In particular,  Level  2  sup-
               ports  color images and image compression.  No more
               than one of the PostScript level options  (-level1,
-              -level1sep, -level2sep) may be given.
+              -level1sep,  -level2sep)  may  be  given.   [config
+              file: psLevel]
 
        -level1sep
-              Generate  Level 1 separable PostScript.  All colors
-              are converted to CMYK.   Images  are  written  with
-              separate stream data for the four components.
+              Generate Level 1 separable PostScript.  All  colors
+              are  converted  to  CMYK.   Images are written with
+              separate  stream  data  for  the  four  components.
+              [config file: psLevel]
+
+
+
+                           01 Feb 2002                          1
+
+
+
+
+
+pdftops(1)                                             pdftops(1)
+
 
        -level2sep
               Generate  Level 2 separable PostScript.  All colors
               are converted to CMYK.  The  PostScript  separation
               convention  operators  are  used  to  handle custom
-              (spot) colors.
+              (spot) colors.  [config file: psLevel]
 
        -eps   Generate an Encapsulated PostScript (EPS) file.  An
               EPS  file  contains  a  single image, so if you use
@@ -58,18 +84,6 @@ OPTIONS
               given.
 
        -form  Generate a PostScript form which can be imported by
-
-
-
-                           25 Oct 2001                          1
-
-
-
-
-
-pdftops(1)                                             pdftops(1)
-
-
               software that understands forms.  A form contains a
               single  page,  so  if  you  use  this option with a
               multi-page PDF file, you must  use  -f  and  -l  to
@@ -79,55 +93,41 @@ pdftops(1)                                             pdftops(1)
        -opi   Generate OPI comments  for  all  images  and  forms
               which  have  OPI information.  (This option is only
               available if pdftops was  compiled  with  OPI  sup-
-              port.)
+              port.)  [config file: psOPI]
 
-       -noemb By  default, any Type 1 fonts which are embedded in
+       -noembt1
+              By  default, any Type 1 fonts which are embedded in
               the PDF file are copied into the  PostScript  file.
               This option causes pdftops to substitute base fonts
               instead.   Embedded  fonts  make  PostScript  files
-              larger, but may be necessary for readable output.
+              larger,  but  may be necessary for readable output.
+              [config file: psEmbedType1Fonts]
 
        -noembtt
-              By  default,  any TrueType fonts which are embedded
-              in the PDF file  are  copied  into  the  PostScript
-              file.   This  option  causes  pdftops to substitute
+              By default, any TrueType fonts which  are  embedded
+              in  the  PDF  file  are  copied into the PostScript
+              file.  This option  causes  pdftops  to  substitute
               base fonts instead.  Embedded fonts make PostScript
-              files  larger,  but  may  be necessary for readable
-              output.  Also, some PostScript interpreters do  not
-              have TrueType rasterizers.
+              files larger, but may  be  necessary  for  readable
+              output.   Also, some PostScript interpreters do not
+              have TrueType  rasterizers.   [config  file:  psEm-
+              bedTrueTypeFonts]
+
+       -paper size
+              Set  the  paper  size  to one of "letter", "legal",
+              "A4", or "A3".  [config file: psPaperSize]
 
        -paperw size
-              Set the paper width, in points.
+              Set the paper  width,  in  points.   [config  file:
+              psPaperSize]
 
        -paperh size
-              Set the paper height, in points.
-
-       -opw password
-              Specify  the owner password for the PDF file.  Pro-
-              viding this will bypass all security  restrictions.
-
-       -upw password
-              Specify the user password for the PDF file.
-
-       -q     Don't print any messages or errors.
-
-       -v     Print copyright and version information.
-
-       -h     Print usage information.  (-help is equivalent.)
-
-BUGS
-       No support for TrueType and Type 3 fonts.
-
-AUTHOR
-       The  pdftops  software  and  documentation  are  copyright
-       1996-2001 Derek B. Noonburg (derekn@foolabs.com).
-
-SEE ALSO
-       xpdf(1),    pdftotext(1),     pdfinfo(1),     pdftopbm(1),
+              Set  the  paper  height,  in points.  [config file:
+              psPaperSize]
 
 
 
-                           25 Oct 2001                          2
+                           01 Feb 2002                          2
 
 
 
@@ -136,7 +136,40 @@ SEE ALSO
 pdftops(1)                                             pdftops(1)
 
 
-       pdfimages(1)
+       -duplex
+              Set the Duplex pagedevice entry in  the  PostScript
+              file.  This tells duplex-capable printers to enable
+              duplexing.  [config file: psDuplex]
+
+       -opw password
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
+
+       -upw password
+              Specify the user password for the PDF file.
+
+       -q     Don't print any messages or errors.  [config  file:
+              errQuiet]
+
+       -cfg config-file
+              Read  config-file in place of ~/.xpdfrc or the sys-
+              tem-wide config file.
+
+       -v     Print copyright and version information.
+
+       -h     Print usage information.   (-help  and  --help  are
+              equivalent.)
+
+BUGS
+       No support for Type 3 fonts.
+
+AUTHOR
+       The  pdftops  software  and  documentation  are  copyright
+       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
+
+SEE ALSO
+       xpdf(1),    pdftotext(1),     pdfinfo(1),     pdffonts(1),
+       pdftopbm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
 
@@ -160,39 +193,6 @@ pdftops(1)                                             pdftops(1)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                           25 Oct 2001                          3
+                           01 Feb 2002                          3
 
 

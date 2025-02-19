@@ -829,6 +829,7 @@ Work around a bug in cygwin's implementation of fseek.
 
 0.93a (2001-nov-21)
 -------------------
+Implemented the sh (shaded fill) operator for the axial shading type.
 Minor fixes to avoid compiler warnings.
 Cleaned up global variables -- moved many into instance vars and
   function args.
@@ -843,4 +844,60 @@ Add the Euro character to WinAnsiEncoding.
 Track the bounding box of the clip region to make rendering patterns
   more efficient.
 Fix openTempFile() for Win32.
-Implemented the sh (shaded fill) operator for the axial shading type.
+
+0.93b (2001-dec-11)
+-------------------
+Added a duplex option to PSOutputDev and a -duplex switch to pdftops.
+Added XRef::PDFgetDocInfoNF() for pdftex project.
+Updated the VMS build script.
+
+0.93c (2001-dec-12)
+-------------------
+Completely rewrote the code that handles font encodings:
+  - everything is Unicode-based
+  - 16-bit fonts are handled much more cleanly
+  - text output encoding can be set more flexibly
+New .xpdfrc config files.
+
+1.00 (2002-feb-01)
+------------------
+More work on the font encoding rewrite:
+  - use the ToUnicode font dict entry
+  - pdfinfo and pdftotext (with '-htmlmeta') convert info strings to
+    the selected text encoding
+Added key bindings for forward ('v') and backward ('b').
+Added the pdffonts program which lists the fonts used in a PDF file.
+Fixed several problems in the TrueType font embedding code (for
+  PostScript output).
+Accept named destination on command line.
+Added several new items to pdfinfo: file size, PDF version, tagged
+  (yes or no), XML metadata (with the -meta option).
+Pdftops didn't get the portrait/landscape setting correct for PDF
+  files with rotated pages.
+The TrueTypeFontFile class (including the Type 42 converter) now
+  understands cmap format 6.
+Improved the "about" window -- mention the GPL, add a list of key
+  bindings.
+Added Zcaron and zcaron characters to WinAnsiEncoding.
+The '0' keyboard shortcut didn't update the zoom popup menu.
+Handle the complete list of alternate names for the Base14 fonts.
+Fixed substitute font scaling in XOutputDev - scale only the width,
+  not the height.
+Implemented stitching (type 3) functions.
+Handle the case of moveto/closepath/clip, which defines an empty
+  clipping region.
+Move dependences into separate Makefile.dep files; get rid of the
+  distdepend target.
+Move all of the configure-script-generated -D options out of the
+  Makefiles and into a top-level .h file (aconf.h).
+Cleaned up the FreeType 1/2 detection code in the configure script.
+Pdfinfo prints dates in a more readable format.
+Fixed a bug in the Paeth image predictor.
+Handle annotations with multiple states.
+Another workaround for buggy X servers: clip points that are way out
+  of bounds.
+Added libpaper support (for Debian).
+Generate PostScript DSC resource comments for PS (not just EPS)
+  files.
+The save and restore (q/Q) operators shouldn't save/restore the path.
+Performance optimization: disable pattern drawing in TextOutputDev.

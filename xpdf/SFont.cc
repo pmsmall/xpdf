@@ -8,6 +8,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include "SFont.h"
 
 //------------------------------------------------------------------------

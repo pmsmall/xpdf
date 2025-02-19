@@ -10,6 +10,7 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -21,7 +22,6 @@
 #include "GfxState.h"
 #include "GfxFont.h"
 #include "Error.h"
-#include "Params.h"
 #include "PBMOutputDev.h"
 
 //------------------------------------------------------------------------
@@ -85,7 +85,7 @@ PBMOutputDev::PBMOutputDev(Display *displayA, int screenA,
   XOutputDev(displayA, pixmapA, 1,
 	     DefaultColormap(displayA, screenA),
 	     WhitePixel(displayA, DefaultScreen(displayA)),
-	     gFalse, 1, fontRastAALow, fontRastAAHigh)
+	     gFalse, 1)
 {
   display = displayA;
   screen = screenA;
@@ -101,7 +101,6 @@ PBMOutputDev::~PBMOutputDev() {
 }
 
 void PBMOutputDev::startPage(int pageNum, GfxState *state) {
-
   curPage = pageNum;
   width = (int)(state->getPageWidth() + 0.5);
   height = (int)(state->getPageHeight() + 0.5);

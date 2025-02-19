@@ -6,9 +6,9 @@
 
        pdfinfo [options] [PDF-file]
 
-       Pdftoinfo prints the contents  of  the  'Info'  dictionary
-       (plus some other useful information) from a Portable Docu-
-       ment Format (PDF) file.
+       Pdfinfo prints the contents of the 'Info' dictionary (plus
+       some  other  useful  information) from a Portable Document
+       Format (PDF) file.
 
        The 'Info' dictionary contains the following values:
 
@@ -28,18 +28,37 @@
               print and copy permissions (if encrypted)
               linearized (yes/no)
 
+2 ONFIGURATION_FIL
+
+       Pdfinfo  reads  a configuration file at startup.  It first
+       tries to find the user's private config  file,  ~/.xpdfrc.
+       If  that  doesn't exist, it looks for a system-wide config
+       file, typically /usr/local/etc/xpdfrc (but  this  location
+       can  be changed when pdfinfo is built).  See the xpdfrc(5)
+       man page for details.
+
 2 OPTIONS
 
+       Many  of  the following options can be set with configura-
+       tion file commands.  These are listed in  square  brackets
+       with  the  description  of  the corresponding command line
+       option.
+
        -opw password
-              Specify  the owner password for the PDF file.  Pro-
-              viding this will bypass all security  restrictions.
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
+       -cfg config-file
+              Read config-file in place of ~/.xpdfrc or the  sys-
+              tem-wide config file.
+
        -v     Print copyright and version information.
 
-       -h     Print usage information.  (-help is equivalent.)
+       -h     Print  usage  information.   (-help  and --help are
+              equivalent.)
 
 2 BUGS
 
@@ -48,11 +67,11 @@
 2 AUTHOR
 
        The  pdfinfo  software  and  documentation  are  copyright
-       1996-2001 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 
-       xpdf(1),  pdftops(1),  pdftotext(1),  pdftopbm(1),  pdfim-
-       ages(1)
+       xpdf(1),     pdftops(1),     pdftotext(1),    pdffonts(1),
+       pdftopbm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 

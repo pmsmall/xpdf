@@ -10,11 +10,13 @@
 #pragma implementation
 #endif
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
 #include <math.h>
 #include "gmem.h"
+#include "CharTypes.h"
 #include "Object.h"
 #include "Array.h"
 #include "Dict.h"
@@ -24,7 +26,6 @@
 #include "GfxFont.h"
 #include "GfxState.h"
 #include "OutputDev.h"
-#include "Params.h"
 #include "Page.h"
 #include "Error.h"
 #include "Gfx.h"
@@ -614,12 +615,6 @@ void Gfx::opSave(Object args[], int numArgs) {
 void Gfx::opRestore(Object args[], int numArgs) {
   state = state->restore();
   out->restoreState(state);
-
-  // Some PDF producers (Macromedia FreeHand) generate a save (q) and
-  // restore (Q) inside a path sequence.  The PDF spec seems to imply
-  // that this is illegal.  Calling clearPath() here implements the
-  // behavior apparently expected by this software.
-  state->clearPath();
 }
 
 void Gfx::opConcat(Object args[], int numArgs) {
@@ -1001,7 +996,7 @@ void Gfx::opRectangle(Object args[], int numArgs) {
 }
 
 void Gfx::opClosePath(Object args[], int numArgs) {
-  if (!state->isPath()) {
+  if (!state->isCurPt()) {
     error(getPos(), "No current point in closepath");
     return;
   }
@@ -1147,6 +1142,13 @@ void Gfx::doPatternFill(GBool eoFill) {
   double det;
   double xstep, ystep;
   int i;
+
+  // this is a bit of a kludge -- patterns can be really slow, so we
+  // skip them if we're only doing text extraction, since they almost
+  // certainly don't contain any text
+  if (!out->needNonText()) {
+    return;
+  }
 
   // get color space
   patCS = (GfxPatternColorSpace *)state->getFillColorSpace();
@@ -1673,7 +1675,8 @@ void Gfx::opSetFont(Object args[], int numArgs) {
     return;
   }
   if (printCommands) {
-    printf("  font: '%s' %g\n",
+    printf("  font: tag=%s name='%s' %g\n",
+	   font->getTag()->getCString(),
 	   font->getName() ? font->getName()->getCString() : "???",
 	   args[1].getNum());
     fflush(stdout);
@@ -1820,24 +1823,13 @@ void Gfx::opShowSpaceText(Object args[], int numArgs) {
 
 void Gfx::doShowText(GString *s) {
   GfxFont *font;
-  GfxFontEncoding16 *enc;
-  Guchar *p;
-  Guchar c8;
-  int c16;
-  GString *s16;
-  char s16a[2];
-  int m, n;
-#if 0 //~type3
-  double dx, dy, width, height, w, h, x, y;
-  double oldCTM[6], newCTM[6];
-  double *mat;
-  Object charProc;
-  Parser *oldParser;
-  int i;
-#else
-  double dx, dy, width, height, w, h;
-#endif
-  double sWidth, sHeight;
+  double riseX, riseY;
+  CharCode code;
+  Unicode u[8];
+  double dx, dy, dx2, dy2, tdx, tdy;
+  double originX, originY, tOriginX, tOriginY;
+  char *p;
+  int len, n, uLen, nChars, nSpaces;
 
   if (fontChanged) {
     out->updateFont(state);
@@ -1845,167 +1837,129 @@ void Gfx::doShowText(GString *s) {
   }
   font = state->getFont();
 
-  //----- 16-bit font
-  if (font->is16Bit()) {
-    enc = font->getEncoding16();
-    if (out->useDrawChar()) {
-      out->beginString(state, s);
-      s16 = NULL;
-    } else {
-      s16 = new GString();
-    }
-    sWidth = sHeight = 0;
-    state->textTransformDelta(0, state->getRise(), &dx, &dy);
-    p = (Guchar *)s->getCString();
-    n = s->getLength();
-    while (n > 0) {
-      m = getNextChar16(enc, p, &c16);
-      if (enc->wMode == 0) {
-	width = state->getFontSize() * font->getWidth16(c16) +
-	        state->getCharSpace();
-	if (m == 1 && c16 == ' ') {
-	  width += state->getWordSpace();
-	}
-	width *= state->getHorizScaling();
-	height = 0;
-      } else {
-	width = 0;
-	height = state->getFontSize() * font->getHeight16(c16);
-      }
-      state->textTransformDelta(width, height, &w, &h);
-      if (out->useDrawChar()) {
-	out->drawChar16(state, state->getCurX() + dx, state->getCurY() + dy,
-			w, h, c16);
-	state->textShift(width, height);
-      } else {
-	s16a[0] = (char)(c16 >> 8);
-	s16a[1] = (char)c16;
-	s16->append(s16a, 2);
-	sWidth += w;
-	sHeight += h;
-      }
-      n -= m;
-      p += m;
-    }
-    if (out->useDrawChar()) {
-      out->endString(state);
-    } else {
-      out->drawString16(state, s16);
-      delete s16;
-      state->textShift(sWidth, sHeight);
-    }
-
-  //----- 8-bit font
-  } else {
 #if 0 //~type3
-    //~ also check out->renderType3()
-    if (font->getType() == fontType3) {
-      out->beginString(state, s);
-      mat = state->getCTM();
-      for (i = 0; i < 6; ++i) {
-	oldCTM[i] = mat[i];
+  double x, y;
+  double oldCTM[6], newCTM[6];
+  double *mat;
+  Object charProc;
+  Parser *oldParser;
+  int i;
+
+  //~ also check out->renderType3()
+  if (font->getType() == fontType3) {
+    out->beginString(state, s);
+    mat = state->getCTM();
+    for (i = 0; i < 6; ++i) {
+      oldCTM[i] = mat[i];
+    }
+    mat = state->getTextMat();
+    newCTM[0] = mat[0] * oldCTM[0] + mat[1] * oldCTM[2];
+    newCTM[1] = mat[0] * oldCTM[1] + mat[1] * oldCTM[3];
+    newCTM[2] = mat[2] * oldCTM[0] + mat[3] * oldCTM[2];
+    newCTM[3] = mat[2] * oldCTM[1] + mat[3] * oldCTM[3];
+    mat = font->getFontMatrix();
+    newCTM[0] = mat[0] * newCTM[0] + mat[1] * newCTM[2];
+    newCTM[1] = mat[0] * newCTM[1] + mat[1] * newCTM[3];
+    newCTM[2] = mat[2] * newCTM[0] + mat[3] * newCTM[2];
+    newCTM[3] = mat[2] * newCTM[1] + mat[3] * newCTM[3];
+    newCTM[0] *= state->getFontSize();
+    newCTM[3] *= state->getFontSize();
+    newCTM[0] *= state->getHorizScaling();
+    newCTM[2] *= state->getHorizScaling();
+    state->textTransformDelta(0, state->getRise(), &riseX, &riseY);
+    oldParser = parser;
+    p = s->getCString();
+    len = s->getLength();
+    while (len > 0) {
+      n = font->getNextChar(p, len, &code,
+			    u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
+			    &dx, &dy, &originX, &originY);
+      state->transform(state->getCurX() + riseX, state->getCurY() + riseY,
+		       &x, &y);
+      out->saveState(state);
+      state = state->save();
+      state->setCTM(newCTM[0], newCTM[1], newCTM[2], newCTM[3], x, y);
+      //~ out->updateCTM(???)
+      ((Gfx8BitFont *)font)->getCharProc(code, &charProc);
+      if (charProc.isStream()) {
+	display(&charProc, gFalse);
+      } else {
+	error(getPos(), "Missing or bad Type3 CharProc entry");
       }
-      mat = state->getTextMat();
-      newCTM[0] = mat[0] * oldCTM[0] + mat[1] * oldCTM[2];
-      newCTM[1] = mat[0] * oldCTM[1] + mat[1] * oldCTM[3];
-      newCTM[2] = mat[2] * oldCTM[0] + mat[3] * oldCTM[2];
-      newCTM[3] = mat[2] * oldCTM[1] + mat[3] * oldCTM[3];
-      mat = font->getFontMatrix();
-      newCTM[0] = mat[0] * newCTM[0] + mat[1] * newCTM[2];
-      newCTM[1] = mat[0] * newCTM[1] + mat[1] * newCTM[3];
-      newCTM[2] = mat[2] * newCTM[0] + mat[3] * newCTM[2];
-      newCTM[3] = mat[2] * newCTM[1] + mat[3] * newCTM[3];
-      newCTM[0] *= state->getFontSize();
-      newCTM[3] *= state->getFontSize();
-      newCTM[0] *= state->getHorizScaling();
-      newCTM[2] *= state->getHorizScaling();
-      state->textTransformDelta(0, state->getRise(), &dx, &dy);
-      oldParser = parser;
-      for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
-	c8 = *p;
-	font->getCharProc(c8, &charProc);
-	state->transform(state->getCurX() + dx, state->getCurY() + dy, &x, &y);
-	out->saveState(state);
-	state = state->save();
-	state->setCTM(newCTM[0], newCTM[1], newCTM[2], newCTM[3], x, y);
-	//~ out->updateCTM(???)
-	if (charProc.isStream()) {
-	  display(&charProc, gFalse);
-	} else {
-	  error(getPos(), "Missing or bad Type3 CharProc entry");
-	}
-	state = state->restore();
-	out->restoreState(state);
-	charProc.free();
-	width = state->getFontSize() * font->getWidth(c8) +
-	        state->getCharSpace();
-	if (c8 == ' ') {
-	  width += state->getWordSpace();
-	}
-	width *= state->getHorizScaling();
-	state->textShift(width);
+      state = state->restore();
+      out->restoreState(state);
+      charProc.free();
+      dx = dx * state->getFontSize() + state->getCharSpace();
+      if (n == 1 && *p == ' ') {
+	dx += state->getWordSpace();
       }
-      parser = oldParser;
-      out->endString(state);
-    } else
+      dx *= state->getHorizScaling();
+      dy *= state->getFontSize();
+      state->textTransformDelta(dx, dy, &tdx, &tdy);
+      state->shift(tdx, tdy);
+      p += n;
+      len -= n;
+    }
+    parser = oldParser;
+    out->endString(state);
+    return;
+  }
 #endif
-    if (out->useDrawChar()) {
-      out->beginString(state, s);
-      state->textTransformDelta(0, state->getRise(), &dx, &dy);
-      for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
-	c8 = *p;
-	width = state->getFontSize() * font->getWidth(c8) +
-	        state->getCharSpace();
-	if (c8 == ' ') {
-	  width += state->getWordSpace();
-	}
-	width *= state->getHorizScaling();
-	state->textTransformDelta(width, 0, &w, &h);
-	out->drawChar(state, state->getCurX() + dx, state->getCurY() + dy,
-		      w, h, c8);
-	state->textShift(width);
+
+  if (out->useDrawChar()) {
+    state->textTransformDelta(0, state->getRise(), &riseX, &riseY);
+    out->beginString(state, s);
+    p = s->getCString();
+    len = s->getLength();
+    while (len > 0) {
+      n = font->getNextChar(p, len, &code,
+			    u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
+			    &dx, &dy, &originX, &originY);
+      dx = dx * state->getFontSize() + state->getCharSpace();
+      if (n == 1 && *p == ' ') {
+	dx += state->getWordSpace();
       }
-      out->endString(state);
-    } else {
-      out->drawString(state, s);
-      width = state->getFontSize() * font->getWidth(s) +
-	      s->getLength() * state->getCharSpace();
-      for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
-	if (*p == ' ') {
-	  width += state->getWordSpace();
-	}
-      }
-      width *= state->getHorizScaling();
-      state->textShift(width);
+      dx *= state->getHorizScaling();
+      dy *= state->getFontSize();
+      state->textTransformDelta(dx, dy, &tdx, &tdy);
+      originX *= state->getFontSize();
+      originY *= state->getFontSize();
+      state->textTransformDelta(originX, originY, &tOriginX, &tOriginY);
+      out->drawChar(state, state->getCurX() + riseX, state->getCurY() + riseY,
+		    tdx, tdy, tOriginX, tOriginY, code, u, uLen);
+      state->shift(tdx, tdy);
+      p += n;
+      len -= n;
     }
-  }
-}
+    out->endString(state);
 
-int Gfx::getNextChar16(GfxFontEncoding16 *enc, Guchar *p, int *c16) {
-  int n;
-  int code;
-  int a, b, m;
-
-  n = enc->codeLen[*p];
-  if (n == 1) {
-    *c16 = enc->map1[*p];
   } else {
-    code = (p[0] << 8) + p[1];
-    a = 0;
-    b = enc->map2Len;
-    // invariant: map2[2*a] <= code < map2[2*b]
-    while (b - a > 1) {
-      m = (a + b) / 2;
-      if (enc->map2[2*m] <= code)
-	a = m;
-      else if (enc->map2[2*m] > code)
-	b = m;
-      else
-	break;
+    dx = dy = 0;
+    p = s->getCString();
+    len = s->getLength();
+    nChars = nSpaces = 0;
+    while (len > 0) {
+      n = font->getNextChar(p, len, &code,
+			    u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
+			    &dx2, &dy2, &originX, &originY);
+      dx += dx2;
+      dy += dy2;
+      if (n == 1 && *p == ' ') {
+	++nSpaces;
+      }
+      ++nChars;
+      p += n;
+      len -= n;
     }
-    *c16 = enc->map2[2*a+1] + (code - enc->map2[2*a]);
+    dx = dx * state->getFontSize()
+         + nChars * state->getCharSpace()
+         + nSpaces * state->getWordSpace();
+    dx *= state->getHorizScaling();
+    dy *= state->getFontSize();
+    state->textTransformDelta(dx, dy, &tdx, &tdy);
+    out->drawString(state, s);
+    state->shift(tdx, tdy);
   }
-  return n;
 }
 
 //------------------------------------------------------------------------
@@ -2190,7 +2144,6 @@ void Gfx::doImage(Object *ref, Stream *str, GBool inlineImg) {
     out->drawImage(state, ref, str, width, height, colorMap,
 		   haveMask ? maskColors : (int *)NULL,  inlineImg);
     delete colorMap;
-    str->close();
 
     maskObj.free();
   }

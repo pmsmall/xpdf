@@ -16,9 +16,8 @@
 #endif
 
 #include <freetype/freetype.h>
+#include "CharTypes.h"
 #include "SFont.h"
-
-class FontEncoding;
 
 //------------------------------------------------------------------------
 
@@ -43,11 +42,30 @@ private:
 
 //------------------------------------------------------------------------
 
+enum FTFontIndexMode {
+  ftFontModeUnicode,
+  ftFontModeCharCode,
+  ftFontModeCharCodeOffset,
+  ftFontModeCodeMap,
+  ftFontModeCodeMapDirect,
+  ftFontModeCIDToGIDMap,
+  ftFontModeCFFCharset
+};
+
 class FTFontFile: public SFontFile {
 public:
 
+  // 8-bit font, TrueType or Type 1/1C
   FTFontFile(FTFontEngine *engineA, char *fontFileName,
-	     FontEncoding *fontEnc);
+	     char **fontEnc, GBool pdfFontHasEncoding);
+
+  // CID font, TrueType
+  FTFontFile(FTFontEngine *engineA, char *fontFileName,
+	     Gushort *cidToGIDA, int cidToGIDLenA);
+
+  // CID font, Type 0C (CFF)
+  FTFontFile(FTFontEngine *engineA, char *fontFileName);
+
   GBool isOk() { return ok; }
   virtual ~FTFontFile();
 
@@ -55,9 +73,11 @@ private:
 
   FTFontEngine *engine;
   FT_Face face;
+  FTFontIndexMode mode;
   int charMapOffset;
-  Guint glyphMap[256];
-  GBool useGlyphMap;
+  Guint *codeMap;
+  Gushort *cidToGID;
+  int cidToGIDLen;
   GBool ok;
 
   friend class FTFont;
@@ -78,11 +98,13 @@ public:
   GBool isOk() { return ok; }
   virtual ~FTFont();
   virtual GBool drawChar(Drawable d, int w, int h, GC gc,
-			 int x, int y, int r, int g, int b, Gushort c);
+			 int x, int y, int r, int g, int b,
+			 CharCode c, Unicode u);
 
 private:
 
-  Guchar *getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h);
+  Guchar *getGlyphPixmap(CharCode c, Unicode u,
+			 int *x, int *y, int *w, int *h);
 
   FTFontFile *fontFile;
   FT_Size sizeObj;

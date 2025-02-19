@@ -42,6 +42,10 @@ pdfinfo:
 	cd goo; $(MAKE)
 	cd @UP_DIR@xpdf; $(MAKE) pdfinfo$(EXE)
 
+pdffonts:
+	cd goo; $(MAKE)
+	cd @UP_DIR@xpdf; $(MAKE) pdffonts$(EXE)
+
 pdftopbm:
 	cd goo; $(MAKE)
 	cd @UP_DIR@xpdf; $(MAKE) pdftopbm$(EXE)
@@ -58,6 +62,7 @@ install: dummy
 	$(INSTALL_PROGRAM) xpdf/pdftops$(EXE) $(DESTDIR)@bindir@/pdftops$(EXE)
 	$(INSTALL_PROGRAM) xpdf/pdftotext$(EXE) $(DESTDIR)@bindir@/pdftotext$(EXE)
 	$(INSTALL_PROGRAM) xpdf/pdfinfo$(EXE) $(DESTDIR)@bindir@/pdfinfo$(EXE)
+	$(INSTALL_PROGRAM) xpdf/pdffonts$(EXE) $(DESTDIR)@bindir@/pdffonts$(EXE)
 @X@	$(INSTALL_PROGRAM) xpdf/pdftopbm$(EXE) $(DESTDIR)@bindir@/pdftopbm$(EXE)
 	$(INSTALL_PROGRAM) xpdf/pdfimages$(EXE) $(DESTDIR)@bindir@/pdfimages$(EXE)
 	-mkdir -p $(DESTDIR)@mandir@/man1
@@ -65,8 +70,18 @@ install: dummy
 	$(INSTALL_DATA) $(srcdir)/doc/pdftops.1 $(DESTDIR)@mandir@/man1/pdftops.1
 	$(INSTALL_DATA) $(srcdir)/doc/pdftotext.1 $(DESTDIR)@mandir@/man1/pdftotext.1
 	$(INSTALL_DATA) $(srcdir)/doc/pdfinfo.1 $(DESTDIR)@mandir@/man1/pdfinfo.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdffonts.1 $(DESTDIR)@mandir@/man1/pdffonts.1
 @X@	$(INSTALL_DATA) $(srcdir)/doc/pdftopbm.1 $(DESTDIR)@mandir@/man1/pdftopbm.1
 	$(INSTALL_DATA) $(srcdir)/doc/pdfimages.1 $(DESTDIR)@mandir@/man1/pdfimages.1
+	-mkdir -p $(DESTDIR)@mandir@/man5
+	$(INSTALL_DATA) $(srcdir)/doc/xpdfrc.5 $(DESTDIR)@mandir@/man5/xpdfrc.5
+	-mkdir -p $(DESTDIR)@sysconfdir@
+	@if test ! -f $(DESTDIR)@sysconfdir@/xpdfrc; then \
+		echo "$(INSTALL_DATA) $(srcdir)/doc/sample-xpdfrc $(DESTDIR)@sysconfdir@/xpdfrc"; \
+		$(INSTALL_DATA) $(srcdir)/doc/sample-xpdfrc $(DESTDIR)@sysconfdir@/xpdfrc; \
+	else \
+		echo "# not overwriting the existing $(DESTDIR)@sysconfdir@/xpdfrc"; \
+	fi
 
 clean:
 	-cd goo; $(MAKE) clean
@@ -75,10 +90,12 @@ clean:
 
 distclean: clean
 	rm -f config.log config.status config.cache
+	rm -f aconf.h
 	rm -f Makefile goo/Makefile ltk/Makefile xpdf/Makefile
+	rm -f goo/Makefile.dep ltk/Makefile.dep xpdf/Makefile.dep
 	rm -f goo/Makefile.in.bak ltk/Makefile.in.bak xpdf/Makefile.in.bak
 
-distdepend:
-	cd goo; $(MAKE) distdepend
-	cd @UP_DIR@ltk; $(MAKE) distdepend
-	cd @UP_DIR@xpdf; $(MAKE) distdepend
+depend:
+	cd goo; $(MAKE) depend
+	cd @UP_DIR@ltk; $(MAKE) depend
+	cd @UP_DIR@xpdf; $(MAKE) depend
