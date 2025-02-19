@@ -141,6 +141,7 @@ public:
 
 private:
 
+  void setupResources(Dict *resDict);
   void setupFonts(Dict *resDict);
   void setupFont(GfxFont *font);
   void setupEmbeddedType1Font(Ref *id, char *psName);

@@ -6,7 +6,7 @@ pdftopbm(1)                                           pdftopbm(1)
 
 NAME
        pdftopbm  -  Portable  Document  Format  (PDF) to Portable
-       Bitmap (PBM) converter (version 0.91)
+       Bitmap (PBM) converter (version 0.92)
 
 SYNOPSIS
        pdftopbm [options] PDF-file PBM-root
@@ -61,6 +61,6 @@ SEE ALSO
 
 
 
-                           14 Aug 2000                          1
+                           03 Dec 2000                          1
 
 

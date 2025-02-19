@@ -1,4 +1,4 @@
-Subject: ANNOUNCE: xpdf 0.91 - a PDF viewer for X
+Subject: ANNOUNCE: xpdf 0.92 - a PDF viewer for X
 
 
 I've just released a new version of xpdf, my Portable Document Format
@@ -10,16 +10,23 @@ systems.
 
 Noticeable changes:
 
-* Added TrueType font rendering, using FreeType.
-* Support for (some) Chinese fonts.
-* Decryption code is included with the main distribution (now that the
-  US export regulations are a little bit less irrational).
-* Added (very basic) support for generating PostScript with Japanese
-  fonts.
-* Added support for generating EPS files (pdftops -eps).
-* Much-improved image filtering in xpdf.
-* Implemented a basic full-screen (presentation) mode (xpdf
-  -fullscreen).
+* Implemented separable CMYK PostScript output (the -level1sep switch
+  to pdftops).
+* Implemented Pattern color spaces with tiling patterns (polygon fills
+  only).
+* Implemented Stamp annotations.
+* Implemented Named link actions.
+* Fixed a really dumb bug in the TrueColor code in SFont (which
+  affects both Type 1 and TrueType font rendering on 16-bit
+  displays).
+* Print a warning about Type 3 fonts (XOutputDev, PSOutputDev).
+* Added CNS (Big5) Chinese font support (CHINESE_CNS_SUPPORT); renamed
+  CHINESE_SUPPORT to CHINESE_GB_SUPPORT.
+* Added Big5 support to pdftotext (with CHINESE_CNS_SUPPORT enabled).
+* Fix an endianness problem in the Type 1 font code which resulted in
+  an incorrect display with "-t1lib plain" on big-endian systems.
+* Added "-title" switch and "xpdf.title" resource to set the window
+  title.
 
 See the `CHANGES' file for a complete list.
 

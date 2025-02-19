@@ -34,7 +34,7 @@
 #if HAVE_T1LIB_H
 #include "T1Font.h"
 #endif
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 #include "TTFont.h"
 #endif
 
@@ -75,7 +75,7 @@ int rgbCubeSize = defaultRGBCube;
 GString *t1libControl = NULL;
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 GString *freeTypeControl = NULL;
 #endif
 
@@ -612,7 +612,7 @@ void XOutputT1Font::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 }
 #endif // HAVE_T1LIB_H
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 //------------------------------------------------------------------------
 // XOutputTTFont
 //------------------------------------------------------------------------
@@ -674,7 +674,7 @@ void XOutputTTFont::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 		 (int)(rgb.r * 65535), (int)(rgb.g * 65535),
 		 (int)(rgb.b * 65535), c);
 }
-#endif // HAVE_FREETYPE_FREETYPE_H
+#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 
 //------------------------------------------------------------------------
 // XOutputServerFont
@@ -909,7 +909,7 @@ XOutputFontCache::XOutputFontCache(Display *display, Guint depth) {
   }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   ttEngine = NULL;
   if (freeTypeControl) {
     useFreeType = freeTypeControl->cmp("none") != 0;
@@ -952,7 +952,7 @@ void XOutputFontCache::startDoc(int screenNum, Colormap colormap,
   }
 #endif // HAVE_T1LIB_H
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   if (useFreeType) {
     ttEngine = new TTFontEngine(display, DefaultVisual(display, screenNum),
 				depth, colormap, freeTypeAA);
@@ -987,7 +987,7 @@ void XOutputFontCache::delFonts() {
   }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   // delete TrueType fonts
   for (i = 0; i < nTTFonts; ++i) {
     delete ttFonts[i];
@@ -1020,7 +1020,7 @@ void XOutputFontCache::clear() {
   t1FontFilesSize = 0;
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   // clear TrueType font cache
   for (i = 0; i < ttFontCacheSize; ++i) {
     ttFonts[i] = NULL;
@@ -1043,7 +1043,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 #if HAVE_T1LIB_H
   XOutputT1Font *t1Font;
 #endif
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   XOutputTTFont *ttFont;
 #endif
   XOutputServerFont *serverFont;
@@ -1066,7 +1066,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
     return t1Fonts[0];
   }
 #endif
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   if (useFreeType && nTTFonts > 0 &&
       ttFonts[0]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
     return ttFonts[0];
@@ -1093,7 +1093,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
   }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   // is it in the TrueType cache?
   if (useFreeType) {
     for (i = 1; i < nTTFonts; ++i) {
@@ -1224,7 +1224,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
     }
   }
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   // try to create a new TrueType font
   if (useFreeType) {
     ttFont = new XOutputTTFont(gfxFont, m11, m12, m21, m22, display, this);
@@ -1407,7 +1407,7 @@ T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
 }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 TTFontFile *XOutputFontCache::getTTFont(GfxFont *gfxFont) {
   Ref id;
   TTFontFile *fontFile;

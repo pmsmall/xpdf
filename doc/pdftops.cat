@@ -6,7 +6,7 @@ pdftops(1)                                             pdftops(1)
 
 NAME
        pdftops  -  Portable  Document  Format (PDF) to PostScript
-       converter (version 0.91)
+       converter (version 0.92)
 
 SYNOPSIS
        pdftops [options] [PDF-file [PS-file]]
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           14 Aug 2000                          1
+                           03 Dec 2000                          1
 
 
 
@@ -127,6 +127,6 @@ SEE ALSO
 
 
 
-                           14 Aug 2000                          2
+                           03 Dec 2000                          2
 
 

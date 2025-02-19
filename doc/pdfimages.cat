@@ -6,7 +6,7 @@ pdfimages(1)                                         pdfimages(1)
 
 NAME
        pdfimages - Portable Document Format (PDF) image extractor
-       (version 0.91)
+       (version 0.92)
 
 SYNOPSIS
        pdfimages [options] PDF-file image-root
@@ -61,6 +61,6 @@ SEE ALSO
 
 
 
-                           14 Aug 2000                          1
+                           03 Dec 2000                          1
 
 

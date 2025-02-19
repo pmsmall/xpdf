@@ -235,6 +235,9 @@ void Page::display(OutputDev *out, double dpi, int rotate,
   for (i = 0; i < formWidgets->getNumWidgets(); ++i) {
     formWidgets->getWidget(i)->draw(gfx);
   }
+  if (formWidgets->getNumWidgets() > 0) {
+    out->dump();
+  }
   delete formWidgets;
 
   delete gfx;

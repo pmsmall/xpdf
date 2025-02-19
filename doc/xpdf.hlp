@@ -2,7 +2,7 @@
 1 xpdf
 
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 0.91)
+       (version 0.92)
 
        xpdf [options] [PDF-file [page]]
 
@@ -41,8 +41,12 @@
               Set the initial  window  geometry.   (-geometry  is
               equivalent.)  [xpdf.geometry]
 
+       -title title
+              Set  the  window title.  By default, the title will
+              be "xpdf: foo.pdf".  [xpdf.title]
+
        -remote name
-              Start/contact  xpdf  remote  server  with specified
+              Start/contact xpdf  remote  server  with  specified
               name (see the REMOTE SERVER MODE section below).
 
        -raise Raise  xpdf  remote  server  window  (with  -remote
@@ -50,62 +54,63 @@
 
        -quit  Kill xpdf remote server (with -remote only).
 
-       -cmap  Install  a  private  colormap.   This is ignored on
+       -cmap  Install a private colormap.   This  is  ignored  on
               TrueColor visuals.  [xpdf.installCmap]
 
        -rgb number
-              Set the size of largest RGB cube xpdf will  try  to
+              Set  the  size of largest RGB cube xpdf will try to
               allocate.  The default is 5 (for a 5x5x5 cube); set
-              to  a  smaller  number  to  conserve  color   table
-              entries.   This  is  ignored with private colormaps
+              to   a  smaller  number  to  conserve  color  table
+              entries.  This is ignored  with  private  colormaps
               and on TrueColor visuals.
 
        -papercolor color
-              Set the "paper color", i.e., the background of  the
+              Set  the "paper color", i.e., the background of the
               page display.  This will not work too well with PDF
-              files that do things like filling in  white  behind
+              files  that  do things like filling in white behind
               the text.  [xpdf.paperColor]
 
        -eucjp When copying text, convert Japanese text to EUC-JP.
-              This is currently the only  option  for  converting
-              Japanese  text  --  the only effect is to switch to
-              7-bit ASCII for non-Japanese text, in order to  fit
-              into  the  EUC-JP  encoding.   (This option is only
-              available if pdftotext was compiled  with  Japanese
+              This  is  currently  the only option for converting
+              Japanese text -- the only effect is  to  switch  to
+              7-bit  ASCII for non-Japanese text, in order to fit
+              into the EUC-JP encoding.   (This  option  is  only
+              available  if  pdftotext was compiled with Japanese
               support.)  [xpdf.eucjp]
 
        -t1lib font-type
-              Set  the type of font rendering for t1lib (the Type
-              1 rasterizer) to use.  Options  are  'none'  (don't
-              use  t1lib  at  all), 'plain' (use non-anti-aliased
-              fonts), 'low' or 'high'  (use  low-level  or  high-
+              Set the type of font rendering for t1lib (the  Type
+
+              1  rasterizer)  to  use.  Options are 'none' (don't
+              use t1lib at all),  'plain'  (use  non-anti-aliased
+              fonts),  'low'  or  'high'  (use low-level or high-
               level anti-aliased fonts).  [xpdf.t1libControl]
 
        -freetype font-type
-              Set  the  type  of font rendering for FreeType (the
-              TrueType rasterizer) to use.   Options  are  'none'
+              Set the type of font rendering  for  FreeType  (the
+              TrueType  rasterizer)  to  use.  Options are 'none'
               (don't use FreeType at all), 'plain' (use non-anti-
-              aliased fonts), or 'aa' (use  anti-aliased  fonts).
+              aliased  fonts),  or 'aa' (use anti-aliased fonts).
               [xpdf.freeTypeControl]
 
        -ps PS-file
-              Set  the  default  file name for PostScript output.
+              Set the default file name  for  PostScript  output.
               This can also be of the form '|command' to pipe the
               PostScript through a command.  [xpdf.psFile]
 
        -paperw size
-              Set  the  paper  width,  in points.  [xpdf.psPaper-
+              Set the paper  width,  in  points.   [xpdf.psPaper-
               Width]
 
        -paperh size
-              Set the paper height,  in  points.   [xpdf.psPaper-
+              Set  the  paper  height, in points.  [xpdf.psPaper-
               Height]
 
        -level1
-              Generate   Level   1   PostScript.   The  resulting
-              PostScript files will be significantly  larger  (if
-              they  contain  images),  but  will print on Level 1
-              printers.  This also converts all images  to  black
+              Generate  Level  1   PostScript.    The   resulting
+              PostScript  files  will be significantly larger (if
+              they contain images), but will  print  on  Level  1
+              printers.   This  also converts all images to black
               and white.  [xpdf.psLevel1]
 
        -upw password
@@ -113,12 +118,12 @@
 
        -fullscreen
               Open xpdf in a full-screen mode, useful for presen-
-              tations.  You may also want to specify '-bg  black'
+              tations.   You may also want to specify '-bg black'
               (or similar) with this.  (There is currently no way
-              to switch between window and full-screen  modes  on
+              to  switch  between window and full-screen modes on
               the fly.)
 
-       -cmd   Print  commands  as  they're  executed  (useful for
+       -cmd   Print commands  as  they're  executed  (useful  for
               debugging).
 
        -q     Don't print any messages or errors.
@@ -127,7 +132,7 @@
 
        -h     Print usage information.  (-help is equivalent.)
 
-       Several other standard X options and resources  will  work
+       Several  other  standard X options and resources will work
        as expected:
 
        -display display
@@ -142,26 +147,26 @@
        -font font
               (-fn is equivalent.)  [xpdf.font]
 
-       The  color and font options only affect the user interface
+       The color and font options only affect the user  interface
        elements, not the PDF display (the 'paper').
 
-       The following X resources do not have command line  option
+       The  following X resources do not have command line option
        equivalents:
 
        xpdf.urlCommand
-              Set  the  command  executed when you click on a URL
-              link.  See  the  WEB  BROWSERS  section  below  for
+              Set the command executed when you click  on  a  URL
+              link.   See  the  WEB  BROWSERS  section  below for
               details.
 
        xpdf.japaneseFont
-              Sets  the  X  font name pattern to use for Japanese
+              Sets the X font name pattern to  use  for  Japanese
               text.  The default is:
 
               -*-fixed-medium-r-nor-
               mal-*-%s-*-*-*-*-*-jisx0208.1983-0
 
        xpdf.chineseGBFont
-              Sets  the X font name pattern to use for Chinese GB
+              Sets the X font name pattern to use for Chinese  GB
               (simplified) text.  The default is:
 
               -*-fangsong                        ti-medium-r-nor-
@@ -174,29 +179,29 @@
               -*-fixed-medium-r-normal-*-%s-*-*-*-*-*-big5-0
 
        xpdf.viKeys
-              Enables the 'h', 'l', 'k' and 'j'  keys  for  left,
+              Enables  the  'h',  'l', 'k' and 'j' keys for left,
               right, up, and down scrolling.
 
-       The  following  resources set the file names of the Type 1
+       The following resources set the file names of the  Type  1
        fonts to use for the Base 14 fonts:
 
               xpdf.t1TimesRoman
               xpdf.t1TimesItalic
               xpdf.t1TimesBold
               xpdf.t1TimesBoldItalic
+
               xpdf.t1Helvetica
               xpdf.t1HelveticaOblique
               xpdf.t1HelveticaBold
               xpdf.t1HelveticaBoldOblique
               xpdf.t1Courier
               xpdf.t1CourierOblique
-
               xpdf.t1CourierBold
               xpdf.t1CourierBoldOblique
               xpdf.t1Symbol
               xpdf.t1ZapfDingbats
 
-       If t1lib is enabled, these  Type  1  fonts  will  be  used
+       If  t1lib  is  enabled,  these  Type  1 fonts will be used
        instead of X server fonts.
 
 2 CONTROLS

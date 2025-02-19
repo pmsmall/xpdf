@@ -227,6 +227,11 @@ if test -z "$no_x"; then
   smr_CHECK_LIB(freetype, ttf, [FreeType font rasterizer],
                 TT_Init_FreeType, freetype/freetype.h,
                 $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+  if test x"$freetype_LIBS" = x; then
+    smr_CHECK_LIB(freetype, ttf, [FreeType font rasterizer],
+                  TT_Init_FreeType, freetype.h,
+                  $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+  fi
   AC_SUBST(freetype_LIBS)
   AC_SUBST(freetype_CFLAGS)
 fi

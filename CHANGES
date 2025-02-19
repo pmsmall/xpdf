@@ -695,3 +695,13 @@ The xref reconstruction (for damaged files) now also looks for
   up stream objects.
 In pdfinfo, convert Unicode chars in the 00xx range into 8-bit chars;
   print a warning if there are any other Unicode chars.
+
+0.92 (2000-dec-03)
+------------------
+Fixed %%BeginResource comment (for xpdf procset) in PostScript
+  output.
+Added "-title" switch and "xpdf.title" resource to set the window
+  title.
+Check for <freetype.h> in addition to <freetype/freetype.h>.
+Upgraded the configure script to smr_macros 0.2.4 - this should fix a
+  bug where configure wasn't correctly finding t1lib.

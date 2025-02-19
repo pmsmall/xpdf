@@ -187,7 +187,7 @@ GfxColorSpace *GfxCalGrayColorSpace::parse(Array *arr) {
     obj3.free();
   }
   obj2.free();
-  if (obj2.dictLookup("Gamma", &obj2)->isNum()) {
+  if (obj1.dictLookup("Gamma", &obj2)->isNum()) {
     cs->gamma = obj2.getNum();
   }
   obj2.free();

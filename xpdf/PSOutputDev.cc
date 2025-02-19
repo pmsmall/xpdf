@@ -348,6 +348,13 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
       writePS("%%%%DocumentProcessColors: Cyan Magenta Yellow Black\n");
     }
     writePS("%%%%EndComments\n");
+    page = catalog->getPage(firstPage);
+    writePS("32 dict dup begin\n");
+    writePS("/BBox [%d %d %d %d] def\n",
+	    (int)page->getX1(), (int)page->getY1(),
+	    (int)page->getX2(), (int)page->getY2());
+    writePS("/FormType 1 def\n");
+    writePS("/Matrix [1 0 0 1 0 0] def\n");
   } else if (psOutEPS) {
     writePS("%%!PS-Adobe-3.0 EPSF-3.0\n");
     writePS("%%%%Creator: xpdf/pdftops %s\n", xpdfVersion);
@@ -388,25 +395,31 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
   }
 
   // write prolog
-  if (!doForm)
+  if (!doForm) {
     writePS("%%%%BeginProlog\n");
-  writePS("%%%%BeginResource: xpdf %s\n", xpdfVersion);
-  for (p = prolog; *p; ++p)
+  }
+  writePS("%%%%BeginResource: procset xpdf %s 0\n", xpdfVersion);
+  for (p = prolog; *p; ++p) {
     writePS("%s\n", *p);
+  }
   writePS("%%%%EndResource\n");
-  if (!doForm)
+  if (!doForm) {
     writePS("%%%%EndProlog\n");
+  }
 
   // set up fonts and images
   type3Warning = gFalse;
-  if (!doForm)
+  if (doForm) {
+    // swap the form and xpdf dicts
+    writePS("xpdf end begin dup begin\n");
+  } else {
     writePS("%%%%BeginSetup\n");
-  writePS("xpdf begin\n");
+    writePS("xpdf begin\n");
+  }
   for (pg = firstPage; pg <= lastPage; ++pg) {
     page = catalog->getPage(pg);
     if ((resDict = page->getResourceDict())) {
-      setupFonts(resDict);
-      setupImages(resDict);
+      setupResources(resDict);
     }
     formWidgets = new FormWidgets(page->getAnnots(&obj1));
     obj1.free();
@@ -414,8 +427,7 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
       if (formWidgets->getWidget(i)->getAppearance(&obj1)->isStream()) {
 	obj1.streamGetDict()->lookup("Resources", &obj2);
 	if (obj2.isDict()) {
-	  setupFonts(obj2.getDict());
-	  setupImages(obj2.getDict());
+	  setupResources(obj2.getDict());
 	}
 	obj2.free();
       }
@@ -423,9 +435,7 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
     }
     delete formWidgets;
   }
-  if (doForm) {
-    writePS("end\n");
-  } else {
+  if (!doForm) {
 #if OPI_SUPPORT
     if (psOutOPI) {
       writePS("/opiMatrix matrix currentmatrix def\n");
@@ -435,17 +445,6 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
       writePS("%d %d pdfSetup\n", paperWidth, paperHeight);
     }
     writePS("%%%%EndSetup\n");
-  }
-
-  // write form header
-  if (doForm) {
-    page = catalog->getPage(firstPage);
-    writePS("4 dict dup begin\n");
-    writePS("/BBox [%d %d %d %d] def\n",
-	    (int)page->getX1(), (int)page->getY1(),
-	    (int)page->getX2(), (int)page->getY2());
-    writePS("/FormType 1 def\n");
-    writePS("/Matrix [1 0 0 1 0 0] def\n");
   }
 
   // initialize sequential page number
@@ -463,7 +462,6 @@ PSOutputDev::~PSOutputDev() {
 
   if (f) {
     if (doForm) {
-      writePS("end\n");
       writePS("/Foo exch /Form defineresource pop\n");
     } else if (psOutEPS) {
       writePS("%%%%Trailer\n");
@@ -508,8 +506,32 @@ PSOutputDev::~PSOutputDev() {
   }
 }
 
+void PSOutputDev::setupResources(Dict *resDict) {
+  Object xObjDict, xObj, resObj;
+  int i;
+
+  setupFonts(resDict);
+  setupImages(resDict);
+
+  resDict->lookup("XObject", &xObjDict);
+  if (xObjDict.isDict()) {
+    for (i = 0; i < xObjDict.dictGetLength(); ++i) {
+      xObjDict.dictGetVal(i, &xObj);
+      if (xObj.isStream()) {
+	xObj.streamGetDict()->lookup("Resources", &resObj);
+	if (resObj.isDict()) {
+	  setupResources(resObj.getDict());
+	}
+	resObj.free();
+      }
+      xObj.free();
+    }
+  }
+  xObjDict.free();
+}
+
 void PSOutputDev::setupFonts(Dict *resDict) {
-  Object fontDict, xObjDict, xObj, resObj;
+  Object fontDict;
   GfxFontDict *gfxFontDict;
   GfxFont *font;
   int i;
@@ -524,21 +546,6 @@ void PSOutputDev::setupFonts(Dict *resDict) {
     delete gfxFontDict;
   }
   fontDict.free();
-
-  resDict->lookup("XObject", &xObjDict);
-  if (xObjDict.isDict()) {
-    for (i = 0; i < xObjDict.dictGetLength(); ++i) {
-      xObjDict.dictGetVal(i, &xObj);
-      if (xObj.isStream()) {
-	xObj.streamGetDict()->lookup("Resources", &resObj);
-	if (resObj.isDict())
-	  setupFonts(resObj.getDict());
-	resObj.free();
-      }
-      xObj.free();
-    }
-  }
-  xObjDict.free();
 }
 
 void PSOutputDev::setupFont(GfxFont *font) {
@@ -874,7 +881,7 @@ void PSOutputDev::setupEmbeddedType1CFont(GfxFont *font, Ref *id,
 }
 
 void PSOutputDev::setupImages(Dict *resDict) {
-  Object xObjDict, xObj, xObjRef, resObj, subtypeObj;
+  Object xObjDict, xObj, xObjRef, subtypeObj;
   int i;
 
   if (!doForm) {
@@ -887,11 +894,6 @@ void PSOutputDev::setupImages(Dict *resDict) {
       xObjDict.dictGetValNF(i, &xObjRef);
       xObjDict.dictGetVal(i, &xObj);
       if (xObj.isStream()) {
-	xObj.streamGetDict()->lookup("Resources", &resObj);
-	if (resObj.isDict()) {
-	  setupImages(resObj.getDict());
-	}
-	resObj.free();
 	xObj.streamGetDict()->lookup("Subtype", &subtypeObj);
 	if (subtypeObj.isName("Image")) {
 	  if (xObjRef.isRef()) {
@@ -940,7 +942,7 @@ void PSOutputDev::setupImage(Ref id, Stream *str) {
 	++col;
       }
     }
-    if (col > 245) {
+    if (col > 225) {
       ++size;
       col = 0;
     }
@@ -976,7 +978,11 @@ void PSOutputDev::setupImage(Ref id, Stream *str) {
 	++col;
       }
     }
-    if (col > 245) {
+    // each line is: "dup nnnnn <~...data...~> put<eol>"
+    // so max data length = 255 - 20 = 235
+    // chunks are 1 or 4 bytes each, so we have to stop at 232
+    // but make it 225 just to be safe
+    if (col > 225) {
       writePS("~> put\n");
       ++line;
       writePS("dup %d <~", line);
@@ -1067,6 +1073,7 @@ void PSOutputDev::endPage() {
     writePS("pdfEndPage\n");
     writePS("end end\n");
     writePS("} def\n");
+    writePS("end end\n");
   } else {
     writePS("showpage\n");
     writePS("%%%%PageTrailer\n");

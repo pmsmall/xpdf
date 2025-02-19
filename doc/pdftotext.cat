@@ -6,7 +6,7 @@ pdftotext(1)                                         pdftotext(1)
 
 NAME
        pdftotext  -  Portable  Document Format (PDF) to text con-
-       verter (version 0.91)
+       verter (version 0.92)
 
 SYNOPSIS
        pdftotext [options] [PDF-file [text-file]]
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           14 Aug 2000                          1
+                           03 Dec 2000                          1
 
 
 
@@ -127,6 +127,6 @@ SEE ALSO
 
 
 
-                           14 Aug 2000                          2
+                           03 Dec 2000                          2
 
 

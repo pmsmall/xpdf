@@ -166,7 +166,7 @@ $! Freetype  (for testing)
 $!
 $ if (freeinc.nes."").and(freeinc2.nes."").and.(freeolb.nes."")
 $ then
-$   mydefs = mydefs + ",HAVE_FREETYPE_FREETYPE_H"
+$   mydefs = mydefs + ",HAVE_FREETYPE_H"
 $   myincs = myincs + "," + freeinc + "," + freeinc2
 $ endif
 $!

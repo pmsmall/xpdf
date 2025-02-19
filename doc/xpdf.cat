@@ -6,7 +6,7 @@ xpdf(1)                                                   xpdf(1)
 
 NAME
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 0.91)
+       (version 0.92)
 
 SYNOPSIS
        xpdf [options] [PDF-file [page]]
@@ -46,8 +46,12 @@ OPTIONS
               Set the initial  window  geometry.   (-geometry  is
               equivalent.)  [xpdf.geometry]
 
+       -title title
+              Set  the  window title.  By default, the title will
+              be "xpdf: foo.pdf".  [xpdf.title]
+
        -remote name
-              Start/contact  xpdf  remote  server  with specified
+              Start/contact xpdf  remote  server  with  specified
               name (see the REMOTE SERVER MODE section below).
 
        -raise Raise  xpdf  remote  server  window  (with  -remote
@@ -55,13 +59,9 @@ OPTIONS
 
        -quit  Kill xpdf remote server (with -remote only).
 
-       -cmap  Install  a  private  colormap.   This is ignored on
-              TrueColor visuals.  [xpdf.installCmap]
 
 
-
-
-                           14 Aug 2000                          1
+                           03 Dec 2000                          1
 
 
 
@@ -70,64 +70,64 @@ OPTIONS
 xpdf(1)                                                   xpdf(1)
 
 
+       -cmap  Install a private colormap.   This  is  ignored  on
+              TrueColor visuals.  [xpdf.installCmap]
+
        -rgb number
-              Set the size of largest RGB cube xpdf will  try  to
+              Set  the  size of largest RGB cube xpdf will try to
               allocate.  The default is 5 (for a 5x5x5 cube); set
-              to  a  smaller  number  to  conserve  color   table
-              entries.   This  is  ignored with private colormaps
+              to   a  smaller  number  to  conserve  color  table
+              entries.  This is ignored  with  private  colormaps
               and on TrueColor visuals.
 
        -papercolor color
-              Set the "paper color", i.e., the background of  the
+              Set  the "paper color", i.e., the background of the
               page display.  This will not work too well with PDF
-              files that do things like filling in  white  behind
+              files  that  do things like filling in white behind
               the text.  [xpdf.paperColor]
 
        -eucjp When copying text, convert Japanese text to EUC-JP.
-              This is currently the only  option  for  converting
-              Japanese  text  --  the only effect is to switch to
-              7-bit ASCII for non-Japanese text, in order to  fit
-              into  the  EUC-JP  encoding.   (This option is only
-              available if pdftotext was compiled  with  Japanese
+              This  is  currently  the only option for converting
+              Japanese text -- the only effect is  to  switch  to
+              7-bit  ASCII for non-Japanese text, in order to fit
+              into the EUC-JP encoding.   (This  option  is  only
+              available  if  pdftotext was compiled with Japanese
               support.)  [xpdf.eucjp]
 
        -t1lib font-type
-              Set  the type of font rendering for t1lib (the Type
-              1 rasterizer) to use.  Options  are  'none'  (don't
-              use  t1lib  at  all), 'plain' (use non-anti-aliased
-              fonts), 'low' or 'high'  (use  low-level  or  high-
+              Set the type of font rendering for t1lib (the  Type
+              1  rasterizer)  to  use.  Options are 'none' (don't
+              use t1lib at all),  'plain'  (use  non-anti-aliased
+              fonts),  'low'  or  'high'  (use low-level or high-
               level anti-aliased fonts).  [xpdf.t1libControl]
 
        -freetype font-type
-              Set  the  type  of font rendering for FreeType (the
-              TrueType rasterizer) to use.   Options  are  'none'
+              Set the type of font rendering  for  FreeType  (the
+              TrueType  rasterizer)  to  use.  Options are 'none'
               (don't use FreeType at all), 'plain' (use non-anti-
-              aliased fonts), or 'aa' (use  anti-aliased  fonts).
+              aliased  fonts),  or 'aa' (use anti-aliased fonts).
               [xpdf.freeTypeControl]
 
        -ps PS-file
-              Set  the  default  file name for PostScript output.
+              Set the default file name  for  PostScript  output.
               This can also be of the form '|command' to pipe the
               PostScript through a command.  [xpdf.psFile]
 
        -paperw size
-              Set  the  paper  width,  in points.  [xpdf.psPaper-
+              Set the paper  width,  in  points.   [xpdf.psPaper-
               Width]
 
        -paperh size
-              Set the paper height,  in  points.   [xpdf.psPaper-
+              Set  the  paper  height, in points.  [xpdf.psPaper-
               Height]
 
        -level1
-              Generate   Level   1   PostScript.   The  resulting
-              PostScript files will be significantly  larger  (if
-              they  contain  images),  but  will print on Level 1
-              printers.  This also converts all images  to  black
-              and white.  [xpdf.psLevel1]
+              Generate  Level  1   PostScript.    The   resulting
+              PostScript  files  will be significantly larger (if
 
 
 
-                           14 Aug 2000                          2
+                           03 Dec 2000                          2
 
 
 
@@ -135,18 +135,22 @@ xpdf(1)                                                   xpdf(1)
 
 xpdf(1)                                                   xpdf(1)
 
+
+              they contain images), but will  print  on  Level  1
+              printers.   This  also converts all images to black
+              and white.  [xpdf.psLevel1]
 
        -upw password
               Specify the user password for the PDF file.
 
        -fullscreen
               Open xpdf in a full-screen mode, useful for presen-
-              tations.  You may also want to specify '-bg  black'
+              tations.   You may also want to specify '-bg black'
               (or similar) with this.  (There is currently no way
-              to switch between window and full-screen  modes  on
+              to  switch  between window and full-screen modes on
               the fly.)
 
-       -cmd   Print  commands  as  they're  executed  (useful for
+       -cmd   Print commands  as  they're  executed  (useful  for
               debugging).
 
        -q     Don't print any messages or errors.
@@ -155,7 +159,7 @@ xpdf(1)                                                   xpdf(1)
 
        -h     Print usage information.  (-help is equivalent.)
 
-       Several other standard X options and resources  will  work
+       Several  other  standard X options and resources will work
        as expected:
 
        -display display
@@ -170,30 +174,26 @@ xpdf(1)                                                   xpdf(1)
        -font font
               (-fn is equivalent.)  [xpdf.font]
 
-       The  color and font options only affect the user interface
+       The color and font options only affect the user  interface
        elements, not the PDF display (the 'paper').
 
-       The following X resources do not have command line  option
+       The  following X resources do not have command line option
        equivalents:
 
        xpdf.urlCommand
-              Set  the  command  executed when you click on a URL
-              link.  See  the  WEB  BROWSERS  section  below  for
+              Set the command executed when you click  on  a  URL
+              link.   See  the  WEB  BROWSERS  section  below for
               details.
 
        xpdf.japaneseFont
-              Sets  the  X  font name pattern to use for Japanese
+              Sets the X font name pattern to  use  for  Japanese
               text.  The default is:
 
-              -*-fixed-medium-r-nor-
-              mal-*-%s-*-*-*-*-*-jisx0208.1983-0
-
-       xpdf.chineseGBFont
-              Sets  the X font name pattern to use for Chinese GB
+              -*-fixed-medium-r-
 
 
 
-                           14 Aug 2000                          3
+                           03 Dec 2000                          3
 
 
 
@@ -202,6 +202,10 @@ xpdf(1)                                                   xpdf(1)
 xpdf(1)                                                   xpdf(1)
 
 
+              normal-*-%s-*-*-*-*-*-jisx0208.1983-0
+
+       xpdf.chineseGBFont
+              Sets the X font name pattern to use for Chinese  GB
               (simplified) text.  The default is:
 
               -*-fangsong                        ti-medium-r-nor-
@@ -214,10 +218,10 @@ xpdf(1)                                                   xpdf(1)
               -*-fixed-medium-r-normal-*-%s-*-*-*-*-*-big5-0
 
        xpdf.viKeys
-              Enables the 'h', 'l', 'k' and 'j'  keys  for  left,
+              Enables  the  'h',  'l', 'k' and 'j' keys for left,
               right, up, and down scrolling.
 
-       The  following  resources set the file names of the Type 1
+       The following resources set the file names of the  Type  1
        fonts to use for the Base 14 fonts:
 
               xpdf.t1TimesRoman
@@ -235,7 +239,7 @@ xpdf(1)                                                   xpdf(1)
               xpdf.t1Symbol
               xpdf.t1ZapfDingbats
 
-       If t1lib is enabled, these  Type  1  fonts  will  be  used
+       If  t1lib  is  enabled,  these  Type  1 fonts will be used
        instead of X server fonts.
 
 CONTROLS
@@ -250,16 +254,12 @@ CONTROLS
               Move backward or forward along the history path.
 
        'Page' entry box
-              Move  to  a specific page number.  Click in the box
-              to activate it, type  the  page  number,  then  hit
-              return.
-
-       zoom popup menu
-              Change  the zoom factor (see the description of the
+              Move to a specific page number.  Click in  the  box
+              to  activate  it,  type  the  page number, then hit
 
 
 
-                           14 Aug 2000                          4
+                           03 Dec 2000                          4
 
 
 
@@ -268,6 +268,10 @@ CONTROLS
 xpdf(1)                                                   xpdf(1)
 
 
+              return.
+
+       zoom popup menu
+              Change the zoom factor (see the description of  the
               -z option above).
 
        binoculars button
@@ -275,16 +279,16 @@ xpdf(1)                                                   xpdf(1)
 
        print button
               Bring up a dialog for generating a PostScript file.
-              The  dialog  has  options  to  set  the pages to be
-              printed and the PostScript  file  name.   The  file
-              name  can  be  '-' for stdout or '|command' to pipe
+              The dialog has options  to  set  the  pages  to  be
+              printed  and  the  PostScript  file name.  The file
+              name can be '-' for stdout or  '|command'  to  pipe
               the PostScript through a command, e.g., '|lpr'.
 
        '?' button
               Bring up the 'about xpdf' window.
 
        link info
-              The space between the '?'  and  'Quit'  buttons  is
+              The  space  between  the  '?' and 'Quit' buttons is
               used to show the URL or external file name when the
               mouse is over a link.
 
@@ -293,14 +297,14 @@ xpdf(1)                                                   xpdf(1)
 
 
    Menu
-       Pressing the right mouse button will  post  a  popup  menu
+       Pressing  the  right  mouse  button will post a popup menu
        with the following commands:
 
        Open...
               Open a new PDF file via a file requester.
 
-       Reload Reload  the  current PDF file.  Note that Xpdf will
-              reload the file automatically (on a page change  or
+       Reload Reload the current PDF file.  Note that  Xpdf  will
+              reload  the file automatically (on a page change or
               redraw) if it has changed since it was last loaded.
 
        Save as...
@@ -310,22 +314,18 @@ xpdf(1)                                                   xpdf(1)
               Rotate the page 90 degrees counterclockwise.
 
        Rotate right
-              Rotate the page  90  degrees  clockwise.   The  two
-              rotate  commands  are  intended  primarily  for PDF
-              files where the rotation isn't correctly  specified
-              in  the  file,  but  they're  also useful if your X
+              Rotate  the  page  90  degrees  clockwise.  The two
+              rotate commands  are  intended  primarily  for  PDF
+              files  where the rotation isn't correctly specified
+              in the file, but they're  also  useful  if  your  X
               server doesn't support font rotation.
 
        Quit   Quit xpdf.
 
 
-   Text selection
-       Dragging the mouse with the left  button  held  down  will
-       highlight  an  arbitrary  rectangle.  Any text inside this
 
 
-
-                           14 Aug 2000                          5
+                           03 Dec 2000                          5
 
 
 
@@ -334,36 +334,39 @@ xpdf(1)                                                   xpdf(1)
 xpdf(1)                                                   xpdf(1)
 
 
+   Text selection
+       Dragging  the  mouse  with  the left button held down will
+       highlight an arbitrary rectangle.  Any  text  inside  this
        rectangle will be copied to the X selection buffer.
 
 
    Links
-       Clicking on a hyperlink will jump to the  link's  destina-
-       tion.   A link to another PDF document will make xpdf load
-       that document.  A 'launch' link to an  executable  program
-       will  display a dialog, and if you click 'ok', execute the
-       program.  URL links call an external command (see the  WEB
+       Clicking  on  a hyperlink will jump to the link's destina-
+       tion.  A link to another PDF document will make xpdf  load
+       that  document.   A 'launch' link to an executable program
+       will display a dialog, and if you click 'ok', execute  the
+       program.   URL links call an external command (see the WEB
        BROWSERS section below).
 
 
    Panning
-       Dragging  the  mouse with the middle button held down pans
+       Dragging the mouse with the middle button held  down  pans
        the window.
 
 
    Key bindings
        o      Open a new PDF file via a file requester.
 
-       r      Reload the current PDF file.  Note that  Xpdf  will
-              reload  the file automatically (on a page change or
+       r      Reload  the  current PDF file.  Note that Xpdf will
+              reload the file automatically (on a page change  or
               redraw) if it has changed since it was last loaded.
 
        f      Find a text string.
 
-       n      Move  to  the next page.  Scrolls to the top of the
+       n      Move to the next page.  Scrolls to the top  of  the
               page, unless scroll lock is turned on.
 
-       p      Move to the previous page.  Scrolls to the  top  of
+       p      Move  to  the previous page.  Scrolls to the top of
               the page, unless scroll lock is turned on.
 
        <Space> or <PageDown> or <Next>
@@ -371,7 +374,7 @@ xpdf(1)                                                   xpdf(1)
               tom, move to next page.
 
        <Backspace> or <Delete> or <PageUp> or <Previous>
-              Scroll up on the current page; if already  at  top,
+              Scroll  up  on the current page; if already at top,
               move to previous page.
 
        <Home> Scroll to top of current page.
@@ -385,13 +388,10 @@ xpdf(1)                                                   xpdf(1)
 
        q      Quit xpdf.
 
-WEB BROWSERS
-       If  you  want  to  run xpdf automatically from netscape or
-       mosaic (and probably other browsers) when you click  on  a
 
 
 
-                           14 Aug 2000                          6
+                           03 Dec 2000                          6
 
 
 
@@ -400,8 +400,11 @@ WEB BROWSERS
 xpdf(1)                                                   xpdf(1)
 
 
+WEB BROWSERS
+       If you want to run xpdf  automatically  from  netscape  or
+       mosaic  (and  probably other browsers) when you click on a
        link to a PDF file, you need to edit (or create) the files
-       .mime.types and  .mailcap  in  your  home  directory.   In
+       .mime.types  and  .mailcap  in  your  home  directory.  In
        .mime.types add the line:
 
               application/pdf pdf
@@ -414,27 +417,27 @@ xpdf(1)                                                   xpdf(1)
        Make sure that xpdf is on your executable search path.
 
        When you click on a URL link in a PDF file, xpdf will exe-
-       cute  the  command  specified   by   the   xpdf.urlCommand
-       resource,  replacing  an  occurrence of '%s' with the URL.
-       For example, to call  netscape  with  the  URL,  use  this
+       cute   the   command   specified  by  the  xpdf.urlCommand
+       resource, replacing an occurrence of '%s'  with  the  URL.
+       For  example,  to  call  netscape  with  the URL, use this
        resource setting:
 
               xpdf.urlCommand: netscape -remote 'openURL(%s)'
 
 REMOTE SERVER MODE
-       Xpdf  can be started in remote server mode by specifying a
-       server name (in addition to the file name  and  page  num-
+       Xpdf can be started in remote server mode by specifying  a
+       server  name  (in  addition to the file name and page num-
        ber).  For example:
 
               xpdf -remote myServer file.pdf
 
-       If  there is currently no xpdf running in server mode with
+       If there is currently no xpdf running in server mode  with
        the name 'myServer', a new xpdf window will be opened.  If
        another command:
 
               xpdf -remote myServer another.pdf 9
 
-       is  issued,  a  new  copy  of  xpdf  will  not be started.
+       is issued, a  new  copy  of  xpdf  will  not  be  started.
        Instead, the first xpdf (the server) will load another.pdf
        and display page nine.  If the file name is the same:
 
@@ -446,18 +449,15 @@ REMOTE SERVER MODE
        can be specified with or without a file name and page num-
        ber.
 
-       The  -quit option tells the server to close its window and
+       The -quit option tells the server to close its window  and
        exit.
 
 CONFIGURATION FILE
-       Xpdf will read a file called .xpdfrc from your home direc-
-       tory  (if  it exists).  This file can contain two types of
-       entries.
+       Xpdf  will  read  a  file  called  .xpdfrc  from your home
 
 
 
-
-                           14 Aug 2000                          7
+                           03 Dec 2000                          7
 
 
 
@@ -466,24 +466,27 @@ CONFIGURATION FILE
 xpdf(1)                                                   xpdf(1)
 
 
+       directory (if it exists).  This file can contain two types
+       of entries.
+
        fontpath directory
               Look for Type 1 fonts in directory.  Xpdf uses this
-              only  to  get  the font encoding.  For display, the
+              only to get the font encoding.   For  display,  the
               font must also be mapped with a fontmap entry.
 
        fontmap PDF-font X-font
-              Map PDF-font (as referenced in a PDF  file)  to  X-
-              font,  which should be a standard X font descriptor
+              Map  PDF-font  (as  referenced in a PDF file) to X-
+              font, which should be a standard X font  descriptor
               with '%s' in the pixel size position.
 
        For example, use:
 
-              fontmap       TimesCE-Roman        -*-times-medium-
+              fontmap        TimesCE-Roman       -*-times-medium-
               r-*-*-%s-*-*-*-*-*-iso8859-2
 
-       to  map  the  Central  European  (Latin-2)  version of the
-       Times-Roman font.  This assumes that you've installed  the
-       appropriate  X fonts (see mkfontdir(1)).  Xpdf knows about
+       to map the  Central  European  (Latin-2)  version  of  the
+       Times-Roman  font.  This assumes that you've installed the
+       appropriate X fonts (see mkfontdir(1)).  Xpdf knows  about
        the ISO8859-2 encoding, so you don't need a fontpath entry
        for these fonts.  To use the Bakoma Type 1 fonts, do this:
 
@@ -494,18 +497,18 @@ xpdf(1)                                                   xpdf(1)
               mal--%s-*-*-*-p-*-adobe-fontspecific
               etc...
 
-       This assumes that the Type 1 font files are  available  in
+       This  assumes  that the Type 1 font files are available in
        the directory /home/derekn/fonts/bakoma.
 
 BUGS
        No support for Type 3 fonts.
 
 AUTHOR
-       The   xpdf   software   and  documentation  are  copyright
+       The  xpdf  software  and   documentation   are   copyright
        1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
-       pdftops(1), pdftotext(1), pdfinfo(1), pdftopbm(1),  pdfim-
+       pdftops(1),  pdftotext(1), pdfinfo(1), pdftopbm(1), pdfim-
        ages(1)
        http://www.foolabs.com/xpdf/
 
@@ -520,9 +523,6 @@ SEE ALSO
 
 
 
-
-
-
-                           14 Aug 2000                          8
+                           03 Dec 2000                          8
 
 

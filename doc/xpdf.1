@@ -1,7 +1,7 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH xpdf 1 "14 Aug 2000"
+.TH xpdf 1 "03 Dec 2000"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 0.91)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 0.92)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -50,6 +50,10 @@ Set the initial window geometry.
 .RB ( \-geometry
 is equivalent.)
 .RB [ xpdf.geometry ]
+.TP
+.BI \-title " title"
+Set the window title.  By default, the title will be "xpdf: foo.pdf".
+.RB [ xpdf.title ]
 .TP
 .BI \-remote " name"
 Start/contact xpdf remote server with specified name (see the

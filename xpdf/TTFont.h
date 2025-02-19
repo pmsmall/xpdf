@@ -9,20 +9,18 @@
 #ifndef TTFONT_H
 #define TTFONT_H
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 
 #ifdef __GNUC__
 #pragma interface
 #endif
 
-#ifdef VMS
-#include <freetype.h>
-#include <ftxpost.h>
-#else
-//~ This will be going away; the configure script will add
-//~ -I<something>/freetype to CFLAGS.
+#if HAVE_FREETYPE_FREETYPE_H
 #include <freetype/freetype.h>
 #include <freetype/ftxpost.h>
+#else
+#include <freetype.h>
+#include <ftxpost.h>
 #endif
 #include "SFont.h"
 
@@ -101,6 +99,6 @@ private:
   GBool ok;
 };
 
-#endif // HAVE_FREETYPE_FREETYPE_H
+#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 
 #endif

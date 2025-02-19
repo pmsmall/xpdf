@@ -35,7 +35,7 @@ class T1FontFile;
 class T1Font;
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 class TTFontEngine;
 class TTFontFile;
 class TTFont;
@@ -79,7 +79,7 @@ extern int rgbCubeSize;
 extern GString *t1libControl;
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 // Type of FreeType font rendering to use:
 //     "none"   -- don't use FreeType
 //     "plain"  -- FreeType, without anti-aliasing
@@ -194,7 +194,7 @@ private:
 };
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 //------------------------------------------------------------------------
 // XOutputTTFont
 //------------------------------------------------------------------------
@@ -269,7 +269,7 @@ struct XOutputT1FontFile {
 };
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 struct XOutputTTFontFile {
   int num, gen;
   TTFontFile *fontFile;
@@ -304,7 +304,7 @@ public:
   GBool getT1libAA() { return t1libAA; }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   // Get a FreeType font file.
   TTFontFile *getTTFont(GfxFont *gfxFont);
 #endif
@@ -330,7 +330,7 @@ private:
   int t1FontFilesSize;		// size of t1FontFiles array
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   GBool useFreeType;		// if false, FreeType is not used at all
   GBool freeTypeAA;		// true for anti-aliased fonts
   TTFontEngine *ttEngine;	// TrueType font engine

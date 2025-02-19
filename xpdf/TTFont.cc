@@ -8,7 +8,7 @@
 #pragma implementation
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 
 #include <string.h>
 #include "gmem.h"
@@ -386,4 +386,4 @@ GBool TTFont::getGlyphPixmap(Gushort c) {
   return gTrue;
 }
 
-#endif // HAVE_FREETYPE_FREETYPE_H
+#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H

@@ -201,6 +201,7 @@ static XrmOptionDescRec opts[] = {
   {"-g",             ".geometry",        XrmoptionSepArg,  NULL},
   {"-font",          ".font",            XrmoptionSepArg,  NULL},
   {"-fn",            ".font",            XrmoptionSepArg,  NULL},
+  {"-title",         ".title",           XrmoptionSepArg,  NULL},
   {"-cmap",          ".installCmap",     XrmoptionNoArg,   (XPointer)"on"},
   {"-rgb",           ".rgbCubeSize",     XrmoptionSepArg,  NULL},
   {"-papercolor",    ".paperColor",      XrmoptionSepArg,  NULL},
@@ -210,7 +211,7 @@ static XrmOptionDescRec opts[] = {
 #if HAVE_T1LIB_H
   {"-t1lib",         ".t1libControl",    XrmoptionSepArg,  NULL},
 #endif
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   {"-freetype",      ".freeTypeControl", XrmoptionSepArg,  NULL},
 #endif
   {"-z",             ".initialZoom",     XrmoptionSepArg,  NULL},
@@ -237,6 +238,8 @@ static ArgDesc argDesc[] = {
    "initial window geometry"},
   {"-geometry",   argStringDummy, NULL,           0,
    "initial window geometry"},
+  {"-title",      argStringDummy, NULL,           0,
+   "window title"},
   {"-remote",     argString,      remoteName + 5, sizeof(remoteName) - 5,
    "start/contact xpdf remote server with specified name"},
   {"-raise",      argFlag,        &doRemoteRaise, 0,
@@ -257,7 +260,7 @@ static ArgDesc argDesc[] = {
   {"-t1lib",      argStringDummy, NULL,           0,
    "t1lib font control: none, plain, low, high"},
 #endif
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   {"-freetype",   argStringDummy, NULL,           0,
    "FreeType font control: none, plain, aa"},
 #endif
@@ -342,6 +345,8 @@ static int psFirstPage, psLastPage;
 static GString *fileReqDir;	// current directory for file requesters
 
 static GString *urlCommand;	// command to execute for URI links
+
+static GString *windowTitle;	// window title string
 
 static LTKApp *app;
 static Display *display;
@@ -529,6 +534,7 @@ int main(int argc, char *argv[]) {
   paperHeight = app->getIntResource("psPaperHeight", defPaperHeight);
   psOutLevel1 = app->getBoolResource("psLevel1", gFalse);
   urlCommand = app->getStringResource("urlCommand", NULL);
+  windowTitle = app->getStringResource("title", NULL);
   installCmap = app->getBoolResource("installCmap", gFalse);
   if (installCmap)
     win->setInstallCmap(gTrue);
@@ -544,7 +550,7 @@ int main(int argc, char *argv[]) {
 #if HAVE_T1LIB_H
   t1libControl = app->getStringResource("t1libControl", "low");
 #endif
-#if HAVE_FREETYPE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   freeTypeControl = app->getStringResource("freeTypeControl", "aa");
 #endif
   t1Courier = app->getStringResource("t1Courier", NULL);
@@ -638,7 +644,9 @@ int main(int argc, char *argv[]) {
     sprintf(s, "of %d", doc ? doc->getNumPages() : 0);
     numPagesLabel->setText(s);
   }
-  if (name) {
+  if (windowTitle) {
+    title = windowTitle->copy();
+  } else if (name) {
     title = new GString("xpdf: ");
     title->append(name);
   } else {
@@ -685,62 +693,91 @@ int main(int argc, char *argv[]) {
 
  done2:
   // free stuff
-  if (out)
+  if (out) {
     delete out;
-  if (win)
+  }
+  if (win) {
     delete win;
-  if (aboutWin)
+  }
+  if (aboutWin) {
     delete aboutWin;
-  if (findWin)
+  }
+  if (findWin) {
     delete findWin;
-  if (app)
+  }
+  if (app) {
     delete app;
-  if (doc)
+  }
+  if (doc) {
     delete doc;
-  if (psFileName)
+  }
+  if (psFileName) {
     delete psFileName;
-  if (defPSFileName)
+  }
+  if (defPSFileName) {
     delete defPSFileName;
-  if (fileReqDir)
+  }
+  if (fileReqDir) {
     delete fileReqDir;
-  if (urlCommand)
+  }
+  if (urlCommand) {
     delete urlCommand;
+  }
+  if (windowTitle) {
+    delete windowTitle;
+  }
 #if HAVE_T1LIB_H
-  if (t1libControl)
+  if (t1libControl) {
     delete t1libControl;
+  }
 #endif
-#if HAVE_FREETYPE_FREETYPE_H
-  if (freeTypeControl)
+#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+  if (freeTypeControl) {
     delete freeTypeControl;
+  }
 #endif
-  if (t1Courier)
+  if (t1Courier) {
     delete t1Courier;
-  if (t1CourierBold)
+  }
+  if (t1CourierBold) {
     delete t1CourierBold;
-  if (t1CourierBoldOblique)
+  }
+  if (t1CourierBoldOblique) {
     delete t1CourierBoldOblique;
-  if (t1CourierOblique)
+  }
+  if (t1CourierOblique) {
     delete t1CourierOblique;
-  if (t1Helvetica)
+  }
+  if (t1Helvetica) {
     delete t1Helvetica;
-  if (t1HelveticaBold)
+  }
+  if (t1HelveticaBold) {
     delete t1HelveticaBold;
-  if (t1HelveticaBoldOblique)
+  }
+  if (t1HelveticaBoldOblique) {
     delete t1HelveticaBoldOblique;
-  if (t1HelveticaOblique)
+  }
+  if (t1HelveticaOblique) {
     delete t1HelveticaOblique;
-  if (t1Symbol)
+  }
+  if (t1Symbol) {
     delete t1Symbol;
-  if (t1TimesBold)
+  }
+  if (t1TimesBold) {
     delete t1TimesBold;
-  if (t1TimesBoldItalic)
+  }
+  if (t1TimesBoldItalic) {
     delete t1TimesBoldItalic;
-  if (t1TimesItalic)
+  }
+  if (t1TimesItalic) {
     delete t1TimesItalic;
-  if (t1TimesRoman)
+  }
+  if (t1TimesRoman) {
     delete t1TimesRoman;
-  if (t1ZapfDingbats)
+  }
+  if (t1ZapfDingbats) {
     delete t1ZapfDingbats;
+  }
 #if JAPANESE_SUPPORT
   if (japan12Font) {
     delete japan12Font;
@@ -757,8 +794,9 @@ int main(int argc, char *argv[]) {
   }
 #endif
   for (i = 0; i < historySize; ++i) {
-    if (history[i].fileName)
+    if (history[i].fileName) {
       delete history[i].fileName;
+    }
   }
   freeParams();
 
@@ -833,9 +871,11 @@ static GBool loadFile(GString *fileName) {
 
   // set up title, number-of-pages display; back to normal cursor
   if (win) {
-    title = new GString("xpdf: ");
-    title->append(fileName);
-    win->setTitle(title);
+    if (!windowTitle) {
+      title = new GString("xpdf: ");
+      title->append(fileName);
+      win->setTitle(title);
+    }
     if (!fullScreen) {
       sprintf(s, "of %d", doc->getNumPages());
       numPagesLabel->setText(s);
@@ -1952,8 +1992,11 @@ static void openSelectCbk(LTKWidget *widget, int n, GString *name) {
     delete openDialog;
     openDialog = NULL;
   }
-  if (loadFile(name1))
+  if (loadFile(name1)) {
+    vScrollbar->setPos(0, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
     displayPage(1, zoom, rotate, gTrue);
+  }
 }
 
 //------------------------------------------------------------------------

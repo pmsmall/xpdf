@@ -6,7 +6,7 @@ pdfinfo(1)                                             pdfinfo(1)
 
 NAME
        pdfinfo - Portable Document Format (PDF) document informa-
-       tion extractor (version 0.91)
+       tion extractor (version 0.92)
 
 SYNOPSIS
        pdfinfo [options] [PDF-file]
@@ -61,6 +61,6 @@ SEE ALSO
 
 
 
-                           14 Aug 2000                          1
+                           03 Dec 2000                          1
 
 
