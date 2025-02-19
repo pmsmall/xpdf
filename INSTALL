@@ -65,10 +65,17 @@ different systems.
         size of the binary (mostly with decoding tables).  The default
         is no Japanese font support.
 
-    --enable-chinese
-        Enables support for 16-bit Chinese fonts (Adobe-GB1-2
+    --enable-chinese-gb
+        Enables support for 16-bit Chinese GB fonts (Adobe-GB1-2
         character set).  This increases the size of the binary (mostly
-        with decoding tables).  The default is no Chinese font support.
+        with decoding tables).  The default is no Chinese GB font
+        support.
+
+    --enable-chinese-cns
+        Enables support for 16-bit Chinese CNS fonts (Adobe-CNS1-3
+        character set).  This increases the size of the binary (mostly
+        with decoding tables).  The default is no Chinese CNS font
+        support.
 
     --enable-no-text-select
         With this option, xpdf will not copy text.  (This is only

@@ -10,9 +10,12 @@ OPTIONS="$OPTIONS -DA4_PAPER")
 AC_ARG_ENABLE(japanese,
 [  --enable-japanese       enable Japanese font support],
 OPTIONS="$OPTIONS -DJAPANESE_SUPPORT")
-AC_ARG_ENABLE(chinese,
-[  --enable-chinese        enable Chinese font support],
-OPTIONS="$OPTIONS -DCHINESE_SUPPORT")
+AC_ARG_ENABLE(chinese-gb,
+[  --enable-chinese-gb     enable Chinese GB font support],
+OPTIONS="$OPTIONS -DCHINESE_GB_SUPPORT")
+AC_ARG_ENABLE(chinese-cns,
+[  --enable-chinese-cns    enable Chinese CNS font support],
+OPTIONS="$OPTIONS -DCHINESE_CNS_SUPPORT")
 AC_ARG_ENABLE(no-text-select,
 [  --enable-no-text-select do not allow text selection],
 OPTIONS="$OPTIONS -DNO_TEXT_SELECT")

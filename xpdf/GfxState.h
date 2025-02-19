@@ -448,18 +448,18 @@ private:
 };
 
 //------------------------------------------------------------------------
-// Pattern
+// GfxPattern
 //------------------------------------------------------------------------
 
-class Pattern {
+class GfxPattern {
 public:
 
-  Pattern(int type);
-  virtual ~Pattern();
+  GfxPattern(int type);
+  virtual ~GfxPattern();
 
-  static Pattern *parse(Object *obj);
+  static GfxPattern *parse(Object *obj);
 
-  virtual Pattern *copy() = 0;
+  virtual GfxPattern *copy() = 0;
 
   int getType() { return type; }
 
@@ -469,16 +469,16 @@ private:
 };
 
 //------------------------------------------------------------------------
-// TilingPattern
+// GfxTilingPattern
 //------------------------------------------------------------------------
 
-class TilingPattern: public Pattern {
+class GfxTilingPattern: public GfxPattern {
 public:
 
-  TilingPattern(Dict *streamDict, Object *stream);
-  virtual ~TilingPattern();
+  GfxTilingPattern(Dict *streamDict, Object *stream);
+  virtual ~GfxTilingPattern();
 
-  virtual Pattern *copy();
+  virtual GfxPattern *copy();
 
   int getPaintType() { return paintType; }
   int getTilingType() { return tilingType; }
@@ -491,7 +491,7 @@ public:
 
 private:
 
-  TilingPattern(TilingPattern *pat);
+  GfxTilingPattern(GfxTilingPattern *pat);
 
   int paintType;
   int tilingType;
@@ -627,7 +627,7 @@ public:
 
 private:
 
-  GfxColorSpace *colorSpace;	// the image colorspace
+  GfxColorSpace *colorSpace;	// the image color space
   int bits;			// bits per component
   int nComps;			// number of components in a pixel
   GfxColorSpace *colorSpace2;	// secondary color space
@@ -780,8 +780,8 @@ public:
     { strokeColorSpace->getCMYK(&strokeColor, cmyk); }
   GfxColorSpace *getFillColorSpace() { return fillColorSpace; }
   GfxColorSpace *getStrokeColorSpace() { return strokeColorSpace; }
-  Pattern *getFillPattern() { return fillPattern; }
-  Pattern *getStrokePattern() { return strokePattern; }
+  GfxPattern *getFillPattern() { return fillPattern; }
+  GfxPattern *getStrokePattern() { return strokePattern; }
   double getFillOpacity() { return fillOpacity; }
   double getStrokeOpacity() { return strokeOpacity; }
   double getLineWidth() { return lineWidth; }
@@ -838,8 +838,8 @@ public:
   void setStrokeColorSpace(GfxColorSpace *colorSpace);
   void setFillColor(GfxColor *color) { fillColor = *color; }
   void setStrokeColor(GfxColor *color) { strokeColor = *color; }
-  void setFillPattern(Pattern *pattern);
-  void setStrokePattern(Pattern *pattern);
+  void setFillPattern(GfxPattern *pattern);
+  void setStrokePattern(GfxPattern *pattern);
   void setFillOpacity(double opac) { fillOpacity = opac; }
   void setStrokeOpacity(double opac) { strokeOpacity = opac; }
   void setLineWidth(double width) { lineWidth = width; }
@@ -900,8 +900,8 @@ private:
   GfxColorSpace *strokeColorSpace; // stroke color space
   GfxColor fillColor;		// fill color
   GfxColor strokeColor;		// stroke color
-  Pattern *fillPattern;		// fill pattern
-  Pattern *strokePattern;	// stroke pattern
+  GfxPattern *fillPattern;	// fill pattern
+  GfxPattern *strokePattern;	// stroke pattern
   double fillOpacity;		// fill opacity
   double strokeOpacity;		// stroke opacity
 

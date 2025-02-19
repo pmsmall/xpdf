@@ -160,18 +160,24 @@
               -*-fixed-medium-r-nor-
               mal-*-%s-*-*-*-*-*-jisx0208.1983-0
 
-       xpdf.chineseFont
-              Sets  the  X  font  name pattern to use for Chinese
-              text.  The default is:
+       xpdf.chineseGBFont
+              Sets  the X font name pattern to use for Chinese GB
+              (simplified) text.  The default is:
 
               -*-fangsong                        ti-medium-r-nor-
               mal-*-%s-*-*-*-*-*-gb2312.1980-0
 
+       xpdf.chineseCNSFont
+              Sets the X font name pattern to use for Chinese CNS
+              (traditional) text.  The default is:
+
+              -*-fixed-medium-r-normal-*-%s-*-*-*-*-*-big5-0
+
        xpdf.viKeys
-              Enables  the  'h',  'l', 'k' and 'j' keys for left,
+              Enables the 'h', 'l', 'k' and 'j'  keys  for  left,
               right, up, and down scrolling.
 
-       The following resources set the file names of the  Type  1
+       The  following  resources set the file names of the Type 1
        fonts to use for the Base 14 fonts:
 
               xpdf.t1TimesRoman
@@ -184,13 +190,13 @@
               xpdf.t1HelveticaBoldOblique
               xpdf.t1Courier
               xpdf.t1CourierOblique
+
               xpdf.t1CourierBold
               xpdf.t1CourierBoldOblique
               xpdf.t1Symbol
               xpdf.t1ZapfDingbats
 
-       If  t1lib  is  enabled,  these  Type  1 fonts will be used
-
+       If t1lib is enabled, these  Type  1  fonts  will  be  used
        instead of X server fonts.
 
 2 CONTROLS
@@ -283,9 +289,11 @@
 
        f      Find a text string.
 
-       n      Move to the next page.
+       n      Move to the next page.  Scrolls to the top  of  the
+              page, unless scroll lock is turned on.
 
-       p      Move to the previous page.
+       p      Move  to  the previous page.  Scrolls to the top of
+              the page, unless scroll lock is turned on.
 
        <Space> or <PageDown> or <Next>
               Scroll down on the current page; if already at bot-

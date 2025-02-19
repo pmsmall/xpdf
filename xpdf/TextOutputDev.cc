@@ -501,6 +501,9 @@ void TextString::addChar16(GfxState *state, double x, double y,
 
   case font16AdobeGB12:
     break;
+
+  case font16AdobeCNS13:
+    break;
   }
 
   // append converted character to string

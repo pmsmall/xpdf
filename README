@@ -171,11 +171,17 @@ For Japanese support, you will need a Japanese font of the form:
 and an X server that can handle 16-bit fonts.  You can also set this
 font using the xpdf.japaneseFont resource.
 
-Similary, for Chinese support, you will need a font of the form:
+For Chinese GB support, you will need a font of the form:
 
     -*-fangsong ti-medium-r-normal-*-%s-*-*-*-*-*-gb2312.1980-0
 
-You can replace this font using the xpdf.chineseFont resource.
+You can replace this font using the xpdf.chineseGBFont resource.
+
+For Chinese CNS support, you will need a font of the form:
+
+    -*-fixed-medium-r-normal--*-%s-*-*-*-*-big5-0
+
+You can replace this font using the xpdf.chineseCNSFont resource.
 
 If compiled with t1lib support, xpdf will use t1lib to render embedded
 Type 1 and Type 1C fonts.  In addition, xpdf can be configured to use
@@ -319,7 +325,13 @@ Adobe Systems, Inc., _Adobe-GB1-3 Character Collection for
 CID-Keyed Fonts_, Adobe Developer Support Technical Note #5079.
 1998.
 http://partners.adobe.com/asn/developer/PDFS/TN/5079.GB_CharColl.pdf
-[The Adobe Chinese character set.]
+[The Adobe Chinese GB character set.]
+
+Adobe Systems, Inc., _Adobe-CNS1-3 Character Collection for
+CID-Keyed Fonts_, Adobe Developer Support Technical Note #5080.
+2000.
+http://partners.adobe.com/asn/developer/PDFS/TN/5080.CNS_CharColl.pdf
+[The Adobe Chinese CNS character set.]
 
 Adobe Systems Inc., _Supporting the DCT Filters in PostScript Level
 2_, Adobe Developer Support Technical Note #5116.  1992.

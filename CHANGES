@@ -669,3 +669,13 @@ Added support for opacity values (from PDF 1.4) to GfxState and
   OutputDev.  [Thanks to Leonard Rosenthol.]
 Implemented type 2 functions; rearranged the Function class
   hierarchy.
+
+0.91b (2000-oct-29)
+-------------------
+Print a warning about Type 3 fonts (XOutputDev, PSOutputDev).
+Added the scroll lock behavior to 'n' and 'p' keys in xpdf.
+Change FileStream buffer size to a #define'd constant.
+Renamed Pattern to GfxPattern to avoid clashes with Windows and MacOS
+  types.
+Added CNS (Big5) Chinese font support (CHINESE_CNS_SUPPORT); renamed
+  CHINESE_SUPPORT to CHINESE_GB_SUPPORT.

@@ -133,8 +133,10 @@ static void mouseDragCbk(LTKWidget *widget, int widgetNum,
 // button callbacks
 static void nextPageCbk(LTKWidget *button, int n, GBool on);
 static void nextTenPageCbk(LTKWidget *button, int n, GBool on);
+static void gotoNextPage(int inc, GBool top);
 static void prevPageCbk(LTKWidget *button, int n, GBool on);
 static void prevTenPageCbk(LTKWidget *button, int n, GBool on);
+static void gotoPrevPage(int dec, GBool top, GBool bottom);
 static void backCbk(LTKWidget *button, int n, GBool on);
 static void forwardCbk(LTKWidget *button, int n, GBool on);
 static void pageNumCbk(LTKWidget *textIn, int n, GString *text);
@@ -563,8 +565,11 @@ int main(int argc, char *argv[]) {
 #if JAPANESE_SUPPORT
   japan12Font = app->getStringResource("japaneseFont", NULL);
 #endif
-#if CHINESE_SUPPORT
-  gb12Font = app->getStringResource("chineseFont", NULL);
+#if CHINESE_GB_SUPPORT
+  gb12Font = app->getStringResource("chineseGBFont", NULL);
+#endif
+#if CHINESE_CNS_SUPPORT
+  cns13Font = app->getStringResource("chineseCNSFont", NULL);
 #endif
   if (fullScreen) {
     zoom = zoomPage;
@@ -741,9 +746,14 @@ int main(int argc, char *argv[]) {
     delete japan12Font;
   }
 #endif
-#if CHINESE_SUPPORT
+#if CHINESE_GB_SUPPORT
   if (gb12Font) {
     delete gb12Font;
+  }
+#endif
+#if CHINESE_CNS_SUPPORT
+  if (cns13Font) {
+    delete cns13Font;
   }
 #endif
   for (i = 0; i < historySize; ++i) {
@@ -960,17 +970,17 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
       break;
     case 'N':
     case 'n':
-      nextPageCbk(NULL, 0, gTrue);
+      gotoNextPage(1, !(modifiers & Mod5Mask));
       break;
     case 'P':
     case 'p':
-      prevPageCbk(NULL, 0, gTrue);
+      gotoPrevPage(1, !(modifiers & Mod5Mask), gFalse);
       break;
     case ' ':
       if (fullScreen ||
 	  vScrollbar->getPos() >=
 	    canvas->getRealHeight() - canvas->getHeight()) {
-	nextPageCbk(NULL, 0, gTrue);
+	gotoNextPage(1, gTrue);
       } else {
 	vScrollbar->setPos(vScrollbar->getPos() + canvas->getHeight(),
 			   canvas->getHeight());
@@ -980,12 +990,9 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
     case '\b':			// bs
     case '\177':		// del
       if (fullScreen) {
-	prevPageCbk(NULL, 0, gTrue);
+	gotoPrevPage(1, gTrue, gFalse);
       } else if (vScrollbar->getPos() == 0) {
-	prevPageCbk(NULL, 0, gTrue);
-	vScrollbar->setPos(canvas->getRealHeight() - canvas->getHeight(),
-			   canvas->getHeight());
-	canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+	gotoPrevPage(1, gFalse, gTrue);
       } else {
 	vScrollbar->setPos(vScrollbar->getPos() - canvas->getHeight(),
 			   canvas->getHeight());
@@ -1062,12 +1069,9 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
     case XK_Page_Up:
     case XK_KP_Page_Up:
       if (fullScreen) {
-	prevPageCbk(NULL, 0, gTrue);
+	gotoPrevPage(1, gTrue, gFalse);
       } else if (vScrollbar->getPos() == 0) {
-	prevPageCbk(NULL, 0, gTrue);
-	vScrollbar->setPos(canvas->getRealHeight() - canvas->getHeight(),
-			   canvas->getHeight());
-	canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+	gotoPrevPage(1, gFalse, gTrue);
       } else {
 	vScrollbar->setPos(vScrollbar->getPos() - canvas->getHeight(),
 			   canvas->getHeight());
@@ -1079,7 +1083,7 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
       if (fullScreen ||
 	  vScrollbar->getPos() >=
 	    canvas->getRealHeight() - canvas->getHeight()) {
-	nextPageCbk(NULL, 0, gTrue);
+	gotoNextPage(1, gTrue);
       } else {
 	vScrollbar->setPos(vScrollbar->getPos() + canvas->getHeight(),
 			   canvas->getHeight());
@@ -1408,9 +1412,9 @@ static void doLink(int mx, int my) {
     case actionNamed:
       actionName = ((LinkNamed *)action)->getName();
       if (!actionName->cmp("NextPage")) {
-	nextPageCbk(NULL, 0, gTrue);
+	gotoNextPage(1, gTrue);
       } else if (!actionName->cmp("PrevPage")) {
-	prevPageCbk(NULL, 0, gTrue);
+	gotoPrevPage(1, gTrue, gFalse);
       } else if (!actionName->cmp("FirstPage")) {
 	if (page != 1) {
 	  displayPage(1, zoom, rotate, gTrue);
@@ -1571,31 +1575,25 @@ static void mouseDragCbk(LTKWidget *widget, int widgetNum,
 //------------------------------------------------------------------------
 
 static void nextPageCbk(LTKWidget *button, int n, GBool on) {
+  gotoNextPage(1, gTrue);
+}
+
+static void nextTenPageCbk(LTKWidget *button, int n, GBool on) {
+  gotoNextPage(10, gTrue);
+}
+
+static void gotoNextPage(int inc, GBool top) {
+  int pg;
+
   if (!doc || doc->getNumPages() == 0) {
     return;
   }
   if (page < doc->getNumPages()) {
-    if (!fullScreen) {
+    if (top && !fullScreen) {
       vScrollbar->setPos(0, canvas->getHeight());
       canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
     }
-    displayPage(page + 1, zoom, rotate, gTrue);
-  } else {
-    XBell(display, 0);
-  }
-}
-
-static void nextTenPageCbk(LTKWidget *button, int n, GBool on) {
-  int pg;
-
-  if (!doc || doc->getNumPages() == 0)
-    return;
-  if (page < doc->getNumPages()) {
-    if (!fullScreen) {
-      vScrollbar->setPos(0, canvas->getHeight());
-      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-    }
-    if ((pg = page + 10) > doc->getNumPages()) {
+    if ((pg = page + inc) > doc->getNumPages()) {
       pg = doc->getNumPages();
     }
     displayPage(pg, zoom, rotate, gTrue);
@@ -1605,32 +1603,29 @@ static void nextTenPageCbk(LTKWidget *button, int n, GBool on) {
 }
 
 static void prevPageCbk(LTKWidget *button, int n, GBool on) {
-  if (!doc || doc->getNumPages() == 0) {
-    return;
-  }
-  if (page > 1) {
-    if (!fullScreen) {
-      vScrollbar->setPos(0, canvas->getHeight());
-      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-    }
-    displayPage(page - 1, zoom, rotate, gTrue);
-  } else {
-    XBell(display, 0);
-  }
+  gotoPrevPage(1, gTrue, gFalse);
 }
 
 static void prevTenPageCbk(LTKWidget *button, int n, GBool on) {
+  gotoPrevPage(10, gTrue, gFalse);
+}
+
+static void gotoPrevPage(int dec, GBool top, GBool bottom) {
   int pg;
 
   if (!doc || doc->getNumPages() == 0) {
     return;
   }
   if (page > 1) {
-    if (!fullScreen) {
+    if (top && !fullScreen) {
       vScrollbar->setPos(0, canvas->getHeight());
       canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    } else if (bottom && !fullScreen) {
+      vScrollbar->setPos(canvas->getRealHeight() - canvas->getHeight(),
+			 canvas->getHeight());
+      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
     }
-    if ((pg = page - 10) < 1) {
+    if ((pg = page - dec) < 1) {
       pg = 1;
     }
     displayPage(pg, zoom, rotate, gTrue);

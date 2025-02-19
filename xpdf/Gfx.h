@@ -24,7 +24,7 @@ class OutputDev;
 class GfxFontDict;
 class GfxFont;
 struct GfxFontEncoding16;
-class Pattern;
+class GfxPattern;
 class GfxState;
 class Gfx;
 
@@ -68,7 +68,7 @@ public:
   GfxFont *lookupFont(char *name);
   GBool lookupXObject(char *name, Object *obj);
   void lookupColorSpace(char *name, Object *obj);
-  Pattern *lookupPattern(char *name);
+  GfxPattern *lookupPattern(char *name);
   GBool lookupGState(char *name, Object *obj);
 
   GfxResources *getNext() { return next; }

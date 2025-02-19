@@ -31,8 +31,11 @@
 #if JAPANESE_SUPPORT
 #include "Japan12CMapInfo.h"
 #endif
-#if CHINESE_SUPPORT
+#if CHINESE_GB_SUPPORT
 #include "GB12CMapInfo.h"
+#endif
+#if CHINESE_CNS_SUPPORT
+#include "CNS13CMapInfo.h"
 #endif
 
 //------------------------------------------------------------------------
@@ -105,9 +108,9 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
     if (!strncmp(p, "Arial", 5)) {
       if (!strcmp(p+5, ",Bold")) {
 	name2 = "Helvetica-Bold";
-      } else if (!strcmp(p+5, "Italic")) {
+      } else if (!strcmp(p+5, ",Italic")) {
 	name2 = "Helvetica-Oblique";
-      } else if (!strcmp(p+5, "BoldItalic")) {
+      } else if (!strcmp(p+5, ",BoldItalic")) {
 	name2 = "Helvetica-BoldOblique";
       } else {
 	name2 = "Helvetica";
@@ -115,9 +118,9 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
     } else if (!strncmp(p, "TimesNewRoman", 13)) {
       if (!strcmp(p+13, ",Bold")) {
 	name2 = "Times-Bold";
-      } else if (!strcmp(p+13, "Italic")) {
+      } else if (!strcmp(p+13, ",Italic")) {
 	name2 = "Times-Italic";
-      } else if (!strcmp(p+13, "BoldItalic")) {
+      } else if (!strcmp(p+13, ",BoldItalic")) {
 	name2 = "Times-BoldItalic";
       } else {
 	name2 = "Times-Roman";
@@ -125,9 +128,9 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
     } else if (!strncmp(p, "CourierNew", 10)) {
       if (!strcmp(p+10, ",Bold")) {
 	name2 = "Courier-Bold";
-      } else if (!strcmp(p+10, "Italic")) {
+      } else if (!strcmp(p+10, ",Italic")) {
 	name2 = "Courier-Oblique";
-      } else if (!strcmp(p+10, "BoldItalic")) {
+      } else if (!strcmp(p+10, ",BoldItalic")) {
 	name2 = "Courier-BoldOblique";
       } else {
 	name2 = "Courier";
@@ -687,11 +690,20 @@ void GfxFont::getType0EncAndWidths(Dict *fontDict) {
 #endif
     } else if (obj4.getString()->cmp("Adobe") == 0 &&
 	       obj5.getString()->cmp("GB1") == 0) {
-#if CHINESE_SUPPORT
+#if CHINESE_GB_SUPPORT
       is16 = gTrue;
       enc16.charSet = font16AdobeGB12;
 #else
-      error(-1, "Xpdf was compiled without Chinese font support");
+      error(-1, "Xpdf was compiled without Chinese GB font support");
+      goto err4;
+#endif
+    } else if (obj4.getString()->cmp("Adobe") == 0 &&
+	       obj5.getString()->cmp("CNS1") == 0) {
+#if CHINESE_CNS_SUPPORT
+      is16 = gTrue;
+      enc16.charSet = font16AdobeCNS13;
+#else
+      error(-1, "Xpdf was compiled without Chinese CNS font support");
       goto err4;
 #endif
     } else {
@@ -908,7 +920,7 @@ void GfxFont::getType0EncAndWidths(Dict *fontDict) {
     enc16.enc = gfxJapan12Tab[i].enc;
   }
 #endif
-#if CHINESE_SUPPORT
+#if CHINESE_GB_SUPPORT
   if (enc16.charSet == font16AdobeGB12) {
     for (i = 0; gfxGB12Tab[i].name; ++i) {
       if (!strcmp(obj1.getName(), gfxGB12Tab[i].name))
@@ -920,6 +932,20 @@ void GfxFont::getType0EncAndWidths(Dict *fontDict) {
       goto err1;
     }
     enc16.enc = gfxGB12Tab[i].enc;
+  }
+#endif
+#if CHINESE_CNS_SUPPORT
+  if (enc16.charSet == font16AdobeCNS13) {
+    for (i = 0; gfxCNS13Tab[i].name; ++i) {
+      if (!strcmp(obj1.getName(), gfxCNS13Tab[i].name))
+	break;
+    }
+    if (!gfxCNS13Tab[i].name) {
+      error(-1, "Unknown encoding '%s' for Adobe-CNS1-3 font",
+	    obj1.getName());
+      goto err1;
+    }
+    enc16.enc = gfxCNS13Tab[i].enc;
   }
 #endif
   obj1.free();

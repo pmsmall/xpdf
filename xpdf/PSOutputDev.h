@@ -193,6 +193,8 @@ private:
   int opi20Nest;		// nesting level of OPI 2.0 objects
 #endif
 
+  GBool type3Warning;		// only show the Type 3 font warning once
+
   GBool ok;			// set up ok?
 };
 

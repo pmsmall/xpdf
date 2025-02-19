@@ -398,6 +398,7 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
     writePS("%%%%EndProlog\n");
 
   // set up fonts
+  type3Warning = gFalse;
   if (!doForm)
     writePS("%%%%BeginSetup\n");
   writePS("xpdf begin\n");
@@ -592,6 +593,10 @@ void PSOutputDev::setupFont(GfxFont *font) {
 
   // do font substitution
   } else {
+    if (!type3Warning && font->getType() == fontType3) {
+      error(-1, "This document uses Type 3 fonts - some text may not be correctly printed");
+      type3Warning = gTrue;
+    }
     name = font->getName();
     psName = NULL;
     if (name) {
@@ -1198,6 +1203,9 @@ void PSOutputDev::drawString16(GfxState *state, GString *s) {
     break;
 
   case font16AdobeGB12:
+    break;
+
+  case font16AdobeCNS13:
     break;
   }
 }

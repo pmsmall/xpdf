@@ -213,7 +213,7 @@ GfxResources::GfxResources(Dict *resDict, GfxResources *next) {
     // get XObject dictionary
     resDict->lookup("XObject", &xObjDict);
 
-    // get colorspace dictionary
+    // get color space dictionary
     resDict->lookup("ColorSpace", &colorSpaceDict);
 
     // get pattern dictionary
@@ -285,15 +285,15 @@ void GfxResources::lookupColorSpace(char *name, Object *obj) {
   obj->initNull();
 }
 
-Pattern *GfxResources::lookupPattern(char *name) {
+GfxPattern *GfxResources::lookupPattern(char *name) {
   GfxResources *resPtr;
-  Pattern *pattern;
+  GfxPattern *pattern;
   Object obj;
 
   for (resPtr = this; resPtr; resPtr = resPtr->next) {
     if (resPtr->patternDict.isDict()) {
       if (!resPtr->patternDict.dictLookup(name, &obj)->isNull()) {
-	pattern = Pattern::parse(&obj);
+	pattern = GfxPattern::parse(&obj);
 	obj.free();
 	return pattern;
       }
@@ -754,7 +754,7 @@ void Gfx::opSetFillColorSpace(Object args[], int numArgs) {
   if (colorSpace) {
     state->setFillColorSpace(colorSpace);
   } else {
-    error(getPos(), "Bad colorspace");
+    error(getPos(), "Bad color space");
   }
   for (i = 0; i < gfxColorMaxComps; ++i) {
     color.c[i] = 0;
@@ -780,7 +780,7 @@ void Gfx::opSetStrokeColorSpace(Object args[], int numArgs) {
   if (colorSpace) {
     state->setStrokeColorSpace(colorSpace);
   } else {
-    error(getPos(), "Bad colorspace");
+    error(getPos(), "Bad color space");
   }
   for (i = 0; i < gfxColorMaxComps; ++i) {
     color.c[i] = 0;
@@ -815,7 +815,7 @@ void Gfx::opSetStrokeColor(Object args[], int numArgs) {
 
 void Gfx::opSetFillColorN(Object args[], int numArgs) {
   GfxColor color;
-  Pattern *pattern;
+  GfxPattern *pattern;
   int i;
 
   if (state->getFillColorSpace()->getMode() == csPattern) {
@@ -847,7 +847,7 @@ void Gfx::opSetFillColorN(Object args[], int numArgs) {
 
 void Gfx::opSetStrokeColorN(Object args[], int numArgs) {
   GfxColor color;
-  Pattern *pattern;
+  GfxPattern *pattern;
   int i;
 
   if (state->getStrokeColorSpace()->getMode() == csPattern) {
@@ -1094,8 +1094,8 @@ void Gfx::opShFill(Object args[], int numArgs) {
 
 void Gfx::doPatternFill(GBool eoFill) {
   GfxPatternColorSpace *patCS;
-  Pattern *pattern;
-  TilingPattern *tPat;
+  GfxPattern *pattern;
+  GfxTilingPattern *tPat;
   GfxColorSpace *cs;
   GfxPath *path;
   GfxSubpath *subpath;
@@ -1117,7 +1117,7 @@ void Gfx::doPatternFill(GBool eoFill) {
   if (pattern->getType() != 1) {
     return;
   }
-  tPat = (TilingPattern *)pattern;
+  tPat = (GfxTilingPattern *)pattern;
 
   // construct a (pattern space) -> (current space) transform matrix
   ctm = state->getCTM();
@@ -1906,7 +1906,7 @@ void Gfx::doWidgetForm(Object *str, double xMin, double yMin,
   // draw it
   doForm1(str, resDict, m, bbox);
 
-  obj1.free();
+  resObj.free();
   bboxObj.free();
 }
 

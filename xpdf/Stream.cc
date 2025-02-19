@@ -596,20 +596,24 @@ GBool FileStream::fillBuf() {
 
   bufPos += bufEnd - buf;
   bufPtr = bufEnd = buf;
-  if (length >= 0 && bufPos >= start + length)
+  if (length >= 0 && bufPos >= start + length) {
     return gFalse;
-  if (length >= 0 && bufPos + 256 > start + length)
+  }
+  if (length >= 0 && bufPos + fileStreamBufSize > start + length) {
     n = start + length - bufPos;
-  else
-    n = 256;
+  } else {
+    n = fileStreamBufSize;
+  }
   n = fread(buf, 1, n, f);
   bufEnd = buf + n;
-  if (bufPtr >= bufEnd)
+  if (bufPtr >= bufEnd) {
     return gFalse;
+  }
 #ifndef NO_DECRYPTION
   if (decrypt) {
-    for (p = buf; p < bufEnd; ++p)
+    for (p = buf; p < bufEnd; ++p) {
       *p = (char)decrypt->decryptByte((Guchar)*p);
+    }
   }
 #endif
   return gTrue;

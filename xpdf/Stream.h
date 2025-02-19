@@ -237,6 +237,8 @@ private:
 // FileStream
 //------------------------------------------------------------------------
 
+#define fileStreamBufSize 256
+
 class FileStream: public BaseStream {
 public:
 
@@ -263,7 +265,7 @@ private:
   FILE *f;
   int start;
   int length;
-  char buf[256];
+  char buf[fileStreamBufSize];
   char *bufPtr;
   char *bufEnd;
   int bufPos;

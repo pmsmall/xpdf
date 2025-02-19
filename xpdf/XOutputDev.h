@@ -112,9 +112,14 @@ extern GBool useEUCJP;
 extern GString *japan12Font;
 #endif
 
-#if CHINESE_SUPPORT
-// X font name pattern to use for Chinese text.
+#if CHINESE_GB_SUPPORT
+// X font name pattern to use for Chinese GB text.
 extern GString *gb12Font;
+#endif
+
+#if CHINESE_CNS_SUPPORT
+// X font name pattern to use for Chinese CNS text.
+extern GString *cns13Font;
 #endif
 
 //------------------------------------------------------------------------
@@ -484,6 +489,7 @@ private:
   XOutputFontCache *fontCache;	// font cache
   XOutputState *save;		// stack of saved states
   TextPage *text;		// text from the current page
+  GBool type3Warning;		// only show the Type 3 font warning once
 
   void updateLineAttrs(GfxState *state, GBool updateDash);
   void doFill(GfxState *state, int rule);

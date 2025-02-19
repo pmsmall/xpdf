@@ -1121,15 +1121,15 @@ void GfxPatternColorSpace::getCMYK(GfxColor *color, GfxCMYK *cmyk) {
 // Pattern
 //------------------------------------------------------------------------
 
-Pattern::Pattern(int type) {
+GfxPattern::GfxPattern(int type) {
   this->type = type;
 }
 
-Pattern::~Pattern() {
+GfxPattern::~GfxPattern() {
 }
 
-Pattern *Pattern::parse(Object *obj) {
-  Pattern *pattern;
+GfxPattern *GfxPattern::parse(Object *obj) {
+  GfxPattern *pattern;
   Dict *dict;
   Object obj1;
 
@@ -1138,7 +1138,7 @@ Pattern *Pattern::parse(Object *obj) {
     dict = obj->streamGetDict();
     dict->lookup("PatternType", &obj1);
     if (obj1.isInt() && obj1.getInt() == 1) {
-      pattern = new TilingPattern(dict, obj);
+      pattern = new GfxTilingPattern(dict, obj);
     }
     obj1.free();
   }
@@ -1146,11 +1146,11 @@ Pattern *Pattern::parse(Object *obj) {
 }
 
 //------------------------------------------------------------------------
-// TilingPattern
+// GfxTilingPattern
 //------------------------------------------------------------------------
 
-TilingPattern::TilingPattern(Dict *streamDict, Object *stream):
-  Pattern(1)
+GfxTilingPattern::GfxTilingPattern(Dict *streamDict, Object *stream):
+  GfxPattern(1)
 {
   Object obj1, obj2;
   int i;
@@ -1218,19 +1218,19 @@ TilingPattern::TilingPattern(Dict *streamDict, Object *stream):
   stream->copy(&contentStream);
 }
 
-TilingPattern::~TilingPattern() {
+GfxTilingPattern::~GfxTilingPattern() {
   resDict.free();
   contentStream.free();
 }
 
-Pattern *TilingPattern::copy() {
-  return new TilingPattern(this);
+GfxPattern *GfxTilingPattern::copy() {
+  return new GfxTilingPattern(this);
 }
 
-TilingPattern::TilingPattern(TilingPattern *pat):
-  Pattern(1)
+GfxTilingPattern::GfxTilingPattern(GfxTilingPattern *pat):
+  GfxPattern(1)
 {
-  memcpy(this, pat, sizeof(TilingPattern));
+  memcpy(this, pat, sizeof(GfxTilingPattern));
   pat->resDict.copy(&resDict);
   pat->contentStream.copy(&contentStream);
 }
@@ -1706,7 +1706,7 @@ GfxImageColorMap::GfxImageColorMap(int bits, Object *decode,
 
   ok = gTrue;
 
-  // bits per component and colorspace
+  // bits per component and color space
   this->bits = bits;
   maxPixel = (1 << bits) - 1;
   this->colorSpace = colorSpace;
@@ -2205,14 +2205,14 @@ void GfxState::setStrokeColorSpace(GfxColorSpace *colorSpace) {
   strokeColorSpace = colorSpace;
 }
 
-void GfxState::setFillPattern(Pattern *pattern) {
+void GfxState::setFillPattern(GfxPattern *pattern) {
   if (fillPattern) {
     delete fillPattern;
   }
   fillPattern = pattern;
 }
 
-void GfxState::setStrokePattern(Pattern *pattern) {
+void GfxState::setStrokePattern(GfxPattern *pattern) {
   if (strokePattern) {
     delete strokePattern;
   }
