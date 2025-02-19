@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   int exitCode;
 
   {
-    // this in inside a block so that the XpdfApp object gets freed
+    // this is inside a block so that the XpdfApp object gets freed
     XpdfApp app(argc, argv);
     if (app.getNumViewers() > 0) {
       exitCode = app.exec();
@@ -43,9 +43,9 @@ int CALLBACK WinMain(HINSTANCE hIstance, HINSTANCE hPrevInstance,
   }
   char **argv = (char  **)gmallocn(argc + 1, sizeof(char *));
   for (i = 0; i < argc; ++i) {
-    n = WideCharToMultiByte(CP_ACP, 0, args[i], -1, NULL, 0, NULL, NULL);
+    n = WideCharToMultiByte(CP_UTF8, 0, args[i], -1, NULL, 0, NULL, NULL);
     argv[i] = (char *)gmalloc(n);
-    WideCharToMultiByte(CP_ACP, 0, args[i], -1, argv[i], n, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, args[i], -1, argv[i], n, NULL, NULL);
   }
   argv[argc] = NULL;
   LocalFree(args);

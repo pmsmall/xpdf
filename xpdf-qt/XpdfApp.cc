@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <QLocalSocket>
 #include "config.h"
 #include "parseargs.h"
 #include "GString.h"
@@ -33,6 +34,8 @@ static char vectorAntialiasArg[16] = "";
 static char textEncArg[128] = "";
 static char passwordArg[33] = "";
 static GBool fullScreen = gFalse;
+static char remoteServerArg[256] = "";
+static char tabStateFile[256] = "";
 static char cfgFileArg[256] = "";
 static GBool printCommandsArg = gFalse;
 static GBool printVersionArg = gFalse;
@@ -49,7 +52,9 @@ static ArgDesc argDesc[] = {
   {"-enc",          argString, textEncArg,         sizeof(textEncArg),         "output text encoding name"},
   {"-pw",           argString, passwordArg,        sizeof(passwordArg),        "password (for encrypted files)"},
   {"-fullscreen",   argFlag,   &fullScreen,        0,                          "run in full-screen (presentation) mode"},
+  {"-remote",       argString, remoteServerArg,    sizeof(remoteServerArg),    "remote server mode - remaining args are commands"},
   {"-cmd",          argFlag,   &printCommandsArg,  0,                          "print commands as they're executed"},
+  {"-tabstate",     argString, tabStateFile,       sizeof(tabStateFile),       "file for saving/loading tab state"},
   {"-cfg",          argString, cfgFileArg,         sizeof(cfgFileArg),         "configuration file to use in place of .xpdfrc"},
   {"-v",            argFlag,   &printVersionArg,   0,                          "print copyright and version info"},
   {"-h",            argFlag,   &printHelpArg,      0,                          "print usage information"},
@@ -66,6 +71,9 @@ static ArgDesc argDesc[] = {
 XpdfApp::XpdfApp(int &argc, char **argv):
   QApplication(argc, argv)
 {
+  XpdfViewer *viewer;
+  QLocalSocket *sock;
+  QString sockName;
   const char *fileName, *dest;
   GString *color;
   GBool ok;
@@ -85,6 +93,7 @@ XpdfApp::XpdfApp(int &argc, char **argv):
   }
 
   //--- set up GlobalParams; handle command line arguments
+  GlobalParams::defaultTextEncoding = "UCS-2";
   globalParams = new GlobalParams(cfgFileArg);
 #ifdef _WIN32
   QString dir = applicationDirPath();
@@ -137,6 +146,9 @@ XpdfApp::XpdfApp(int &argc, char **argv):
   if (textEncArg[0]) {
     globalParams->setTextEncoding(textEncArg);
   }
+  if (tabStateFile[0]) {
+    globalParams->setTabStateFile(tabStateFile);
+  }
   if (printCommandsArg) {
     globalParams->setPrintCommands(gTrue);
   }
@@ -144,6 +156,32 @@ XpdfApp::XpdfApp(int &argc, char **argv):
   errorEventType = QEvent::registerEventType();
 
   viewers = new GList();
+
+  //--- remote server mode
+  if (remoteServerArg[0]) {
+    sock = new QLocalSocket(this);
+    sockName = "xpdf_";
+    sockName += remoteServerArg;
+    sock->connectToServer(sockName, QIODevice::WriteOnly);
+    if (sock->waitForConnected(5000)) {
+      for (i = 1; i < argc; ++i) {
+	sock->write(argv[i]);
+	sock->write("\n");
+      }
+      while (sock->bytesToWrite()) {
+	sock->waitForBytesWritten(5000);
+      }
+      delete sock;
+      ::exit(0);
+    } else {
+      delete sock;
+      viewer = newWindow(gFalse, remoteServerArg);
+      for (i = 1; i < argc; ++i) {
+	viewer->execCmd(argv[i], NULL);
+      }
+      return;
+    }
+  }
 
   //--- load PDF file(s) requested on the command line
   if (argc >= 2) {
@@ -163,12 +201,18 @@ XpdfApp::XpdfApp(int &argc, char **argv):
 	fileName = argv[i];
 	++i;
       }
+      // on Windows: xpdf.cc converts command line args to UTF-8
+      // on Linux: command line args are in the local 8-bit charset
+#ifdef _WIN32
+      QString qFileName = QString::fromUtf8(fileName);
+#else
+      QString qFileName = QString::fromLocal8Bit(fileName);
+#endif
       if (viewers->getLength() > 0) {
-	ok = ((XpdfViewer *)viewers->get(0))->openInNewTab(fileName, pg, dest,
-							   passwordArg,
-							   gFalse);
+	ok = ((XpdfViewer *)viewers->get(0))
+	         ->openInNewTab(qFileName, pg, dest, passwordArg, gFalse);
       } else {
-	ok = openInNewWindow(fileName, pg, dest, passwordArg, fullScreen);
+	ok = openInNewWindow(qFileName, pg, dest, passwordArg, fullScreen);
       }
     }
   } else {
@@ -185,10 +229,15 @@ int XpdfApp::getNumViewers() {
   return viewers->getLength();
 }
 
-void XpdfApp::newWindow(GBool fullScreen) {
+XpdfViewer *XpdfApp::newWindow(GBool fullScreen,
+			       const char *remoteServerName) {
   XpdfViewer *viewer = new XpdfViewer(this, fullScreen);
   viewers->append(viewer);
+  if (remoteServerName) {
+    viewer->startRemoteServer(remoteServerName);
+  }
   viewer->show();
+  return viewer;
 }
 
 GBool XpdfApp::openInNewWindow(QString fileName, int page, QString dest,

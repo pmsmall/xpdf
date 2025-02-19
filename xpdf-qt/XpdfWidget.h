@@ -2,7 +2,7 @@
 //
 // XpdfWidget.h
 //
-// Copyright 2009-2017 Glyph & Cog, LLC
+// Copyright 2009-2019 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -10,7 +10,7 @@
 //!
 //! XpdfWidget is a PDF viewer widget class for Qt.
 //! <br><br><br>
-//! Copyright 2009-2017 Glyph & Cog, LLC
+//! Copyright 2009-2019 Glyph & Cog, LLC
 
 //! \file
 
@@ -29,6 +29,7 @@ class QMutex;
 class QTimer;
 #if XPDFWIDGET_PRINTING
 class QPrinter;
+class QPrintDialog;
 #endif
 
 class GString;
@@ -902,12 +903,17 @@ private:
 		     QString &targetFileName, int &targetPage,
 		     QString &targetDest);
 
+#if XPDFWIDGET_PRINTING
+  QPrinter *printerForDialog;
+  QPrintDialog *printDialog;
   int printHDPI, printVDPI;
   bool printCanceled;
+#endif
 
   static QMutex initMutex;
 
   QtPDFCore *core;
+  double scaleFactor;
 
   bool keyPassthrough;
   bool mousePassthrough;

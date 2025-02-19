@@ -13,6 +13,7 @@
 
 #include <QDialog>
 #include <QIcon>
+#include <QLocalServer>
 #include <QMainWindow>
 #include <QToolButton>
 #include "gtypes.h"
@@ -138,9 +139,24 @@ public:
   GBool openInNewTab(QString fileName, int page, QString destName,
 		     QString password, GBool switchToTab);
 
+  // Check that [fileName] is open in the current tab -- if not, open
+  // it.  In either case, switch to [page] or [destName].  Returns a
+  // boolean indicating success.
+  GBool checkOpen(QString fileName, int page, QString destName,
+		  QString password);
+
   virtual QMenu *createPopupMenu();
 
+  // Start up the remote server socket.
+  void startRemoteServer(const QString &remoteServerName);
+
+  // Execute a command [cmd], with [event] for context.
+  void execCmd(const char *cmd, QInputEvent *event);
+
 private slots:
+
+  void remoteServerConnection();
+  void remoteServerRead();
 
   void pdfResized();
   void pdfPaintDone(bool finished);
@@ -215,9 +231,13 @@ private:
   friend class XpdfErrorWindow;
 
   //--- commands
-  void execCmd(const char *cmd, QInputEvent *event);
+  int mouseX(QInputEvent *event);
+  int mouseY(QInputEvent *event);
   void cmdAbout(GString *args[], int nArgs, QInputEvent *event);
   void cmdBlockSelectMode(GString *args[], int nArgs, QInputEvent *event);
+  void cmdCheckOpenFile(GString *args[], int nArgs, QInputEvent *event);
+  void cmdCheckOpenFileAtDest(GString *args[], int nArgs, QInputEvent *event);
+  void cmdCheckOpenFileAtPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdCloseTabOrQuit(GString *args[], int nArgs, QInputEvent *event);
   void cmdCloseSidebar(GString *args[], int nArgs, QInputEvent *event);
   void cmdCloseSidebarMoveResizeWin(GString *args[], int nArgs, QInputEvent *event);
@@ -251,6 +271,7 @@ private:
   void cmdHelp(GString *args[], int nArgs, QInputEvent *event);
   void cmdHorizontalContinuousMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdLinearSelectMode(GString *args[], int nArgs, QInputEvent *event);
+  void cmdLoadTabState(GString *args[], int nArgs, QInputEvent *event);
   void cmdNewTab(GString *args[], int nArgs, QInputEvent *event);
   void cmdNewWindow(GString *args[], int nArgs, QInputEvent *event);
   void cmdNextPage(GString *args[], int nArgs, QInputEvent *event);
@@ -258,6 +279,9 @@ private:
   void cmdNextTab(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpen(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenErrorWindow(GString *args[], int nArgs, QInputEvent *event);
+  void cmdOpenFile(GString *args[], int nArgs, QInputEvent *event);
+  void cmdOpenFileAtDest(GString *args[], int nArgs, QInputEvent *event);
+  void cmdOpenFileAtPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenSidebar(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenSidebarMoveResizeWin(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenSidebarResizeWin(GString *args[], int nArgs, QInputEvent *event);
@@ -277,6 +301,7 @@ private:
   void cmdRun(GString *args[], int nArgs, QInputEvent *event);
   void cmdSaveAs(GString *args[], int nArgs, QInputEvent *event);
   void cmdSaveImage(GString *args[], int nArgs, QInputEvent *event);
+  void cmdSaveTabState(GString *args[], int nArgs, QInputEvent *event);
   void cmdScrollDown(GString *args[], int nArgs, QInputEvent *event);
   void cmdScrollDownNextPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdScrollLeft(GString *args[], int nArgs, QInputEvent *event);
@@ -401,6 +426,8 @@ private:
   GList *tabInfo;		// [XpdfTabInfo]
   XpdfTabInfo *currentTab;
 
+  double scaleFactor;
+
   XpdfWidget::DisplayMode fullScreenPreviousDisplayMode;
   double fullScreenPreviousZoom;
 
@@ -415,6 +442,8 @@ private:
 #endif
 
   QString lastFileOpened;
+
+  QLocalServer *remoteServer;
 };
 
 #endif

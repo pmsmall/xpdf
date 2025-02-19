@@ -260,7 +260,9 @@ void QtPDFCore::startSelection(int wx, int wy) {
     return;
   }
     startSelectionDrag(pg, x, y);
-    doSetCursor(Qt::CrossCursor);
+    if (getSelectMode() == selectModeBlock) {
+      doSetCursor(Qt::CrossCursor);
+    }
     dragging = gTrue;
 }
 
@@ -311,7 +313,7 @@ void QtPDFCore::mouseMove(int wx, int wy) {
   int pg, x, y;
   double xu, yu;
   const char *s;
-  GBool ok;
+  GBool ok, mouseOverText;
 
   if (!doc || doc->getNumPages() == 0) {
     return;
@@ -321,25 +323,41 @@ void QtPDFCore::mouseMove(int wx, int wy) {
     if (ok) {
       moveSelectionDrag(pg, x, y);
     }
-  } else if (hyperlinksEnabled) {
+  } else {
     cvtDevToUser(pg, x, y, &xu, &yu);
-    if (ok && (action = findLink(pg, xu, yu))) {
+
+    // check for a link
+    action = NULL;
+    if (hyperlinksEnabled && ok) {
+      action = findLink(pg, xu, yu);
+    }
+
+    // check for text
+    mouseOverText = gFalse;
+    if (!action && getSelectMode() == selectModeLinear && ok) {
+      mouseOverText = overText(pg, x, y);
+    }
+
+    // update the cursor
+    if (action) {
       doSetCursor(Qt::PointingHandCursor);
-      if (action != linkAction) {
-	linkAction = action;
-	if (updateCbk) {
-	  //~ should pass a QString to updateCbk()
-	  s = getLinkInfo(action).toLocal8Bit().constData();
-	  (*updateCbk)(updateCbkData, NULL, -1, -1, s);
-	}
-      }
+    } else if (mouseOverText) {
+      doSetCursor(Qt::IBeamCursor);
     } else {
       doUnsetCursor();
-      if (linkAction) {
-	linkAction = NULL;
-	if (updateCbk) {
-	  (*updateCbk)(updateCbkData, NULL, -1, -1, "");
+    }
+
+    // update the link info
+    if (action != linkAction) {
+      linkAction = action;
+      if (updateCbk) {
+	//~ should pass a QString to updateCbk()
+	if (linkAction) {
+	  s = getLinkInfo(linkAction).toLocal8Bit().constData();
+	} else {
+	  s = "";
 	}
+	(*updateCbk)(updateCbkData, NULL, -1, -1, s);
       }
     }
   }
@@ -436,9 +454,9 @@ QString QtPDFCore::getSelectedTextQString() {
     return "";
   }
   enc = globalParams->getTextEncodingName();
-  if (!s->cmp("UTF-8")) {
+  if (!enc->cmp("UTF-8")) {
     qs = QString::fromUtf8(s->getCString());
-  } else if (!s->cmp("UCS-2")) {
+  } else if (!enc->cmp("UCS-2")) {
     for (i = 0; i+1 < s->getLength(); i += 2) {
       qs.append((QChar)(((s->getChar(i) & 0xff) << 8) +
 			(s->getChar(i+1) & 0xff)));
@@ -751,7 +769,7 @@ void QtPDFCore::runCommand(GString *cmdFmt, GString *arg) {
   if ((s = strstr(cmdFmt->getCString(), "%s"))) {
     cmd = mungeURL(arg);
     cmd->insert(0, cmdFmt->getCString(),
-		s - cmdFmt->getCString());
+		(int)(s - cmdFmt->getCString()));
     cmd->append(s + 2);
   } else {
     cmd = cmdFmt->copy();
@@ -847,7 +865,7 @@ QSize QtPDFCore::getBestSize() {
   double zoomPercent;
   int w, h, pg, rot;
 
-  if (!doc) {
+  if (!doc || doc->getNumPages() == 0) {
     //~ what should this return?
     return QSize(612, 792);
   }
@@ -916,9 +934,13 @@ void QtPDFCore::paintEvent(int x, int y, int w, int h) {
   bitmap = getWindowBitmap(wholeWindow);
   QImage image(bitmap->getDataPtr(), bitmap->getWidth(),
 	       bitmap->getHeight(), QImage::Format_RGB888);
-  painter.drawImage(QRect(x, y, w, h), image,
-		    QRect((int)(x * scaleFactor), (int)(y * scaleFactor),
-			  (int)(w * scaleFactor), (int)(h * scaleFactor)));
+  if (scaleFactor == 1) {
+    painter.drawImage(QRect(x, y, w, h), image, QRect(x, y, w, h));
+  } else {
+    painter.drawImage(QRectF(x, y, w, h), image,
+		      QRectF(x * scaleFactor, y * scaleFactor,
+			     w * scaleFactor, h * scaleFactor));
+  }
   if (paintDoneCbk) {
     (*paintDoneCbk)(paintDoneCbkData, (bool)isBitmapFinished());
   }
@@ -938,8 +960,17 @@ void QtPDFCore::tick() {
 }
 
 void QtPDFCore::invalidate(int x, int y, int w, int h) {
-  viewport->update((int)(x / scaleFactor), (int)(y / scaleFactor),
-		   (int)(w / scaleFactor), (int)(h / scaleFactor));
+  int xx, yy, ww, hh;
+
+  if (scaleFactor == 1) {
+    viewport->update(x, y, w, h);
+  } else {
+    xx = (int)(x / scaleFactor);
+    yy = (int)(y / scaleFactor);
+    ww = (int)ceil((x + w) / scaleFactor) - xx;
+    hh = (int)ceil((y + h) / scaleFactor) - yy;
+    viewport->update(xx, yy, ww, hh);
+  }
 }
 
 void QtPDFCore::updateScrollbars() {

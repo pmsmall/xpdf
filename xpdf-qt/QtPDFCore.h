@@ -130,6 +130,7 @@ public:
   void takeFocus();
   QSize getBestSize();
   int getDisplayDpi() { return displayDpi; }
+  double getScaleFactor() { return scaleFactor; }
   void enableHyperlinks(GBool on) { hyperlinksEnabled = on; }
   GBool getHyperlinksEnabled() { return hyperlinksEnabled; }
   void enableSelect(GBool on) { selectEnabled = on; }

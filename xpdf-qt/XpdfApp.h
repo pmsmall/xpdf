@@ -32,7 +32,8 @@ public:
 
   int getNumViewers();
 
-  void newWindow(GBool fullScreen = gFalse);
+  XpdfViewer *newWindow(GBool fullScreen = gFalse,
+			const char *remoteServerName = NULL);
 
   GBool openInNewWindow(QString fileName, int page = 1,
 			QString dest = QString(),

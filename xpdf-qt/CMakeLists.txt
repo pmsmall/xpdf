@@ -19,13 +19,15 @@ if ((QT4_FOUND OR Qt5Widgets_FOUND)
   if (QT4_FOUND)
     include(${QT_USE_FILE})
   else ()
-    include_directories("${QT_INCLUDES}")
+    include_directories(SYSTEM "${QT_INCLUDES}")
     add_definitions(${QT_DEFINITIONS})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${QT_CFLAGS}")
-    if(POLICY CMP0020)
-      # do not link to qtmain.lib
-      cmake_policy(SET CMP0020 OLD)
-    endif()
+  endif ()
+  cmake_policy(SET CMP0020 NEW)
+
+  if (Qt5Widgets_FOUND AND NOT (Qt5Widgets_VERSION VERSION_LESS 5.7.0))
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
   endif ()
 
   if (XPDFWIDGET_PRINTING)
@@ -81,11 +83,17 @@ if ((QT4_FOUND OR Qt5Widgets_FOUND)
     ${XPDF_ICONS}
   )
   target_link_libraries(xpdf ${QT_LIBRARIES} ${EXTRA_QT_LIBRARIES}
+                        ${PAPER_LIBRARY}
                         ${FREETYPE_LIBRARY} ${FREETYPE_OTHER_LIBS}
                         ${DTYPE_LIBRARY} ${LCMS_LIBRARY}
                         ${CMAKE_THREAD_LIBS_INIT})
   set_property(TARGET xpdf PROPERTY WIN32_EXECUTABLE 1)
+  if (QT4_FOUND)
+    set_property(TARGET xpdf PROPERTY QT4_NO_LINK_QTMAIN ON)
+  else ()
+    set_property(TARGET xpdf PROPERTY Qt5_NO_LINK_QTMAIN ON)
+  endif ()
 
-  install(TARGETS xpdf RUNTIME DESTINATION bin)
-  install(FILES ${PROJECT_SOURCE_DIR}/doc/xpdf.1 DESTINATION man/man1)
+  install(TARGETS xpdf RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(FILES ${PROJECT_SOURCE_DIR}/doc/xpdf.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif ()

@@ -78,12 +78,12 @@ void XpdfWidget::setup(const QColor &paperColor, const QColor &matteColor,
 
   init();
 
-  paperColor2[0] = paperColor.red();
-  paperColor2[1] = paperColor.green();
-  paperColor2[2] = paperColor.blue();
-  matteColor2[0] = matteColor.red();
-  matteColor2[1] = matteColor.green();
-  matteColor2[2] = matteColor.blue();
+  paperColor2[0] = (Guchar)paperColor.red();
+  paperColor2[1] = (Guchar)paperColor.green();
+  paperColor2[2] = (Guchar)paperColor.blue();
+  matteColor2[0] = (Guchar)matteColor.red();
+  matteColor2[1] = (Guchar)matteColor.green();
+  matteColor2[2] = (Guchar)matteColor.blue();
   try {
     core = new QtPDFCore(viewport(), horizontalScrollBar(),
 			 verticalScrollBar(),
@@ -97,12 +97,15 @@ void XpdfWidget::setup(const QColor &paperColor, const QColor &matteColor,
     core->setPaintDoneCbk(paintDoneCbk, this);
     core->setTileDoneCbk(tileDoneCbk, this);
     connect(this, SIGNAL(tileDone()), viewport(), SLOT(update()));
+    scaleFactor = core->getScaleFactor();
   } catch (GMemException e) {
     //~ what should this do?
     core = NULL;
   }
 
 #if XPDFWIDGET_PRINTING
+  printerForDialog = NULL;
+  printDialog = NULL;
   printHDPI = printVDPI = 0;
 #endif
 
@@ -115,6 +118,10 @@ void XpdfWidget::setup(const QColor &paperColor, const QColor &matteColor,
 }
 
 XpdfWidget::~XpdfWidget() {
+#if XPDFWIDGET_PRINTING
+  delete printerForDialog;
+  delete printDialog;
+#endif
   delete tickTimer;
   delete core;
 }
@@ -216,9 +223,9 @@ void XpdfWidget::showPasswordDialog(bool showDlg) {
 void XpdfWidget::setMatteColor(const QColor &matteColor) {
   SplashColor matteColor2;
 
-  matteColor2[0] = matteColor.red();
-  matteColor2[1] = matteColor.green();
-  matteColor2[2] = matteColor.blue();
+  matteColor2[0] = (Guchar)matteColor.red();
+  matteColor2[1] = (Guchar)matteColor.green();
+  matteColor2[2] = (Guchar)matteColor.blue();
   try {
     core->setMatteColor(matteColor2);
   } catch (GMemException e) {
@@ -426,7 +433,11 @@ QString XpdfWidget::getFileName() const {
     if (!core->getDoc() || !core->getDoc()->getFileName()) {
       return QString();
     }
-    return QString(core->getDoc()->getFileName()->getCString());
+#ifdef _WIN32
+    return QString::fromWCharArray(core->getDoc()->getFileNameU());
+#else
+    return QString::fromLocal8Bit(core->getDoc()->getFileName()->getCString());
+#endif
   } catch (GMemException e) {
     return QString();
   }
@@ -1132,9 +1143,9 @@ void XpdfWidget::setSelectionColor(const QColor &selectionColor) {
   SplashColor col;
 
   try {
-    col[0] = selectionColor.red();
-    col[1] = selectionColor.green();
-    col[2] = selectionColor.blue();
+    col[0] = (Guchar)selectionColor.red();
+    col[1] = (Guchar)selectionColor.green();
+    col[2] = (Guchar)selectionColor.blue();
     core->setSelectionColor(col);
   } catch (GMemException e) {
   }
@@ -1162,28 +1173,33 @@ bool XpdfWidget::okToPrint() const {
 }
 
 XpdfWidget::ErrorCode XpdfWidget::print(bool showDialog) {
-  QPrinter *prt;
-  QPrintDialog *dlg;
+  GString *defaultPrinter;
   ErrorCode err;
 
   try {
     if (!core->getDoc()) {
       return pdfErrNoHandle;
     }
-    prt = new QPrinter(QPrinter::HighResolution);
-    prt->setFromTo(1, core->getDoc()->getNumPages());
+    if (!printerForDialog) {
+      printerForDialog = new QPrinter(QPrinter::HighResolution);
+      if ((defaultPrinter = globalParams->getDefaultPrinter())) {
+	printerForDialog->setPrinterName(
+			    QString::fromUtf8(defaultPrinter->getCString()));
+	delete defaultPrinter;
+      }
+    }
+    printerForDialog->setFromTo(1, core->getDoc()->getNumPages());
     if (showDialog) {
-      dlg = new QPrintDialog(prt, this);
-      if (dlg->exec() != QDialog::Accepted) {
-	delete dlg;
-	delete prt;
+      if (!printDialog) {
+	printDialog = new QPrintDialog(printerForDialog, this);
+      }
+      if (printDialog->exec() != QDialog::Accepted) {
 	return pdfErrPrinting;
       }
-      delete dlg;
     }
     printCanceled = false;
-    err = printPDF(core->getDoc(), prt, printHDPI, printVDPI, this);
-    delete prt;
+    err = printPDF(core->getDoc(), printerForDialog,
+		   printHDPI, printVDPI, this);
     return err;
   } catch (GMemException e) {
     return pdfErrOutOfMemory;
@@ -1948,29 +1964,41 @@ void XpdfWidget::keyPressEvent(QKeyEvent *e) {
 }
 
 void XpdfWidget::mousePressEvent(QMouseEvent *e) {
+  int x, y;
+
   if (!mousePassthrough) {
+    x = (int)(e->x() * scaleFactor);
+    y = (int)(e->y() * scaleFactor);
     if (e->button() == Qt::LeftButton) {
-      core->startSelection(e->x(), e->y());
+      core->startSelection(x, y);
     } else if (e->button() == Qt::MidButton) {
-      core->startPan(e->x(), e->y());
+      core->startPan(x, y);
     }
   }
   emit mousePress(e);
 }
 
 void XpdfWidget::mouseReleaseEvent(QMouseEvent *e) {
+  int x, y;
+
   if (!mousePassthrough) {
+    x = (int)(e->x() * scaleFactor);
+    y = (int)(e->y() * scaleFactor);
     if (e->button() == Qt::LeftButton) {
-      core->endSelection(e->x(), e->y());
+      core->endSelection(x, y);
     } else if (e->button() == Qt::MidButton) {
-      core->endPan(e->x(), e->y());
+      core->endPan(x, y);
     }
   }
   emit mouseRelease(e);
 }
 
 void XpdfWidget::mouseMoveEvent(QMouseEvent *e) {
-  core->mouseMove(e->x(), e->y());
+  int x, y;
+
+  x = (int)(e->x() * scaleFactor);
+  y = (int)(e->y() * scaleFactor);
+  core->mouseMove(x, y);
   emit mouseMove(e);
 }
 
