@@ -44,7 +44,7 @@ void LTKFileReq::makeWidgets() {
   LTKBox *fileNameBox1, *fileNameBox2, *fileNameBox;
   LTKBox *listBox, *hScrollBox, *vScrollBox, *emptyBox, *listBox2;
 
-  dirLabel = new LTKLabel(NULL, 0, -1, NULL, "Dir:");
+  dirLabel = new LTKLabel(NULL, 0, ltkLabelStatic, -1, NULL, "Dir:");
   dirNameBox1 = new LTKBox(NULL, 1, 1, 0, 0, 0, 0, ltkBorderNone, 0, 0,
 			   dirLabel);
   dirName = new LTKTextIn(NULL, 0, 40, fontName, &dirNameCbk, NULL);
@@ -70,7 +70,7 @@ void LTKFileReq::makeWidgets() {
   listBox2 = new LTKBox(NULL, 2, 2, 0, 0, 0, 2, ltkBorderNone, 1, 1,
 			listBox, vScrollBox, hScrollBox, emptyBox);
 
-  fileLabel = new LTKLabel(NULL, 0, -1, NULL, "File:");
+  fileLabel = new LTKLabel(NULL, 0, ltkLabelStatic, -1, NULL, "File:");
   fileNameBox1 = new LTKBox(NULL, 1, 1, 0, 0, 0, 0, ltkBorderNone, 0, 0,
 			    fileLabel);
   fileName = new LTKTextIn(NULL, 0, 40, fontName, NULL, NULL);

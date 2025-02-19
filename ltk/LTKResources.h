@@ -33,6 +33,9 @@ extern GString *ltkGetStringResource(XrmDatabase db, GString *appName,
 extern int ltkGetIntResource(XrmDatabase db, GString *appName,
 			     char *instName, int def);
 
+extern GBool ltkGetBoolResource(XrmDatabase db, GString *appName,
+				char *instName, GBool def);
+
 extern unsigned long ltkGetColorResource(
                 XrmDatabase db, GString *appName,
                 char *instName,

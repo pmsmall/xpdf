@@ -142,15 +142,30 @@ GString *appendToPath(GString *path, char *fileName) {
 #endif
 	break;
     }
-    if (i >= 0) {
+    if (i <= 0) {
+#ifdef __EMX__
+      if (path->getChar[0] == '/' || path->getChar[0] == '\\') {
+	path->del(1, path->getLength() - 1);
+      } else if (path->getLength() >= 2 && path->getChar[1] == ':') {
+	path->del(2, path->getLength() - 2);
+      } else {
+	path->clear();
+	path->append("..");
+      }
+#else
+      if (path->getChar(0) == '/') {
+	path->del(1, path->getLength() - 1);
+      } else {
+	path->clear();
+	path->append("..");
+      }
+#endif
+    } else {
 #ifdef __EMX__
       if (path->getChar(i) == ':')
 	++i;
 #endif
       path->del(i, path->getLength() - i);
-    } else {
-      path->clear();
-      path->append("..");
     }
     return path;
   }

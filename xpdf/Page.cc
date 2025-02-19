@@ -18,6 +18,7 @@
 #include "OutputDev.h"
 #include "Gfx.h"
 #include "Error.h"
+
 #include "Params.h"
 #include "Page.h"
 
@@ -34,6 +35,10 @@ PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
     y1 = attrs->y1;
     x2 = attrs->x2;
     y2 = attrs->y2;
+    cropX1 = attrs->cropX1;
+    cropY1 = attrs->cropY1;
+    cropX2 = attrs->cropX2;
+    cropY2 = attrs->cropY2;
     rotate = attrs->rotate;
     attrs->resources.copy(&resources);
   } else {
@@ -43,6 +48,7 @@ PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
     y1 = 0;
     x2 = 612;
     y2 = 792;
+    cropX1 = cropY1 = cropX2 = cropY2 = 0;
     rotate = 0;
     resources.initNull();
   }
@@ -178,14 +184,14 @@ void Page::display(OutputDev *out, int dpi, int rotate) {
 
   if (printCommands) {
     printf("***** MediaBox = ll:%d,%d ur:%d,%d\n",
-	   getX2(), getY2(), getX2(), getY2());
+	   getX1(), getY1(), getX2(), getY2());
     if (isCropped()) {
       printf("***** CropBox = ll:%d,%d ur:%d,%d\n",
 	     getCropX1(), getCropY1(), getCropX2(), getCropY2());
     }
     printf("***** Rotate = %d\n", attrs->getRotate());
   }
-  rotate += attrs->getRotate();
+  rotate += getRotate();
   if (rotate >= 360)
     rotate -= 360;
   else if (rotate < 0)

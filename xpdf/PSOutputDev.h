@@ -22,6 +22,13 @@ class GfxPath;
 class GfxFont;
 
 //------------------------------------------------------------------------
+// Parameters
+//------------------------------------------------------------------------
+
+// Generate Level 1 PostScript?
+extern GBool psOutLevel1;
+
+//------------------------------------------------------------------------
 // PSOutputDev
 //------------------------------------------------------------------------
 
@@ -105,16 +112,21 @@ public:
 			     int width, int height, GBool invert,
 			     GBool inlineImg);
   virtual void drawImage(GfxState *state, Stream *str, int width,
-			 int height, GfxColorSpace *colorSpace,
+			 int height, GfxImageColorMap *colorMap,
 			 GBool inlineImg);
 
 private:
 
   void setupFont(GfxFont *font);
   void setupEmbeddedFont(Ref *id);
+  void setupEmbeddedFont(char *fileName);
   void doPath(GfxPath *path);
-  void doImage(GBool mask, GBool inlineImg, Stream *str,
-	       int width, int height, int len);
+  void doImageL1(GfxImageColorMap *colorMap,
+		 GBool invert, GBool inlineImg,
+		 Stream *str, int width, int height, int len);
+  void doImage(GfxImageColorMap *colorMap,
+	       GBool invert, GBool inlineImg,
+	       Stream *str, int width, int height, int len);
   void writePS(char *fmt, ...);
   void writePSString(GString *s);
 
@@ -130,6 +142,9 @@ private:
   Ref *fontFileIDs;		// list of object IDs of all embedded fonts
   int fontFileIDLen;		// number of entries in fontFileIDs array
   int fontFileIDSize;		// size of fontFileIDs array
+  char **fontFileNames;		// list of names of all embedded external fonts
+  int fontFileNameLen;		// number of entries in fontFileNames array
+  int fontFileNameSize;		// size of fontFileNames array
 
   GBool ok;			// set up ok?
 };

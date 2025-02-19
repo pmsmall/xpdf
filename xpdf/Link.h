@@ -93,7 +93,7 @@ private:
   GBool pageIsRef;		// is the page a reference or number?
   union {
     Ref pageRef;		// reference to page
-    int pageNum;		// zero-relative page number
+    int pageNum;		// one-relative page number
   };
   double left, bottom;		// position
   double right, top;
@@ -256,6 +256,9 @@ public:
   // Destructor.
   ~Link();
 
+  // Was the link created successfully?
+  GBool isOk() { return ok; }
+
   // Check if point is inside the link rectangle.
   GBool inRect(double x, double y)
     { return x1 <= x && x <= x2 && y1 <= y && y <= y2; }
@@ -274,6 +277,7 @@ private:
   double x2, y2;		// upper right corner
   double borderW;		// border width
   LinkAction *action;		// action
+  GBool ok;			// is link valid?
 };
 
 //------------------------------------------------------------------------

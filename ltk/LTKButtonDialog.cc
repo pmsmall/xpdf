@@ -68,15 +68,15 @@ LTKButtonDialogWidget::LTKButtonDialogWidget(char *name1, int widgetNum1,
 
   labelBox1 = labelBox2 = labelBox3 = NULL;
   if (line1) {
-    label1 = new LTKLabel(NULL, 0, -1, NULL, line1);
+    label1 = new LTKLabel(NULL, 0, ltkLabelStatic, -1, NULL, line1);
     labelBox1 = new LTKBox(NULL, 1, 1, 0, 0, 0, 0, ltkBorderNone, 0, 0,
 			   label1);
     if (line2) {
-      label2 = new LTKLabel(NULL, 0, -1, NULL, line2);
+      label2 = new LTKLabel(NULL, 0, ltkLabelStatic, -1, NULL, line2);
       labelBox2 = new LTKBox(NULL, 1, 1, 0, 0, 0, 0, ltkBorderNone, 0, 0,
 			     label2);
       if (line3) {
-	label3 = new LTKLabel(NULL, 0, -1, NULL, line3);
+	label3 = new LTKLabel(NULL, 0, ltkLabelStatic, -1, NULL, line3);
 	labelBox3 = new LTKBox(NULL, 1, 1, 0, 0, 0, 0, ltkBorderNone, 0, 0,
 			       label3);
 	labelBox = new LTKBox(NULL, 1, 3, 2, 2, 2, 2, ltkBorderNone, 0, 0,

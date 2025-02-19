@@ -62,6 +62,7 @@ public:
   Display *getDisplay() { return display; }
   int getScreenNum() { return screenNum; }
   Window getXWindow() { return xwin; }
+  Colormap getColormap() { return colormap; }
   unsigned long getFgColor() { return fgColor; }
   unsigned long getBgColor() { return bgColor; }
   GC getFgGC() { return fgGC; }
@@ -74,11 +75,11 @@ public:
   LTKWindow *setNext(LTKWindow *next1) { return next = next1; }
   LTKWidget *addWidget(LTKWidget *widget);
   LTKWidget *delWidget(LTKWidget *widget);
-  LTKWidget *findWidget(Window xwin1);
   LTKWidget *findWidget(char *name);
 
   //---------- special access ----------
 
+  void setInstallCmap(GBool inst) { installCmap = inst; }
   void setMenu(LTKMenu *menu1) { menu = menu1; }
   void setKeyCbk(LTKWindowKeyCbk cbk) { keyCbk = cbk; }
   void setPropChangeCbk(LTKWindowPropCbk cbk);
@@ -167,6 +168,8 @@ protected:
   int screenNum;		// X screen number
   Window xwin;			// X window ID
   long eventMask;		// current event mask
+  GBool installCmap;		// install a private colormap
+  Colormap colormap;		// the colormap
   unsigned long fgColor,	// foreground pixel number
                 bgColor;	// background pixel number
   GC fgGC;			// X GC for foreground color

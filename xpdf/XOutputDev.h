@@ -48,8 +48,18 @@ struct BoundingRect {
 };
 
 struct RGBColor {
-  int r, g, b;
+  double r, g, b;
 };
+
+//------------------------------------------------------------------------
+// Parameters
+//------------------------------------------------------------------------
+
+// Install a private colormap.
+extern GBool installCmap;
+
+// Size of RGB color cube.
+extern int rgbCubeSize;
 
 //------------------------------------------------------------------------
 // XOutputFont
@@ -65,10 +75,10 @@ public:
   // Destructor.
   ~XOutputFont();
 
-  // Does this font match the tag, size, and angle?
-  GBool matches(GString *tag1, double m11, double m12, double m21, double m22)
-    { return tag->cmp(tag1) == 0 && mat11 == m11 && mat12 == m12 &&
-	     mat21 == m21 && mat22 == m22; }
+  // Does this font match the ID, size, and angle?
+  GBool matches(Ref id1, double m11, double m12, double m21, double m22)
+    { return id.num == id1.num && id.gen == id1.gen &&
+	     mat11 == m11 && mat12 == m12 && mat21 == m21 && mat22 == m22; }
 
   // Get X font.
   XFontStruct *getXFont() { return xFont; }
@@ -81,7 +91,7 @@ public:
 
 private:
 
-  GString *tag;
+  Ref id;
   double mat11, mat12, mat21, mat22;
   Display *display;
   XFontStruct *xFont;
@@ -202,7 +212,7 @@ public:
 			     int width, int height, GBool invert,
 			     GBool inlineImg);
   virtual void drawImage(GfxState *state, Stream *str, int width,
-			 int height, GfxColorSpace *colorSpace,
+			 int height, GfxImageColorMap *colorMap,
 			 GBool inlineImg);
 
   //----- special access
@@ -230,6 +240,9 @@ private:
   GC strokeGC;			// GC with stroke color
   GC fillGC;			// GC with fill color
   Region clipRegion;		// clipping region
+  GBool trueColor;		// set if using a TrueColor visual
+  int rMul, gMul, bMul;		// RGB multipliers (for TrueColor)
+  int rShift, gShift, bShift;	// RGB shifts (for TrueColor)
   Gulong			// color cube
     colors[maxRGBCube * maxRGBCube * maxRGBCube];
   int numColors;		// size of color cube
@@ -249,7 +262,7 @@ private:
   void doFill(GfxState *state, int rule);
   void doClip(GfxState *state, int rule);
   int convertPath(GfxState *state, XPoint **points, int *size,
-		  int *numPoints, int **lengths, GBool fill);
+		  int *numPoints, int **lengths, GBool fillHack);
   void convertSubpath(GfxState *state, GfxSubpath *subpath,
 		      XPoint **points, int *size, int *n);
   void doCurve(XPoint **points, int *size, int *k,

@@ -15,7 +15,15 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#ifdef _AIX
+#ifdef HAVE_STRINGS_H
+// needed by AIX for bzero() declaration for FD_ZERO
+#include <strings.h>
+#endif
+#ifdef HAVE_BSTRING_H
+// needed by IRIX for bzero() declaration for FD_ZERO
+#include <bstring.h>
+#endif
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
 #include <X11/Xlib.h>
@@ -30,7 +38,7 @@
 #include <LTKWidget.h>
 
 #if defined(VMS) && defined(__DECCXX) && (_VMS_VER < 70000000)
-int gettimeofday (struct timeval *__tp, void *__tzp);
+extern "C" int gettimeofday (struct timeval *__tp, void *__tzp);
 #endif
 
 //------------------------------------------------------------------------
@@ -50,9 +58,12 @@ LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
   int numOpts;
   XrmDatabase cmdLineDB;
   GString *displayName;
+  int h;
 
   appName = new GString(appName1);
   windows = NULL;
+  for (h = 0; h < ltkWinTabSize; ++h)
+    winTab[h] = NULL;
   grabWin = NULL;
   activeMenu = NULL;
   repeatWidget = NULL;
@@ -72,7 +83,9 @@ LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
   delete displayName;
   screenNum = DefaultScreen(display);
   ltkGetOtherResources(display, cmdLineDB, &resourceDB);
+  wmDeleteWinAtom = XInternAtom(display, "WM_DELETE_WINDOW", False);
   pressedBtn = 0;
+  killCbk = NULL;
 }
 
 LTKApp::~LTKApp() {
@@ -93,6 +106,10 @@ GString *LTKApp::getStringResource(char *inst, char *def) {
 
 int LTKApp::getIntResource(char *inst, int def) {
   return ltkGetIntResource(resourceDB, appName, inst, def);
+}
+
+GBool LTKApp::getBoolResource(char *inst, GBool def) {
+  return ltkGetBoolResource(resourceDB, appName, inst, def);
 }
 
 unsigned long LTKApp::getColorResource(char *inst,
@@ -120,43 +137,69 @@ LTKWindow *LTKApp::addWindow(LTKWindow *w) {
 
 LTKWindow *LTKApp::delWindow(LTKWindow *w) {
   LTKWindow *w1, *w2;
+  int h;
+  LTKWinHash *p1, *p2, *p3;
 
   for (w1 = NULL, w2 = windows; w2 && w2 != w; w1 = w2, w2 = w2->getNext()) ;
   if (w2 == w) {
+
+    // remove window from window list
     if (w1)
       w1->setNext(w2->getNext());
     else
       windows = w2->getNext();
     w2->setNext(NULL);
+
+    // remove window and widgets from hash table
+    for (h = 0; h < ltkWinTabSize; ++h) {
+      p1 = NULL;
+      p2 = winTab[h];
+      while (p2) {
+	if (p2->win == w) {
+	  p3 = p2;
+	  if (p1)
+	    p2 = p1->next = p2->next;
+	  else
+	    p2 = winTab[h] = p2->next;
+	  delete p3;
+	} else {
+	  p1 = p2;
+	  p2 = p2->next;
+	}
+      }
+    }
+
     return w2;
   }
   return NULL;
 }
 
-LTKWindow *LTKApp::findWindow(Window xwin, LTKWidget **widget) {
-  LTKWindow *w;
-  Window root;
-  Window xparent;
-  Window *children;
-  unsigned int numChildren;
+void LTKApp::registerXWindow(Window xwin, LTKWindow *win, LTKWidget *widget) {
+  int h;
+  LTKWinHash *p;
 
-  root = None;
-  xparent = None;
-  children = NULL;
-  numChildren = 0;
-  XQueryTree(display, xwin, &root, &xparent, &children, &numChildren);
-  if (numChildren > 0)
-    XFree((void *)children);
-  *widget = NULL;
-  for (w = windows; w; w = w->getNext()) {
-    if (w->getXWindow() == xwin)
-      break;
-    if (w->getXWindow() == xparent) {
-      *widget = w->findWidget(xwin);
-      break;
+  h = (int)xwin % ltkWinTabSize;
+  p = new LTKWinHash;
+  p->xwin = xwin;
+  p->win = win;
+  p->widget = widget;
+  p->next = winTab[h];
+  winTab[h] = p;
+}
+
+LTKWindow *LTKApp::findWindow(Window xwin, LTKWidget **widget) {
+  int h;
+  LTKWinHash *p;
+
+  h = (int)xwin % ltkWinTabSize;
+  for (p = winTab[h]; p; p = p->next) {
+    if (p->xwin == xwin) {
+      *widget = p->widget;
+      return p->win;
     }
   }
-  return w;
+  *widget = NULL;
+  return NULL;
 }
 
 void LTKApp::setRepeatEvent(LTKWidget *repeatWidget1, int repeatDelay1,
@@ -169,7 +212,11 @@ void LTKApp::setRepeatEvent(LTKWidget *repeatWidget1, int repeatDelay1,
 }
 
 void LTKApp::doEvent(GBool wait) {
+#ifdef VMS
+  long delay, retval;
+#else
   fd_set readFDs, writeFDs, exceptFDs;
+#endif
   struct timeval curTime, timeout;
   int timeout1;
   XEvent event;
@@ -193,18 +240,24 @@ void LTKApp::doEvent(GBool wait) {
   while (XPending(display) == 0) {
     if (!wait)
       return;
+#ifndef VMS
     FD_ZERO(&readFDs);
     FD_ZERO(&writeFDs);
     FD_ZERO(&exceptFDs);
     n = ConnectionNumber(display);
     FD_SET(n, &readFDs);
+#endif
     if (!repeatWidget) {
-#ifdef __hpux
+#ifdef VMS
+      n = XMultiplexInput(1, &display, 0, 0, 0, &retval);
+#else // VMS
+#ifdef SELECT_TAKES_INT
       n = select(n+1, (int *)&readFDs, (int *)&writeFDs, (int *)&exceptFDs,
 		 NULL);
 #else
       n = select(n+1, &readFDs, &writeFDs, &exceptFDs, NULL);
 #endif
+#endif // VMS
     } else {
       gettimeofday(&curTime, NULL);
       timeout.tv_sec = curTime.tv_sec - lastRepeat.tv_sec;
@@ -220,12 +273,18 @@ void LTKApp::doEvent(GBool wait) {
       else
 	timeout.tv_usec = timeout1 - timeout.tv_usec;
       timeout.tv_sec = 0;
-#ifdef __hpux
+#ifdef VMS
+      if ((delay = timeout.tv_usec / 1000) == 0)
+	delay = 1;
+      n = XMultiplexInput(1, &display, 0, delay, 0, &retval);
+#else // VMS
+#ifdef SELECT_TAKES_INT
       n = select(n+1, (int *)&readFDs, (int *)&writeFDs, (int *)&exceptFDs,
 		 &timeout);
 #else
       n = select(n+1, &readFDs, &writeFDs, &exceptFDs, &timeout);
 #endif
+#endif // VMS
     }
     if (n == 0 && repeatWidget) {
       repeatWidget->repeatEvent();
@@ -328,7 +387,7 @@ void LTKApp::doEvent(GBool wait) {
     break;
   case KeyPress:
     if (win && !(grabWin && win != grabWin)) {
-      n = XLookupString((XKeyEvent *)&event, buf, sizeof(buf)-1,
+      n = XLookupString(&event.xkey, buf, sizeof(buf)-1,
 			&key, NULL);
       buf[n] = '\0';
       win->keyPress(key, event.xkey.state, buf, n);
@@ -382,6 +441,14 @@ void LTKApp::doEvent(GBool wait) {
   case PropertyNotify:
     if (win && !(grabWin && win != grabWin))
       win->propChange(event.xproperty.atom);
+    break;
+  case ClientMessage:
+    if ((Atom)event.xclient.data.l[0] == wmDeleteWinAtom && win) {
+      if (killCbk)
+	(*killCbk)(win);
+      else
+	exit(0);
+    }
     break;
   default:
     break;

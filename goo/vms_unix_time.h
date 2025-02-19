@@ -29,7 +29,7 @@ struct timeval
 	long	tv_usec;	/* and microseconds */
 };
 #else
-#if __DECC_VER < 50200000
+#if (__DECC_VER < 50200000) || (__VMS_VER < 70000000)
 struct timeval
 {
 	long	tv_sec;		/* seconds */
@@ -81,7 +81,7 @@ struct	itimerval
 	struct	timeval it_value;	/* current value */
 };
 #else
-#if __DECC_VER < 50200000
+#if (__DECC_VER < 50200000) || (__VMS_VER < 70000000)
 struct	itimerval
 {
 	struct	timeval it_interval;	/* timer interval */

@@ -56,9 +56,12 @@ enum GfxColorMode {
 class GfxColorSpace {
 public:
 
-  // Constructors.
-  GfxColorSpace();
-  GfxColorSpace(int bits1, Object *colorSpace, Object *decode);
+  // Construct a colorspace.
+  GfxColorSpace(Object *colorSpace);
+
+  // Construct a simple colorspace: DeviceGray, DeviceCMYK, or
+  // DeviceRGB.
+  GfxColorSpace(GfxColorMode mode1);
 
   // Destructor.
   ~GfxColorSpace();
@@ -69,32 +72,80 @@ public:
   // Is color space valid?
   GBool isOk() { return ok; }
 
-  // Get stream decoding info.
-  int getNumComponents() { return numComponents; }
-  int getBits() { return bits; }
-
-  // Get color mode.
+  // Get the color mode.
   GfxColorMode getMode() { return mode; }
+
+  // Get number of components in pixels of this colorspace.
+  int getNumPixelComps() { return indexed ? 1 : numComps; }
+
+  // Get number of components in colors of this colorspace.
+  int getNumColorComps() { return numComps; }
+
+  // Return 1 if colorspace is indexed.
   GBool isIndexed() { return indexed; }
 
-  // Convert an input value to a color (for images).
-  void getGray(Guchar x[4], Guchar *gray);
-  void getRGB(Guchar x[4], Guchar *r, Guchar *g, Guchar *b);
+  // Get lookup table (only for indexed colrospaces).
+  int getIndexHigh() { return indexHigh; }
+  Guchar *getLookupVal(int i) { return lookup[i]; }
 
-  // Convert an input value to a color (for fill/stroke colors).
+  // Convert a pixel to a color.
   void getColor(double x[4], GfxColor *color);
 
 private:
 
   GfxColorMode mode;		// color mode
-  GBool indexed;		// use lookup table?
-  int bits;			// bits per component
-  int numComponents;		// number of components in input values
-  int lookupComponents;		// number of components in lookup table
-  Guchar (*lookup)[4];		// lookup table
+  GBool indexed;		// set for indexed colorspaces
+  int numComps;			// number of components in colors
+  int indexHigh;		// max pixel for indexed colorspace
+  Guchar (*lookup)[4];		// lookup table (only for indexed
+				//   colorspaces)
   GBool ok;			// is color space valid?
 
   GfxColorSpace(GfxColorSpace *colorSpace);
+  void setMode(Object *colorSpace);
+};
+
+//------------------------------------------------------------------------
+// GfxImageColorMap
+//------------------------------------------------------------------------
+
+class GfxImageColorMap {
+public:
+
+  // Constructor.
+  GfxImageColorMap(int bits1, Object *decode, GfxColorSpace *colorSpace1);
+
+  // Destructor.
+  ~GfxImageColorMap();
+
+  // Is color map valid?
+  GBool isOk() { return ok; }
+
+  // Get the color space.
+  GfxColorSpace *getColorSpace() { return colorSpace; }
+
+  // Get stream decoding info.
+  int getNumPixelComps() { return colorSpace->getNumPixelComps(); }
+  int getBits() { return bits; }
+
+  // Get decode table.
+  double getDecodeLow(int i) { return decodeLow[i]; }
+  double getDecodeHigh(int i) { return decodeLow[i] + decodeRange[i]; }
+
+  // Convert a pixel to a color.
+  void getColor(Guchar x[4], GfxColor *color);
+
+private:
+
+  GfxColorSpace *colorSpace;	// the image colorspace
+  int bits;			// bits per component
+  int maxPixel;			// max pixel value
+  int decodeComps;		// number of components in decode array
+  GBool simpleDecode;		// set if decode range is 0-1
+  GBool indexDecode;		// set if decode range is 0 - 2^n-1
+  double decodeLow[4];		// minimum values for each component
+  double decodeRange[4];	// max - min value for each component
+  GBool ok;
 };
 
 //------------------------------------------------------------------------
@@ -207,7 +258,7 @@ public:
   // Construct a default GfxState, for a device with resolution <dpi>,
   // page box (<x1>,<y1>)-(<x2>,<y2>), page rotation <rotate>, and
   // coordinate system specified by <upsideDown>.
-  GfxState(int dpi, int x1a, int y1a, int x2a, int y2a, int rotate,
+  GfxState(int dpi, int px1a, int py1a, int px2a, int py2a, int rotate,
 	   GBool upsideDown);
 
   // Destructor.
@@ -218,10 +269,10 @@ public:
 
   // Accessors.
   double *getCTM() { return ctm; }
-  int getX1() { return x1; }
-  int getY1() { return y1; }
-  int getX2() { return x2; }
-  int getY2() { return y2; }
+  int getX1() { return px1; }
+  int getY1() { return py1; }
+  int getX2() { return px2; }
+  int getY2() { return py2; }
   int getPageWidth() { return pageWidth; }
   int getPageHeight() { return pageHeight; }
   GfxColor *getFillColor() { return &fillColor; }
@@ -343,7 +394,7 @@ public:
 private:
 
   double ctm[6];		// coord transform matrix
-  int x1, y1, x2, y2;		// page corners (user coords)
+  int px1, py1, px2, py2;	// page corners (user coords)
   int pageWidth, pageHeight;	// page size (pixels)
 
   GfxColorSpace *fillColorSpace;   // fill color space

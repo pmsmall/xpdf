@@ -20,13 +20,29 @@
 #include <gtypes.h>
 #include <GString.h>
 
+class LTKApp;
 class LTKWindow;
 class LTKWidget;
 class LTKMenu;
 
 //------------------------------------------------------------------------
+// callback type
+//------------------------------------------------------------------------
+
+typedef void (*LTKAppKillCbk)(LTKWindow *win);
+
+//------------------------------------------------------------------------
 // LTKApp
 //------------------------------------------------------------------------
+
+#define ltkWinTabSize 127
+
+struct LTKWinHash {
+  Window xwin;
+  LTKWindow *win;
+  LTKWidget *widget;
+  LTKWinHash *next;
+};
 
 class LTKApp {
 public:
@@ -49,10 +65,11 @@ public:
 
   GString *getStringResource(char *inst, char *def);
   int getIntResource(char *inst, int def);
+  GBool getBoolResource(char *inst, GBool def);
   unsigned long getColorResource(char *inst,
 				 char *def1, unsigned long def2,
 				 XColor *xcol);
-  XFontStruct *LTKApp::getFontResource(char *inst,  char *def);
+  XFontStruct *getFontResource(char *inst,  char *def);
   void getGeometryResource(char *inst, int *x, int *y,
 			   Guint *width, Guint *height);
 
@@ -60,6 +77,7 @@ public:
 
   LTKWindow *addWindow(LTKWindow *w);
   LTKWindow *delWindow(LTKWindow *w);
+  void registerXWindow(Window xwin, LTKWindow *win, LTKWidget *widget);
   LTKWindow *findWindow(Window xwin, LTKWidget **widget);
 
   //---------- special access ----------
@@ -68,6 +86,7 @@ public:
   void setMenu(LTKMenu *menu) { activeMenu = menu; }
   void setRepeatEvent(LTKWidget *repeatWidget1, int repeatDelay1,
 		      int repeatPeriod1);
+  void setKillCbk(LTKAppKillCbk cbk) { killCbk = cbk; }
 
   //---------- event handler ----------
 
@@ -77,6 +96,8 @@ private:
 
   GString *appName;		// application name (for X resources)
   LTKWindow *windows;		// list of windows
+  LTKWinHash			// hash table of (X window) -> (LTK
+    *winTab[ltkWinTabSize];	//   window/widget) mappings
 
   LTKWindow *grabWin;		// do events only for this window
   LTKMenu *activeMenu;		// currently posted menu
@@ -89,10 +110,13 @@ private:
 
   Display *display;		// X display
   int screenNum;		// X screen number
-  XrmDatabase resourceDB;	// X resource database;
+  XrmDatabase resourceDB;	// X resource database
+  Atom wmDeleteWinAtom;		// atom for WM_DELETE_WINDOW
 
   int pressedBtn;		// button currently pressed
   Time buttonPressTime;		// time of last button press
+
+  LTKAppKillCbk killCbk;	// WM_DELETE_WINDOW callback
 };
 
 #endif

@@ -83,8 +83,8 @@ void LTKScrollingCanvas::buttonRelease(int mx, int my, int button,
   LTKWidget::buttonRelease(left + mx, top + my, button, click);
 }
 
-void LTKScrollingCanvas::mouseMove(int mx, int my, int pressedBtn) {
-  LTKWidget::mouseMove(left + mx, top + my, pressedBtn);
+void LTKScrollingCanvas::mouseMove(int mx, int my, int btn) {
+  LTKWidget::mouseMove(left + mx, top + my, btn);
 }
 
 void LTKScrollingCanvas::resize(int realWidth1, int realHeight1) {

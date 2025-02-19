@@ -39,7 +39,7 @@ public:
   int getY1() { return y1; }
   int getX2() { return x2; }
   int getY2() { return y2; }
-  GBool isCropped() { return cropX1 < cropX2; }
+  GBool isCropped() { return cropX2 > cropX1; }
   int getCropX1() { return cropX1; }
   int getCropY1() { return cropY1; }
   int getCropX2() { return cropX2; }

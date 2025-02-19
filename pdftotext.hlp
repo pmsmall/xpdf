@@ -36,10 +36,10 @@
 2 AUTHOR
 
        The  pdftotext  software  and  documentation are copyright
-       1996, 1997 Derek B. Noonburg (derekn@ece.cmu.edu).
+       1996-1998 Derek B. Noonburg (derekn@aimnet.com).
 
 2 SEE_ALSO
 
        xpdf(1), pdftops(1)
-       http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
+       http://www.aimnet.com/~derekn/xpdf/
 

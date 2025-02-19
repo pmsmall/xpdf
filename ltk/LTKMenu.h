@@ -60,7 +60,7 @@ public:
   void redraw();
   void buttonPress(int mx, int my, int button, GBool dblClick);
   void buttonRelease(int mx, int my, int button, GBool click);
-  void mouseMove(int mx, int my, int pressedBtn);
+  void mouseMove(int mx, int my, int btn);
 
 private:
 

@@ -34,199 +34,82 @@ void GfxColor::setCMYK(double c, double m, double y, double k) {
 // GfxColorSpace
 //------------------------------------------------------------------------
 
-GfxColorSpace::GfxColorSpace() {
-  mode = colorGray;
-  indexed = gFalse;
-  bits = 1;
-  numComponents = 1;
-  lookupComponents = 1;
-  lookup = (Guchar (*)[4])gmalloc((1 << bits) * 4 * sizeof(Guchar));
-  ok = gTrue;
-}
-
-GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
+GfxColorSpace::GfxColorSpace(Object *colorSpace) {
   Object obj, obj2;
-  double decodeLow[4], decodeHigh[4];
-  int decodeComps;
-  Guchar (*palette)[4];
-  int indexHigh;
   char *s;
   int x;
-  int i, j, k;
+  int i, j;
 
   ok = gTrue;
-  bits = bits1;
   lookup = NULL;
-  palette = NULL;
-
-  // get decode map
-  if (decode->isNull()) {
-    decodeComps = 0;
-  } else if (decode->isArray()) {
-    decodeComps = decode->arrayGetLength() / 2;
-    for (i = 0; i < decodeComps; ++i) {
-      decode->arrayGet(2*i, &obj);
-      if (!obj.isNum())
-	goto err2;
-      decodeLow[i] = obj.getNum();
-      obj.free();
-      decode->arrayGet(2*i+1, &obj);
-      if (!obj.isNum())
-	goto err2;
-      decodeHigh[i] = obj.getNum();
-      obj.free();
-    }
-  } else {
-    goto err1;
-  }
 
   // get mode
   indexed = gFalse;
-  if (colorSpace->isName("DeviceGray") || colorSpace->isName("G")) {
-    mode = colorGray;
-    numComponents = lookupComponents = 1;
-  } else if (colorSpace->isName("DeviceRGB") || colorSpace->isName("RGB")) {
-    mode = colorRGB;
-    numComponents = lookupComponents = 3;
-  } else if (colorSpace->isName("DeviceCMYK") || colorSpace->isName("CMYK")) {
-    mode = colorCMYK;
-    numComponents = lookupComponents = 4;
+  if (colorSpace->isName()) {
+    setMode(colorSpace);
   } else if (colorSpace->isArray()) {
     colorSpace->arrayGet(0, &obj);
-    if (obj.isName("DeviceGray") || obj.isName("G") ||
-	obj.isName("CalGray")) {
-      mode = colorGray;
-      numComponents = lookupComponents = 1;
-    } else if (obj.isName("DeviceRGB") || obj.isName("RGB") ||
-	       obj.isName("CalRGB")) {
-      mode = colorRGB;
-      numComponents = lookupComponents = 3;
-    } else if (obj.isName("DeviceCMYK") || obj.isName("CMYK")) {
-      mode = colorCMYK;
-      numComponents = lookupComponents = 4;
-    } else if (obj.isName("Indexed") || obj.isName("I")) {
+    if (obj.isName("Indexed") || obj.isName("I")) {
       indexed = gTrue;
-      numComponents = 1;
-    } else {
-      goto err2;
-    }
-    obj.free();
-  }
-
-  // indexed decoding
-  if (indexed) {
-    if (decodeComps == 0) {
-      decodeLow[0] = 0;
-      decodeHigh[0] = (1 << bits) - 1;
-    } else if (decodeComps != numComponents) {
-      goto err1;
-    }
-    colorSpace->arrayGet(1, &obj);
-    if (obj.isName("DeviceGray") || obj.isName("G")) {
-      mode = colorGray;
-      lookupComponents = 1;
-    } else if (obj.isName("DeviceRGB") || obj.isName("RGB")) {
-      mode = colorRGB;
-      lookupComponents = 3;
-    } else if (obj.isName("DeviceCMYK") || obj.isName("CMYK")) {
-      mode = colorCMYK;
-      lookupComponents = 4;
-    } else if (obj.isArray()) {
-      obj.arrayGet(0, &obj2);
-      if (obj.isName("CalGray")) {
-	mode = colorGray;
-	lookupComponents = 1;
-      } else if (obj.isName("CalRGB")) {
-	mode = colorRGB;
-	lookupComponents = 3;
-      } else {
-	obj2.free();
-	goto err2;
-      }
+      setMode(colorSpace->arrayGet(1, &obj2));
       obj2.free();
     } else {
-      goto err2;
+      setMode(colorSpace);
     }
     obj.free();
+  } else {
+    goto err1;
+  }
+  if (!ok)
+    return;
+
+  // get lookup table for indexed colorspace
+  if (indexed) {
     colorSpace->arrayGet(2, &obj);
     if (!obj.isInt())
       goto err2;
     indexHigh = obj.getInt();
     obj.free();
-    palette = (Guchar (*)[4])gmalloc((indexHigh + 1) * 4 * sizeof(Guchar));
+    lookup = (Guchar (*)[4])gmalloc((indexHigh + 1) * 4 * sizeof(Guchar));
     colorSpace->arrayGet(3, &obj);
     if (obj.isStream()) {
       obj.streamReset();
       for (i = 0; i <= indexHigh; ++i) {
-	for (j = 0; j < lookupComponents; ++j) {
+	for (j = 0; j < numComps; ++j) {
 	  if ((x = obj.streamGetChar()) == EOF)
-	    goto err3;
-	  palette[i][j] = (Guchar)x;
+	    goto err2;
+	  lookup[i][j] = (Guchar)x;
 	}
       }
     } else if (obj.isString()) {
       s = obj.getString()->getCString();
       for (i = 0; i <= indexHigh; ++i)
-	for (j = 0; j < lookupComponents; ++j)
-	  palette[i][j] = (Guchar)*s++;
+	for (j = 0; j < numComps; ++j)
+	  lookup[i][j] = (Guchar)*s++;
     } else {
-      goto err3;
+      goto err2;
     }
     obj.free();
-    lookup = (Guchar (*)[4])gmalloc((1 << bits) * 4 * sizeof(Guchar));
-    for (i = 0; i < (1 << bits); ++i) {
-      k = (int)(decodeLow[0] + i * (decodeHigh[0] - decodeLow[0]) /
-	                           ((1 << bits) - 1) + 0.5);
-      switch (mode) {
-      case colorGray:
-	lookup[i][0] = lookup[i][1] = lookup[i][2] = palette[k][0];
-	break;
-      case colorCMYK:
-	x = palette[k][0] + palette[k][3];
-	lookup[i][0] = (x > 255) ? 0 : 255 - x;
-	x = palette[k][1] + palette[k][3];
-	lookup[i][1] = (x > 255) ? 0 : 255 - x;
-	x = palette[k][2] + palette[k][3];
-	lookup[i][2] = (x > 255) ? 0 : 255 - x;
-	break;
-      case colorRGB:
-	lookup[i][0] = palette[k][0];
-	lookup[i][1] = palette[k][1];
-	lookup[i][2] = palette[k][2];
-	break;
-      }
-    }
-    gfree(palette);
-
-  // non-indexed decoding
-  } else {
-    if (decodeComps == 0) {
-      for (i = 0; i < numComponents; ++i) {
-	decodeLow[i] = 0;
-	decodeHigh[i] = 1;
-      }
-    } else if (decodeComps != numComponents) {
-      goto err1;
-    }
-    lookup = (Guchar (*)[4])gmalloc((1 << bits) * 4 * sizeof(Guchar));
-    for (i = 0; i < (1 << bits); ++i) {
-      for (j = 0; j < lookupComponents; ++j) {
-	lookup[i][j] = (Guchar)(255.0 * (decodeLow[j] +
-					 (double)i *
-					 (decodeHigh[j] - decodeLow[j]) /
-					 (double)((1 << bits) - 1)));
-      }
-    }
   }
 
   return;
 
- err3:
-  gfree(palette);
  err2:
   obj.free();
  err1:
   ok = gFalse;
+}
+
+GfxColorSpace::GfxColorSpace(GfxColorMode mode1) {
+  mode = mode1;
+  indexed = gFalse;
+  switch (mode) {
+  case colorGray: numComps = 1; break;
+  case colorCMYK: numComps = 4; break;
+  case colorRGB:  numComps = 3; break;
+  }
+  lookup = NULL;
+  ok = gTrue;
 }
 
 GfxColorSpace::~GfxColorSpace() {
@@ -236,66 +119,49 @@ GfxColorSpace::~GfxColorSpace() {
 GfxColorSpace::GfxColorSpace(GfxColorSpace *colorSpace) {
   int size;
 
-  memcpy(this, colorSpace, sizeof(GfxColorSpace));
-  size = (1 << bits) * 4 * sizeof(Guchar);
-  lookup = (Guchar (*)[4])gmalloc(size);
-  memcpy(lookup, colorSpace->lookup, size);
-}
-
-void GfxColorSpace::getGray(Guchar x[4], Guchar *gray) {
-  Guchar *p;
-
+  mode = colorSpace->mode;
+  indexed = colorSpace->indexed;
+  numComps = colorSpace->numComps;
+  indexHigh = colorSpace->indexHigh;
   if (indexed) {
-    p = lookup[x[0]];
-    *gray = (Guchar)(0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]);
+    size = (indexHigh + 1) * 4 * sizeof(Guchar);
+    lookup = (Guchar (*)[4])gmalloc(size);
+    memcpy(lookup, colorSpace->lookup, size);
   } else {
-    switch (mode) {
-    case colorGray:
-      *gray = lookup[x[0]][0];
-      break;
-    case colorCMYK:
-      *gray = 255 - (Guchar)(lookup[x[3]][3] -
-			     0.299 * lookup[x[0]][0] -
-			     0.587 * lookup[x[1]][1] -
-			     0.114 * lookup[x[2]][2]);
-      break;
-    case colorRGB:
-      *gray = (Guchar)(0.299 * lookup[x[0]][0] +
-		       0.587 * lookup[x[1]][1] +
-		       0.114 * lookup[x[2]][2]);
-      break;
-    }
+    lookup = NULL;
   }
+  ok = gTrue;
 }
 
-void GfxColorSpace::getRGB(Guchar x[4], Guchar *r, Guchar *g, Guchar *b) {
-  Guchar *p;
-  int t;
+void GfxColorSpace::setMode(Object *colorSpace) {
+  Object obj;
 
-  if (indexed) {
-    p = lookup[x[0]];
-    *r = p[0];
-    *g = p[1];
-    *b = p[2];
-  } else {
-    switch (mode) {
-    case colorGray:
-      *r = *g = *b = lookup[x[0]][0];
-      break;
-    case colorCMYK:
-      t = lookup[x[0]][0] + lookup[x[3]][3];
-      *r = (t > 255) ? 0 : 255 - t;
-      t = lookup[x[1]][1] + lookup[x[3]][3];
-      *g = (t > 255) ? 0 : 255 - t;
-      t = lookup[x[2]][2] + lookup[x[3]][3];
-      *b = (t > 255) ? 0 : 255 - t;
-      break;
-    case colorRGB:
-      *r = lookup[x[0]][0];
-      *g = lookup[x[1]][1];
-      *b = lookup[x[2]][2];
-      break;
+  if (colorSpace->isName("DeviceGray") || colorSpace->isName("G")) {
+    mode = colorGray;
+    numComps = 1;
+  } else if (colorSpace->isName("DeviceRGB") || colorSpace->isName("RGB")) {
+    mode = colorRGB;
+    numComps = 3;
+  } else if (colorSpace->isName("DeviceCMYK") || colorSpace->isName("CMYK")) {
+    mode = colorCMYK;
+    numComps = 4;
+  } else if (colorSpace->isArray()) {
+    colorSpace->arrayGet(0, &obj);
+    if (obj.isName("CalGray")) {
+      mode = colorGray;
+      numComps = 1;
+    } else if (obj.isName("CalRGB")) {
+      mode = colorRGB;
+      numComps = 3;
+    } else if (obj.isName("CalCMYK")) {
+      mode = colorCMYK;
+      numComps = 4;
+    } else {
+      ok = gFalse;
     }
+    obj.free();
+  } else {
+    ok = gFalse;
   }
 }
 
@@ -303,8 +169,18 @@ void GfxColorSpace::getColor(double x[4], GfxColor *color) {
   Guchar *p;
 
   if (indexed) {
-    p = lookup[(int)x[0]];
-    color->setRGB(p[0] / 255.0, p[1] / 255.0, p[2] / 255.0);
+    p = lookup[(int)(x[0] + 0.5)];
+    switch (mode) {
+    case colorGray:
+      color->setGray(p[0] / 255.0);
+      break;
+    case colorCMYK:
+      color->setCMYK(p[0] / 255.0, p[1] / 255.0, p[2] / 255.0, p[3] / 255.0);
+      break;
+    case colorRGB:
+      color->setRGB(p[0] / 255.0, p[1] / 255.0, p[2] / 255.0);
+      break;
+    }
   } else {
     switch (mode) {
     case colorGray:
@@ -318,6 +194,96 @@ void GfxColorSpace::getColor(double x[4], GfxColor *color) {
       break;
     }
   }
+}
+
+//------------------------------------------------------------------------
+// GfxImageColorMap
+//------------------------------------------------------------------------
+
+GfxImageColorMap::GfxImageColorMap(int bits1, Object *decode,
+				   GfxColorSpace *colorSpace1) {
+  Object obj;
+  int i;
+
+  ok = gTrue;
+
+  // bits per component and colorspace
+  bits = bits1;
+  maxPixel = (1 << bits) - 1;
+  colorSpace = colorSpace1;
+
+  // get decode map
+  if (decode->isNull()) {
+    if (colorSpace->isIndexed()) {
+      simpleDecode = gFalse;
+      indexDecode = gTrue;
+      decodeComps = 1;
+      decodeLow[0] = 0;
+      decodeRange[0] = (1 << bits1) - 1;
+    } else {
+      simpleDecode = gTrue;
+      indexDecode = gFalse;
+      decodeComps = colorSpace->getNumPixelComps();
+      for (i = 0; i < decodeComps; ++i) {
+	decodeLow[i] = 0;
+	decodeRange[i] = 1;
+      }
+    }
+  } else if (decode->isArray()) {
+    decodeComps = decode->arrayGetLength() / 2;
+    if (decodeComps != colorSpace->getNumPixelComps())
+      goto err1;
+    simpleDecode = gTrue;
+    indexDecode = gFalse;
+    for (i = 0; i < decodeComps; ++i) {
+      decode->arrayGet(2*i, &obj);
+      if (!obj.isNum())
+	goto err2;
+      decodeLow[i] = obj.getNum();
+      obj.free();
+      decode->arrayGet(2*i+1, &obj);
+      if (!obj.isNum())
+	goto err2;
+      decodeRange[i] = obj.getNum() - decodeLow[i];
+      obj.free();
+      if (decodeLow[i] != 0 || decodeRange[i] != 1)
+	simpleDecode = gFalse;
+    }
+    if (colorSpace->isIndexed() &&
+	decodeLow[0] == 0 && decodeRange[0] == (1 << bits) - 1) {
+      simpleDecode = gFalse;
+      indexDecode = gTrue;
+    }
+  } else {
+    goto err1;
+  }
+
+  return;
+
+ err2:
+  obj.free();
+ err1:
+  ok = gFalse;
+}
+
+GfxImageColorMap::~GfxImageColorMap() {
+  delete colorSpace;
+}
+
+void GfxImageColorMap::getColor(Guchar x[4], GfxColor *color) {
+  double y[4];
+  int i;
+
+  if (simpleDecode) {
+    for (i = 0; i < decodeComps; ++i)
+      y[i] = (double)x[i] / maxPixel;
+  } else if (indexDecode) {
+    y[0] = (double)x[0];
+  } else {
+    for (i = 0; i < decodeComps; ++i)
+      y[i] = decodeLow[i] + (x[i] * decodeRange[i]) / maxPixel;
+  }
+  colorSpace->getColor(y, color);
 }
 
 //------------------------------------------------------------------------
@@ -455,55 +421,55 @@ void GfxPath::curveTo(double x1, double y1, double x2, double y2,
 // GfxState
 //------------------------------------------------------------------------
 
-GfxState::GfxState(int dpi, int x1a, int y1a, int x2a, int y2a, int rotate,
+GfxState::GfxState(int dpi, int px1a, int py1a, int px2a, int py2a, int rotate,
 		   GBool upsideDown) {
   double k;
 
-  x1 = x1a;
-  y1 = y1a;
-  x2 = x2a;
-  y2 = y2a;
+  px1 = px1a;
+  py1 = py1a;
+  px2 = px2a;
+  py2 = py2a;
   k = (double)dpi / 72.0;
   if (rotate == 90) {
     ctm[0] = 0;
     ctm[1] = upsideDown ? k : -k;
     ctm[2] = k;
     ctm[3] = 0;
-    ctm[4] = -k * y1;
-    ctm[5] = k * (upsideDown ? -x1 : x2);
-    pageWidth = (int)(k * (y2 - y1));
-    pageHeight = (int)(k * (x2 - x1));
+    ctm[4] = -k * py1;
+    ctm[5] = k * (upsideDown ? -px1 : px2);
+    pageWidth = (int)(k * (py2 - py1));
+    pageHeight = (int)(k * (px2 - px1));
   } else if (rotate == 180) {
     ctm[0] = -k;
     ctm[1] = 0;
     ctm[2] = 0;
     ctm[3] = upsideDown ? k : -k;
-    ctm[4] = k * x2;
-    ctm[5] = k * (upsideDown ? -y1 : y2);
-    pageWidth = (int)(k * (x2 - x1));
-    pageHeight = (int)(k * (y2 - y1));
+    ctm[4] = k * px2;
+    ctm[5] = k * (upsideDown ? -py1 : py2);
+    pageWidth = (int)(k * (px2 - px1));
+    pageHeight = (int)(k * (py2 - py1));
   } else if (rotate == 270) {
     ctm[0] = 0;
     ctm[1] = upsideDown ? -k : k;
     ctm[2] = -k;
     ctm[3] = 0;
-    ctm[4] = k * y2;
-    ctm[5] = k * (upsideDown ? x2 : -x1);
-    pageWidth = (int)(k * (y2 - y1));
-    pageHeight = (int)(k * (x2 - x1));
+    ctm[4] = k * py2;
+    ctm[5] = k * (upsideDown ? px2 : -px1);
+    pageWidth = (int)(k * (py2 - py1));
+    pageHeight = (int)(k * (px2 - px1));
   } else {
     ctm[0] = k;
     ctm[1] = 0;
     ctm[2] = 0;
     ctm[3] = upsideDown ? -k : k;
-    ctm[4] = -k * x1;
-    ctm[5] = k * (upsideDown ? y2 : -y1);
-    pageWidth = (int)(k * (x2 - x1));
-    pageHeight = (int)(k * (y2 - y1));
+    ctm[4] = -k * px1;
+    ctm[5] = k * (upsideDown ? py2 : -py1);
+    pageWidth = (int)(k * (px2 - px1));
+    pageHeight = (int)(k * (py2 - py1));
   }
 
-  fillColorSpace = new GfxColorSpace();
-  strokeColorSpace = new GfxColorSpace();
+  fillColorSpace = new GfxColorSpace(colorGray);
+  strokeColorSpace = new GfxColorSpace(colorGray);
   fillColor.setGray(0);
   strokeColor.setGray(0);
 

@@ -54,7 +54,7 @@ public:
 
   virtual void buttonPress(int mx, int my, int button, GBool dblClick);
   virtual void buttonRelease(int mx, int my, int button, GBool click);
-  virtual void mouseMove(int mx, int my, int pressedBtn);
+  virtual void mouseMove(int mx, int my, int btn);
   virtual void activate(GBool on);
   virtual void keyPress(KeySym key, Guint modifiers, char *s, int n);
   virtual void clearSelection();

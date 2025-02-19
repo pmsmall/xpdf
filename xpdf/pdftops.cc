@@ -37,6 +37,8 @@ static ArgDesc argDesc[] = {
    "first page to print"},
   {"-l",      argInt,      &lastPage,      0,
    "last page to print"},
+  {"-level1",   argFlag,        &psOutLevel1,   0,
+   "generate Level 1 PostScript"},
   {"-noemb",  argFlag,     &noEmbedFonts,  0,
    "don't embed Type 1 fonts"},
   {"-h",      argFlag,     &printHelp,     0,

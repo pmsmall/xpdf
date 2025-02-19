@@ -132,7 +132,7 @@ public:
   virtual void buttonRelease(int mx, int my, int button, GBool click);
   virtual void activate(GBool on) {}
   virtual void activateDefault() {}
-  virtual void mouseMove(int mx, int my, int pressedBtn);
+  virtual void mouseMove(int mx, int my, int btn);
   virtual void keyPress(KeySym key, Guint modifiers, char *s, int n) {}
   virtual void repeatEvent() {}
   virtual void clearSelection() {}
@@ -147,7 +147,6 @@ protected:
   int x, y;			// current position (in window)
   int width, height;		// current size
 
-  int pressedBtn;		// currently pressed button
   LTKButtonPressCbk btnPressCbk;     // mouse button press callback
   LTKButtonReleaseCbk btnReleaseCbk; // mouse button release callback
   LTKMouseMoveCbk mouseMoveCbk;	     // mouse move callback

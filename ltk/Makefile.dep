@@ -1,81 +1,7 @@
-#========================================================================
-#
-# LTK library Makefile
-#
-# Copyright 1996 Derek B. Noonburg
-#
-#========================================================================
-
-include ../Makefile.config
-
-GOODIR = ../goo
-
-CXXFLAGS = $(CXXFLAGS2) -I$(GOODIR) -I.
-
-all: $(LIBPREFIX)LTK.a ltkbuild
-
-#------------------------------------------------------------------------
-
-LTK_OBJS =	LTKApp.o \
-		LTKBorder.o \
-		LTKBox.o \
-		LTKButton.o \
-		LTKButtonDialog.o \
-		LTKCanvas.o \
-		LTKCompoundWidget.o \
-		LTKDblBufCanvas.o \
-		LTKEmpty.o \
-		LTKFileReq.o \
-		LTKLabel.o \
-		LTKList.o \
-		LTKMenu.o \
-		LTKMisc.o \
-		LTKResources.o \
-		LTKScrollbar.o \
-		LTKScrollingCanvas.o \
-		LTKTextIn.o \
-		LTKWidget.o \
-		LTKWindow.o
-
-$(LIBPREFIX)LTK.a: $(LTK_OBJS)
-	rm -f $(LIBPREFIX)LTK.a
-	$(AR) $(LIBPREFIX)LTK.a $(LTK_OBJS)
-	$(RANLIB) $(LIBPREFIX)LTK.a
-
-#------------------------------------------------------------------------
-
-LTKBUILD_OBJS = ltkbuild.o
-LTKBUILD_LIBS = -L$(GOODIR) -lGoo
-
-ltkbuild: $(LTKBUILD_OBJS)
-	$(CXX) $(CXXFLAGS) -o ltkbuild $(LTKBUILD_OBJS) $(LTKBUILD_LIBS)
-
-#------------------------------------------------------------------------
-
-clean:
-	rm -f $(LTK_OBJS) $(LIBPREFIX)LTK.a
-	rm -f $(LTKBUILD_OBJS) ltkbuild
-	rm -f Makefile.bak
-
-#------------------------------------------------------------------------
-
-depend:
-	cp Makefile Makefile.bak
-	sed '/^#----- dependences -----/q' Makefile.bak >Makefile
-	echo >>Makefile
-	$(CXX) $(CXXFLAGS) -M $(LTK_OBJS:.o=.cc) |\
-	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
-	  grep -v '^ \\$$' >>Makefile
-	$(CXX) $(CXXFLAGS) -M $(LTKBUILD_OBJS:.o=.cc) |\
-	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
-	  grep -v '^ \\$$' >>Makefile
-
-#----- dependences -----
-
 LTKApp.o: LTKApp.cc \
  ../goo/gtypes.h LTKApp.h \
- ../goo/GString.h LTKResources.h LTKWindow.h \
- LTKMenu.h LTKMisc.h LTKWidget.h
+ ../goo/GString.h LTKResources.h LTKWindow.h LTKMenu.h LTKMisc.h \
+ LTKWidget.h
 LTKBorder.o: LTKBorder.cc \
  ../goo/gtypes.h \
  LTKBorder.h
@@ -146,9 +72,13 @@ LTKTextIn.o: LTKTextIn.cc \
  ../goo/gtypes.h ../goo/GString.h \
  LTKWindow.h LTKTextIn.h LTKWidget.h LTKBorder.h
 LTKWidget.o: LTKWidget.cc \
- LTKWindow.h ../goo/gtypes.h \
- ../goo/GString.h LTKWidget.h
+ LTKApp.h \
+ ../goo/gtypes.h ../goo/GString.h \
+ LTKWindow.h LTKWidget.h
 LTKWindow.o: LTKWindow.cc \
  LTKConfig.h LTKApp.h \
  ../goo/gtypes.h ../goo/GString.h \
  LTKMenu.h LTKWindow.h LTKWidget.h LTKBox.h LTKBorder.h
+ltkbuild.o: ltkbuild.cc \
+ ../goo/gtypes.h \
+ ../goo/gmem.h ../goo/GString.h ltkbuild-widgets.h

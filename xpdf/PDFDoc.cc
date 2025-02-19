@@ -15,6 +15,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <GString.h>
+#include "config.h"
 #include "Page.h"
 #include "Catalog.h"
 #include "XRef.h"
@@ -50,12 +51,12 @@ PDFDoc::PDFDoc(GString *fileName1) {
     return;
   }
 #else
-  if (!(file = fopen(fileName->getCString(), "r"))) {
+  if (!(file = fopen(fileName->getCString(), FOPEN_READ_BIN))) {
     fileName2 = fileName->copy();
     fileName2->lowerCase();
-    if (!(file = fopen(fileName2->getCString(), "r"))) {
+    if (!(file = fopen(fileName2->getCString(), FOPEN_READ_BIN))) {
       fileName2->upperCase();
-      if (!(file = fopen(fileName2->getCString(), "r"))) {
+      if (!(file = fopen(fileName2->getCString(), FOPEN_READ_BIN))) {
 	error(-1, "Couldn't open file '%s'", fileName->getCString());
 	delete fileName2;
 	return;
@@ -119,7 +120,7 @@ void PDFDoc::displayPage(OutputDev *out, int page, int zoom, int rotate,
   if (doLinks) {
     if (links)
       delete links;
-    links = getLinks(page);
+    getLinks(page);
     for (i = 0; i < links->getNumLinks(); ++i) {
       link = links->getLink(i);
       link->getBorder(&x1, &y1, &x2, &y2, &w);
@@ -148,7 +149,7 @@ GBool PDFDoc::saveAs(GString *name) {
   char buf[4096];
   int n;
 
-  if (!(f = fopen(name->getCString(), "w"))) {
+  if (!(f = fopen(name->getCString(), FOPEN_WRITE_BIN))) {
     error(-1, "Couldn't open file '%s'", name->getCString());
     return gFalse;
   }
@@ -159,11 +160,9 @@ GBool PDFDoc::saveAs(GString *name) {
   return gTrue;
 }
 
-Links *PDFDoc::getLinks(int page) {
-  Links *links;
+void PDFDoc::getLinks(int page) {
   Object obj;
 
   links = new Links(catalog->getPage(page)->getAnnots(&obj));
   obj.free();
-  return links;
 }

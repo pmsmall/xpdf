@@ -139,7 +139,7 @@ void LTKTextIn::buttonRelease(int mx, int my, int button, GBool click) {
 					   selectionEnd - cursor));
 }
 
-void LTKTextIn::mouseMove(int mx, int my, int pressedBtn) {
+void LTKTextIn::mouseMove(int mx, int my, int btn) {
   int newCursor, newSelectionEnd;
   int i;
 

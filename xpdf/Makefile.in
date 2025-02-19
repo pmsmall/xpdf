@@ -1,0 +1,80 @@
+#========================================================================
+#
+# Xpdf Makefile
+#
+# Copyright 1996 Derek B. Noonburg
+#
+#========================================================================
+
+GOODIR = ../goo
+LTKDIR = ../ltk
+
+CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOODIR) -I$(LTKDIR) -I. @X_CFLAGS@
+
+XLIBS = @XPM_LIB@ @X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
+
+CXX = @CXX@
+STRIP = @STRIP@
+
+LIBPREFIX = @LIBPREFIX@
+EXE = @EXE@
+
+#------------------------------------------------------------------------
+
+all: xpdf$(EXE) pdftops$(EXE) pdftotext$(EXE)
+
+#------------------------------------------------------------------------
+
+XPDF_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
+	GfxState.o Lexer.o Link.o Object.o OutputDev.o Page.o Params.o \
+	Parser.o PDFDoc.o PSOutputDev.o Stream.o TextOutputDev.o \
+	XOutputDev.o XRef.o xpdf.o
+XPDF_LIBS = -L$(LTKDIR) -lLTK -L$(GOODIR) -lGoo $(XLIBS) -lm
+
+xpdf$(EXE): $(XPDF_OBJS)
+	$(CXX) $(CXXFLAGS) -o xpdf$(EXE) $(XPDF_OBJS) $(XPDF_LIBS)
+	$(STRIP) xpdf$(EXE)
+
+xpdf-ltk.h: xpdf.ltk
+	$(LTKDIR)/ltkbuild <xpdf.ltk >xpdf-ltk.h
+
+#------------------------------------------------------------------------
+
+PDFTOPS_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
+	GfxState.o Lexer.o Link.o Object.o OutputDev.o Page.o Params.o \
+	Parser.o PDFDoc.o PSOutputDev.o Stream.o XRef.o pdftops.o
+PDFTOPS_LIBS = -L$(GOODIR) -lGoo -lm
+
+pdftops$(EXE): $(PDFTOPS_OBJS)
+	$(CXX) $(CXXFLAGS) -o pdftops$(EXE) $(PDFTOPS_OBJS) $(PDFTOPS_LIBS)
+	$(STRIP) pdftops$(EXE)
+
+#------------------------------------------------------------------------
+
+PDFTOTEXT_OBJS = Array.o Catalog.o Dict.o Error.o Gfx.o GfxFont.o \
+	GfxState.o Lexer.o Link.o Object.o OutputDev.o Page.o Params.o \
+	Parser.o PDFDoc.o TextOutputDev.o Stream.o XRef.o pdftotext.o
+PDFTOTEXT_LIBS = -L$(GOODIR) -lGoo -lm
+
+pdftotext$(EXE): $(PDFTOTEXT_OBJS)
+	$(CXX) $(CXXFLAGS) -o pdftotext$(EXE) $(PDFTOTEXT_OBJS) \
+		$(PDFTOTEXT_LIBS)
+	$(STRIP) pdftotext$(EXE)
+
+#------------------------------------------------------------------------
+
+clean:
+	rm -f $(XPDF_OBJS) xpdf-ltk.h xpdf$(EXE)
+	rm -f $(PDFTOPS_OBJS) pdftops$(EXE)
+	rm -f $(PDFTOTEXT_OBJS) pdftotext$(EXE)
+	rm -f Makefile.bak
+
+#------------------------------------------------------------------------
+
+depend: xpdf-ltk.h
+	$(CXX) $(CXXFLAGS) -M $(XPDF_OBJS:.o=.cc) \
+	  pdftops.cc pdftotext.cc |\
+	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
+	  grep -v '^ \\$$' >Makefile.dep
+
+include Makefile.dep

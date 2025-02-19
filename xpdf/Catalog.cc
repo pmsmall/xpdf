@@ -1,6 +1,6 @@
 //========================================================================
 //
-// Catalog.h
+// Catalog.cc
 //
 // Copyright 1996 Derek B. Noonburg
 //
@@ -183,7 +183,7 @@ LinkDest *Catalog::findDest(GString *name) {
     else
       obj1.free();
   }
-  if (!found) {
+  if (!found && nameTree.isDict()) {
     if (!findDestInTree(&nameTree, name, &obj1)->isNull())
       found = gTrue;
     else

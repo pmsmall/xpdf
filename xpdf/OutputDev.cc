@@ -71,14 +71,14 @@ void OutputDev::drawImageMask(GfxState *state, Stream *str,
 }
 
 void OutputDev::drawImage(GfxState *state, Stream *str, int width,
-			  int height, GfxColorSpace *colorSpace,
+			  int height, GfxImageColorMap *colorMap,
 			  GBool inlineImg) {
   int i, j;
 
   if (inlineImg) {
     str->reset();
-    j = height * ((width * colorSpace->getNumComponents() *
-		   colorSpace->getBits() + 7) / 8);
+    j = height * ((width * colorMap->getNumPixelComps() *
+		   colorMap->getBits() + 7) / 8);
     for (i = 0; i < j; ++i)
       str->getChar();
   }

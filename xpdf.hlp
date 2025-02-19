@@ -2,7 +2,7 @@
 1 xpdf
 
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 0.7)
+       (version 0.7a)
 
        xpdf [options] [PDF-file [page]]
 
@@ -52,16 +52,27 @@
 
        -quit  Kill xpdf remote server (with -remote only).
 
+       -cmap  Install  a  private  colormap.   This is ignored on
+              TrueColor visuals.  [xpdf.installCmap]
+
        -rgb number
-              Set  the  size of largest RGB cube xpdf will try to
+              Set the size of largest RGB cube xpdf will  try  to
               allocate.  The default is 5 (for a 5x5x5 cube); set
-              to   a  smaller  number  to  conserve  color  table
-              entries.
+              to  a  smaller  number  to  conserve  color   table
+              entries.   This  is  ignored with private colormaps
+              and on TrueColor visuals.
 
        -ps PS-file
               Set the default file name  for  PostScript  output.
               This can also be of the form '|command' to pipe the
               PostScript through a command.  [xpdf.psFile]
+
+       -level1
+              Generate  Level  1   PostScript.    The   resulting
+              PostScript  files  will be significantly larger (if
+              they contain images), but will  print  on  Level  1
+              printers.   This  also converts all images to black
+              and white.  [xpdf.psLevel1]
 
        -cmd   Print commands  as  they're  executed  (useful  for
               debugging).
@@ -69,6 +80,7 @@
        -h     Print usage information.  (-help is equivalent.)
 
        Several  other  standard X options and resources will work
+
        as expected:
 
        -display display
@@ -85,6 +97,14 @@
 
        The color and font options only affect the user  interface
        elements, not the PDF display (the 'paper').
+
+       The  following X resources do not have command line option
+       equivalents:
+
+       xpdf.urlCommand
+              Set the command executed when you click  on  a  URL
+              link.   See  the  WEB  BROWSERS  section  below for
+              details.
 
 2 CONTROLS
 
@@ -104,6 +124,9 @@
               Increase and decrease the resolution, i.e., zoom in
               and zoom out.
 
+       binoculars button
+              Find a text string.
+
        print button
               Bring up a dialog for generating a PostScript file.
               The  dialog  has  options  to  set  the pages to be
@@ -113,6 +136,11 @@
 
        '?' button
               Bring up the 'about xpdf' window.
+
+       link info
+              The space between the '?'  and  'Quit'  buttons  is
+              used to show the URL or external file name when the
+              mouse is over a link.
 
        'Quit' button
               Quit xpdf.
@@ -127,13 +155,12 @@
        Save PDF...
               Save the current file via a file requester.
 
-       Find   Find a text string.
-
        Rotate left
               Rotate the page 90 degrees counterclockwise.
 
        Rotate right
               Rotate  the  page  90  degrees  clockwise.  The two
+
               rotate commands  are  intended  primarily  for  PDF
               files  where the rotation isn't correctly specified
               in the file, but they're  also  useful  if  your  X
@@ -148,11 +175,15 @@
 
    Links
        Clicking  on  a hyperlink will jump to the link's destina-
-       tion.  Currently, only links within PDF  documents  or  to
-       another  PDF  file  are supported.  Clicking on a URL link
-       just prints the URL.  Clicking on any other type  of  link
-       (e.g.,  links to executable programs) prints an error mes-
-       sage.
+       tion.  A link to another PDF document will make xpdf  load
+       that  document.   A 'launch' link to an executable program
+       will display a dialog, and if you click 'ok', execute  the
+       program.   URL links call an external command (see the WEB
+       BROWSERS section below).
+
+   Panning
+       Dragging the mouse with the middle button held  down  pans
+       the window.
 
    Key bindings
        o      Open a new PDF file via a file requester.
@@ -168,7 +199,7 @@
               tom, move to next page.
 
        <Backspace> or <Delete> or <PageUp> or <Previous>
-              Scroll  up  on the current page; if already at top,
+              Scroll up on the current page; if already  at  top,
               move to previous page.
 
        <Home> Scroll to top of current page.
@@ -198,6 +229,14 @@
               application/pdf; xpdf -err %s
 
        Make sure that xpdf is on your executable search path.
+
+       When you click on a URL link in a PDF file, xpdf will exe-
+       cute  the  command  specified   by   the   xpdf.urlCommand
+       resource,  replacing  an  occurrence of '%s' with the URL.
+       For example, to call  netscape  with  the  URL,  use  this
+       resource setting:
+
+              xpdf.urlCommand: netscape -remote 'openURL(%s)'
 
 2 REMOTE_SERVER_MODE
 
@@ -275,11 +314,11 @@
 
 2 AUTHOR
 
-       The  xpdf  software  and documentation are copyright 1996,
-       1997 Derek B. Noonburg (derekn@ece.cmu.edu).
+       The   xpdf   software   and  documentation  are  copyright
+       1996-1998 Derek B. Noonburg (derekn@aimnet.com).
 
 2 SEE_ALSO
 
        pdftops(1), pdftotext(1)
-       http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
+       http://www.aimnet.com/~derekn/xpdf/
 

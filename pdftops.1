@@ -1,8 +1,8 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH pdftops 1 "28 May 1997"
+.TH pdftops 1 "22 Feb 1998"
 .SH NAME
 pdftops \- Portable Document Format (PDF) to PostScript converter
-(version 0.7)
+(version 0.7a)
 .SH SYNOPSIS
 .B pdftops
 [options]
@@ -37,6 +37,11 @@ Specifies the first page to print.
 .BI \-l number
 Specifies the last page to print.
 .TP
+.B \-level1
+Generate Level 1 PostScript.  The resulting PostScript files will be
+significantly larger (if they contain images), but will print on Level
+1 printers.  This also converts all images to black and white.
+.TP
 .B \-noemb
 By default, any Type 1 fonts which are embedded in the PDF file are
 copied into the PostScript file.  This option causes pdftops to
@@ -51,10 +56,10 @@ is equivalent.)
 This is a beta release of pdftops, and there are still a bunch of PDF
 features which I have yet to implement.
 .SH AUTHOR
-The pdftops software and documentation are copyright 1996, 1997 Derek
-B. Noonburg (derekn@ece.cmu.edu).
+The pdftops software and documentation are copyright 1996-1998 Derek
+B. Noonburg (derekn@aimnet.com).
 .SH "SEE ALSO"
 .BR xpdf (1),
 .BR pdftotext (1)
 .br
-.B http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
+.B http://www.aimnet.com/~derekn/xpdf/

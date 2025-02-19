@@ -32,138 +32,154 @@
 //------------------------------------------------------------------------
 
 Operator Gfx::opTab[] = {
-  {"\"", 3, {tchkNum,    tchkNum,    tchkString},
-         &Gfx::opMoveSetShowText},
-  {"'",  1, {tchkString},
-         &Gfx::opMoveShowText},
-  {"B",  0, {tchkNone},
-         &Gfx::opFillStroke},
-  {"B*", 0, {tchkNone},
-         &Gfx::opEOFillStroke},
-  {"BI", 0, {tchkNone},
-         &Gfx::opBeginImage},
-  {"BT", 0, {tchkNone},
-         &Gfx::opBeginText},
-  {"BX", 0, {tchkNone},
-         &Gfx::opBeginIgnoreUndef},
-  {"CS", 1, {tchkName},
-         &Gfx::opSetStrokeColorSpace},
-  {"Do", 1, {tchkName},
-         &Gfx::opXObject},
-  {"EI", 0, {tchkNone},
-         &Gfx::opEndImage},
-  {"ET", 0, {tchkNone},
-         &Gfx::opEndText},
-  {"EX", 0, {tchkNone},
-         &Gfx::opEndIgnoreUndef},
-  {"F",  0, {tchkNone},
-         &Gfx::opFill},
-  {"G",  1, {tchkNum},
-         &Gfx::opSetStrokeGray},
-  {"ID", 0, {tchkNone},
-         &Gfx::opImageData},
-  {"J",  1, {tchkInt},
-         &Gfx::opSetLineCap},
-  {"K",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-         &Gfx::opSetStrokeCMYKColor},
-  {"M",  1, {tchkNum},
-         &Gfx::opSetMiterLimit},
-  {"Q",  0, {tchkNone},
-         &Gfx::opRestore},
-  {"RG", 3, {tchkNum,    tchkNum,    tchkNum},
-         &Gfx::opSetStrokeRGBColor},
-  {"S",  0, {tchkNone},
-         &Gfx::opStroke},
-  {"SC", -1, {tchkVarNum},
-         &Gfx::opSetStrokeColor},
-  {"T*", 0, {tchkNone},
-         &Gfx::opTextNextLine},
-  {"TD", 2, {tchkNum,    tchkNum},
-         &Gfx::opTextMoveSet},
-  {"TJ", 1, {tchkArray},
-         &Gfx::opShowSpaceText},
-  {"TL", 1, {tchkNum},
-         &Gfx::opSetTextLeading},
-  {"Tc", 1, {tchkNum},
-         &Gfx::opSetCharSpacing},
-  {"Td", 2, {tchkNum,    tchkNum},
-         &Gfx::opTextMove},
-  {"Tf", 2, {tchkName,   tchkNum},
-         &Gfx::opSetFont},
-  {"Tj", 1, {tchkString},
-         &Gfx::opShowText},
-  {"Tm", 6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
-	     tchkNum,    tchkNum},
-         &Gfx::opSetTextMatrix},
-  {"Tr", 1, {tchkInt},
-         &Gfx::opSetTextRender},
-  {"Ts", 1, {tchkNum},
-         &Gfx::opSetTextRise},
-  {"Tw", 1, {tchkNum},
-         &Gfx::opSetWordSpacing},
-  {"Tz", 1, {tchkNum},
-         &Gfx::opSetHorizScaling},
-  {"W",  0, {tchkNone},
-         &Gfx::opClip},
-  {"W*", 0, {tchkNone},
-         &Gfx::opEOClip},
-  {"b",  0, {tchkNone},
-         &Gfx::opCloseFillStroke},
-  {"b*", 0, {tchkNone},
-         &Gfx::opCloseEOFillStroke},
-  {"c",  6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
-	     tchkNum,    tchkNum},
-         &Gfx::opCurveTo},
-  {"cm", 6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
-	     tchkNum,    tchkNum},
-         &Gfx::opConcat},
-  {"cs", 1, {tchkName},
-         &Gfx::opSetFillColorSpace},
-  {"d",  2, {tchkArray,  tchkNum},
-         &Gfx::opSetDash},
-  {"d0", 2, {tchkNum,    tchkNum},
-         &Gfx::opSetCharWidth},
-  {"d1", 2, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
-	     tchkNum,    tchkNum},
-         &Gfx::opSetCacheDevice},
-  {"f",  0, {tchkNone},
-         &Gfx::opFill},
-  {"f*", 0, {tchkNone},
-         &Gfx::opEOFill},
-  {"g",  1, {tchkNum},
-         &Gfx::opSetFillGray},
-  {"gs", 1, {tchkName},
-         &Gfx::opSetExtGState},
-  {"h",  0, {tchkNone},
-         &Gfx::opClosePath},
-  {"i",  1, {tchkNum},
-         &Gfx::opSetFlat},
-  {"j",  1, {tchkInt},
-         &Gfx::opSetLineJoin},
-  {"k",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-         &Gfx::opSetFillCMYKColor},
-  {"l",  2, {tchkNum,    tchkNum},
-         &Gfx::opLineTo},
-  {"m",  2, {tchkNum,    tchkNum},
-         &Gfx::opMoveTo},
-  {"n",  0, {tchkNone},
-         &Gfx::opEndPath},
-  {"q",  0, {tchkNone},
-         &Gfx::opSave},
-  {"re", 4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-         &Gfx::opRectangle},
-  {"rg", 3, {tchkNum,    tchkNum,    tchkNum},
-         &Gfx::opSetFillRGBColor},
-  {"s",  0, {tchkNone},
-         &Gfx::opCloseStroke},
-  {"sc", -1, {tchkVarNum},
-         &Gfx::opSetFillColor},
-  {"v",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-         &Gfx::opCurveTo1},
-  {"w",  1, {tchkNum},
-         &Gfx::opSetLineWidth},
-  {"y",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
-         &Gfx::opCurveTo2},
+  {"\"",  3, {tchkNum,    tchkNum,    tchkString},
+          &Gfx::opMoveSetShowText},
+  {"'",   1, {tchkString},
+          &Gfx::opMoveShowText},
+  {"B",   0, {tchkNone},
+          &Gfx::opFillStroke},
+  {"B*",  0, {tchkNone},
+          &Gfx::opEOFillStroke},
+  {"BDC", 2, {tchkName,   tchkProps},
+          &Gfx::opBeginMarkedContent},
+  {"BI",  0, {tchkNone},
+          &Gfx::opBeginImage},
+  {"BMC", 1, {tchkName},
+          &Gfx::opBeginMarkedContent},
+  {"BT",  0, {tchkNone},
+          &Gfx::opBeginText},
+  {"BX",  0, {tchkNone},
+          &Gfx::opBeginIgnoreUndef},
+  {"CS",  1, {tchkName},
+          &Gfx::opSetStrokeColorSpace},
+  {"DP",  2, {tchkName,   tchkProps},
+          &Gfx::opMarkPoint},
+  {"Do",  1, {tchkName},
+          &Gfx::opXObject},
+  {"EI",  0, {tchkNone},
+          &Gfx::opEndImage},
+  {"EMC", 0, {tchkNone},
+          &Gfx::opEndMarkedContent},
+  {"ET",  0, {tchkNone},
+          &Gfx::opEndText},
+  {"EX",  0, {tchkNone},
+          &Gfx::opEndIgnoreUndef},
+  {"F",   0, {tchkNone},
+          &Gfx::opFill},
+  {"G",   1, {tchkNum},
+          &Gfx::opSetStrokeGray},
+  {"ID",  0, {tchkNone},
+          &Gfx::opImageData},
+  {"J",   1, {tchkInt},
+          &Gfx::opSetLineCap},
+  {"K",   4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opSetStrokeCMYKColor},
+  {"M",   1, {tchkNum},
+          &Gfx::opSetMiterLimit},
+  {"MP",  1, {tchkName},
+          &Gfx::opMarkPoint},
+  {"Q",   0, {tchkNone},
+          &Gfx::opRestore},
+  {"RG",  3, {tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opSetStrokeRGBColor},
+  {"S",   0, {tchkNone},
+          &Gfx::opStroke},
+  {"SC",  -4, {tchkNum,   tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opSetStrokeColor},
+  {"SCN", -5, {tchkSCN,   tchkSCN,    tchkSCN,    tchkSCN,
+	       tchkSCN},
+          &Gfx::opSetStrokeColorN},
+  {"T*",  0, {tchkNone},
+          &Gfx::opTextNextLine},
+  {"TD",  2, {tchkNum,    tchkNum},
+          &Gfx::opTextMoveSet},
+  {"TJ",  1, {tchkArray},
+          &Gfx::opShowSpaceText},
+  {"TL",  1, {tchkNum},
+          &Gfx::opSetTextLeading},
+  {"Tc",  1, {tchkNum},
+          &Gfx::opSetCharSpacing},
+  {"Td",  2, {tchkNum,    tchkNum},
+          &Gfx::opTextMove},
+  {"Tf",  2, {tchkName,   tchkNum},
+          &Gfx::opSetFont},
+  {"Tj",  1, {tchkString},
+          &Gfx::opShowText},
+  {"Tm",  6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
+	      tchkNum,    tchkNum},
+          &Gfx::opSetTextMatrix},
+  {"Tr",  1, {tchkInt},
+          &Gfx::opSetTextRender},
+  {"Ts",  1, {tchkNum},
+          &Gfx::opSetTextRise},
+  {"Tw",  1, {tchkNum},
+          &Gfx::opSetWordSpacing},
+  {"Tz",  1, {tchkNum},
+          &Gfx::opSetHorizScaling},
+  {"W",   0, {tchkNone},
+          &Gfx::opClip},
+  {"W*",  0, {tchkNone},
+          &Gfx::opEOClip},
+  {"b",   0, {tchkNone},
+          &Gfx::opCloseFillStroke},
+  {"b*",  0, {tchkNone},
+          &Gfx::opCloseEOFillStroke},
+  {"c",   6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
+	      tchkNum,    tchkNum},
+          &Gfx::opCurveTo},
+  {"cm",  6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
+	      tchkNum,    tchkNum},
+          &Gfx::opConcat},
+  {"cs",  1, {tchkName},
+          &Gfx::opSetFillColorSpace},
+  {"d",   2, {tchkArray,  tchkNum},
+          &Gfx::opSetDash},
+  {"d0",  2, {tchkNum,    tchkNum},
+          &Gfx::opSetCharWidth},
+  {"d1",  6, {tchkNum,    tchkNum,    tchkNum,    tchkNum,
+	      tchkNum,    tchkNum},
+          &Gfx::opSetCacheDevice},
+  {"f",   0, {tchkNone},
+          &Gfx::opFill},
+  {"f*",  0, {tchkNone},
+          &Gfx::opEOFill},
+  {"g",   1, {tchkNum},
+          &Gfx::opSetFillGray},
+  {"gs",  1, {tchkName},
+          &Gfx::opSetExtGState},
+  {"h",   0, {tchkNone},
+          &Gfx::opClosePath},
+  {"i",   1, {tchkNum},
+          &Gfx::opSetFlat},
+  {"j",   1, {tchkInt},
+          &Gfx::opSetLineJoin},
+  {"k",   4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opSetFillCMYKColor},
+  {"l",   2, {tchkNum,    tchkNum},
+          &Gfx::opLineTo},
+  {"m",   2, {tchkNum,    tchkNum},
+          &Gfx::opMoveTo},
+  {"n",   0, {tchkNone},
+          &Gfx::opEndPath},
+  {"q",   0, {tchkNone},
+          &Gfx::opSave},
+  {"re",  4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opRectangle},
+  {"rg",  3, {tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opSetFillRGBColor},
+  {"s",   0, {tchkNone},
+          &Gfx::opCloseStroke},
+  {"sc",  -4, {tchkNum,   tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opSetFillColor},
+  {"scn", -5, {tchkSCN,   tchkSCN,    tchkSCN,    tchkSCN,
+	       tchkSCN},
+          &Gfx::opSetFillColorN},
+  {"v",   4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opCurveTo1},
+  {"w",   1, {tchkNum},
+          &Gfx::opSetLineWidth},
+  {"y",   4, {tchkNum,    tchkNum,    tchkNum,    tchkNum},
+          &Gfx::opCurveTo2},
 };
 
 #define numOps (sizeof(opTab) / sizeof(Operator))
@@ -350,10 +366,18 @@ void Gfx::execOp(Object *cmd, Object args[], int numArgs) {
   }
 
   // type check args
-  if (op->numArgs >= 0 && numArgs != op->numArgs) {
-    error(getPos(), "Wrong number (%d) of args to '%s' operator",
-	  numArgs, name);
-    return;
+  if (op->numArgs >= 0) {
+    if (numArgs != op->numArgs) {
+      error(getPos(), "Wrong number (%d) of args to '%s' operator",
+	    numArgs, name);
+      return;
+    }
+  } else {
+    if (numArgs > -op->numArgs) {
+      error(getPos(), "Too many (%d) args to '%s' operator",
+	    numArgs, name);
+      return;
+    }
   }
   for (i = 0; i < numArgs; ++i) {
     if (!checkArg(&args[i], op->tchk[i])) {
@@ -396,7 +420,8 @@ GBool Gfx::checkArg(Object *arg, TchkType type) {
   case tchkString: return arg->isString();
   case tchkName:   return arg->isName();
   case tchkArray:  return arg->isArray();
-  case tchkVarNum: return arg->isNum();
+  case tchkProps:  return arg->isDict() || arg->isName();
+  case tchkSCN:    return arg->isNum() || arg->isName();
   case tchkNone:   return gFalse;
   }
   return gFalse;
@@ -485,80 +510,84 @@ void Gfx::opSetExtGState(Object args[], int numArgs) {
 //------------------------------------------------------------------------
 
 void Gfx::opSetFillGray(Object args[], int numArgs) {
+  state->setFillColorSpace(new GfxColorSpace(colorGray));
   state->setFillGray(args[0].getNum());
   out->updateFillColor(state);
 }
 
 void Gfx::opSetStrokeGray(Object args[], int numArgs) {
+  state->setStrokeColorSpace(new GfxColorSpace(colorGray));
   state->setStrokeGray(args[0].getNum());
   out->updateStrokeColor(state);
 }
 
 void Gfx::opSetFillCMYKColor(Object args[], int numArgs) {
+  state->setFillColorSpace(new GfxColorSpace(colorCMYK));
   state->setFillCMYK(args[0].getNum(), args[1].getNum(),
 		     args[2].getNum(), args[3].getNum());
   out->updateFillColor(state);
 }
 
 void Gfx::opSetStrokeCMYKColor(Object args[], int numArgs) {
+  state->setStrokeColorSpace(new GfxColorSpace(colorCMYK));
   state->setStrokeCMYK(args[0].getNum(), args[1].getNum(),
 		       args[2].getNum(), args[3].getNum());
   out->updateStrokeColor(state);
 }
 
 void Gfx::opSetFillRGBColor(Object args[], int numArgs) {
+  state->setFillColorSpace(new GfxColorSpace(colorRGB));
   state->setFillRGB(args[0].getNum(), args[1].getNum(), args[2].getNum());
   out->updateFillColor(state);
 }
 
 void Gfx::opSetStrokeRGBColor(Object args[], int numArgs) {
+  state->setStrokeColorSpace(new GfxColorSpace(colorRGB));
   state->setStrokeRGB(args[0].getNum(), args[1].getNum(), args[2].getNum());
   out->updateStrokeColor(state);
 }
 
 void Gfx::opSetFillColorSpace(Object args[], int numArgs) {
-  Object obj1, obj2;
+  Object obj;
   GfxColorSpace *colorSpace;
+  double x[4];
 
-  colorSpaceDict.dictLookup(args[0].getName(), &obj1);
-  if (!obj1.isNull()) {
-    obj2.initNull();
-    colorSpace = new GfxColorSpace(8, &obj1, &obj2);
-    obj2.free();
-    if (colorSpace->isOk()) {
-      state->setFillColorSpace(colorSpace);
-    } else {
-      delete colorSpace;
-      error(getPos(), "Bad colorspace");
-    }
+  colorSpaceDict.dictLookup(args[0].getName(), &obj);
+  if (obj.isNull())
+    colorSpace = new GfxColorSpace(&args[0]);
+  else
+    colorSpace = new GfxColorSpace(&obj);
+  obj.free();
+  if (colorSpace->isOk()) {
+    state->setFillColorSpace(colorSpace);
   } else {
-    error(getPos(), "Unknown colorspace '%s'", args[0].getName());
+    delete colorSpace;
+    error(getPos(), "Bad colorspace");
   }
-  obj1.free();
-  state->setFillGray(0.0);
+  x[0] = x[1] = x[2] = x[3] = 0;
+  state->setFillColor(x);
   out->updateFillColor(state);
 }
 
 void Gfx::opSetStrokeColorSpace(Object args[], int numArgs) {
-  Object obj1, obj2;
+  Object obj;
   GfxColorSpace *colorSpace;
+  double x[4];
 
-  colorSpaceDict.dictLookup(args[0].getName(), &obj1);
-  if (!obj1.isNull()) {
-    obj2.initNull();
-    colorSpace = new GfxColorSpace(8, &obj1, &obj2);
-    obj2.free();
-    if (colorSpace->isOk()) {
-      state->setStrokeColorSpace(colorSpace);
-    } else {
-      delete colorSpace;
-      error(getPos(), "Bad colorspace");
-    }
+  colorSpaceDict.dictLookup(args[0].getName(), &obj);
+  if (obj.isNull())
+    colorSpace = new GfxColorSpace(&args[0]);
+  else
+    colorSpace = new GfxColorSpace(&obj);
+  obj.free();
+  if (colorSpace->isOk()) {
+    state->setStrokeColorSpace(colorSpace);
   } else {
-    error(getPos(), "Unknown colorspace '%s'", args[0].getName());
+    delete colorSpace;
+    error(getPos(), "Bad colorspace");
   }
-  obj1.free();
-  state->setStrokeGray(0.0);
+  x[0] = x[1] = x[2] = x[3] = 0;
+  state->setStrokeColor(x);
   out->updateStrokeColor(state);
 }
 
@@ -566,10 +595,9 @@ void Gfx::opSetFillColor(Object args[], int numArgs) {
   double x[4];
   int i;
 
+  x[0] = x[1] = x[2] = x[3] = 0;
   for (i = 0; i < numArgs; ++i)
     x[i] = args[i].getNum();
-  for (; i < 4; ++i)
-    x[i] = 0;
   state->setFillColor(x);
   out->updateFillColor(state);
 }
@@ -578,10 +606,39 @@ void Gfx::opSetStrokeColor(Object args[], int numArgs) {
   double x[4];
   int i;
 
+  x[0] = x[1] = x[2] = x[3] = 0;
   for (i = 0; i < numArgs; ++i)
     x[i] = args[i].getNum();
-  for (; i < 4; ++i)
-    x[i] = 0;
+  state->setStrokeColor(x);
+  out->updateStrokeColor(state);
+}
+
+void Gfx::opSetFillColorN(Object args[], int numArgs) {
+  double x[4];
+  int i;
+
+  x[0] = x[1] = x[2] = x[3] = 0;
+  for (i = 0; i < numArgs && i < 4; ++i) {
+    if (args[i].isNum())
+      x[i] = args[i].getNum();
+    else
+      break;
+  }
+  state->setFillColor(x);
+  out->updateFillColor(state);
+}
+
+void Gfx::opSetStrokeColorN(Object args[], int numArgs) {
+  double x[4];
+  int i;
+
+  x[0] = x[1] = x[2] = x[3] = 0;
+  for (i = 0; i < numArgs && i < 4; ++i) {
+    if (args[i].isNum())
+      x[i] = args[i].getNum();
+    else
+      break;
+  }
   state->setStrokeColor(x);
   out->updateStrokeColor(state);
 }
@@ -1049,6 +1106,7 @@ void Gfx::doImage(Stream *str, GBool inlineImg) {
   int bits;
   GBool mask;
   GfxColorSpace *colorSpace;
+  GfxImageColorMap *colorMap;
   GBool invert;
 
   // get stream dict
@@ -1123,38 +1181,46 @@ void Gfx::doImage(Stream *str, GBool inlineImg) {
     out->drawImageMask(state, str, width, height, invert, inlineImg);
 
   } else {
-    // get color space
+    // get color space and color map
     dict->lookup("ColorSpace", &obj1);
     if (obj1.isNull()) {
       obj1.free();
       dict->lookup("CS", &obj1);
     }
-    if (!(obj1.isName() || obj1.isArray() || obj1.isNull()))
-      goto err2;
-    dict->lookup("Decode", &obj2);
-    if (obj2.isNull()) {
-      obj2.free();
-      dict->lookup("D", &obj2);
+    if (obj1.isName() && !colorSpaceDict.isNull()) {
+      colorSpaceDict.dictLookup(obj1.getName(), &obj2);
+      if (!obj2.isNull()) {
+	obj1.free();
+	obj1 = obj2;
+      } else {
+	obj2.free();
+      }
     }
-    if (!(obj2.isArray() || obj2.isNull()))
-      goto err3;
-    colorSpace = new GfxColorSpace(bits, &obj1, &obj2);
-    if (!colorSpace->isOk())
-      goto err4;
+    colorSpace = new GfxColorSpace(&obj1);
     obj1.free();
-    obj2.free();
+    if (!colorSpace->isOk()) {
+      delete colorSpace;
+      goto err1;
+    }
+    dict->lookup("Decode", &obj1);
+    if (obj1.isNull()) {
+      obj1.free();
+      dict->lookup("D", &obj1);
+    }
+    colorMap = new GfxImageColorMap(bits, &obj1, colorSpace);
+    obj1.free();
+    if (!colorMap->isOk()) {
+      delete colorSpace;
+      goto err1;
+    }
 
     // draw it
-    out->drawImage(state, str, width, height, colorSpace, inlineImg);
-    delete colorSpace;
+    out->drawImage(state, str, width, height, colorMap, inlineImg);
+    delete colorMap;
   }
 
   return;
 
- err4:
-  delete colorSpace;
- err3:
-  obj2.free();
  err2:
   obj1.free();
  err1:
@@ -1275,12 +1341,6 @@ Stream *Gfx::buildImageStream() {
   char *key;
   Stream *str;
 
-  // inline image must be in stream
-  if (!parser) {
-    error(getPos(), "Inline image in array content stream");
-    return NULL;
-  }
-
   // build dictionary
   dict.initDict();
   parser->getObj(&obj);
@@ -1341,4 +1401,29 @@ void Gfx::opBeginIgnoreUndef(Object args[], int numArgs) {
 void Gfx::opEndIgnoreUndef(Object args[], int numArgs) {
   if (ignoreUndef > 0)
     --ignoreUndef;
+}
+
+//------------------------------------------------------------------------
+// marked content operators
+//------------------------------------------------------------------------
+
+void Gfx::opBeginMarkedContent(Object args[], int numArgs) {
+  if (printCommands) {
+    printf("  marked content: %s ", args[0].getName());
+    if (numArgs == 2)
+      args[2].print(stdout);
+    printf("\n");
+  }
+}
+
+void Gfx::opEndMarkedContent(Object args[], int numArgs) {
+}
+
+void Gfx::opMarkPoint(Object args[], int numArgs) {
+  if (printCommands) {
+    printf("  mark point: %s ", args[0].getName());
+    if (numArgs == 2)
+      args[2].print(stdout);
+    printf("\n");
+  }
 }

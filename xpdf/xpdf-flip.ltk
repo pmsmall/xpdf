@@ -224,7 +224,7 @@ Window(func:makeAboutWindow defWidget:"close" title:"About xpdf") {
         Label(text:xpdfCopyright)
       }
       Box1(bottom:12) {
-        Label(text:"derekn@ece.cmu.edu")
+        Label(text:"derekn@aimnet.com")
       }
       Box1(bottom:0) {
         Label(text:["Supports PDF version " pdfVersion "."])
@@ -242,7 +242,7 @@ Window(func:makeAboutWindow defWidget:"close" title:"About xpdf") {
         Label(text:"Mouse button 3: menu")
       }
       Box1(bottom:12) {
-        Label(text:"http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html")
+        Label(text:"http://www.aimnet.com/~derekn/xpdf/")
       }
     }
     Box(x:2 y:1) {

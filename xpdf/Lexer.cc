@@ -286,6 +286,30 @@ Object *Lexer::getObj(Object *obj) {
     n = 0;
     while ((c = lookChar()) != EOF && !(c < 128 && endOfNameChars[c])) {
       getChar();
+      if (c == '#') {
+	c = 0;
+	c2 = lookChar();
+	if (c2 >= '0' && c2 <= '9')
+	  c = c2 - '0';
+	else if (c2 >= 'A' && c2 <= 'F')
+	  c = c2 - 'A' + 10;
+	else if (c2 >= 'a' && c2 <= 'f')
+	  c = c2 - 'a' + 10;
+	else
+	  goto notEscChar;
+	getChar();
+	c <<= 4;
+	c2 = getChar();
+	if (c2 >= '0' && c2 <= '9')
+	  c += c2 - '0';
+	else if (c2 >= 'A' && c2 <= 'F')
+	  c += c2 - 'A' + 10;
+	else if (c2 >= 'a' && c2 <= 'f')
+	  c += c2 - 'a' + 10;
+	else
+	  error(getPos(), "Illegal digit in hex char in name");
+      }
+     notEscChar:
       if (++n == tokBufSize) {
 	error(getPos(), "Name token too long");
 	break;
@@ -331,11 +355,11 @@ Object *Lexer::getObj(Object *obj) {
 	} else if (!isspace(c)) {
 	  c2 = c2 << 4;
 	  if (c >= '0' && c <= '9')
-	    c2 += (c - '0');
+	    c2 += c - '0';
 	  else if (c >= 'A' && c <= 'F')
-	    c2 += (c - 'A' + 10);
+	    c2 += c - 'A' + 10;
 	  else if (c >= 'a' && c <= 'f')
-	    c2 += (c - 'a' + 10);
+	    c2 += c - 'a' + 10;
 	  else
 	    error(getPos(), "Illegal character <%02x> in hex string", c);
 	  if (++m == 2) {
@@ -400,11 +424,11 @@ Object *Lexer::getObj(Object *obj) {
       *p++ = c;
     }
     *p = '\0';
-    if (!strcmp(tokBuf, "true"))
+    if (tokBuf[0] == 't' && !strcmp(tokBuf, "true"))
       obj->initBool(gTrue);
-    else if (!strcmp(tokBuf, "false"))
+    else if (tokBuf[0] == 'f' && !strcmp(tokBuf, "false"))
       obj->initBool(gFalse);
-    else if (!strcmp(tokBuf, "null"))
+    else if (tokBuf[0] == 'n' && !strcmp(tokBuf, "null"))
       obj->initNull();
     else
       obj->initCmd(tokBuf);

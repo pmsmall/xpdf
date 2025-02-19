@@ -110,7 +110,10 @@ ArgDesc fileReqArgs[] = {
 ArgDesc labelArgs[] = {
   {"name",           argVal,     gFalse, "NULL"},
   {"num",            argVal,     gFalse, "0"},
-  {"length",         argVal,     gFalse, "-1"},
+  {"static",         argSel,     gFalse, "ltkLabelStatic"},
+  {"fixedWidth",     argSel,     gFalse, "ltkLabelFixedWidth"},
+  {"maxLength",      argLastSel, gFalse, "ltkLabelMaxLength"},
+  {"length",         argVal,     gFalse, "8"},
   {"font",           argVal,     gFalse, "NULL"},
   {"text",           argVal,     gFalse, "NULL"},
   {NULL}

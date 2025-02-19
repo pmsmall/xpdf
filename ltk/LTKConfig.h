@@ -14,7 +14,7 @@
 #define LTK_BACKGROUND "gray70"
 
 // default window font
-#define LTK_WIN_FONT "-*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*"
+#define LTK_WIN_FONT "-*-helvetica-medium-r-normal-*-14-*-*-*-*-*-*-*"
 
 // default font that every server should have
 #define LTK_DEF_FONT "fixed"

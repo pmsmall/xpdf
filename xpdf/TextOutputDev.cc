@@ -195,6 +195,23 @@ void TextPage::endString() {
   TextString *p1, *p2;
   double h, y1, y2;
 
+  // throw away zero-length strings -- they don't have valid xMin/xMax
+  // values, and they're useless anyway
+  if (curStr->text->getLength() == 0) {
+    delete curStr;
+    curStr = NULL;
+    return;
+  }
+
+#if 0 //~tmp
+  if (curStr->yMax - curStr->yMin > 20) {
+    delete curStr;
+    curStr = NULL;
+    return;
+  }
+#endif
+
+  // insert string in y-major list
   h = curStr->yMax - curStr->yMin;
   y1 = curStr->yMin + 0.5 * h;
   y2 = curStr->yMin + 0.8 * h;
@@ -227,7 +244,11 @@ void TextPage::coalesce() {
   while (str1 && (str2 = str1->yxNext)) {
     space = str1->yMax - str1->yMin;
     d = str2->xMin - str1->xMax;
+#if 0 //~tmp
+    if (str2->yMin < str1->yMax && d > -0.1 * space && d < 0.2 * space) {
+#else
     if (str2->yMin < str1->yMax && d > -0.5 * space && d < space) {
+#endif
       n = str1->text->getLength();
       if (d > 0.1 * space)
 	str1->text->append(' ');
@@ -482,6 +503,7 @@ void TextPage::clear() {
 //------------------------------------------------------------------------
 
 TextOutputDev::TextOutputDev(char *fileName, GBool useASCII7) {
+  text = NULL;
   ok = gTrue;
 
   // open file
@@ -507,7 +529,8 @@ TextOutputDev::TextOutputDev(char *fileName, GBool useASCII7) {
 TextOutputDev::~TextOutputDev() {
   if (needClose)
     fclose(f);
-  delete text;
+  if (text)
+    delete text;
 }
 
 void TextOutputDev::startPage(int pageNum, GfxState *state) {

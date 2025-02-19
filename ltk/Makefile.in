@@ -1,0 +1,75 @@
+#========================================================================
+#
+# LTK library Makefile
+#
+# Copyright 1996 Derek B. Noonburg
+#
+#========================================================================
+
+GOODIR = ../goo
+
+CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOODIR) -I. @X_CFLAGS@
+
+CXX = @CXX@
+AR = @AR@
+RANLIB = @RANLIB@
+
+LIBPREFIX = @LIBPREFIX@
+EXE = @EXE@
+
+all: $(LIBPREFIX)LTK.a ltkbuild$(EXE)
+
+#------------------------------------------------------------------------
+
+LTK_OBJS =	LTKApp.o \
+		LTKBorder.o \
+		LTKBox.o \
+		LTKButton.o \
+		LTKButtonDialog.o \
+		LTKCanvas.o \
+		LTKCompoundWidget.o \
+		LTKDblBufCanvas.o \
+		LTKEmpty.o \
+		LTKFileReq.o \
+		LTKLabel.o \
+		LTKList.o \
+		LTKMenu.o \
+		LTKMisc.o \
+		LTKResources.o \
+		LTKScrollbar.o \
+		LTKScrollingCanvas.o \
+		LTKTextIn.o \
+		LTKWidget.o \
+		LTKWindow.o
+
+$(LIBPREFIX)LTK.a: $(LTK_OBJS)
+	rm -f $(LIBPREFIX)LTK.a
+	$(AR) $(LIBPREFIX)LTK.a $(LTK_OBJS)
+	$(RANLIB) $(LIBPREFIX)LTK.a
+
+#------------------------------------------------------------------------
+
+LTKBUILD_OBJS = ltkbuild.o
+LTKBUILD_LIBS = -L$(GOODIR) -lGoo
+
+ltkbuild$(EXE): $(LTKBUILD_OBJS)
+	$(CXX) $(CXXFLAGS) -o ltkbuild$(EXE) $(LTKBUILD_OBJS) $(LTKBUILD_LIBS)
+
+#------------------------------------------------------------------------
+
+clean:
+	rm -f $(LTK_OBJS) $(LIBPREFIX)LTK.a
+	rm -f $(LTKBUILD_OBJS) ltkbuild$(EXE)
+	rm -f Makefile.bak
+
+#------------------------------------------------------------------------
+
+depend:
+	$(CXX) $(CXXFLAGS) -M $(LTK_OBJS:.o=.cc) |\
+	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
+	  grep -v '^ \\$$' >Makefile.dep
+	$(CXX) $(CXXFLAGS) -M $(LTKBUILD_OBJS:.o=.cc) |\
+	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
+	  grep -v '^ \\$$' >>Makefile.dep
+
+include Makefile.dep

@@ -78,6 +78,7 @@ public:
 
   // Coalesce strings that look like parts of the same line.
   void coalesce();
+
   // Find a string.  If <top> is true, starts looking at <xMin>,<yMin>;
   // otherwise starts looking at top of page.  If <bottom> is true,
   // stops looking at <xMax>,<yMax>; otherwise stops looking at bottom

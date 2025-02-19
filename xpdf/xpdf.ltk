@@ -47,15 +47,15 @@ Window(func:makeWindow title:"xpdf" icon:xpdfIcon) {
       }
       Box1() {
         Label(text:"Page"
-              font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+              font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
       }
       Box1(sunken left:4 right:4) {
         TextIn(name:"pageNum" mw:6 done:&pageNumCbk
-               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+               font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
       }
       Box1() {
-        Label(name:"numPages" length:9
-              font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+        Label(name:"numPages" maxLength length:9
+              font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
       }
       Box1() {
         IconButton(bitmap:zoomIn_bits w:zoomIn_width
@@ -65,7 +65,10 @@ Window(func:makeWindow title:"xpdf" icon:xpdfIcon) {
         IconButton(bitmap:zoomOut_bits w:zoomOut_width
                    h:zoomOut_height press:&zoomOutCbk)
       }
-      Box1(xfill:4) { Empty() }
+      Box1() {
+        IconButton(bitmap:find_bits w:find_width
+                   h:find_height press:&findCbk)
+      }
       Box1() {
         IconButton(bitmap:postscript_bits w:postscript_width
                    h:postscript_height press:&postScriptCbk)
@@ -74,7 +77,10 @@ Window(func:makeWindow title:"xpdf" icon:xpdfIcon) {
         IconButton(bitmap:about_bits w:about_width h:about_height
                    press:&aboutCbk)
       }
-      Box1(xfill:1) { Empty() }
+      Box1(xfill:1) {
+        Label(name:"link" fixedWidth
+              font:"-*-helvetica-medium-r-normal-*-12-*-*-*-*-*-*-*")
+      }
       Box1() { Button(label:"Quit" press:&quitCbk) }
     }
   }
@@ -84,13 +90,10 @@ Window(func:makeWindow title:"xpdf" icon:xpdfIcon) {
 # menu for main window
 #------------------------------------------------------------------------
 
-Menu(func:makeMenu title:"xpdf" n:9) {
+Menu(func:makeMenu title:"xpdf" n:7) {
   MenuItem(text:"Open..."      shortcut:"O"     num:menuOpen
            select:&menuCbk)
-  MenuItem(text:"Save PDF..."                   num:menuSavePDF
-           select:&menuCbk)
-  MenuItem(text:NULL)
-  MenuItem(text:"Find"         shortcut:"F"     num:menuFind
+  MenuItem(text:"Save as..."                    num:menuSavePDF
            select:&menuCbk)
   MenuItem(text:NULL)
   MenuItem(text:"Rotate left"                   num:menuRotateLeft
@@ -113,19 +116,19 @@ Window(func:makePostScriptDialog dialog:gTrue defWidget:"ok"
       Box1() { Label(text:"Pages:") }
       Box1(sunken) {
         TextIn(name:"firstPage" mw:6 tab:"lastPage"
-               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+               font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
       }
       Box1() { Label(text:"to") }
       Box1(sunken) {
         TextIn(name:"lastPage" mw:6 tab:"fileName"
-               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+               font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
       }
     }
     Box(x:2 y:1) {
       Box1() { Label(text:"File:") }
       Box1(sunken xfill:1) {
         TextIn(name:"fileName" mw:32
-               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+               font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
       }
     }
     Box(x:3 y:1 top:8) {
@@ -145,7 +148,7 @@ Window(func:makeOpenDialog dialog:gTrue defWidget:"open"
   Box(x:1 y:2 xfill:1 yfill:1) {
     Box1(xfill:1 yfill:1) {
       FileReq(name:"fileReq" select:openSelectCbk
-              font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+              font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
     }
     Box(x:3 y:1 top:8 xfill:1) {
       Box1(left:8) { Button(name:"open" label:"Open" press:&openButtonCbk
@@ -165,7 +168,7 @@ Window(func:makeSaveDialog dialog:gTrue defWidget:"save"
   Box(x:1 y:2 xfill:1 yfill:1) {
     Box1(xfill:1 yfill:1) {
       FileReq(name:"fileReq" select:saveSelectCbk
-              font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+              font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
     }
     Box(x:3 y:1 top:8 xfill:1) {
       Box1(left:8) { Button(name:"save" label:"Save" press:&saveButtonCbk
@@ -186,7 +189,7 @@ Window(func:makeFindWindow defWidget:"find" title:"xpdf: Find") {
       Box1() { Label(text:"Text:") }
       Box1(xfill:1 sunken) {
         TextIn(name:"text" mw:32
-               font:"-*-courier-medium-r-*-*-14-*-*-*-*-*-*-*")
+               font:"-*-courier-medium-r-normal-*-14-*-*-*-*-*-*-*")
       }
     }
     Box1(xfill:1 yfill:1) { Empty() }
@@ -205,10 +208,10 @@ Window(func:makeFindWindow defWidget:"find" title:"xpdf: Find") {
 
 Window(func:makeAboutWindow defWidget:"close" title:"About xpdf") {
   Box(x:1 y:2) {
-    Box(x:1 y:10 left:2 right:2 top:2 bottom:2 sunken) {
+    Box(x:1 y:11 left:2 right:2 top:2 bottom:2 sunken) {
       Box1(bottom:0) {
         Label(text:"xpdf"
-              font:"-*-times-bold-i-*-*-24-*-*-*-*-*-*-*")
+              font:"-*-times-bold-i-normal-*-24-*-*-*-*-*-*-*")
       }
       Box1(bottom:12) {
         Label(text:["Version " xpdfVersion])
@@ -217,9 +220,9 @@ Window(func:makeAboutWindow defWidget:"close" title:"About xpdf") {
         Label(text:xpdfCopyright)
       }
       Box1(bottom:12) {
-        Label(text:"derekn@ece.cmu.edu")
+        Label(text:"derekn@aimnet.com")
       }
-      Box1(bottom:0) {
+      Box1(bottom:2) {
         Label(text:["Supports PDF version " pdfVersion "."])
       }
       Box1(bottom:0) {
@@ -231,11 +234,14 @@ Window(func:makeAboutWindow defWidget:"close" title:"About xpdf") {
       Box1(bottom:0) {
         Label(text:"Mouse button 1: select text / follow link")
       }
+      Box1(bottom:0) {
+        Label(text:"Mouse button 2: pan window")
+      }
       Box1(bottom:12) {
         Label(text:"Mouse button 3: menu")
       }
       Box1(bottom:12) {
-        Label(text:"http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html")
+        Label(text:"http://www.aimnet.com/~derekn/xpdf/")
       }
     }
     Box(x:2 y:1) {
