@@ -1026,7 +1026,7 @@ void TextPage::dump(FILE *f) {
   TextString *str1, *str2, *str3;
   double yMin, yMax;
   int col1, col2;
-  double d;
+  int d;
 
   // build x-major list
   xyStrings = NULL;
@@ -1123,8 +1123,12 @@ void TextPage::dump(FILE *f) {
 	  
 	// print the space
 	d = (int)((yMin - yMax) / (str1->yMax - str1->yMin) + 0.5);
+	// various things (weird font matrices) can result in bogus
+	// values here, so do a sanity check
 	if (rawOrder && d > 2) {
 	  d = 2;
+	} else if (!rawOrder && d > 5) {
+	  d = 5;
 	}
 	for (; d > 0; --d) {
 	  fputc('\n', f);
@@ -1159,7 +1163,7 @@ void TextPage::clear() {
 //------------------------------------------------------------------------
 
 TextOutputDev::TextOutputDev(char *fileName, TextOutputCharSet charSet,
-			     GBool rawOrder) {
+			     GBool rawOrder, GBool append) {
   text = NULL;
   this->rawOrder = rawOrder;
   ok = gTrue;
@@ -1169,7 +1173,7 @@ TextOutputDev::TextOutputDev(char *fileName, TextOutputCharSet charSet,
   if (fileName) {
     if (!strcmp(fileName, "-")) {
       f = stdout;
-    } else if ((f = fopen(fileName, "w"))) {
+    } else if ((f = fopen(fileName, append ? "a" : "w"))) {
       needClose = gTrue;
     } else {
       error(-1, "Couldn't open text file '%s'", fileName);

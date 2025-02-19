@@ -60,7 +60,8 @@ public:
   // Open a PostScript output file, and write the prolog.
   PSOutputDev(char *fileName, Catalog *catalog,
 	      int firstPage, int lastPage,
-	      GBool embedType11, GBool doForm1);
+	      GBool embedType1, GBool embedTrueType,
+	      GBool doForm);
 
   // Destructor -- writes the trailer and closes the file.
   virtual ~PSOutputDev();
@@ -147,6 +148,7 @@ private:
   void setupEmbeddedType1Font(Ref *id, char *psName);
   void setupEmbeddedType1Font(GString *fileName, char *psName);
   void setupEmbeddedType1CFont(GfxFont *font, Ref *id, char *psName);
+  void setupEmbeddedTrueTypeFont(GfxFont *font, Ref *id, char *psName);
   void setupImages(Dict *resDict);
   void setupImage(Ref id, Stream *str);
   void doPath(GfxPath *path);
@@ -169,6 +171,7 @@ private:
   void writePSString(GString *s);
 
   GBool embedType1;		// embed Type 1 fonts?
+  GBool embedTrueType;		// embed TrueType fonts?
   GBool doForm;			// generate a form?
 
   FILE *f;			// PostScript file

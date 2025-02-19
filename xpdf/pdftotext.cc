@@ -26,6 +26,9 @@
 #include "Error.h"
 #include "config.h"
 
+static void printInfoString(FILE *f, Dict *infoDict, char *key, char *fmt);
+static void printInfoDate(FILE *f, Dict *infoDict, char *key, char *fmt);
+
 static int firstPage = 1;
 static int lastPage = 0;
 static GBool useASCII7 = gFalse;
@@ -35,6 +38,7 @@ static GBool useLatin5 = gFalse;
 static GBool useEUCJP = gFalse;
 #endif
 static GBool rawOrder = gFalse;
+static GBool htmlMeta = gFalse;
 static char userPassword[33] = "";
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
@@ -56,6 +60,8 @@ static ArgDesc argDesc[] = {
 #endif
   {"-raw",    argFlag,     &rawOrder,      0,
    "keep strings in content stream order"},
+  {"-htmlmeta", argFlag,   &htmlMeta,      0,
+   "generate a simple HTML file, including the meta information"},
   {"-upw",    argString,   userPassword,   sizeof(userPassword),
    "user password (for encrypted files)"},
   {"-q",      argFlag,     &errQuiet,      0,
@@ -76,6 +82,8 @@ int main(int argc, char *argv[]) {
   GString *userPW;
   TextOutputDev *textOut;
   TextOutputCharSet charSet;
+  FILE *f;
+  Object info;
   GBool ok;
   char *p;
 
@@ -109,13 +117,13 @@ int main(int argc, char *argv[]) {
     delete userPW;
   }
   if (!doc->isOk()) {
-    goto err;
+    goto err1;
   }
 
   // check for copy permission
   if (!doc->okToCopy()) {
     error(-1, "Copying of text from this document is not allowed.");
-    goto err;
+    goto err1;
   }
 
   // construct text file name
@@ -129,7 +137,7 @@ int main(int argc, char *argv[]) {
     } else {
       textFileName = fileName->copy();
     }
-    textFileName->append(".txt");
+    textFileName->append(htmlMeta ? ".html" : ".txt");
   }
 
   // get page range
@@ -138,6 +146,45 @@ int main(int argc, char *argv[]) {
   }
   if (lastPage < 1 || lastPage > doc->getNumPages()) {
     lastPage = doc->getNumPages();
+  }
+
+  // write HTML header
+  if (htmlMeta) {
+    if (!textFileName->cmp("-")) {
+      f = stdout;
+    } else {
+      if (!(f = fopen(textFileName->getCString(), "w"))) {
+	error(-1, "Couldn't open text file '%s'", textFileName->getCString());
+	goto err2;
+      }
+    }
+    fputs("<html>\n", f);
+    fputs("<head>\n", f);
+    doc->getDocInfo(&info);
+    if (info.isDict()) {
+      printInfoString(f, info.getDict(), "Title", "<title>%s</title>\n");
+      printInfoString(f, info.getDict(), "Subject",
+		      "<meta name=\"Subject\" content=\"%s\">\n");
+      printInfoString(f, info.getDict(), "Keywords",
+		      "<meta name=\"Keywords\" content=\"%s\">\n");
+      printInfoString(f, info.getDict(), "Author",
+		      "<meta name=\"Author\" content=\"%s\">\n");
+      printInfoString(f, info.getDict(), "Creator",
+		      "<meta name=\"Creator\" content=\"%s\">\n");
+      printInfoString(f, info.getDict(), "Producer",
+		      "<meta name=\"Producer\" content=\"%s\">\n");
+      printInfoDate(f, info.getDict(), "CreationDate",
+		    "<meta name=\"CreationDate\" content=\"%s\">\n");
+      printInfoDate(f, info.getDict(), "ModDate",
+		    "<meta name=\"ModDate\" content=\"%s\">\n");
+    }
+    info.free();
+    fputs("</head>\n", f);
+    fputs("<body>\n", f);
+    fputs("<pre>\n", f);
+    if (f != stdout) {
+      fclose(f);
+    }
   }
 
   // write text file
@@ -152,15 +199,35 @@ int main(int argc, char *argv[]) {
   } else if (useLatin5) {
     charSet = textOutLatin5;
   }
-  textOut = new TextOutputDev(textFileName->getCString(), charSet, rawOrder);
+  textOut = new TextOutputDev(textFileName->getCString(), charSet, rawOrder,
+			      htmlMeta);
   if (textOut->isOk()) {
     doc->displayPages(textOut, firstPage, lastPage, 72, 0, gFalse);
   }
   delete textOut;
 
+  // write end of HTML file
+  if (htmlMeta) {
+    if (!textFileName->cmp("-")) {
+      f = stdout;
+    } else {
+      if (!(f = fopen(textFileName->getCString(), "a"))) {
+	error(-1, "Couldn't open text file '%s'", textFileName->getCString());
+	goto err2;
+      }
+    }
+    fputs("</pre>\n", f);
+    fputs("</body>\n", f);
+    fputs("</html>\n", f);
+    if (f != stdout) {
+      fclose(f);
+    }
+  }
+
   // clean up
+ err2:
   delete textFileName;
- err:
+ err1:
   delete doc;
   freeParams();
 
@@ -169,4 +236,46 @@ int main(int argc, char *argv[]) {
   gMemReport(stderr);
 
   return 0;
+}
+
+static void printInfoString(FILE *f, Dict *infoDict, char *key, char *fmt) {
+  Object obj;
+  GString *s1, *s2;
+  int i;
+
+  if (infoDict->lookup(key, &obj)->isString()) {
+    s1 = obj.getString();
+    if ((s1->getChar(0) & 0xff) == 0xfe &&
+	(s1->getChar(1) & 0xff) == 0xff) {
+      s2 = new GString();
+      for (i = 2; i < obj.getString()->getLength(); i += 2) {
+	if (s1->getChar(i) == '\0') {
+	  s2->append(s1->getChar(i+1));
+	} else {
+	  delete s2;
+	  s2 = new GString("<unicode>");
+	  break;
+	}
+      }
+      fprintf(f, fmt, s2->getCString());
+      delete s2;
+    } else {
+      fprintf(f, fmt, s1->getCString());
+    }
+  }
+  obj.free();
+}
+
+static void printInfoDate(FILE *f, Dict *infoDict, char *key, char *fmt) {
+  Object obj;
+  char *s;
+
+  if (infoDict->lookup(key, &obj)->isString()) {
+    s = obj.getString()->getCString();
+    if (s[0] == 'D' && s[1] == ':') {
+      s += 2;
+    }
+    fprintf(f, fmt, s);
+  }
+  obj.free();
 }

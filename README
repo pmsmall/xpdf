@@ -310,6 +310,12 @@ Adobe Systems Inc., _PostScript Language Reference Manual_, 2nd ed.
 Addison-Wesley, 1990, ISBN 0-201-18127-4.
 [The official PostScript manual.]
 
+Adobe Systems, Inc., _The Type 42 Font Format Specification_,
+Adobe Developer Support Technical Specification #5012.  1998.
+http://partners.adobe.com/asn/developer/pdfs/tn/5012.Type42_Spec.pdf
+[Type 42 is the format used to embed TrueType fonts in PostScript
+files.]
+
 Adobe Systems, Inc., _Adobe CMap and CIDFont Files Specification_,
 Adobe Developer Support Technical Specification #5014.  1995.
 http://www.adobe.com/supportservice/devrelations/PDFS/TN/5014.CIDFont_Spec.pdf
@@ -388,6 +394,10 @@ Christoph Loeffler, Adriaan Ligtenberg, George S. Moschytz, "Practical
 Fast 1-D DCT Algorithms with 11 Multiplications".  IEEE Intl. Conf. on
 Acoustics, Speech & Signal Processing, 1989, 988-991.
 [The fast IDCT algorithm used in the DCTDecode filter.]
+
+Microsoft, _TyueType 1.0 Font Files_, rev. 1.66.  1995.
+http://www.microsoft.com/typography/tt/tt.htm
+[The TrueType font spec (in MS Word format, naturally).]
 
 Charles Poynton, "Color FAQ".
 http://www.inforamp.net/~poynton/ColorFAQ.html

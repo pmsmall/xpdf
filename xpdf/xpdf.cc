@@ -2193,7 +2193,7 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on) {
     win->setBusyCursor(gTrue);
     if (doc->okToPrint()) {
       psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
-			      psFirstPage, psLastPage, gTrue, gFalse);
+			      psFirstPage, psLastPage, gTrue, gTrue, gFalse);
       if (psOut->isOk()) {
 	doc->displayPages(psOut, psFirstPage, psLastPage, 72, 0, gFalse);
       }
@@ -2296,7 +2296,7 @@ static void doFind(char *s) {
   // search following pages
   textOut = new TextOutputDev(NULL,
 			      useEUCJP ? textOutASCII7 : textOutLatin1,
-			      gFalse);
+			      gFalse, gFalse);
   if (!textOut->isOk()) {
     delete textOut;
     goto done;

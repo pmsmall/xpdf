@@ -19,6 +19,7 @@
 #include "config.h"
 #include "Object.h"
 #include "Error.h"
+#include "Function.h"
 #include "GfxState.h"
 #include "GfxFont.h"
 #include "FontFile.h"
@@ -278,7 +279,8 @@ typedef void (*SignalFunc)(int);
 
 PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
 			 int firstPage, int lastPage,
-			 GBool embedType11, GBool doForm1) {
+			 GBool embedType1, GBool embedTrueType,
+			 GBool doForm) {
   Page *page;
   Dict *resDict;
   FormWidgets *formWidgets;
@@ -288,8 +290,9 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
   int i;
 
   // initialize
-  embedType1 = embedType11;
-  doForm = doForm1;
+  this->embedType1 = embedType1;
+  this->embedTrueType = embedTrueType;
+  this->doForm = doForm;
   fontIDs = NULL;
   fontFileIDs = NULL;
   fontFileNames = NULL;
@@ -600,6 +603,11 @@ void PSOutputDev::setupFont(GfxFont *font) {
     psName = font->getEmbeddedFontName();
     setupEmbeddedType1CFont(font, &fontFileID, psName);
 
+  } else if (embedTrueType && font->getType() == fontTrueType &&
+	     font->getEmbeddedFontID(&fontFileID)) {
+    psName = font->getEmbeddedFontName();
+    setupEmbeddedTrueTypeFont(font, &fontFileID, psName);
+
   } else if (font->is16Bit() && font->getCharSet16() == font16AdobeJapan12) {
     psName = "Ryumin-Light-RKSJ";
     do16Bit = gTrue;
@@ -876,6 +884,48 @@ void PSOutputDev::setupEmbeddedType1CFont(GfxFont *font, Ref *id,
   cvt = new Type1CFontConverter(fontBuf, fontLen, f);
   cvt->convert();
   delete cvt;
+  gfree(fontBuf);
+
+  // ending comment
+  if (psOutEPS) {
+    writePS("%%%%EndResource\n");
+  }
+}
+
+void PSOutputDev::setupEmbeddedTrueTypeFont(GfxFont *font, Ref *id,
+					    char *psName) {
+  char *fontBuf;
+  int fontLen;
+  TrueTypeFontFile *ttFile;
+  int i;
+
+  // check if font is already embedded
+  for (i = 0; i < fontFileIDLen; ++i) {
+    if (fontFileIDs[i].num == id->num &&
+	fontFileIDs[i].gen == id->gen)
+      return;
+  }
+
+  // add entry to fontFileIDs list
+  if (fontFileIDLen >= fontFileIDSize) {
+    fontFileIDSize += 64;
+    fontFileIDs = (Ref *)grealloc(fontFileIDs, fontFileIDSize * sizeof(Ref));
+  }
+  fontFileIDs[fontFileIDLen++] = *id;
+
+  // beginning comment
+  if (psOutEPS) {
+    writePS("%%%%BeginResource: font %s\n", psName);
+    embFontList->append("%%+ font ");
+    embFontList->append(psName);
+    embFontList->append("\n");
+  }
+
+  // convert it to a Type 42 font
+  fontBuf = font->readEmbFontFile(&fontLen);
+  ttFile = new TrueTypeFontFile(fontBuf, fontLen);
+  ttFile->convertToType42(psName, font->getEncoding(), f);
+  delete ttFile;
   gfree(fontBuf);
 
   // ending comment
@@ -1656,7 +1706,7 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
   GfxIndexedColorSpace *indexedCS;
   GfxSeparationColorSpace *separationCS;
   Guchar *lookup;
-  double x[1], y[gfxColorMaxComps];
+  double x[gfxColorMaxComps], y[gfxColorMaxComps];
   int n, numComps;
   int i, j, k;
 

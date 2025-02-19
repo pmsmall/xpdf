@@ -172,7 +172,25 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
   embFontID.num = -1;
   embFontID.gen = -1;
   missingWidth = 0;
-  fontDict->lookup("FontDescriptor", &obj1);
+  if (type == fontType0) {
+    fontDict->lookup("DescendantFonts", &obj2);
+    if (obj2.isArray()) {
+      obj2.arrayGet(0, &obj3);
+      if (obj3.isDict()) {
+	obj3.dictLookup("FontDescriptor", &obj1);
+      } else {
+	error(-1, "Bad descendant font in Type 0 font");
+	obj1.initNull();
+      }
+      obj3.free();
+    } else {
+      error(-1, "Missing DescendantFonts entry in Type 0 font");
+      obj1.initNull();
+    }
+    obj2.free();
+  } else {
+    fontDict->lookup("FontDescriptor", &obj1);
+  }
   if (obj1.isDict()) {
 
     // get flags
@@ -452,24 +470,29 @@ void GfxFont::getEncAndWidths(Dict *fontDict, BuiltinFont *builtinFont,
   obj1.free();
 
   // check embedded or external font file for base encoding
-  if ((type == fontType1 || type == fontType1C) &&
+  if ((type == fontType1 || type == fontType1C || type == fontTrueType) &&
       (extFontFile || embFontID.num >= 0)) {
-    if (extFontFile)
+    if (extFontFile) {
       buf = readExtFontFile(&len);
-    else
+    } else {
       buf = readEmbFontFile(&len);
+    }
     if (buf) {
-      if (type == fontType1)
+      if (type == fontType1) {
 	fontFile = new Type1FontFile(buf, len);
-      else
+      } else if (type == fontType1C) {
 	fontFile = new Type1CFontFile(buf, len);
+      } else {
+	fontFile = new TrueTypeFontFile(buf, len);
+      }
       if (fontFile->getName()) {
 	if (embFontName)
 	  delete embFontName;
 	embFontName = new GString(fontFile->getName());
       }
-      if (!encoding)
+      if (!encoding) {
 	encoding = fontFile->getEncoding(gTrue);
+      }
       delete fontFile;
       gfree(buf);
     }

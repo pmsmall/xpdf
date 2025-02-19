@@ -748,7 +748,9 @@ int ASCIIHexStream::lookChar() {
 GString *ASCIIHexStream::getPSFilter(char *indent) {
   GString *s;
 
-  s = str->getPSFilter(indent);
+  if (!(s = str->getPSFilter(indent))) {
+    return NULL;
+  }
   s->append(indent)->append("/ASCIIHexDecode filter\n");
   return s;
 }
@@ -824,7 +826,9 @@ int ASCII85Stream::lookChar() {
 GString *ASCII85Stream::getPSFilter(char *indent) {
   GString *s;
 
-  s = str->getPSFilter(indent);
+  if (!(s = str->getPSFilter(indent))) {
+    return NULL;
+  }
   s->append(indent)->append("/ASCII85Decode filter\n");
   return s;
 }
@@ -1139,7 +1143,9 @@ GString *LZWStream::getPSFilter(char *indent) {
   if (pred) {
     return NULL;
   }
-  s = str->getPSFilter(indent);
+  if (!(s = str->getPSFilter(indent))) {
+    return NULL;
+  }
   s->append(indent)->append("/LZWDecode filter\n");
   return s;
 }
@@ -1171,7 +1177,9 @@ void RunLengthStream::reset() {
 GString *RunLengthStream::getPSFilter(char *indent) {
   GString *s;
 
-  s = str->getPSFilter(indent);
+  if (!(s = str->getPSFilter(indent))) {
+    return NULL;
+  }
   s->append(indent)->append("/RunLengthDecode filter\n");
   return s;
 }
@@ -1720,7 +1728,9 @@ GString *CCITTFaxStream::getPSFilter(char *indent) {
   GString *s;
   char s1[50];
 
-  s = str->getPSFilter(indent);
+  if (!(s = str->getPSFilter(indent))) {
+    return NULL;
+  }
   s->append(indent)->append("<< ");
   if (encoding != 0) {
     sprintf(s1, "/K %d ", encoding);
@@ -2710,7 +2720,9 @@ int DCTStream::read16() {
 GString *DCTStream::getPSFilter(char *indent) {
   GString *s;
 
-  s = str->getPSFilter(indent);
+  if (!(s = str->getPSFilter(indent))) {
+    return NULL;
+  }
   s->append(indent)->append("<< >> /DCTDecode filter\n");
   return s;
 }

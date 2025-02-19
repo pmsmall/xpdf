@@ -144,7 +144,7 @@ public:
   // should be set to textOutASCII7 for Japanese (EUC-JP) text.  If
   // <rawOrder> is true, the text is kept in content stream order.
   TextOutputDev(char *fileName, TextOutputCharSet charSet,
-		GBool rawOrder);
+		GBool rawOrder, GBool append);
 
   // Destructor.
   virtual ~TextOutputDev();

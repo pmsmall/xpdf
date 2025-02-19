@@ -752,3 +752,21 @@ Add the 0/+/-/z/w key bindings to control the zoom setting.
 Fixed ImageOutputDev (pdfimages) to correctly handle inline image
   masks.
 Extract ascent/descent info from font descriptor.
+
+0.92d (2001-jun-26)
+-------------------
+Extract encoding from TrueType fonts.
+Embed TrueType fonts in PostScript output.  (Added a "-noembtt" flag
+  to pdftops.)
+Moved Function classes to a separate file (Function.h/cc).
+Implemented multi-dimensional sampled Functions.
+Implemented Type 4 (PostScript calculator) Functions.
+For Type 0 fonts, FontDescriptor is in descendant font, not parent.
+  [Thanks to Lidia Mirkin.]
+Added the "-htmlmeta" option to pdftotext.
+In TextOutputDev, when computing the number of blank lines to insert,
+  do a sanity check on the result.
+If both FlateDecode and some other filter (e.g., DCTDecode) were
+  applied to an image stream, getPSFilter() crashed instead of just
+  returning NULL.
+Handle the /Identity function.

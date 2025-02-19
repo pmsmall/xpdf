@@ -29,6 +29,7 @@
 static int firstPage = 1;
 static int lastPage = 0;
 static GBool noEmbedFonts = gFalse;
+static GBool noEmbedTTFonts = gFalse;
 static GBool doForm = gFalse;
 static char userPassword[33] = "";
 static GBool printVersion = gFalse;
@@ -55,6 +56,8 @@ static ArgDesc argDesc[] = {
 #endif
   {"-noemb",  argFlag,     &noEmbedFonts,   0,
    "don't embed Type 1 fonts"},
+  {"-noembtt", argFlag,    &noEmbedTTFonts, 0,
+   "don't embed TrueType fonts"},
   {"-form",   argFlag,     &doForm,         0,
    "generate a PostScript form"},
   {"-upw",    argString,   userPassword,    sizeof(userPassword),
@@ -155,7 +158,8 @@ int main(int argc, char *argv[]) {
 
   // write PostScript file
   psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
-			  firstPage, lastPage, !noEmbedFonts, doForm);
+			  firstPage, lastPage,
+			  !noEmbedFonts, !noEmbedTTFonts, doForm);
   if (psOut->isOk())
     doc->displayPages(psOut, firstPage, lastPage, 72, 0, gFalse);
   delete psOut;
