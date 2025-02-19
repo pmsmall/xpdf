@@ -83,18 +83,13 @@ static const char *aboutHTML =
   "<br>"
   "XpdfReader uses the following open source libraries:"
   "<ul>"
-  "FreeType is copyright 2006-2020 David Turner, Robert Wilhelm, and Werner Lemberg.  FreeType is used here under the terms of the FreeType Project License."
+  "<li>FreeType is copyright 2006-2023 David Turner, Robert Wilhelm, and Werner Lemberg.  FreeType is used here under the terms of the FreeType Project License."
   "<li>The Qt Toolkit is Copyright 2015 The Qt Company Ltd.  Qt is used here under the terms of the LGPL v2.1."
   "</ul>";
 
 const char *helpURL = "http://www.xpdfreader.com/help";
 
 //------------------------------------------------------------------------
-
-#define nZoomComboBoxVals 13
-static int zoomComboBoxVals[nZoomComboBoxVals] = {
-  25, 50, 75, 100, 110, 125, 150, 175, 200, 300, 400, 600, 800
-};
 
 #define maxZoom 2000
 
@@ -155,6 +150,7 @@ XpdfViewerCmd XpdfViewer::cmdTab[] = {
   { "hideToolbar",             0, gFalse, gFalse, &XpdfViewer::cmdHideToolbar },
   { "horizontalContinuousMode",0, gFalse, gFalse, &XpdfViewer::cmdHorizontalContinuousMode },
   { "linearSelectMode",        0, gFalse, gFalse, &XpdfViewer::cmdLinearSelectMode },
+  { "loadSession",             0, gFalse, gFalse, &XpdfViewer::cmdLoadSession },
   { "loadTabState",            0, gFalse, gFalse, &XpdfViewer::cmdLoadTabState },
   { "newTab",                  0, gFalse, gFalse, &XpdfViewer::cmdNewTab },
   { "newWindow",               0, gFalse, gFalse, &XpdfViewer::cmdNewWindow },
@@ -192,6 +188,7 @@ XpdfViewerCmd XpdfViewer::cmdTab[] = {
   { "run",                     1, gFalse, gFalse, &XpdfViewer::cmdRun },
   { "saveAs",                  0, gTrue,  gFalse, &XpdfViewer::cmdSaveAs },
   { "saveImage",               0, gTrue,  gFalse, &XpdfViewer::cmdSaveImage },
+  { "saveSession",             0, gFalse, gFalse, &XpdfViewer::cmdSaveSession },
   { "saveTabState",            0, gFalse, gFalse, &XpdfViewer::cmdSaveTabState },
   { "scrollDown",              1, gTrue,  gFalse, &XpdfViewer::cmdScrollDown },
   { "scrollDownNextPage",      1, gTrue,  gFalse, &XpdfViewer::cmdScrollDownNextPage },
@@ -391,7 +388,7 @@ QValidator::State ZoomValidator::validate(QString &input, int &pos) const {
   QChar c;
   int n, i;
 
-  n = input.length();
+  n = (int)input.length();
   if (n == 0) {
     return QValidator::Intermediate;
   }
@@ -447,11 +444,11 @@ QVariant PropertyListAnimation::interpolated(const QVariant &from,
 					     qreal progress) const {
   int i;
 
-  i = (int)(progress * valueList.size());
+  i = (int)(progress * (int)valueList.size());
   if (i < 0) {
     i = 0;
   } else if (i >= valueList.size()) {
-    i = valueList.size() - 1;
+    i = (int)valueList.size() - 1;
   }
   return valueList[i];
 }
@@ -1008,6 +1005,110 @@ QMenu *XpdfViewer::createPopupMenu() {
   return NULL;
 }
 
+void XpdfViewer::saveSession(FILE *out, int format) {
+  fprintf(out, "%d\n", tabInfo->getLength());
+  for (int i = 0; i < tabInfo->getLength(); ++i) {
+    XpdfWidget *pdf = ((XpdfTabInfo *)tabInfo->get(i))->pdf;
+    QString fileName = pdf->getFileName();
+    if (!fileName.isEmpty()) {
+      fprintf(out, "%s\n", fileName.toUtf8().constData());
+      char displayModeChar;
+      switch (pdf->getDisplayMode()) {
+      case XpdfWidget::pdfDisplaySingle:
+	displayModeChar = 's';
+	break;
+      case XpdfWidget::pdfDisplayContinuous:
+	displayModeChar = 'c';
+	break;
+      case XpdfWidget::pdfDisplaySideBySideSingle:
+	displayModeChar = 'b';
+	break;
+      case XpdfWidget::pdfDisplaySideBySideContinuous:
+	displayModeChar = 'B';
+	break;
+      case XpdfWidget::pdfDisplayHorizontalContinuous:
+	displayModeChar = 'h';
+	break;
+      default:
+	displayModeChar = 'c';
+	break;
+      }
+      fprintf(out, "%c %d %g %d %d %d\n",
+	      displayModeChar, pdf->getMidPage(), pdf->getZoom(),
+	      pdf->getRotate(), pdf->getScrollX(), pdf->getScrollY());
+    }
+  }
+}
+
+void XpdfViewer::loadSession(FILE *in, int format) {
+  char line1[1024], line2[1024];
+  if (!fgets(line1, sizeof(line1), in)) {
+    return;
+  }
+  int nTabs;
+  if (sscanf(line1, "%d", &nTabs) != 1) {
+    return;
+  }
+
+  GBool first = gTrue;
+  for (int i = 0; i < nTabs; ++i) {
+    if (!fgets(line1, sizeof(line1), in) || !fgets(line2, sizeof(line2), in)) {
+      return;
+    }
+    size_t n = strlen(line1);
+    if (n > 0 && line1[n-1] == '\n') {
+      line1[--n] = '\0';
+    }
+    if (n > 0 && line1[n-1] == '\r') {
+      line1[--n] = '\0';
+    }
+    char displayModeChar;
+    int page, rotate, scrollX, scrollY;
+    double zoom;
+    if (sscanf(line2, "%c %d %lf %d %d %d",
+	       &displayModeChar, &page, &zoom, &rotate,
+	       &scrollX, &scrollY) != 6) {
+      return;
+    }
+    GBool ok;
+    if (first && !currentTab->pdf->hasOpenDocument()) {
+      ok = open(line1, page, "", rotate, "");
+    } else {
+      ok = openInNewTab(line1, page, "", rotate, "", gFalse);
+    }
+    if (ok) {
+      XpdfWidget *pdf = lastOpenedTab->pdf;
+      switch (displayModeChar) {
+      case 's':
+	pdf->setDisplayMode(XpdfWidget::pdfDisplaySingle);
+	break;
+      case 'c':
+	pdf->setDisplayMode(XpdfWidget::pdfDisplayContinuous);
+	break;
+      case 'b':
+	pdf->setDisplayMode(XpdfWidget::pdfDisplaySideBySideSingle);
+	break;
+      case 'B':
+	pdf->setDisplayMode(XpdfWidget::pdfDisplaySideBySideContinuous);
+	break;
+      case 'h':
+	pdf->setDisplayMode(XpdfWidget::pdfDisplayHorizontalContinuous);
+	break;
+      default: break;
+      }
+      pdf->setRotate(rotate);
+      pdf->setZoom(zoom);
+      pdf->scrollTo(scrollX, scrollY);
+    }
+    first = gFalse;
+  }
+}
+
+GBool XpdfViewer::isEmpty() {
+  return tabInfo->getLength() == 1 &&
+         ((XpdfTabInfo *)tabInfo->get(0))->pdf->getFileName().isEmpty();
+}
+
 //------------------------------------------------------------------------
 // remote server
 //------------------------------------------------------------------------
@@ -1095,6 +1196,7 @@ void XpdfViewer::execCmd(const char *cmd, QInputEvent *event) {
   //----- find the command
   a = -1;
   b = nCmds;
+  cmp = 0;
   // invariant: cmdTab[a].name < name < cmdTab[b].name
   while (b - a > 1) {
     m = (a + b) / 2;
@@ -1336,10 +1438,7 @@ void XpdfViewer::cmdFindFirst(GString *args[], int nArgs, QInputEvent *event) {
   int flags;
 
   clearFindError();
-  flags = 0;
-  if (findCaseSensitiveAction->isChecked()) {
-    flags |= XpdfWidget::findCaseSensitive;
-  }
+  flags = getFindCaseFlag();
   if (findWholeWordsAction->isChecked()) {
     flags |= XpdfWidget::findWholeWord;
   }
@@ -1352,10 +1451,7 @@ void XpdfViewer::cmdFindNext(GString *args[], int nArgs, QInputEvent *event) {
   int flags;
 
   clearFindError();
-  flags = XpdfWidget::findNext;
-  if (findCaseSensitiveAction->isChecked()) {
-    flags |= XpdfWidget::findCaseSensitive;
-  }
+  flags = XpdfWidget::findNext | getFindCaseFlag();
   if (findWholeWordsAction->isChecked()) {
     flags |= XpdfWidget::findWholeWord;
   }
@@ -1369,10 +1465,7 @@ void XpdfViewer::cmdFindPrevious(GString *args[], int nArgs,
   int flags;
 
   clearFindError();
-  flags = XpdfWidget::findBackward | XpdfWidget::findNext;
-  if (findCaseSensitiveAction->isChecked()) {
-    flags |= XpdfWidget::findCaseSensitive;
-  }
+  flags = XpdfWidget::findBackward | XpdfWidget::findNext | getFindCaseFlag();
   if (findWholeWordsAction->isChecked()) {
     flags |= XpdfWidget::findWholeWord;
   }
@@ -1481,6 +1574,11 @@ void XpdfViewer::cmdLinearSelectMode(GString *args[], int nArgs,
 				     QInputEvent *event) {
   currentTab->pdf->setLinearSelectMode();
   updateSelectModeInfo();
+}
+
+void XpdfViewer::cmdLoadSession(GString *args[], int nArgs,
+				QInputEvent *event) {
+  app->loadSession(NULL, gTrue);
 }
 
 void XpdfViewer::cmdLoadTabState(GString *args[], int nArgs,
@@ -1899,6 +1997,8 @@ void XpdfViewer::cmdRun(GString *args[], int nArgs, QInputEvent *event) {
   fmt = args[0];
   i = 0;
   gotSel = gotMouse = gFalse;
+  selPage = mPage = 0;
+  selURX = selURY = selLRX = selLRY = mX = mY = 0;
   while (i < fmt->getLength()) {
     c0 = fmt->getChar(i);
     if (c0 == '%' && i+1 < fmt->getLength()) {
@@ -2009,6 +2109,11 @@ void XpdfViewer::cmdSaveAs(GString *args[], int nArgs, QInputEvent *event) {
 
 void XpdfViewer::cmdSaveImage(GString *args[], int nArgs, QInputEvent *event) {
   execSaveImageDialog();
+}
+
+void XpdfViewer::cmdSaveSession(GString *args[], int nArgs,
+				QInputEvent *event) {
+  app->saveSession(NULL, gTrue);
 }
 
 void XpdfViewer::cmdSaveTabState(GString *args[], int nArgs,
@@ -2361,13 +2466,16 @@ void XpdfViewer::cmdZoomFitWidth(GString *args[], int nArgs,
 }
 
 void XpdfViewer::cmdZoomIn(GString *args[], int nArgs, QInputEvent *event) {
-  double z;
+  double zsf, z;
   int i;
 
-  z = currentTab->pdf->getZoomPercent(currentTab->pdf->getMidPage());
-  for (i = 0; i < zoomComboBox->count(); ++i) {
-    if (zoomComboBoxVals[i] > z) {
-      currentTab->pdf->zoomCentered(zoomComboBoxVals[i]);
+  zsf = app->getZoomScaleFactor();
+  z = currentTab->pdf->getZoomPercent(currentTab->pdf->getMidPage()) / zsf;
+  for (i = 0; i < app->getNZoomValues(); ++i) {
+    // the 1.0001 factor is to allow for floating point jitter when
+    // multiplying and dividing by zoomScaleFactor
+    if (app->getZoomValue(i) > 1.0001 * z) {
+      currentTab->pdf->zoomCentered(app->getZoomValue(i) * zsf);
       zoomComboBox->setCurrentIndex(i);
       updateZoomInfo();
       break;
@@ -2376,13 +2484,16 @@ void XpdfViewer::cmdZoomIn(GString *args[], int nArgs, QInputEvent *event) {
 }
 
 void XpdfViewer::cmdZoomOut(GString *args[], int nArgs, QInputEvent *event) {
-  double z;
+  double zsf, z;
   int i;
 
-  z = currentTab->pdf->getZoomPercent(currentTab->pdf->getMidPage());
-  for (i = zoomComboBox->count() - 1; i >= 0; --i) {
-    if (zoomComboBoxVals[i] < z) {
-      currentTab->pdf->zoomCentered(zoomComboBoxVals[i]);
+  zsf = app->getZoomScaleFactor();
+  z = currentTab->pdf->getZoomPercent(currentTab->pdf->getMidPage()) / zsf;
+  for (i = app->getNZoomValues() - 1; i >= 0; --i) {
+    // the 0.9999 factor is to allow for floating point jitter when
+    // multiplying and dividing by zoomScaleFactor
+    if (app->getZoomValue(i) < 0.9999 * z) {
+      currentTab->pdf->zoomCentered(app->getZoomValue(i) * zsf);
       zoomComboBox->setCurrentIndex(i);
       updateZoomInfo();
       break;
@@ -2399,7 +2510,7 @@ void XpdfViewer::cmdZoomPercent(GString *args[], int nArgs,
   if (z > maxZoom) {
     z = maxZoom;
   }
-  currentTab->pdf->zoomCentered(z);
+  currentTab->pdf->zoomCentered(z * app->getZoomScaleFactor());
   updateZoomInfo();
 }
 
@@ -2409,7 +2520,7 @@ void XpdfViewer::cmdZoomToSelection(GString *args[], int nArgs,
   int pg, xx0, yy0, xx1, yy1;
 
   if (currentTab->pdf->getCurrentSelection(&pg, &x0, &y0, &x1, &y1)) {
-    z = currentTab->pdf->getZoomPercent(pg);
+    z = currentTab->pdf->getZoomPercent(pg) / app->getZoomScaleFactor();
     currentTab->pdf->getCore()->cvtUserToDev(pg, x0, y0, &xx0, &yy0);
     currentTab->pdf->getCore()->cvtUserToDev(pg, x1, y1, &xx1, &yy1);
     rx = (double)currentTab->pdf->getCore()->getWindowWidth()
@@ -2429,6 +2540,26 @@ void XpdfViewer::cmdZoomToSelection(GString *args[], int nArgs,
     }
     currentTab->pdf->zoomToRect(pg, x0, y0, x1, y1);
     updateZoomInfo();
+  }
+}
+
+// Check the find settings menu items and the find text to determine
+// the effective case sensitivity setting.
+int XpdfViewer::getFindCaseFlag() {
+  // could use QString::isLower(), but it's only available in Qt 5.12+
+  if (findCaseSensitiveAction->isChecked()) {
+    return XpdfWidget::findCaseSensitive;
+  } else if (findSmartCaseAction->isChecked()) {
+    QString s = findEdit->text();
+    for (int i = 0; i < s.length(); ++i) {
+      QChar c = s[i];
+      if (c != c.toLower()) {
+	return XpdfWidget::findCaseSensitive;
+      }
+    }
+    return 0;
+  } else {
+    return 0;
   }
 }
 
@@ -2672,6 +2803,8 @@ void XpdfViewer::mouseWheel(QWheelEvent *e) {
     keyCode = xpdfKeyCodeMousePress6;
   } else if (delta.x() < 0) {
     keyCode = xpdfKeyCodeMousePress7;
+  } else {
+    return;
   }
   if ((cmds = globalParams->getKeyBinding(keyCode,
 					  getModifiers(e->modifiers()),
@@ -2854,6 +2987,10 @@ void XpdfViewer::reloadMenuAction() {
 
 void XpdfViewer::saveAsMenuAction() {
   execCmd("saveAs", NULL);
+}
+
+void XpdfViewer::loadSessionMenuAction() {
+  execCmd("loadSession", NULL);
 }
 
 void XpdfViewer::saveImageMenuAction() {
@@ -3305,8 +3442,8 @@ void XpdfViewer::createToolBar() {
   addToolBarSpacing(4);
   zoomComboBox = new QComboBox();
   zoomComboBox->setToolTip("change zoom level");
-  for (i = 0; i < nZoomComboBoxVals; ++i) {
-    zoomVal.setNum(zoomComboBoxVals[i]);
+  for (i = 0; i < app->getNZoomValues(); ++i) {
+    zoomVal.setNum(app->getZoomValue(i));
     zoomVal.append('%');
     zoomComboBox->addItem(zoomVal);
   }
@@ -3353,8 +3490,18 @@ void XpdfViewer::createToolBar() {
   addToolBarButton(QIcon(":/findPrevious-button"),
 		   SLOT(findPrevButtonPressed()), "find previous occurrence");
   QMenu *findSettingsMenu = new QMenu(this);
+  QActionGroup *findCaseGroup = new QActionGroup(findSettingsMenu);
+  findCaseInsensitiveAction = findSettingsMenu->addAction("case insensitive");
+  findCaseInsensitiveAction->setCheckable(true);
+  findCaseGroup->addAction(findCaseInsensitiveAction);
   findCaseSensitiveAction = findSettingsMenu->addAction("case sensitive");
   findCaseSensitiveAction->setCheckable(true);
+  findCaseGroup->addAction(findCaseSensitiveAction);
+  findSmartCaseAction = findSettingsMenu->addAction("smart case");
+  findSmartCaseAction->setCheckable(true);
+  findSmartCaseAction->setChecked(true);
+  findCaseGroup->addAction(findSmartCaseAction);
+  findSettingsMenu->addSeparator();
   findWholeWordsAction = findSettingsMenu->addAction("whole words");
   findWholeWordsAction->setCheckable(true);
   addToolBarMenuButton(QIcon(":/findSettings-button"),
@@ -3413,6 +3560,8 @@ void XpdfViewer::createMainMenu() {
 			 this, SLOT(openInNewWinMenuAction()));
   fileSubmenu->addAction("Reload", this, SLOT(reloadMenuAction()));
   fileSubmenu->addAction("&Save as...", this, SLOT(saveAsMenuAction()));
+  fileSubmenu->addAction("Load last session",
+			 this, SLOT(loadSessionMenuAction()));
   fileSubmenu->addSeparator();
   fileSubmenu->addAction("Save image...", this, SLOT(saveImageMenuAction()));
 #if XPDFWIDGET_PRINTING
@@ -3847,7 +3996,8 @@ void XpdfViewer::updateZoomInfo() {
   } else {
     pg = 1;
   }
-  z = (int)floor(currentTab->pdf->getZoomPercent(pg) + 0.5);
+  z = (int)floor(currentTab->pdf->getZoomPercent(pg) /
+		 app->getZoomScaleFactor() + 0.5);
   zoomStr.setNum(z);
   zoomStr.append('%');
   zoomComboBox->setEditText(zoomStr);
@@ -3893,9 +4043,9 @@ void XpdfViewer::updateDocInfo() {
   QString tabTitle;
   if (currentTab->pdf->hasOpenDocument()) {
     tabTitle = currentTab->pdf->getFileName();
-    int i = tabTitle.lastIndexOf('/');
+    int i = (int)tabTitle.lastIndexOf('/');
 #ifdef _WIN32
-    int j = tabTitle.lastIndexOf('\\');
+    int j = (int)tabTitle.lastIndexOf('\\');
     if (j > i) {
       i = j;
     }
@@ -4584,6 +4734,7 @@ QString XpdfViewer::createDocumentInfoFontsHTML(XpdfWidget *view) {
   char *seenObjs = (char *)gmalloc(numObjects);
   memset(seenObjs, 0, numObjects);
 
+  Annots *annots = doc->getAnnots();
   for (int pg = 1; pg <= doc->getNumPages(); ++pg) {
     Page *page = doc->getCatalog()->getPage(pg);
     Dict *resDict = page->getResourceDict();
@@ -4591,17 +4742,15 @@ QString XpdfViewer::createDocumentInfoFontsHTML(XpdfWidget *view) {
       html += scanFonts(resDict, doc, seenObjs);
     }
     Object obj1, obj2;
-    Annots *annots = new Annots(doc, page->getAnnots(&obj1));
-    obj1.free();
-    for (int i = 0; i < annots->getNumAnnots(); ++i) {
-      if (annots->getAnnot(i)->getAppearance(&obj1)->isStream()) {
+    int nAnnots = annots->getNumAnnots(pg);
+    for (int i = 0; i < nAnnots; ++i) {
+      if (annots->getAnnot(pg, i)->getAppearance(&obj1)->isStream()) {
 	obj1.streamGetDict()->lookupNF("Resources", &obj2);
 	html += scanFonts(&obj2, doc, seenObjs);
 	obj2.free();
       }
       obj1.free();
     }
-    delete annots;
   }
   AcroForm *form = doc->getCatalog()->getForm();
   if (form) {
@@ -4862,6 +5011,21 @@ void XpdfViewer::execSaveImageDialog() {
   regionBox->addWidget(selectionBtn);
   selectionBtn->setEnabled(currentTab->pdf->hasSelection());
 
+  grid->addWidget(new QLabel("Color:"), 1, 0);
+
+  QHBoxLayout *colorBox = new QHBoxLayout();
+  grid->addLayout(colorBox, 1, 1);
+
+  QComboBox *colorCombo = new QComboBox();
+  colorBox->addWidget(colorCombo);
+  colorCombo->setEditable(false);
+  colorCombo->addItem("RGB");
+  colorCombo->addItem("Gray");
+  colorCombo->addItem("Monochrome");
+  colorCombo->setCurrentIndex(0);
+
+  colorBox->addStretch();
+
   grid->addWidget(new QLabel("Resolution:"), 2, 0);
 
   QHBoxLayout *resolutionBox = new QHBoxLayout();
@@ -4926,6 +5090,17 @@ void XpdfViewer::execSaveImageDialog() {
       currentTab->pdf->getCurrentSelection(&page, &x0, &y0, &x1, &y1);
     }
     int fmt = formatCombo->currentIndex();
+    XpdfWidget::ImageColorMode color;
+    if (colorCombo->currentIndex() == 1) {
+      color = XpdfWidget::pdfImageColorGray;
+    } else if (colorCombo->currentIndex() == 2) {
+      color = XpdfWidget::pdfImageColorMono;
+      if (strcmp(saveImageFormats[fmt].qImageFormat, "TIFF")) {
+	color = XpdfWidget::pdfImageColorGray;
+      }
+    } else {
+      color = XpdfWidget::pdfImageColorRGB;
+    }
     QString fileName =
         QFileDialog::getSaveFileName(this, "Save Image",
 				     QString(),
@@ -4933,9 +5108,10 @@ void XpdfViewer::execSaveImageDialog() {
     if (!fileName.isEmpty()) {
       QImage img;
       if (wholePage) {
-	img = currentTab->pdf->convertPageToImage(page, res);
+	img = currentTab->pdf->convertPageToImage(page, res, false, color);
       } else {
-	img = currentTab->pdf->convertRegionToImage(page, x0, y0, x1, y1, res);
+	img = currentTab->pdf->convertRegionToImage(page, x0, y0, x1, y1, res,
+						    false, color);
       }
       img.save(fileName, saveImageFormats[fmt].qImageFormat);
     }

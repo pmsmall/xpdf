@@ -154,6 +154,16 @@ public:
   // Execute a command [cmd], with [event] for context.
   void execCmd(const char *cmd, QInputEvent *event);
 
+  // Used by XpdfApp::saveSession() to save session info for one
+  // window.
+  void saveSession(FILE *out, int format);
+
+  // Used by XpdfApp::loadSession() to load a session for one window.
+  void loadSession(FILE *in, int format);
+
+  // Returns true if this viewer contains a single empty tab.
+  GBool isEmpty();
+
 public slots:
 
   bool close();
@@ -186,6 +196,7 @@ private slots:
   void openInNewWinMenuAction();
   void reloadMenuAction();
   void saveAsMenuAction();
+  void loadSessionMenuAction();
   void saveImageMenuAction();
 #if XPDFWIDGET_PRINTING
   void printMenuAction();
@@ -292,6 +303,7 @@ private:
   void cmdHideToolbar(GString *args[], int nArgs, QInputEvent *event);
   void cmdHorizontalContinuousMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdLinearSelectMode(GString *args[], int nArgs, QInputEvent *event);
+  void cmdLoadSession(GString *args[], int nArgs, QInputEvent *event);
   void cmdLoadTabState(GString *args[], int nArgs, QInputEvent *event);
   void cmdNewTab(GString *args[], int nArgs, QInputEvent *event);
   void cmdNewWindow(GString *args[], int nArgs, QInputEvent *event);
@@ -328,6 +340,7 @@ private:
   void cmdRun(GString *args[], int nArgs, QInputEvent *event);
   void cmdSaveAs(GString *args[], int nArgs, QInputEvent *event);
   void cmdSaveImage(GString *args[], int nArgs, QInputEvent *event);
+  void cmdSaveSession(GString *args[], int nArgs, QInputEvent *event);
   void cmdSaveTabState(GString *args[], int nArgs, QInputEvent *event);
   void cmdScrollDown(GString *args[], int nArgs, QInputEvent *event);
   void cmdScrollDownNextPage(GString *args[], int nArgs, QInputEvent *event);
@@ -377,6 +390,7 @@ private:
   void cmdZoomOut(GString *args[], int nArgs, QInputEvent *event);
   void cmdZoomPercent(GString *args[], int nArgs, QInputEvent *event);
   void cmdZoomToSelection(GString *args[], int nArgs, QInputEvent *event);
+  int getFindCaseFlag();
   int scaleScroll(int delta);
   void followLink(QInputEvent *event, GBool onlyIfNoSel,
 		  GBool newTab, GBool newWindow);
@@ -462,7 +476,9 @@ private:
   QList<QVariant> indicatorIcons;
   QList<QVariant> indicatorErrIcons;
   QLineEdit *findEdit;
+  QAction *findCaseInsensitiveAction;
   QAction *findCaseSensitiveAction;
+  QAction *findSmartCaseAction;
   QAction *findWholeWordsAction;
 
   // sidebar pane
