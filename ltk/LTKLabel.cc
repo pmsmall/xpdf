@@ -2,6 +2,8 @@
 //
 // LTKLabel.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation

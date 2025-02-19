@@ -4,6 +4,8 @@
 //
 // Widget base class.
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKWIDGET_H
@@ -100,7 +102,8 @@ protected:
 
   // Make a copy of Widget fields only.
   LTKWidget(LTKWidget *widget):
-    kind(widget->kind), name(widget->name ? widget->name->copy() : NULL),
+    kind(widget->kind),
+    name(widget->name ? widget->name->copy() : (String *)NULL),
     width(0), height(0) {}
 
   LTKWidgetKind kind;		// kind of widget

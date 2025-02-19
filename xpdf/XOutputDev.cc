@@ -2,6 +2,8 @@
 //
 // XOutputDev.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -17,6 +19,17 @@
 #include "GfxFont.h"
 #include "Error.h"
 #include "XOutputDev.h"
+
+#define numTmpSubpaths 16	// number of elements in temporary arrays
+
+//------------------------------------------------------------------------
+// BoundingRect
+//------------------------------------------------------------------------
+
+struct BoundingRect {
+  short xMin, xMax;		// min/max x values
+  short yMin, yMax;		// min/max y values
+};
 
 //------------------------------------------------------------------------
 // Font map
@@ -350,8 +363,6 @@ void XOutputDev::updateLineAttrs(GfxState *state, Boolean updateDash) {
   double *dashPattern;
   int dashLength;
   double dashStart;
-//~
-static
   char dashList[20];
   int i;
 
@@ -413,11 +424,15 @@ void XOutputDev::updateFont(GfxState *state) {
   gFont = state->getFont();
   pdfFont = gFont->getName();
   size = state->getTransformedFontSize();
-  for (p = fontMap; p->pdfFont; ++p) {
-    if (!pdfFont->cmp(p->pdfFont))
-      break;
+  if (pdfFont) {
+    for (p = fontMap; p->pdfFont; ++p) {
+      if (!pdfFont->cmp(p->pdfFont))
+	break;
+    }
+  } else {
+    p = NULL;
   }
-  if (p->pdfFont) {
+  if (p && p->pdfFont) {
     sprintf(fontName, p->xFont, (int)size);
   } else {
     if (gFont->isFixedWidth())
@@ -452,44 +467,263 @@ void XOutputDev::updateFont(GfxState *state) {
 void XOutputDev::stroke(GfxState *state) {
   GfxPath *path;
   GfxSubpath *subpath;
-  double x1, y1, x2, y2;
+  XPoint *points;
+  double x, y;
   int n, m, i, j;
 
+  // get path
   path = state->getPath();
   n = path->getNumSubpaths();
+
+  // allocate points array
+  m = 0;
+  for (i = 0; i < n; ++i) {
+    subpath = path->getSubpath(i);
+    if (subpath->getNumPoints() > m)
+      m = subpath->getNumPoints();
+  }
+  if (m <= numTmpPoints)
+    points = tmpPoints;
+  else
+    points = (XPoint *)smalloc(m * sizeof(XPoint));
+
+  // draw the lines
   for (i = 0; i < n; ++i) {
     subpath = path->getSubpath(i);
     m = subpath->getNumPoints();
-    state->transform(subpath->getX(0), subpath->getY(0), &x1, &y1);
-    for (j = 1; j < m; ++j) {
-      state->transform(subpath->getX(j), subpath->getY(j), &x2, &y2);
-      XDrawLine(display, pixmap, strokeGC,
-		(int)x1, (int)y1, (int)x2, (int)y2);
-      x1 = x2;
-      y1 = y2;
+    for (j = 0; j < m; ++j) {
+      state->transform(subpath->getX(j), subpath->getY(j), &x, &y);
+      points[j].x = (int)x;
+      points[j].y = (int)y;
     }
+    XDrawLines(display, pixmap, strokeGC, points, m, CoordModeOrigin);
   }
+
+  // free points
+  if (points != tmpPoints)
+    sfree(points);
 }
 
 void XOutputDev::fill(GfxState *state) {
-  XPoint *points;
-  int n;
-
-  XSetFillRule(display, fillGC, WindingRule);
-  points = pathPoints(state, &n);
-  XFillPolygon(display, pixmap, fillGC, points, n, Complex, CoordModeOrigin);
-  sfree(points);
+  doFill(state, WindingRule);
 }
 
 void XOutputDev::eoFill(GfxState *state) {
-  XPoint *points;
-  int n;
+  doFill(state, EvenOddRule);
+}
 
-  XSetFillRule(display, fillGC, EvenOddRule);
-  points = pathPoints(state, &n);
-  XFillPolygon(display, pixmap, fillGC, points, n, Complex, CoordModeOrigin);
+// This contains a kludge to deal with fills with multiple subpaths.
+// First, it divides up the subpaths into non-overlappign polygons by
+// simply comparing bounding rectangles.  Second it handles filling
+// polygons with multiple disjoint subpaths by connecting all of the
+// subpaths to one point.  There really ought to be a better way of
+// doing this.
+void XOutputDev::doFill(GfxState *state, int rule) {
+  static int tmpLengths[numTmpSubpaths];
+  static BoundingRect tmpRects[numTmpSubpaths];
+  GfxPath *path;
+  GfxSubpath *subpath;
+  XPoint *points;
+  int *lengths;
+  BoundingRect *rects;
+  BoundingRect rect;
+  double x, y;
+  int x1, y1;
+  int n, m, i, j, k;
+
+  // set fill rule
+  XSetFillRule(display, fillGC, rule);
+
+  // get path
+  path = state->getPath();
+  n = path->getNumSubpaths();
+
+  // allocate points and lengths arrays
+  m = 0;
+  for (i = 0; i < n; ++i)
+    m += path->getSubpath(i)->getNumPoints() + 2;
+  if (m < numTmpPoints)
+    points = tmpPoints;
+  else
+    points = (XPoint *)smalloc(m * sizeof(XPoint));
+  if (n < numTmpSubpaths)
+    lengths = tmpLengths;
+  else
+    lengths = (int *)smalloc(n * sizeof(int));
+
+  // allocate bounding rectangles array
+  if (n < numTmpSubpaths)
+    rects = tmpRects;
+  else
+    rects = (BoundingRect *)smalloc(n * sizeof(BoundingRect));
+
+  // transform points
+  k = 0;
+  for (i = 0; i < n; ++i) {
+    // do one subpath
+    subpath = path->getSubpath(i);
+    m = subpath->getNumPoints();
+    for (j = 0; j < m; ++j) {
+
+      // transform a point
+      state->transform(subpath->getX(j), subpath->getY(j), &x, &y);
+      points[k+j].x = x1 = (int)x;
+      points[k+j].y = y1 = (int)y;
+
+      // update bounding rectangle
+      if (n > 1) {
+	if (j == 0) {
+	  rects[i].xMin = rects[i].xMax = x1;
+	  rects[i].yMin = rects[i].yMax = y1;
+	} else {
+	  if (x1 < rects[i].xMin)
+	    rects[i].xMin = x1;
+	  else if (x1 > rects[i].xMax)
+	    rects[i].xMax = x1;
+	  if (y1 < rects[i].yMin)
+	    rects[i].yMin = y1;
+	  else if (y1 > rects[i].yMax)
+	    rects[i].yMax = y1;
+	}
+      }
+    }
+
+    // close subpath if necessary
+    if (points[k].x != points[k+m-1].x || points[k].y != points[k+m-1].y) {
+      points[k+m] = points[k];
+      ++m;
+    }
+    lengths[i] = m;
+
+    // next subpath
+    k += m + 1;
+  }
+
+  // only one subpath
+  if (n == 1) {
+    XFillPolygon(display, pixmap, fillGC, points, lengths[0],
+		 Complex, CoordModeOrigin);
+
+  // multiple subpaths
+  } else {
+    i = 0;
+    k = 0;
+    while (i < n) {
+      rect = rects[i];
+      m = lengths[i];
+      points[k+m] = points[k];
+      ++m;
+      for (j = i + 1; j < n; ++j) {
+	if (!(((rects[j].xMin > rect.xMin && rects[j].xMin < rect.xMax) ||
+	       (rects[j].xMax > rect.xMin && rects[j].xMax < rect.xMax) ||
+	       (rects[j].xMin < rect.xMin && rects[j].xMax > rect.xMax)) &&
+	      ((rects[j].yMin > rect.yMin && rects[j].yMin < rect.yMax) ||
+	       (rects[j].yMax > rect.yMin && rects[j].yMax < rect.yMax) ||
+	       (rects[j].yMin < rect.yMin && rects[j].yMax > rect.yMax))))
+	  break;
+	if (rects[j].xMin < rect.xMin)
+	  rect.xMin = rects[j].xMin;
+	if (rects[j].xMax > rect.xMax)
+	  rect.xMax = rects[j].xMax;
+	if (rects[j].yMin < rect.yMin)
+	  rect.yMin = rects[j].yMin;
+	if (rects[j].yMax > rect.yMax)
+	  rect.yMax = rects[j].yMax;
+	m += lengths[j];
+	points[k+m] = points[k];
+	++m;
+      }
+      XFillPolygon(display, pixmap, fillGC, points + k, m,
+		   Complex, CoordModeOrigin);
+      i = j;
+      k += m;
+    }
+  }
+
+  // free points, lengths, and rectangles arrays
+  if (points != tmpPoints)
+    sfree(points);
+  if (lengths != tmpLengths)
+    sfree(lengths);
+  if (rects != tmpRects)
+    sfree(rects);
+}
+
+#if 0
+void XOutputDev::doFill(GfxState *state, int rule) {
+  XPoint *points;
+  GfxPath *path;
+  GfxSubpath *subpath;
+  BoundsRect *rects;
+  double x, y;
+  int x1, y1;
+  int n, m, i, j, k;
+
+  // set fill rule
+  XSetFillRule(display, fillGC, rule);
+
+  // transform points
+  path = state->getPath();
+  n = path->getNumSubpaths();
+  m = 0;
+  for (i = 0; i < n; ++i)
+    m += path->getSubpath(i)->getNumPoints();
+  points = (XPoint *)smalloc(m * sizeof(XPoint));
+  rects = NULL;
+  if (n > 1)
+    rects = (BoundsRect *)smalloc(n * sizeof(BoundsRect));
+  k = 0;
+printf("fill polygon:\n");
+  for (i = 0; i < n; ++i) {
+printf("  subpath %d:\n", i);
+    subpath = path->getSubpath(i);
+    for (j = 0; j < subpath->getNumPoints(); ++j) {
+      state->transform(subpath->getX(j), subpath->getY(j), &x, &y);
+      points[k].x = x1 = (int)x;
+      points[k].y = y1 = (int)y;
+printf("    point %d: %g,%g (%d,%d)\n", j, subpath->getX(j), subpath->getY(j), x1, y1);
+      if (n > 1) {
+	if (j == 0) {
+	  rects[i].xMin = rects[i].xMax = x1;
+	  rects[i].yMin = rects[i].yMax = y1;
+	} else {
+	  if (x1 < rects[i].xMin)
+	    rects[i].xMin = x1;
+	  else if (x1 > rects[i].xMax)
+	    rects[i].xMax = x1;
+	  if (y1 < rects[i].yMin)
+	    rects[i].yMin = y1;
+	  else if (y1 > rects[i].yMax)
+	    rects[i].yMax = y1;
+	}
+      }
+      ++k;
+    }
+  }
+
+  // only one subpath
+  if (n == 1) {
+    XFillPolygon(display, pixmap, fillGC, points, m, Complex, CoordModeOrigin);
+
+  // multiple subpaths
+  } else {
+    j = 0;
+    for (i = 0; i < n; ++i) {
+      m = path->getSubpath(i)->getNumPoints();
+      XFillPolygon(display, pixmap, fillGC, points + j, m,
+		   Complex, CoordModeOrigin);
+      j += m;
+    }
+/*
+    XFillPolygon(display, pixmap, fillGC, points, m, Complex, CoordModeOrigin);
+*/
+    sfree(rects);
+  }
+
+  // free points array
   sfree(points);
 }
+#endif
 
 void XOutputDev::clip(GfxState *state) {
   XPoint *points;
@@ -519,6 +753,33 @@ void XOutputDev::eoClip(GfxState *state) {
   XSetRegion(display, fillGC, clipRegion);
 }
 
+XPoint *XOutputDev::pathPoints(GfxState *state, int *numPoints) {
+  XPoint *points;
+  GfxPath *path;
+  GfxSubpath *subpath;
+  double x, y;
+  int n, m, i, j, k;
+
+  path = state->getPath();
+  n = path->getNumSubpaths();
+  m = 0;
+  for (i = 0; i < n; ++i)
+    m += path->getSubpath(i)->getNumPoints();
+  points = (XPoint *)smalloc(m * sizeof(XPoint));
+  k = 0;
+  for (i = 0; i < n; ++i) {
+    subpath = path->getSubpath(i);
+    for (j = 0; j < subpath->getNumPoints(); ++j) {
+      state->transform(subpath->getX(j), subpath->getY(j), &x, &y);
+      points[k].x = (int)x;
+      points[k].y = (int)y;
+      ++k;
+    }
+  }
+  *numPoints = m;
+  return points;
+}
+
 void XOutputDev::drawChar(GfxState *state, double x, double y, ushort c) {
   ushort c1;
   char buf;
@@ -532,8 +793,7 @@ void XOutputDev::drawChar(GfxState *state, double x, double y, ushort c) {
   state->transform(x, y, &x1, &y1);
   c1 = isoMap[c];
   if (c1 == 0) {
-//~
-    error(0, "unknown char: %02x --> %03x\n", c, c1);
+//~    error(0, "unknown char: %03x", gFont->getPDFMap()[c]);
   } else if (c1 < 0x100) {
     buf = (char)c1;
     XDrawString(display, pixmap,
@@ -634,6 +894,14 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   str->reset();
   color = findColor(state->getFillColor());
 
+  // check for tiny (zero width or height) images
+  if (w0 == 0 || h0 == 0) {
+    j = height * ((width + 7) / 8);
+    for (i = 0; i < j; ++i)
+      str->getChar();
+    return;
+  }
+
   // allocate XImage
   depth = DefaultDepth(display, screenNum);
   if (x0 < 0 || x0 + w0 > canvas->getRealWidth() ||
@@ -693,7 +961,7 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
       --bits;
 
       // draw image pixel
-      if (pix == 1 && dx > 0 && dy > 0) {
+      if (pix == 0 && dx > 0 && dy > 0) {
 	for (ix = 0; ix < dx; ++ix) {
 	  for (iy = 0; iy < dy; ++iy) {
 	    if (rotate)
@@ -778,6 +1046,14 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   str->reset();
   nComps = colorSpace->getNumComponents();
   nBits = colorSpace->getBits();
+
+  // check for tiny (zero width or height) images
+  if (w0 == 0 || h0 == 0) {
+    k = height * ((width * nComps * nBits + 7) / 8);
+    for (i = 0; i < k; ++i)
+      str->getChar();
+    return;
+  }
 
   // allocate XImage
   depth = DefaultDepth(display, screenNum);
@@ -917,31 +1193,4 @@ unsigned long XOutputDev::findColor(int x[4], GfxColorSpace *colorSpace) {
     pixel = colors[(r1 * numColors + g1) * numColors + b1];
   }
   return pixel;
-}
-
-XPoint *XOutputDev::pathPoints(GfxState *state, int *numPoints) {
-  XPoint *points;
-  GfxPath *path;
-  GfxSubpath *subpath;
-  double x, y;
-  int n, m, i, j, k;
-
-  path = state->getPath();
-  n = path->getNumSubpaths();
-  m = 0;
-  for (i = 0; i < n; ++i)
-    m += path->getSubpath(i)->getNumPoints();
-  points = (XPoint *)smalloc(m * sizeof(XPoint));
-  k = 0;
-  for (i = 0; i < n; ++i) {
-    subpath = path->getSubpath(i);
-    for (j = 0; j < subpath->getNumPoints(); ++j) {
-      state->transform(subpath->getX(j), subpath->getY(j), &x, &y);
-      points[k].x = (int)x;
-      points[k].y = (int)y;
-      ++k;
-    }
-  }
-  *numPoints = m;
-  return points;
 }

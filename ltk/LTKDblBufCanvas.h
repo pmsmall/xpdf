@@ -2,6 +2,8 @@
 //
 // LTKDblBufCanvas.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKDBLBUFCANVAS_H

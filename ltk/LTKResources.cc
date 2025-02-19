@@ -2,6 +2,8 @@
 //
 // LTKResources.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -32,13 +34,13 @@ void ltkGetOtherResources(Display *display,
     XrmMergeDatabases(db1, db);
   } else {
     s = ltkGetHomeDir()->append("/.Xresources");
-    if (f = fopen(s->getCString(), "r")) {
+    if ((f = fopen(s->getCString(), "r"))) {
       fclose(f);
       XrmCombineFileDatabase(s->getCString(), db, True);
     }
     delete s;
     s = ltkGetHomeDir()->append("/.Xdefaults");
-    if (f = fopen(s->getCString(), "r")) {
+    if ((f = fopen(s->getCString(), "r"))) {
       fclose(f);
       XrmCombineFileDatabase(s->getCString(), db, True);
     }
@@ -58,7 +60,7 @@ String *ltkGetStringResource(XrmDatabase db, String *appName,
 		     resType, &val))
     ret = new String(val.addr, val.size);
   else
-    ret = def ? new String(def) : NULL;
+    ret = def ? new String(def) : (String *)NULL;
   delete inst;
   return ret;
 }

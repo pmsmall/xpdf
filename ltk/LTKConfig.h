@@ -2,6 +2,8 @@
 //
 // LTKConfig.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKCONFIG_H

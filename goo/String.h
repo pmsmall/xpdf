@@ -4,6 +4,8 @@
 //
 // Variable-length string type.
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef VSTRING_H

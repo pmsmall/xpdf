@@ -2,6 +2,8 @@
 //
 // GfxFont.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef GFXFONT_H
@@ -47,8 +49,9 @@ public:
   // Get width of a character.
   double getWidth(uchar c) { return widths[c]; }
 
-  // Get the mapping from font encoding to ISO encoding.
+  // Get the mapping from font encoding to ISO or PDF encoding.
   ushort *getISOMap() { return isoMap; }
+  ushort *getPDFMap() { return pdfMap; }
 
   // Get the mapping from ISO encoding to font encoding.
   ushort *getReverseISOMap() { return revISOMap; }

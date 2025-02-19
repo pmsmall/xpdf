@@ -1,0 +1,17 @@
+0.2 (95-dec-12)
+---------------
+First public release.
+
+
+0.3 (96-jan-13)
+---------------
+LZW patent workaround.
+Implemented inline images.
+Fixed (mostly) disjoint polygon fills.
+Added remote server stuff.
+Added page number on command line.
+Fixed problem with font encodings which caused character misalignment.
+Fixed inverted CCITT decoding and inverted image mask drawing.
+Now compiles under gcc 2.7.x (ignore those stupid 'unused parameter'
+  warnings).
+Many minor bug fixes and optimizations.

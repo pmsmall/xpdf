@@ -2,6 +2,8 @@
 //
 // LTKResources.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKRESOURCES_H

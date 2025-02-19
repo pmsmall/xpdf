@@ -2,6 +2,8 @@
  * cover.c
  *
  * Simple code coverage checking.
+ *
+ * Copyright 1996 Derek B. Noonburg
  */
 
 #include <stdio.h>

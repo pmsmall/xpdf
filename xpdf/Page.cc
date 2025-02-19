@@ -2,6 +2,8 @@
 //
 // Page.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation

@@ -2,6 +2,8 @@
 //
 // Gfx.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -644,6 +646,10 @@ void Gfx::opSetFont(Object args[]) {
     error(0, "unknown font tag '%s'", args[0].getName());
     return;
   }
+  if (printCommands) {
+    printf("  font: '%s' %g\n",
+	   font->getName()->getCString(), args[1].getNum());
+  }
   state->setFont(font, args[1].getNum());
   fontChanged = true;
 }
@@ -848,11 +854,19 @@ void Gfx::doImage(Stream *str) {
 
   // get size
   dict->lookup("Width", &obj1);
+  if (obj1.isNull()) {
+    obj1.free();
+    dict->lookup("W", &obj1);
+  }
   if (!obj1.isInt())
     goto err2;
   width = obj1.getInt();
   obj1.free();
   dict->lookup("Height", &obj1);
+  if (obj1.isNull()) {
+    obj1.free();
+    dict->lookup("H", &obj1);
+  }
   if (!obj1.isInt())
     goto err2;
   height = obj1.getInt();
@@ -860,6 +874,10 @@ void Gfx::doImage(Stream *str) {
 
   // image or mask?
   dict->lookup("ImageMask", &obj1);
+  if (obj1.isNull()) {
+    obj1.free();
+    dict->lookup("IM", &obj1);
+  }
   mask = false;
   if (obj1.isBool())
     mask = obj1.getBool();
@@ -869,6 +887,10 @@ void Gfx::doImage(Stream *str) {
 
   // bit depth
   dict->lookup("BitsPerComponent", &obj1);
+  if (obj1.isNull()) {
+    obj1.free();
+    dict->lookup("BPC", &obj1);
+  }
   if (!obj1.isInt())
     goto err2;
   bits = obj1.getInt();
@@ -880,6 +902,10 @@ void Gfx::doImage(Stream *str) {
       goto err1;
     invert = false;
     dict->lookup("Decode", &obj1);
+    if (obj1.isNull()) {
+      obj1.free();
+      dict->lookup("D", &obj1);
+    }
     if (obj1.isArray()) {
       obj1.arrayGet(0, &obj2);
       if (obj2.isInt() && obj2.getInt() == 1)
@@ -894,9 +920,17 @@ void Gfx::doImage(Stream *str) {
   } else {
     // get color space
     dict->lookup("ColorSpace", &obj1);
+    if (obj1.isNull()) {
+      obj1.free();
+      dict->lookup("CS", &obj1);
+    }
     if (!(obj1.isName() || obj1.isArray() || obj1.isNull()))
       goto err2;
     dict->lookup("Decode", &obj2);
+    if (obj1.isNull()) {
+      obj1.free();
+      dict->lookup("D", &obj1);
+    }
     if (!(obj2.isArray() || obj2.isNull()))
       goto err3;
     colorSpace = new GfxColorSpace(bits, &obj1, &obj2);
@@ -932,18 +966,62 @@ void Gfx::doForm(Stream *str) {
 //------------------------------------------------------------------------
 
 void Gfx::opBeginImage(Object args[]) {
+  Object dict;
+  Object obj;
+  char *key;
+  Stream *str;
+
   cover("Gfx::opBeginImage");
-  error(0, "Unimplemented: inline image\n");
+
+  // inline image must be in stream
+  if (!parser) {
+    error(0, "Inline image in array content stream");
+    return;
+  }
+
+  // build dictionary
+  dict.initDict();
+  nextObj(&obj);
+  while (!obj.isCmd("ID") && !obj.isEOF()) {
+    if (!obj.isName()) {
+      error(0, "Dictionary key must be a name object");
+      obj.free();
+      nextObj(&obj);
+    } else {
+      key = copyString(obj.getName());
+      obj.free();
+      nextObj(&obj);
+      if (obj.isEOF() || obj.isError())
+	break;
+      dict.dictAdd(key, &obj);
+    }
+    nextObj(&obj);
+  }
+  if (obj.isEOF())
+    error(0, "End of file in inline image");
+  obj.free();
+
+  // make stream
+  str = new SubStream(parser->getStream(), &dict);
+  str = str->addFilters(&dict);
+
+  // display the image
+  doImage(str);
+  delete str;
+
+  // get 'EI' tag
+  nextObj(&obj);
+  if (!obj.isCmd("EI"))
+    error(0, "Expected 'EI' operator");
+  obj.free();
 }
 
 void Gfx::opImageData(Object args[]) {
-  cover("Gfx::opImageData");
-  error(0, "Unimplemented: inline image 'ID' operator");
+  error(0, "Internal: got 'ID' operator");
 }
 
 void Gfx::opEndImage(Object args[]) {
-  cover("Gfx::opEndImage");
-  error(0, "Unimplemented: inline image 'EI'operator");
+  error(0, "Internal: got 'EI'operator");
 }
 
 //------------------------------------------------------------------------

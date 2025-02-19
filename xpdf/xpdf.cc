@@ -2,14 +2,18 @@
 //
 // xpdf.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <X11/X.h>
 #include <X11/cursorfont.h>
 #include <parseargs.h>
 #include <cover.h>
 #include <LTKAll.h>
+#include <String.h>
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -22,6 +26,10 @@
 #include "Error.h"
 #include "config.h"
 
+#define remoteCmdLength 256
+
+static void killApp();
+static void loadFile(String *fileName1);
 static void displayPage(int page1, int zoom1, int rotate1);
 static void keyPress(LTKWindow *win, KeySym key, char *s, int n);
 static void nextPageCbk(LTKButton *button, int n, Boolean on);
@@ -36,6 +44,7 @@ static void quitCbk(LTKButton *button, int n, Boolean on);
 static void layoutCanvasCbk(LTKScrollingCanvas *canvas);
 static void scrollVertCbk(LTKScrollbar *scrollbar, int n, int val);
 static void scrollHorizCbk(LTKScrollbar *scrollbar, int n, int val);
+static void propChangeCbk(LTKWindow *win, Atom atom);
 static void closeAboutCbk(LTKButton *button, int n, Boolean on);
 
 #include "leftArrow.xbm"
@@ -62,15 +71,24 @@ static XrmOptionDescRec opts[] = {
 
 Boolean printCommands = false;
 Boolean printHelp = false;
+static char remoteName[100] = "xpdf_";
+static Boolean doRemoteRaise = false;
+static Boolean doRemoteQuit = false;
 
 static ArgDesc argDesc[] = {
-  {"-cmd",  argFlag, &printCommands, 0,
-   "print commands as they're executed"},
-  {"-err",  argFlag, &errorsToTTY,   0,
+  {"-err",    argFlag,   &errorsToTTY,   0,
    "send error messages to /dev/tty instead of stderr"},
-  {"-h",    argFlag, &printHelp,     0,
+  {"-remote", argString, remoteName + 5, sizeof(remoteName) - 5,
+   "start/contact xpdf remote server with specified name"},
+  {"-raise",  argFlag,   &doRemoteRaise, 0,
+   "raise xpdf remote server window (with -remote only)"},
+  {"-quit",   argFlag,   &doRemoteQuit,  0,
+   "kill xpdf remote server (with -remote only)"},
+  {"-cmd",    argFlag,   &printCommands, 0,
+   "print commands as they're executed"},
+  {"-h",      argFlag,   &printHelp,     0,
    "print usage information"},
-  {"-help", argFlag, &printHelp,     0,
+  {"-help",   argFlag,   &printHelp,     0,
    "print usage information"},
   {NULL}
 };
@@ -85,27 +103,31 @@ static int zoomDPI[maxZoom - minZoom + 1] = {
 };
 #define defZoom 1
 
+static String *fileName;
+static FILE *file;
 static Catalog *catalog;
 static XOutputDev *out;
-
-static LTKApp *app;
-static LTKWindow *win;
-static LTKScrollingCanvas *canvas;
-static LTKScrollbar *hScrollbar, *vScrollbar;
-static LTKTextIn *pageNumText;
-static LTKLabel *numPagesLabel;
-static LTKWindow *aboutWin;
 
 static int page;
 static int zoom;
 static int rotate;
 static Boolean quit;
 
+static LTKApp *app;
+static Display *display;
+static LTKWindow *win;
+static LTKScrollingCanvas *canvas;
+static LTKScrollbar *hScrollbar, *vScrollbar;
+static LTKTextIn *pageNumText;
+static LTKLabel *numPagesLabel;
+static LTKWindow *aboutWin;
+static Atom remoteAtom;
+
 int main(int argc, char *argv[]) {
-  FILE *f;
-  FileStream *str;
-  Object catObj;
-  Object obj;
+  Window xwin;
+  char cmd[remoteCmdLength];
+  String *name;
+  int pg;
   Boolean ok;
   char s[20];
 
@@ -118,48 +140,65 @@ int main(int argc, char *argv[]) {
   // init error file
   errorInit();
 
+  // create LTKApp (and parse X-related args)
+  app = new LTKApp("xpdf", opts, &argc, argv);
+  display = app->getDisplay();
+  win = NULL;
+
+  // check command line
+  if (doRemoteRaise)
+    ok = ok && remoteName[5] && !doRemoteQuit &&
+         (argc == 1 || argc == 2 || argc == 3);
+  else if (doRemoteQuit)
+    ok = ok && remoteName[5] && argc == 1;
+  else
+    ok = ok && (argc == 2 || argc == 3);
+  if (!ok || printHelp) {
+    printUsage("xpdf", "[<PDF-file> [<page>]]", argDesc);
+    exit(1);
+  }
+  if (argc >= 2)
+    name = new String(argv[1]);
+  else
+    name = NULL;
+  if (argc == 3)
+    pg = atoi(argv[2]);
+  else
+    pg = 1;
+
+  // look for already-running remote server
+  if (remoteName[5]) {
+    remoteAtom = XInternAtom(display, remoteName, False);
+    xwin = XGetSelectionOwner(display, remoteAtom);
+    if (xwin != None) {
+      if (name) {
+	sprintf(cmd, "%c %d %.200s", doRemoteRaise ? 'D' : 'd',
+		pg, name->getCString());
+	XChangeProperty(display, xwin, remoteAtom, remoteAtom, 8,
+			PropModeReplace, (uchar *)cmd, strlen(cmd) + 1);
+      } else if (doRemoteRaise) {
+	XChangeProperty(display, xwin, remoteAtom, remoteAtom, 8,
+			PropModeReplace, (uchar *)"r", 2);
+      } else if (doRemoteQuit) {
+	XChangeProperty(display, xwin, remoteAtom, remoteAtom, 8,
+			PropModeReplace, (uchar *)"q", 2);
+      }
+      delete app;
+      exit(0);
+    }
+    if (!name)
+      exit(0);
+  } else {
+    remoteAtom = None;
+  }
+
   // print banner
   fprintf(errFile, "xpdf version %s\n", xpdfVersion);
   fprintf(errFile, "%s\n", xpdfCopyright);
 
-  // create LTKApp
-  app = new LTKApp("xpdf", opts, &argc, argv);
-  if (!ok || printHelp || argc != 2) {
-    printUsage("xpdf", "<PDF-file>", argDesc);
-    exit(1);
-  }
-
-  // open PDF file and create stream
-  if (!(f = fopen(argv[1], "r"))) {
-    error(0, "Couldn't open file '%s'\n", argv[1]);
-    exit(1);
-  }
-  obj.initNull();
-  str = new FileStream(f, 0, -1, &obj);
-
-  // check header
-  str->checkHeader();
-
-  // read xref table
-  xref = new XRef(str);
-  delete str;
-  if (!xref->isOk()) {
-    error(0, "Couldn't read xref table\n");
-    fclose(f);
-    delete xref;
-    exit(1);
-  }
-
-  // read catalog
-  catalog = new Catalog(xref->getCatalog(&catObj));
-  catObj.free();
-  if (!catalog->isOk()) {
-    error(0, "Couldn't read page catalog\n");
-    fclose(f);
-    delete xref;
-    delete catalog;
-    exit(1);
-  }
+  // open PDF file
+  fileName = NULL;
+  loadFile(name);
 
   // create window
   win = makeWindow(app);
@@ -175,14 +214,22 @@ int main(int argc, char *argv[]) {
   win->map();
   aboutWin = NULL;
 
+  // set up remote server
+  if (remoteAtom != None) {
+    win->setPropChangeCbk(&propChangeCbk);
+    xwin = win->getXWindow();
+    XSetSelectionOwner(display, remoteAtom, xwin, CurrentTime);
+  }
+
   // create output device
   out = new XOutputDev(win);
 
   // display first page
-  page = -99;
+  if (pg < 1 || pg > catalog->getNumPages())
+    pg = 1;
   zoom = -99;
   rotate = -99;
-  displayPage(1, defZoom, 0);
+  displayPage(pg, defZoom, 0);
 
   // event loop
   quit = false;
@@ -191,14 +238,11 @@ int main(int argc, char *argv[]) {
   } while (!quit);
 
   // free stuff
-  fclose(f);
-  delete out;
-  delete win;
-  if (aboutWin)
-    delete aboutWin;
-  delete app;
-  delete xref;
+  killApp();
   delete catalog;
+  delete xref;
+  fclose(file);
+  delete fileName;
 
   // check for memory leaks
   Object::memCheck(errFile);
@@ -207,23 +251,106 @@ int main(int argc, char *argv[]) {
   coverDump(errFile);
 }
 
+static void killApp() {
+  delete out;
+  if (remoteAtom != None)
+    XSetSelectionOwner(display, remoteAtom, None, CurrentTime);
+  delete win;
+  if (aboutWin)
+    delete aboutWin;
+  delete app;
+}
+
+static void loadFile(String *fileName1) {
+  FileStream *str;
+  Object catObj;
+  Object obj;
+  char s[20];
+
+  if (win) {
+    win->setCursor(XC_watch);
+    XFlush(display);
+  }
+
+  // free old objects
+  if (fileName) {
+    delete catalog;
+    delete xref;
+    fclose(file);
+    delete fileName;
+  }
+  xref = NULL;
+
+  // new file name
+  fileName = fileName1;
+
+  // open PDF file and create stream
+  if (!(file = fopen(fileName->getCString(), "r"))) {
+    error(0, "Couldn't open file '%s'", fileName->getCString());
+    goto err1;
+  }
+  obj.initNull();
+  str = new FileStream(file, 0, -1, &obj);
+
+  // check header
+  str->checkHeader();
+
+  // read xref table
+  xref = new XRef(str);
+  delete str;
+  if (!xref->isOk()) {
+    error(0, "Couldn't read xref table");
+    goto err2;
+  }
+
+  // read catalog
+  catalog = new Catalog(xref->getCatalog(&catObj));
+  catObj.free();
+  if (!catalog->isOk()) {
+    error(0, "Couldn't read page catalog");
+    goto err3;
+  }
+
+  // nothing displayed yet
+  page = -99;
+
+  if (win) {
+    sprintf(s, "of %d", catalog->getNumPages());
+    numPagesLabel->setText(s);
+    win->setCursor(XC_top_left_arrow);
+  }
+  return;
+
+ err3:
+  delete catalog;
+ err2:
+  delete xref;
+  fclose(file);
+ err1:
+  delete fileName;
+  delete app;
+  exit(1);
+}
+
 static void displayPage(int page1, int zoom1, int rotate1) {
   char s[20];
 
-  win->setCursor(XC_watch);
+  if (win) {
+    win->setCursor(XC_watch);
+    XFlush(display);
+  }
 
   page = page1;
-  sprintf(s, "%d", page);
-  pageNumText->setText(s);
-
   zoom = zoom1;
-
   rotate = rotate1;
 
   if (printCommands)
     printf("***** page %d *****\n", page);
   catalog->getPage(page)->display(out, zoomDPI[zoom - minZoom], rotate);
   layoutCanvasCbk(canvas);
+
+  sprintf(s, "%d", page);
+  pageNumText->setText(s);
 
   win->setCursor(XC_top_left_arrow);
 }
@@ -264,14 +391,14 @@ static void nextPageCbk(LTKButton *button, int n, Boolean on) {
   if (page < catalog->getNumPages())
     displayPage(page + 1, zoom, rotate);
   else
-    XBell(win->getDisplay(), 0);
+    XBell(display, 0);
 }
 
 static void prevPageCbk(LTKButton *button, int n, Boolean on) {
   if (page > 1)
     displayPage(page - 1, zoom, rotate);
   else
-    XBell(win->getDisplay(), 0);
+    XBell(display, 0);
 }
 
 static void pageNumCbk(LTKTextIn *textIn, int n, String *text) {
@@ -279,10 +406,10 @@ static void pageNumCbk(LTKTextIn *textIn, int n, String *text) {
   char s[20];
 
   page1 = atoi(text->getCString());
-  if (page1 >= 1 && page <= catalog->getNumPages()) {
+  if (page1 >= 1 && page1 <= catalog->getNumPages()) {
     displayPage(page1, zoom, rotate);
   } else {
-    XBell(win->getDisplay(), 0);
+    XBell(display, 0);
     sprintf(s, "%d", page);
     pageNumText->setText(s);
   }
@@ -292,14 +419,14 @@ static void zoomInCbk(LTKButton *button, int n, Boolean on) {
   if (zoom < maxZoom)
     displayPage(page, zoom + 1, rotate);
   else
-    XBell(win->getDisplay(), 0);
+    XBell(display, 0);
 }
 
 static void zoomOutCbk(LTKButton *button, int n, Boolean on) {
   if (zoom > minZoom)
     displayPage(page, zoom - 1, rotate);
   else
-    XBell(win->getDisplay(), 0);
+    XBell(display, 0);
 }
 
 static void rotateCWCbk(LTKButton *button, int n, Boolean on) {
@@ -317,7 +444,9 @@ static void rotateCCWCbk(LTKButton *button, int n, Boolean on) {
 }
 
 static void aboutCbk(LTKButton *button, int n, Boolean on) {
-  if (!aboutWin) {
+  if (aboutWin) {
+    XMapRaised(display, aboutWin->getXWindow());
+  } else {
     aboutWin = makeAboutWindow(app);
     aboutWin->layout(0, 0);
     aboutWin->map();
@@ -340,12 +469,59 @@ static void layoutCanvasCbk(LTKScrollingCanvas *canvas) {
 
 static void scrollVertCbk(LTKScrollbar *scrollbar, int n, int val) {
   canvas->scroll(hScrollbar->getPos(), val);
-  XSync(scrollbar->getDisplay(), False);
+  XSync(display, False);
 }
 
 static void scrollHorizCbk(LTKScrollbar *scrollbar, int n, int val) {
   canvas->scroll(val, vScrollbar->getPos());
-  XSync(scrollbar->getDisplay(), False);
+  XSync(display, False);
+}
+
+static void propChangeCbk(LTKWindow *win, Atom atom) {
+  Window xwin;
+  char *cmd;
+  Atom type;
+  int format;
+  ulong size, remain;
+  char *p;
+  String *newFileName;
+  int newPage;
+
+  // get command
+  xwin = win->getXWindow();
+  if (XGetWindowProperty(display, xwin, remoteAtom,
+			 0, remoteCmdLength/4, True, remoteAtom,
+			 &type, &format, &size, &remain,
+			 (uchar **)&cmd) != Success)
+    return;
+  if (size == 0)
+    return;
+
+  // raise window
+  if (cmd[0] == 'D' || cmd[0] == 'r'){
+    XMapRaised(display, xwin);
+    XFlush(display);
+  }
+
+  // display file / page
+  if (cmd[0] == 'd' || cmd[0] == 'D') {
+    p = cmd + 2;
+    newPage = atoi(p);
+    if (!(p = strchr(p, ' ')))
+      return;
+    newFileName = new String(p + 1);
+    XFree(cmd);
+    if (newFileName->cmp(fileName))
+      loadFile(newFileName);
+    else
+      delete newFileName;
+    if (newPage != page && newPage >= 1 && newPage <= catalog->getNumPages())
+      displayPage(newPage, zoom, rotate);
+
+  // quit
+  } else if (cmd[0] == 'q') {
+    quit = true;
+  }
 }
 
 static void closeAboutCbk(LTKButton *button, int n, Boolean on) {

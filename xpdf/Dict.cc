@@ -2,6 +2,8 @@
 //
 // Dict.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -44,6 +46,22 @@ void Dict::add(char *key, Object *val) {
   ++length;
 }
 
+__inline DictEntry *Dict::find(char *key) {
+  int i;
+
+  for (i = 0; i < length; ++i) {
+    if (!strcmp(key, entries[i].key))
+      return &entries[i];
+  }
+  return NULL;
+}
+
+Boolean Dict::is(char *type) {
+  DictEntry *e;
+
+  return (e = find("Type")) && e->val.isName(type);
+}
+
 Object *Dict::lookup(char *key, Object *obj) {
   DictEntry *e;
 
@@ -66,16 +84,6 @@ Object *Dict::getVal(int i, Object *obj) {
 
 Object *Dict::getValNF(int i, Object *obj) {
   return entries[i].val.copy(obj);
-}
-
-__inline DictEntry *Dict::find(char *key) {
-  int i;
-
-  for (i = 0; i < length; ++i) {
-    if (!strcmp(key, entries[i].key))
-      return &entries[i];
-  }
-  return NULL;
 }
 
 void Dict::print(FILE *f) {

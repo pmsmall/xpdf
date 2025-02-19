@@ -1,3 +1,11 @@
+#========================================================================
+#
+# Goo library Makefile
+#
+# Copyright 1996 Derek B. Noonburg
+#
+#========================================================================
+
 include ../Makefile.config
 
 CFLAGS = -O -Wall -I. $(CFLAGS2)
@@ -31,50 +39,24 @@ depend:
 
 #----- dependences -----
 
-String.o: String.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/string.h \
-  ./String.h
-mem.o: mem.c \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdio.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/standards.h /usr/include/va_list.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/include/sys/resource.h /usr/include/sys/time.h \
-  /usr/include/sys/localedef.h /usr/include/sys/lc_core.h \
-  /usr/include/locale.h /usr/include/sys/localedef31.h ./mem.h
-parseargs.o: parseargs.c \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdio.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/standards.h /usr/include/va_list.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/string.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/include/sys/resource.h /usr/include/sys/time.h \
-  /usr/include/sys/localedef.h /usr/include/sys/lc_core.h \
-  /usr/include/locale.h /usr/include/sys/localedef31.h /usr/include/ctype.h \
-  ./parseargs.h ./stypes.h
-cover.o: cover.c \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdio.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/standards.h /usr/include/va_list.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h ./mem.h \
-  ./cover.h
+String.o: String.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/include/string.h ./String.h
+mem.o: mem.c /usr/include/stdio.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h /usr/include/libio.h /usr/include/_G_config.h \
+  /usr/include/stdlib.h /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h \
+  /usr/include/errno.h /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  ./mem.h
+parseargs.o: parseargs.c /usr/include/stdio.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h /usr/include/libio.h /usr/include/_G_config.h \
+  /usr/include/string.h /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h \
+  /usr/include/stdlib.h /usr/include/errno.h /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/include/ctype.h ./parseargs.h ./stypes.h
+cover.o: cover.c /usr/include/stdio.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h /usr/include/libio.h /usr/include/_G_config.h \
+  ./mem.h ./cover.h

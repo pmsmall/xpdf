@@ -2,6 +2,8 @@
 //
 // LTKCanvas.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKCANVAS_H

@@ -2,6 +2,8 @@
 //
 // LTKBorder.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKBORDER_H

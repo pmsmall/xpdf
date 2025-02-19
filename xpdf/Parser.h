@@ -2,6 +2,8 @@
 //
 // Parser.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef PARSER_H
@@ -27,6 +29,9 @@ public:
   // Get the next object from the input stream.
   Object *getObj(Object *obj);
 
+  // Get stream.
+  Stream *getStream() { return lexer->getStream(); }
+
   // Get current position in file.
   int getPos() { return lexer->getPos(); }
 
@@ -34,9 +39,9 @@ private:
 
   Lexer *lexer;			// input stream
   Object buf1, buf2;		// next two tokens
+  int inlineImg;		// set when inline image data is encountered
 
   Stream *makeStream(Object *dict);
-  Stream *makeFilter(char *name, Stream *str, Object *params);
   void shift();
 };
 

@@ -2,6 +2,8 @@
 //
 // LTKButton.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -43,7 +45,7 @@ LTKButton::LTKButton(char *name1, unsigned char *iconData1,
 
 LTKButton::LTKButton(LTKButton *button):
     LTKWidget(button) {
-  label = button->label ? button->label->copy() : NULL;
+  label = button->label ? button->label->copy() : (String *)NULL;
   iconData = button->iconData;
   iconWidth = button->iconWidth;
   iconHeight = button->iconHeight;

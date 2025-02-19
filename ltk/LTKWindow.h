@@ -2,6 +2,8 @@
 //
 // LTKWindow.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKWINDOW_H
@@ -19,6 +21,7 @@ class LTKBox;
 class LTKWindow;
 
 typedef void (*LTKWindowKeyCbk)(LTKWindow *win, KeySym key, char *s, int n);
+typedef void (*LTKWindowPropCbk)(LTKWindow *win, Atom atom);
 
 class LTKWindow {
 public:
@@ -64,7 +67,14 @@ public:
 
   void redraw();
 
+  // Set the property change callback.
+  void setPropChangeCbk(LTKWindowPropCbk propCbk1);
+
+  //---------- event handlers ----------
+
   void keyPress(KeySym key, char *s, int n);
+
+  void doPropChange(Atom atom);
 
   //---------- utility functions ----------
 
@@ -84,12 +94,14 @@ protected:
   LTKBox *box;			// contents of window
   LTKWidget *widgets;		// list of widgets (except boxes)
   LTKWindowKeyCbk keyCbk;	// key press callback
+  LTKWindowPropCbk propCbk;	// property change callback
 
   LTKWidget *keyWidget;		// current keyboard input focus
 
   Display *display;		// X display
   int screenNum;		// X screen number
   Window xwin;			// X window ID
+  long eventMask;		// requested input events
   unsigned long fgColor,	// foreground pixel number
                 bgColor;	// background pixel number
   GC fgGC;			// X GC for foreground color

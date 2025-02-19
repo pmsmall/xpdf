@@ -2,6 +2,8 @@
 //
 // XRef.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -30,6 +32,7 @@ XRef::XRef(Stream *str) {
   int i;
 
   ok = true;
+  entries = NULL;
   file = str->getFile();
   pos = readTrailer(str);
   if (pos == 0) {

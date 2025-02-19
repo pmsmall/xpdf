@@ -2,6 +2,8 @@
 //
 // GfxState.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -74,7 +76,7 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
 
   // get decode map
   if (decode->isNull()) {
-    decodeComps = 0;;
+    decodeComps = 0;
   } else if (decode->isArray()) {
     decodeComps = decode->arrayGetLength() / 2;
     for (i = 0; i < decodeComps; ++i) {
@@ -95,27 +97,27 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
 
   // get mode
   indexed = false;
-  if (colorSpace->isName("DeviceGray")) {
+  if (colorSpace->isName("DeviceGray") || colorSpace->isName("G")) {
     mode = colorGray;
     numComponents = lookupComponents = 1;
-  } else if (colorSpace->isName("DeviceRGB")) {
+  } else if (colorSpace->isName("DeviceRGB") || colorSpace->isName("RGB")) {
     mode = colorRGB;
     numComponents = lookupComponents = 3;
-  } else if (colorSpace->isName("DeviceCMYK")) {
+  } else if (colorSpace->isName("DeviceCMYK") || colorSpace->isName("CMYK")) {
     mode = colorCMYK;
     numComponents = lookupComponents = 4;
   } else if (colorSpace->isArray()) {
     colorSpace->arrayGet(0, &obj);
-    if (obj.isName("DeviceGray")) {
+    if (obj.isName("DeviceGray") || obj.isName("G")) {
       mode = colorGray;
       numComponents = lookupComponents = 1;
-    } else if (obj.isName("DeviceRGB")) {
+    } else if (obj.isName("DeviceRGB") || obj.isName("RGB")) {
       mode = colorRGB;
       numComponents = lookupComponents = 3;
-    } else if (obj.isName("DeviceCMYK")) {
+    } else if (obj.isName("DeviceCMYK") || obj.isName("CMYK")) {
       mode = colorCMYK;
       numComponents = lookupComponents = 4;
-    } else if (obj.isName("Indexed")) {
+    } else if (obj.isName("Indexed") || obj.isName("I")) {
       indexed = true;
       numComponents = 1;
     } else {
@@ -133,10 +135,10 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
       goto err1;
     }
     colorSpace->arrayGet(1, &obj);
-    if (obj.isName("DeviceRGB")) {
+    if (obj.isName("DeviceRGB") || obj.isName("RGB")) {
       mode = colorRGB;
       lookupComponents = 3;
-    } else if (obj.isName("DeviceCMYK")) {
+    } else if (obj.isName("DeviceCMYK") || obj.isName("CMYK")) {
       mode = colorCMYK;
       lookupComponents = 4;
     } else {
@@ -506,33 +508,12 @@ GfxState::GfxState(GfxState *state) {
   saved = NULL;
 }
 
-void GfxState::transform(double x1, double y1, double *x2, double *y2) {
-  *x2 = ctm[0] * x1 + ctm[2] * y1 + ctm[4];
-  *y2 = ctm[1] * x1 + ctm[3] * y1 + ctm[5];
-}
-
-void GfxState::transformDelta(double x1, double y1, double *x2, double *y2) {
-  *x2 = ctm[0] * x1 + ctm[2] * y1;
-  *y2 = ctm[1] * x1 + ctm[3] * y1;
-}
-
 double GfxState::transformWidth(double w) {
   double x, y;
 
   x = ctm[0] + ctm[2];
   y = ctm[1] + ctm[3];
-  return w * sqrt(x * x + y * y);
-}
-
-void GfxState::textTransform(double x1, double y1, double *x2, double *y2) {
-  *x2 = textMat[0] * x1 + textMat[2] * y1 + textMat[4];
-  *y2 = textMat[1] * x1 + textMat[3] * y1 + textMat[5];
-}
-
-void GfxState::textTransformDelta(double x1, double y1,
-				  double *x2, double *y2) {
-  *x2 = textMat[0] * x1 + textMat[2] * y1;
-  *y2 = textMat[1] * x1 + textMat[3] * y1;
+  return w * sqrt(0.5 * (x * x + y * y));
 }
 
 double GfxState::getTransformedFontSize() {

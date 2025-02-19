@@ -2,6 +2,8 @@
 //
 // config.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef CONFIG_H
@@ -12,14 +14,14 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion "0.2"
+#define xpdfVersion "0.3"
 
 // supported PDF version
 #define pdfVersion "1.1"
 #define pdfVersionNum 1.1
 
 // copyright notice
-#define xpdfCopyright "Copyright \251 1995 Derek B. Noonburg"
+#define xpdfCopyright "Copyright \251 1996 Derek B. Noonburg"
 
 //------------------------------------------------------------------------
 // X-related constants
@@ -30,5 +32,12 @@
 
 // number of fonts to cache
 #define fontCacheSize 16
+
+//------------------------------------------------------------------------
+// misc
+//------------------------------------------------------------------------
+
+// command to uncompress to stdout
+#define uncompressCmd "uncompress -c"
 
 #endif

@@ -1,3 +1,11 @@
+#========================================================================
+#
+# Main xpdf Makefile.
+#
+# Copyright 1996 Derek B. Noonburg
+#
+#========================================================================
+
 all:
 	cd goo; make depend; make
 	cd ltk; make depend; make

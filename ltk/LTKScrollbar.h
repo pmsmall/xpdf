@@ -2,6 +2,8 @@
 //
 // LTKScrollbar.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKSCROLLBAR_H

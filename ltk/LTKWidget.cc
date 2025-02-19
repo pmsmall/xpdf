@@ -4,6 +4,8 @@
 //
 // Widget base class.
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -17,7 +19,7 @@
 
 LTKWidget::LTKWidget(LTKWidgetKind kind1, char *name1) {
   kind = kind1;
-  name = name1 ? new String(name1) : NULL;
+  name = name1 ? new String(name1) : (String *)NULL;
   x = 0;
   y = 0;
   width = 0;

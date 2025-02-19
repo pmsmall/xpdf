@@ -2,6 +2,8 @@
 //
 // Dict.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef DICT_H
@@ -42,8 +44,7 @@ public:
   void add(char *key, Object *val);
 
   // Check if dictionary is of specified type.
-  Boolean is(char *type)
-    { DictEntry *e; return (e = find("Type")) && e->val.isName(type); }
+  Boolean is(char *type);
 
   // Look up an entry and return the value.  Returns a null object
   // if <key> is not in the dictionary.

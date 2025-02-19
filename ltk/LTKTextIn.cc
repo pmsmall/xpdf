@@ -2,6 +2,8 @@
 //
 // LTKTextIn.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -111,7 +113,7 @@ void LTKTextIn::buttonPress(int mx, int my, int button) {
 void LTKTextIn::activate(Boolean on) {
   if (active != on) {
     drawCursor(on);
-    parent->setKeyWidget(on ? this : NULL);
+    parent->setKeyWidget(on ? this : (LTKWidget *)NULL);
     active = on;
     if (!active && cbk)
       (*cbk)(this, widgetNum, text);
@@ -236,7 +238,7 @@ void LTKTextIn::redrawTail(int i) {
 
 void LTKTextIn::setText(char *s) {
   delete text;
-  if (strlen(s) <= maxLength)
+  if (strlen(s) <= (uint)maxLength)
     text = new String(s);
   else
     text = new String(s, maxLength);

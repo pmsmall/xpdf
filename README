@@ -1,49 +1,51 @@
 xpdf
 ====
 
-version 0.2 (alpha)
-95-dec-12
+version 0.3 (alpha)
+96-jan-13
 
-Copyright 1995 Derek B. Noonburg
-derekn@ece.cmu.edu
+The xpdf software and documentation are
+copyright 1996 Derek B. Noonburg.
+
+Email: derekn@ece.cmu.edu
 
 
 What is xpdf?
 -------------
 
 Xpdf is a viewer for Portable Document Format (PDF) files.  (These are
-also sometimes also called 'Acrobat' files, after the name of Adobe's
-PDF viewer.)  Xpdf runs under UNIX and the X Window System.
+also sometimes also called 'Acrobat' files, from the name of Adobe's
+PDF software.)  Xpdf runs under UNIX and the X Window System.
 
 Xpdf is designed to be small and efficient.  It does not use the Motif
-or Xt libraries.  It uses standard X fonts.  The Linux/x86 binary is
-124 kB, and is quite usable on my 486-66.
+or Xt libraries.  It uses standard X fonts.  Xpdf is quite usable on a
+486-66 PC running Linux.
+
+
+Compatibility
+-------------
 
 Xpdf is known to work on the following systems:
 
 * x86, Linux 1.2.13, XFree86 3.1.1, gcc 2.6.3
-* PowerPC, AIX 4.1, gcc 2.6.3
+* PowerPC, AIX 4.1, gcc 2.7.0
 * SPARC, SunOS 4.1.3, gcc 2.5.8
 * MIPS, Ultrix 4.4, gcc 2.6.3
 * Alpha, OSF/1 1.3, gcc 2.6.3
 
-If you compile it for another system, please let me know.  If you try,
-but can't get it to compile, I'll try to help.
-
-Version 2.7.0 of g++ will not compile xpdf (at least under AIX 4.1).
-I'll work on this.
+It should work on pretty much any UNIX/X11 system with a C++ compiler.
+If you compile it for another system, please let me know.  If you
+can't get it to compile on your system, I'll try to help.
 
 
 Getting xpdf
 ------------
 
-The latest version is available from
+The latest version is available from:
 
-    http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
+  http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
 
-Source code and some precompiled executables are available.
-
-If anyone would like to volunteer an ftp site, please let me know.
+Source code and several precompiled executables are available.
 
 
 Running xpdf
@@ -51,13 +53,77 @@ Running xpdf
 
 To run xpdf, simply type:
 
-    xpdf file.pdf
+  xpdf file.pdf
 
-where 'file.pdf' is your PDF file.
+where 'file.pdf' is your PDF file.  The file name can be followed by a
+number specifying the page which should be displayed first, e.g.:
+
+  xpdf file.pdf 18
+
+On-screen controls, at the bottom of the xpdf window:
+
+  left/right arrow buttons:
+    move to the previous/next page
+
+  'Page' entry box:
+    move to a specific page number -- click in the box to activate it,
+    type the page number, then hit return
+
+  double-box buttons:
+    increase and decrease the resolution, i.e., zoom in and zoom out
+    (I don't like the current icons; suggestions are welcome.)
+
+  curved arrow buttons:
+    rotate the page clockwise and counterclockwise (these are intended
+    primarily for PDF files where the rotation isn't correctly
+    specified in the file)
+
+  '?' button:
+    bring up the 'about xpdf' window
+
+  'Quit' button:
+    quit xpdf
+
+Key bindings:
+
+  n           move to the next page
+  p           move to the previous page
+  <space>     scroll down on the current page
+  <backspace> scroll up on the current page (also <delete>)
+  Control-L   redraw the current page
+  q           quit xpdf
+
+Command line options:
+
+  -err
+    send error messages to /dev/tty instead of stderr (useful if xpdf
+    is started from another application, e.g., netscape which
+    otherwise pops up an annoying little window for every error)
+
+  -remote
+    start/contact xpdf remote server with specified name (see the
+    'Remote server mode' section below)
+
+  -raise
+    raise xpdf remote server window (with -remote only)
+
+  -quit
+    kill xpdf remote server (with -remote only)
+
+  -h or -help
+    print usage information
+
+  -cmd
+    print commands as they're executed (useful for debugging)
+
+
+Web browsers
+------------
 
 If you want to run xpdf automatically from netscape when you click on
-a PDF file, you need to edit (or create) the files '.mime.types' and
-'.mailcap' in your home directory.  In '.mime.types' add the line:
+a link to a PDF file, you need to edit (or create) the files
+'.mime.types' and '.mailcap' in your home directory.  In '.mime.types'
+add the line:
 
     application/pdf pdf
 
@@ -66,49 +132,34 @@ In '.mailcap' add the lines:
     # Use xpdf to view PDF files.
     application/pdf; xpdf -err %s
 
-This should also work for mosaic and possibly for other browsers.  The
-'-err' switch sends error messages to '/dev/tty' instead of stderr, so
-netscape doesn't pop up annoying little windows.
+This should also work for mosaic and possibly for other browsers.
 
 
-Using xpdf
-----------
+Remote server mode
+------------------
 
-There are several controls at the bottom of the xpdf window:
+Xpdf can be started in remote server mode by specifying a server name
+(in addition to the file name and page number).  For example:
 
-* The left and right arrow buttons move to the previous and next page,
-  respectively.
+  xpdf -remote myServer file.pdf
 
-* The 'Page' entry box allows you to move to a specific page number.
-  Click in the box to activate it, type the page number, then hit
-  return.
+If there is currently no xpdf running in server mode with the name
+'myServer', a new xpdf window will be opened.  If another command:
 
-* The double-box buttons increase and decrease the resolution, i.e.,
-  zoom in and zoom out.  (I don't like these icons.  If you can do
-  better (in 15x15 pixels not including the border), I'll be happy to
-  use them.)
+  xpdf -remote myServer another.pdf 9
 
-* The curved arrow buttons rotate the page clockwise and
-  counterclockwise.  These are intended primarily for PDF files where
-  the rotation isn't correctly specified in the file.
+is issued, a new copy of xpdf will not be started.  Instead, the first
+xpdf (the server) will load 'another.pdf' and display page nine.  If
+the file name is the same:
 
-* The '?' button brings up an 'about xpdf' window.
+  xpdf -remote myServer another.pdf 4
 
-* The 'Quit' button exits xpdf.
+the xpdf server will simply display the specified page.
 
-There are also a few key bindings:
+The -raise option tells the server to raise its window; it can be
+specified with or without a file name and page number.
 
-* 'n' moves to the next page.
-
-* 'p' move to the previous page.
-
-* <Space> scrolls down on the current page.
-
-* <Backspace> or <delete> scrolls up on the current page.
-
-* Control-L redraws the current page.
-
-* 'q' quits xpdf.
+The -quit option tells the server to close its window and exit.
 
 
 Fonts
@@ -137,8 +188,8 @@ Notes
 -----
 
 This is an alpha version, so there are some known problems.  This
-section lists some of the more noticeable things.  (See 'Bugs' below
-for a more complete list).
+section lists some of the more noticeable things.  (See the 'Bugs'
+section below for a more complete list).
 
 Individual characters are always drawn 'right-side-up'; rotated text
 looks pretty strange.
@@ -146,12 +197,49 @@ looks pretty strange.
 PDF version 1.1 allows encryption.  I'll implement decryption if I can
 get the necessary information from Adobe.  Encryped PDF files will
 show up in xpdf as blank with error messages of the form "Unknown
-operator '<gibberish>'".
+operator '...gibberish...'".
 
-Images which are embedded in a content stream are not implemented yet.
-These do not seem to be used too often -- most images are stored as
-XObjects, which are handled correctly.  Inline images will produce an
-"Unimplemented: inline image" error.
+I have not yet implemented the DCT (aka JPEG) filter.  DCT-encoded
+images will show up as black rectangles.
+
+The Symbol and Zapf Dingbats fonts are not handled correctly yet.  You
+will likely see error messages of the form "Failed to open font:
+'-*-zapfdingbats...'".
+
+
+The Unisys LZW Patent
+---------------------
+
+Nearly all PDF files include data which has been compressed with the
+LZW compression algorithm.  Unfortunately, LZW is covered by a
+software patent which is owned by Unisys Corporation.  Unisys refuses
+to license this patent for PDF-related use in software such as xpdf
+which is released for free and which may be freely redistributed.
+(This is same algorithm which is used by GIF.  However, Unisys is not
+doing licensing for free PDF viwers in the same way as for free GIF
+viewers.)
+
+As a workaround, xpdf converts PDF-format LZW data to compress-format
+LZW data.  (The standard UNIX compress utility also uses LZW, but with
+a slightly different file format.)  This conversion does *not*
+decompress the data; it simply converts it to a different file format.
+Xpdf then calls uncompress to actually decompress the data.
+
+I have been told by several notable people that the LZW patent covers
+compression only, and does not cover decompression.  To date, no one
+has explained to me exactly why they believe this.  (I took a brief
+look at the patent itself, and it seems to cover both, but I'm not a
+patent lawyer.)  If anyone can explain this and convince me that the
+patent really doesn't cover decompression (or if someone pays a patent
+lawyer to explain it to me), I will put the native LZW code back in.
+
+Software patents in general are a bad idea.  Consider supporting the
+League for Programming Freedom <http://www.lpf.org/>.
+
+For Unisys's slant on things (mostly regarding GIF), see
+<http://www.unisys.com/LeadStory/lzwterms.html> and
+<http://www.unisys.com/LeadStory/lzwfaq.html>.  These pages mention
+an email address for feedback.
 
 
 Compiling xpdf
@@ -164,9 +252,13 @@ document.
 
 To compile xpdf:
 
-* Edit 'Makefile.config' in the top-level directory.  Set the
-  compilers you want to use (e.g., gcc and g++) and add any necessary
-  switches (e.g., include and library directories).
+* Edit Makefile.config in the top-level directory.  Set the compilers
+  you want to use (e.g., gcc and g++) and add any necessary switches
+  (e.g., include and library directories).
+
+* If 'uncompress -c file.Z' does not decompress a standard UNIX .Z
+  file to stdout on your system, you'll need to change uncompressCmd
+  in xpdf/config.h.  This should not be necessary on most systems.
 
 * Type 'make'.
 
@@ -186,7 +278,7 @@ Xpdf may be distributed under the following conditions:
    a. all of the xpdf source code, unmodified; OR
    b. one or more xpdf executables, compiled from the unmodified
       source code; OR
-   b. both of the above.
+   c. both of the above.
 
 If you distribute xpdf, I would appreciate receiving a pointer (ftp
 site, BBS phone number, etc.) or a copy (disk, CD-ROM, etc.).
@@ -203,18 +295,21 @@ This is an alpha release of xpdf, and there are still a bunch of PDF
 features which I have yet to implement.
 
 If you find a bug in xpdf, i.e., if it prints an error message,
-crashes, or incorrectly displays a document, please send me email,
-with a pointer (URL, ftp site, etc.) to the PDF file.
+crashes, or incorrectly displays a document, and you don't see that
+bug listed here, please send me email, with a pointer (URL, ftp site,
+etc.) to the PDF file.
 
-This is a list of things which I plan to add:
+This is a list of things which I plan to add (in approximate order of
+priority):
 
-* inline images
+* DCT filter
 * PostScript output
 * annotations -- text and hyperlinks
+* Type-3 fonts
+* support for Adobe Acrobat Amber optimized PDF files
 * document outline
 * forms
 * text search/select/copy
-* DCT filter
 * RunLength filter
 * encryption (if I can get documentation)
 * adding text to clipping path
@@ -224,23 +319,20 @@ This is a list of things which I plan to add:
 There are also some problems which I know about.  This is a list of
 things which I plan to fix:
 
-* write a man page
+* fix Symbol and ZapfDingbats font handling
 * do a better job of scaling images; look at 'Interpolate' param
-* keep static points array for fill functions in XOutputDev
-* do curve flatness right, i.e., in device coord space, in the device
-  driver
 * rotated (90/180/270) text
 * fix trademark ('TM') constructed char to use smaller font
-* use LZW and CCITT filter parameters
 * greek small fonts
 * if a Type1 font file is embedded in the PDF file, dump it to disk
   and add it to the X font path
-* fix ZapfDingbats and Symbol fonts
-* correctly handle fills defined by disjoint polygons
 * check into problem with off-by-one errors on rectangles, images,
   clipping regions
+* deal better with TrueColor visuals (don't use RGB cube)
 * efficiently handle very large files - don't read entire catalog,
   xref, etc.
+
+I'm also planning to write a man page.
 
 
 References

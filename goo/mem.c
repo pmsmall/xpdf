@@ -2,6 +2,8 @@
  * mem.c
  *
  * Memory routines with out-of-memory checking.
+ *
+ * Copyright 1996 Derek B. Noonburg
  */
 
 #include <stdio.h>

@@ -2,6 +2,8 @@
  * mem.h
  *
  * Memory routines with out-of-memory checking.
+ *
+ * Copyright 1996 Derek B. Noonburg
  */
 
 #ifndef MEM_H

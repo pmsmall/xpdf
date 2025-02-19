@@ -4,6 +4,8 @@
 //
 // Variable-length string type.
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -13,7 +15,10 @@
 #include <String.h>
 
 static inline int size(int len) {
-  return ((len + 1) + 7) & ~7;
+  int delta;
+
+  delta = len < 256 ? 7 : 255;
+  return ((len + 1) + delta) & ~delta;
 }
 
 inline void String::resize(int length1) {

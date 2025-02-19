@@ -2,6 +2,8 @@
  * parseargs.h
  *
  * Command line argument parser.
+ *
+ * Copyright 1996 Derek B. Noonburg
  */
 
 #ifndef PARSEARGS_H

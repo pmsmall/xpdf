@@ -1,8 +1,16 @@
+#========================================================================
+#
+# LTK library Makefile
+#
+# Copyright 1996 Derek B. Noonburg
+#
+#========================================================================
+
 include ../Makefile.config
 
 GOODIR = ../goo
 
-CXXFLAGS = -O -Wall -I$(GOODIR) -L$(GOODIR) -I. $(CXXFLAGS2)
+CXXFLAGS = -O -Wall -I$(GOODIR) -I. $(CXXFLAGS2)
 
 all: libLTK.a ltkbuild
 
@@ -32,7 +40,7 @@ libLTK.a: $(LTK_OBJS)
 #------------------------------------------------------------------------
 
 LTKBUILD_OBJS = ltkbuild.o
-LTKBUILD_LIBS = -lGoo
+LTKBUILD_LIBS = -L$(GOODIR) -lGoo
 
 ltkbuild: $(LTKBUILD_OBJS)
 	$(CXX) $(CXXFLAGS) -o ltkbuild $(LTKBUILD_OBJS) $(LTKBUILD_LIBS)
@@ -55,270 +63,174 @@ depend:
 
 #----- dependences -----
 
-LTKApp.o: LTKApp.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h /usr/include/X11/Xlib.h \
-  /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKApp.o: LTKApp.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ../goo/stypes.h ./LTKApp.h \
   /usr/include/X11/Xresource.h ../goo/String.h ./LTKResources.h ./LTKWindow.h \
   ./LTKMisc.h ./LTKWidget.h
 LTKBorder.o: LTKBorder.cc ./LTKBorder.h /usr/include/X11/Xlib.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/standards.h /usr/include/sys/m_types.h /usr/include/X11/X.h \
-  /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h
-LTKBox.o: LTKBox.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+  /usr/include/sys/types.h /usr/include/linux/types.h \
+  /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h
+LTKBox.o: LTKBox.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKWindow.h ../goo/stypes.h ../goo/String.h \
   ./LTKBox.h ./LTKBorder.h ./LTKWidget.h
-LTKButton.o: LTKButton.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKButton.o: LTKButton.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKWindow.h ../goo/stypes.h ../goo/String.h \
   ./LTKButton.h ./LTKWidget.h ./LTKBorder.h
-LTKCanvas.o: LTKCanvas.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKCanvas.o: LTKCanvas.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKWindow.h ../goo/stypes.h ../goo/String.h \
   ./LTKCanvas.h ./LTKWidget.h
-LTKDblBufCanvas.o: LTKDblBufCanvas.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKDblBufCanvas.o: LTKDblBufCanvas.cc /usr/include/stdlib.h \
+  /usr/include/features.h /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKWindow.h ../goo/stypes.h ../goo/String.h \
   ./LTKDblBufCanvas.h ./LTKWidget.h
-LTKEmpty.o: LTKEmpty.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKEmpty.o: LTKEmpty.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKWindow.h ../goo/stypes.h ../goo/String.h \
   ./LTKEmpty.h ./LTKWidget.h
-LTKLabel.o: LTKLabel.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKLabel.o: LTKLabel.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKLabel.h ../goo/stypes.h ../goo/String.h \
   ./LTKWidget.h ./LTKWindow.h
-LTKMisc.o: LTKMisc.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdio.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/standards.h /usr/include/va_list.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/include/sys/resource.h /usr/include/sys/time.h \
-  /usr/include/sys/localedef.h /usr/include/sys/lc_core.h \
-  /usr/include/locale.h /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/unistd.h \
-  /usr/include/sys/access.h /usr/include/sys/lockf.h /usr/include/sys/stat.h \
-  /usr/include/sys/mode.h /usr/include/pwd.h ./LTKMisc.h ../goo/String.h \
-  ./LTKWindow.h /usr/include/X11/Xlib.h /usr/include/X11/X.h \
-  /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
-  ../goo/stypes.h ./LTKWidget.h
-LTKResources.o: LTKResources.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdio.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/va_list.h ../goo/stypes.h ../goo/String.h ./LTKConfig.h \
-  ./LTKMisc.h ./LTKResources.h /usr/include/X11/Xlib.h /usr/include/X11/X.h \
-  /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKMisc.o: LTKMisc.cc /usr/include/stdio.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h /usr/include/libio.h /usr/include/_G_config.h \
+  /usr/include/stdlib.h /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h \
+  /usr/include/errno.h /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/include/unistd.h /usr/include/posix_opt.h /usr/include/gnu/types.h \
+  /usr/include/confname.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h /usr/include/pwd.h \
+  ./LTKMisc.h ../goo/String.h ./LTKWindow.h /usr/include/X11/Xlib.h \
+  /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
+  /usr/include/X11/Xosdefs.h ../goo/stypes.h ./LTKWidget.h
+LTKResources.o: LTKResources.cc /usr/include/stdlib.h \
+  /usr/include/features.h /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/include/stdio.h /usr/include/libio.h /usr/include/_G_config.h \
+  ../goo/stypes.h ../goo/String.h ./LTKConfig.h ./LTKMisc.h ./LTKResources.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xresource.h
-LTKScrollbar.o: LTKScrollbar.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKScrollbar.o: LTKScrollbar.cc /usr/include/stdlib.h \
+  /usr/include/features.h /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKApp.h /usr/include/X11/Xresource.h \
   ../goo/stypes.h ../goo/String.h ./LTKWindow.h ./LTKScrollbar.h ./LTKWidget.h \
   ./LTKBorder.h
-LTKScrollingCanvas.o: LTKScrollingCanvas.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKScrollingCanvas.o: LTKScrollingCanvas.cc /usr/include/stdlib.h \
+  /usr/include/features.h /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKWindow.h ../goo/stypes.h ../goo/String.h \
   ./LTKScrollingCanvas.h ./LTKWidget.h
-LTKTextIn.o: LTKTextIn.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKTextIn.o: LTKTextIn.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h /usr/include/X11/keysym.h \
-  /usr/include/X11/keysymdef.h /usr/include/X11/aix_keysym.h ./LTKWindow.h \
-  ../goo/stypes.h ../goo/String.h ./LTKTextIn.h ./LTKWidget.h ./LTKBorder.h
-LTKWidget.o: LTKWidget.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+  /usr/include/X11/keysymdef.h ./LTKWindow.h ../goo/stypes.h ../goo/String.h \
+  ./LTKTextIn.h ./LTKWidget.h ./LTKBorder.h
+LTKWidget.o: LTKWidget.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKWindow.h ../goo/stypes.h ../goo/String.h \
   ./LTKWidget.h
-LTKWindow.o: LTKWindow.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/include/standards.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/resource.h \
-  /usr/include/sys/time.h /usr/include/sys/localedef.h \
-  /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/include/sys/lc_core.h /usr/include/locale.h \
-  /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/X11/Xlib.h /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/X11/Xosdefs.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stddef.h \
+LTKWindow.o: LTKWindow.cc /usr/include/stdlib.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h /usr/include/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h \
+  /usr/include/X11/Xlib.h /usr/include/sys/types.h \
+  /usr/include/linux/types.h /usr/include/asm/types.h /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h /usr/include/X11/Xosdefs.h \
   /usr/include/X11/Xutil.h ./LTKConfig.h ./LTKApp.h \
   /usr/include/X11/Xresource.h ../goo/stypes.h ../goo/String.h ./LTKWindow.h \
   ./LTKWidget.h ./LTKBox.h ./LTKBorder.h
-ltkbuild.o: ltkbuild.cc \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdio.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdarg.h \
-  /usr/include/standards.h /usr/include/va_list.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/types.h \
-  /usr/include/sys/m_types.h /usr/include/sys/limits.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/float.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/stdlib.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/sys/wait.h \
-  /usr/include/sys/resource.h /usr/include/sys/time.h \
-  /usr/include/sys/localedef.h /usr/include/sys/lc_core.h \
-  /usr/include/locale.h /usr/include/sys/localedef31.h \
-  /usr/gnu/lib/gcc-lib/powerpc-ibm-aix4.1.1/2.6.3/include/string.h \
-  /usr/include/ctype.h ../goo/stypes.h ../goo/mem.h ../goo/String.h \
-  ltkbuild.widgets.h
+ltkbuild.o: ltkbuild.cc /usr/include/stdio.h /usr/include/features.h \
+  /usr/include/sys/cdefs.h /usr/include/libio.h /usr/include/_G_config.h \
+  /usr/include/stdlib.h /usr/lib/gcc-lib/i486-linux/2.6.3/include/stddef.h \
+  /usr/include/errno.h /usr/include/linux/errno.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/float.h /usr/include/alloca.h \
+  /usr/include/string.h /usr/include/ctype.h \
+  /usr/lib/gcc-lib/i486-linux/2.6.3/include/stdarg.h ../goo/stypes.h \
+  ../goo/mem.h ../goo/String.h ltkbuild.widgets.h

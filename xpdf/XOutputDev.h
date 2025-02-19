@@ -2,6 +2,8 @@
 //
 // XOutputDev.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef XOUTPUTDEV_H
@@ -18,6 +20,8 @@ class LTKApp;
 class LTKWindow;
 class GfxColor;
 class GfxFont;
+
+#define numTmpPoints 256	// number of XPoints in temporary array
 
 //------------------------------------------------------------------------
 // XOutputFontCache
@@ -132,6 +136,8 @@ private:
   unsigned long			// color cube
     colors[maxColorCube * maxColorCube * maxColorCube];
   int numColors;		// size of color cube
+  XPoint			// temporary points array
+    tmpPoints[numTmpPoints];
   GfxFont *gFont;		// current font
   XFontStruct *font;		// current X font
   ushort *isoMap;		// font encoding
@@ -140,9 +146,10 @@ private:
   XOutputState *save;		// stack of saved states
 
   void updateLineAttrs(GfxState *state, Boolean updateDash);
+  void doFill(GfxState *state, int rule);
+  XPoint *pathPoints(GfxState *state, int *numPoints);
   unsigned long findColor(GfxColor *color);
   unsigned long findColor(int x[4], GfxColorSpace *colorSpace);
-  XPoint *pathPoints(GfxState *state, int *numPoints);
 };
 
 #endif

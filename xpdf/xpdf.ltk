@@ -2,6 +2,8 @@
 #
 # xpdf.ltk
 #
+# Copyright 1996 Derek B. Noonburg
+#
 #========================================================================
 
 #------------------------------------------------------------------------
@@ -79,7 +81,7 @@ Window(func:makeWindow title:"xpdf" keyCbk:keyPress) {
 
 Window(func:makeAboutWindow title:"About xpdf") {
   Box(x:1 y:2) {
-    Box(x:1 y:7 left:2 right:2 top:2 bottom:2 sunken) {
+    Box(x:1 y:8 left:2 right:2 top:2 bottom:2 sunken) {
       Box1(bottom:0) {
         Label(text:"xpdf"
               font:"-*-times-bold-i-*-*-24-*-*-*-*-*-*-*")
@@ -101,6 +103,9 @@ Window(func:makeAboutWindow title:"About xpdf") {
       }
       Box1(bottom:12) {
         Label(text:"are copyright 1995 Adobe Systems Inc.")
+      }
+      Box1(bottom:12) {
+        Label(text:"http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html")
       }
     }
     Box(x:2 y:1) {

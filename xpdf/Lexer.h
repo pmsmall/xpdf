@@ -2,6 +2,8 @@
 //
 // Lexer.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LEXER_H
@@ -47,7 +49,6 @@ private:
   Boolean freeStream;		// should Lexer free the Stream?
 
   int getChar();
-  void skipSpace();
 };
 
 #endif

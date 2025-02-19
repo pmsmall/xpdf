@@ -2,6 +2,8 @@
 //
 // LTKMisc.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -20,10 +22,10 @@ String *ltkGetHomeDir() {
   struct passwd *pw;
   String *ret;
 
-  if (s = getenv("HOME")) {
+  if ((s = getenv("HOME"))) {
     ret = new String(s);
   } else {
-    if (s = getenv("USER"))
+    if ((s = getenv("USER")))
       pw = getpwnam(s);
     else
       pw = getpwuid(getuid());

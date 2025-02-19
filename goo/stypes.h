@@ -2,6 +2,8 @@
  * stypes.h
  *
  * Some useful simple types.
+ *
+ * Copyright 1996 Derek B. Noonburg
  */
 
 #ifndef STYPES_H

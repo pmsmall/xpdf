@@ -2,6 +2,8 @@
  * cover.h
  *
  * Simple code coverage checking.
+ *
+ * Copyright 1996 Derek B. Noonburg
  */
 
 #ifndef COVER_H

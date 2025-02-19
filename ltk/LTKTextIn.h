@@ -2,6 +2,8 @@
 //
 // LTKTextIn.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKTEXTIN_H

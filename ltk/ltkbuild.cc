@@ -5,6 +5,8 @@
 // Read an LTKbuild file from stdin and write C++ window construction
 // function(s) to stdout.
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #define VERSION "0.1"

@@ -2,6 +2,8 @@
 //
 // Stream.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -53,6 +55,130 @@ Boolean Stream::checkHeader() {
   return ok;
 }
 
+Stream *Stream::addFilters(Object *dict) {
+  Object obj, obj2;
+  Object params, params2;
+  Stream *str;
+  int i;
+
+  str = this;
+  dict->dictLookup("Filter", &obj);
+  if (obj.isNull()) {
+    obj.free();
+    dict->dictLookup("F", &obj);
+  }
+  dict->dictLookup("DecodeParms", &params);
+  if (params.isNull()) {
+    params.free();
+    dict->dictLookup("DP", &params);
+  }
+  if (obj.isName()) {
+    str = makeFilter(obj.getName(), str, &params);
+  } else if (obj.isArray()) {
+    for (i = 0; i < obj.arrayGetLength(); ++i) {
+      obj.arrayGet(i, &obj2);
+      if (params.isArray())
+	params.arrayGet(i, &params2);
+      else
+	params2.initNull();
+      if (obj2.isName())
+	str = makeFilter(obj2.getName(), str, &params2);
+      else
+	error(getPos(), "Bad filter name");
+      obj2.free();
+      params2.free();
+    }
+  } else if (!obj.isNull()) {
+    error(getPos(), "Bad 'Filter' attribute in stream");
+  }
+  obj.free();
+  params.free();
+
+  return str;
+}
+
+Stream *Stream::makeFilter(char *name, Stream *str, Object *params) {
+  int predictor;		// parameters
+  int colors;
+  int bits;
+  int early;
+  int encoding;
+  Boolean byteAlign;
+  Boolean black;
+  int columns, rows;
+  Object obj;
+
+  if (!strcmp(name, "ASCIIHexDecode") || !strcmp(name, "AHx")) {
+    str = new ASCIIHexStream(str);
+  } else if (!strcmp(name, "ASCII85Decode") || !strcmp(name, "A85")) {
+    str = new ASCII85Stream(str);
+  } else if (!strcmp(name, "LZWDecode") || !strcmp(name, "LZW")) {
+    predictor = 1;
+    columns = 1;
+    colors = 1;
+    bits = 8;
+    early = 1;
+    if (params->isDict()) {
+      params->dictLookup("Predictor", &obj);
+      if (obj.isInt())
+	predictor = obj.getInt();
+      obj.free();
+      params->dictLookup("Columns", &obj);
+      if (obj.isInt())
+	columns = obj.getInt();
+      obj.free();
+      params->dictLookup("Colors", &obj);
+      if (obj.isInt())
+	colors = obj.getInt();
+      obj.free();
+      params->dictLookup("BitsPerComponent", &obj);
+      if (obj.isInt())
+	bits = obj.getInt();
+      obj.free();
+      params->dictLookup("EarlyChange", &obj);
+      if (obj.isInt())
+	early = obj.getInt();
+      obj.free();
+    }
+    str = new LZWStream(str, predictor, columns, colors, bits, early);
+//~  } else if (!strcmp(name, "RunLengthDecode")) {
+  } else if (!strcmp(name, "CCITTFaxDecode")) {
+    encoding = 0;
+    byteAlign = false;
+    columns = 1728;
+    rows = 0;
+    black = false;
+    if (params->isDict()) {
+      params->dictLookup("K", &obj);
+      if (obj.isInt())
+	encoding = obj.getInt();
+      obj.free();
+      params->dictLookup("EncodedByteAlign", &obj);
+      if (obj.isBool())
+	byteAlign = obj.getBool();
+      obj.free();
+      params->dictLookup("Columns", &obj);
+      if (obj.isInt())
+	columns = obj.getInt();
+      obj.free();
+      params->dictLookup("Rows", &obj);
+      if (obj.isInt())
+	rows = obj.getInt();
+      obj.free();
+      params->dictLookup("BlackIs1", &obj);
+      if (obj.isBool())
+	black = obj.getBool();
+      obj.free();
+    }
+    str = new CCITTFaxStream(str, encoding, byteAlign, columns, rows, black);
+  } else if (!strcmp(name, "DCTDecode")) {
+    str = new DCTStream(str);
+  } else {
+    error(getPos(), "Unknown filter '%s'", name);
+  }
+  return str;
+}
+
 //------------------------------------------------------------------------
 // FileStream
 //------------------------------------------------------------------------
@@ -101,8 +227,17 @@ void FileStream::setPos(int pos1) {
   }
 }
 
-Dict *FileStream::getDict() {
-  return dict.getDict();
+//------------------------------------------------------------------------
+// SubStream
+//------------------------------------------------------------------------
+
+SubStream::SubStream(Stream *str1, Object *dict1) {
+  str = str1;
+  dict = *dict1;
+}
+
+SubStream::~SubStream() {
+  dict.free();
 }
 
 //------------------------------------------------------------------------
@@ -240,109 +375,192 @@ LZWStream::LZWStream(Stream *str1, int predictor1, int columns1, int colors1,
   colors = colors1;
   bits = bits1;
   early = early1;
-  eof = false;
-  inputBits = 0;
-  clearTable();
+  zPipe = NULL;
 }
 
 LZWStream::~LZWStream() {
+  if (zPipe) {
+    pclose(zPipe);
+    zPipe = NULL;
+    unlink(zName);
+  }
   delete str;
 }
 
 void LZWStream::reset() {
+  FILE *f;
+
   str->reset();
-  eof = false;
-  inputBits = 0;
-  clearTable();
+  if (zPipe) {
+    pclose(zPipe);
+    zPipe = NULL;
+    unlink(zName);
+  }
+  strcpy(zCmd, uncompressCmd);
+  strcat(zCmd, " ");
+  zName = zCmd + strlen(zCmd);
+  tmpnam(zName);
+  strcat(zName, ".Z");
+  if (!(f = fopen(zName, "w"))) {
+    error(getPos(), "Couldn't open temporary file '%s'", zName);
+    return;
+  }
+  dumpFile(f);
+  fclose(f);
+  if (!(zPipe = popen(zCmd, "r"))) {
+    error(getPos(), "Couldn't popen '%s'", zCmd);
+    unlink(zName);
+    return;
+  }
 }
 
-int LZWStream::getChar() {
-  int code;
-  int nextLength;
+void LZWStream::dumpFile(FILE *f) {
+  int outCodeBits;		// size of output code
+  int outBits;			// max output code
+  int outBuf[8];		// output buffer
+  int outData;			// temporary output buffer
+  int inCode, outCode;		// input and output codes
+  int nextCode;			// next code index
+  Boolean eof;			// set when EOF is reached
+  Boolean clear;		// set if table needs to be cleared
+  Boolean first;		// indicates first code word after clear
   int i, j;
 
-  // if at eof just return EOF
-  if (eof)
-    return EOF;
+  // magic number
+  fputc(0x1f, f);
+  fputc(0x9d, f);
 
-  // if buffer not empty, return next char
-  if (seqIndex < seqLength)
-    return seqBuf[seqIndex++];
+  // max code length, block mode flag
+  fputc(0x8c, f);
 
-  // check for eod and clear-table codes
- start:
-  code = getCode();
-  if (code == EOF || code == 257) {
-    eof = true;
-    return EOF;
-  }
-  if (code == 256) {
-    clearTable();
-    goto start;
-  }
-  if (nextCode >= 4096) {
-    error(getPos(), "Bad LZW stream - expected clear-table code");
-    clearTable();
-  }
+  // init input side
+  inCodeBits = 9;
+  inputBuf = 0;
+  inputBits = 0;
+  eof = false;
 
-  // process the next code
-  nextLength = seqLength + 1;
-  if (code < 256) {
-    seqBuf[0] = code;
-    seqLength = 1;
-  } else if (code < nextCode) {
-    seqLength = table[code].length;
-    for (i = seqLength - 1, j = code; i > 0; --i) {
-      seqBuf[i] = table[j].tail;
-      j = table[j].head;
-    }
-    seqBuf[0] = j;
-  } else {
-    seqBuf[seqLength] = newChar;
-    ++seqLength;
-  }
-  newChar = seqBuf[0];
-  if (first) {
-    first = false;
-  } else {
-    table[nextCode].length = nextLength;
-    table[nextCode].head = prevCode;
-    table[nextCode].tail = newChar;
-    ++nextCode;
-    if (nextCode + early == 512)
-      nextBits = 10;
-    else if (nextCode + early == 1024)
-      nextBits = 11;
-    else if (nextCode + early == 2048)
-      nextBits = 12;
-  }
-  prevCode = code;
+  // init output side
+  outCodeBits = 9;
 
-  // return char from buffer
-  seqIndex = 0;
-  return seqBuf[seqIndex++];
-}
-
-void LZWStream::clearTable() {
-  nextCode = 258;
-  nextBits = 9;
-  seqIndex = seqLength = 0;
+  // clear table
   first = true;
+  nextCode = 258;
+
+  clear = false;
+  do {
+    for (i = 0; i < 8; ++i) {
+      // check for table overflow
+      if (nextCode + early > 0x1001) {
+	inCode = 256;
+
+      // read input code
+      } else {
+	do {
+	  inCode = getCode();
+	  if (inCode == EOF) {
+	    eof = true;
+	    inCode = 0;
+	  }
+	} while (first && inCode == 256);
+      }
+
+      // compute output code
+      if (inCode < 256) {
+	outCode = inCode;
+      } else if (inCode == 256) {
+	outCode = 256;
+	clear = true;
+      } else if (inCode == 257) {
+	outCode = 0;
+	eof = true;
+      } else {
+	outCode = inCode - 1;
+      }
+      outBuf[i] = outCode;
+
+      // next code index
+      if (first)
+	first = false;
+      else
+	++nextCode;
+
+      // check input code size
+      if (nextCode + early == 0x200)
+	inCodeBits = 10;
+      else if (nextCode + early == 0x400) {
+	inCodeBits = 11;
+      } else if (nextCode + early == 0x800) {
+	inCodeBits = 12;
+      }
+
+      // check for eof/clear
+      if (eof)
+	break;
+      if (clear) {
+	i = 8;
+	break;
+      }
+    }
+
+    // write output block
+    outData = 0;
+    outBits = 0;
+    j = 0;
+    while (j < i || outBits > 0) {
+      if (outBits < 8 && j < i) {
+	outData = outData | (outBuf[j++] << outBits);
+	outBits += outCodeBits;
+      }
+      fputc(outData & 0xff, f);
+      outData >>= 8;
+      outBits -= 8;
+    }
+
+    // check output code size
+    if (nextCode - 1 == 512 ||
+	nextCode - 1 == 1024 ||
+	nextCode - 1 == 2048 ||
+	nextCode - 1 == 4096) {
+      outCodeBits = inCodeBits;
+    }
+
+    // clear table if necessary
+    if (clear) {
+      inCodeBits = 9;
+      outCodeBits = 9;
+      first = true;
+      nextCode = 258;
+      clear = false;
+    }
+  } while (!eof);
 }
 
 int LZWStream::getCode() {
   int c;
   int code;
 
-  while (inputBits < nextBits) {
+  while (inputBits < inCodeBits) {
     if ((c = str->getChar()) == EOF)
       return EOF;
     inputBuf = (inputBuf << 8) | (c & 0xff);
     inputBits += 8;
   }
-  code = (inputBuf >> (inputBits - nextBits)) & ((1 << nextBits) - 1);
-  inputBits -= nextBits;
+  code = (inputBuf >> (inputBits - inCodeBits)) & ((1 << inCodeBits) - 1);
+  inputBits -= inCodeBits;
   return code;
+}
+
+int LZWStream::getChar() {
+  int c;
+
+  if (!zPipe)
+    return EOF;
+  if ((c = fgetc(zPipe)) == EOF) {
+    pclose(zPipe);
+    zPipe = NULL;
+    unlink(zName);
+  }
+  return c;
 }
 
 //------------------------------------------------------------------------
@@ -492,26 +710,36 @@ int CCITTFaxStream::getChar() {
   }
 
   // get a byte
-  bits = 0;
-  ret = 0;
-  do {
-    if (outputBits > 8 - bits)
-      i = 8 - bits;
-    else
-      i = outputBits;
-    ret = ret << i;
-    if (a0 & 1)
-      ret |= 0xff >> (8 - i);
-    bits += i;
-    if ((outputBits -= i) == 0) {
+  if (outputBits >= 8) {
+    ret = ((a0 & 1) == 0) ? 0xff : 0x00;
+    if ((outputBits -= 8) == 0) {
       ++a0;
       if (codingLine[a0] < columns)
 	outputBits = codingLine[a0 + 1] - codingLine[a0];
     }
-  } while (bits < 8 && codingLine[a0] < columns);
-  if (bits < 8)
-    ret <<= 8 - bits;
-  return black ? ~ret : ret;
+  } else {
+    bits = 8;
+    ret = 0;
+    do {
+      if (outputBits > bits) {
+	i = bits;
+	bits = 0;
+	if ((a0 & 1) == 0)
+	  ret |= 0xff >> (8 - i);
+	outputBits -= i;
+      } else {
+	i = outputBits;
+	bits -= outputBits;
+	if ((a0 & 1) == 0)
+	  ret |= (0xff >> (8 - i)) << bits;
+	outputBits = 0;
+	++a0;
+	if (codingLine[a0] < columns)
+	  outputBits = codingLine[a0 + 1] - codingLine[a0];
+      }
+    } while (bits > 0 && codingLine[a0] < columns);
+  }
+  return black ? (ret ^ 0xff) : ret;
 }
 
 short CCITTFaxStream::getCode(CCITTCodeTable *table) {
@@ -565,4 +793,24 @@ int CCITTFaxStream::getBit() {
   bit = (inputBuf >> (inputBits - 1)) & 1;
   --inputBits;
   return bit;
+}
+
+//------------------------------------------------------------------------
+// DCTStream
+//------------------------------------------------------------------------
+
+DCTStream::DCTStream(Stream *str1) {
+  str = str1;
+}
+
+DCTStream::~DCTStream() {
+  delete str;
+}
+
+void DCTStream::reset() {
+  str->reset();
+}
+
+int DCTStream::getChar() {
+  return 0;
 }

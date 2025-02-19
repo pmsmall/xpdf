@@ -2,6 +2,8 @@
 //
 // Lexer.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -32,12 +34,28 @@ Object *Lexer::getObj(Object *obj) {
   char token[maxTokenLen+1];
   char *p;
   int n;
+  Boolean comment;
   Boolean real;
   int x;
   Boolean next;
 
   // skip whitespace and comments
-  skipSpace();
+  if (buf == EOF)
+    buf = getChar();
+  comment = false;
+  while (1) {
+    if (!isspace(buf)) {
+      if (!comment)
+	break;
+      if (buf == '%')
+	comment = true;
+      else if (buf == '\n')
+	comment = false;
+      else if (buf == EOF)
+	break;
+    }
+    buf = getChar();
+  }
 
   // check for end of stream
   if (buf == EOF)
@@ -161,9 +179,9 @@ Object *Lexer::getObj(Object *obj) {
   // name
   } else if (buf == '/') {
     buf = getChar();
-    while (!isspace(buf) && buf != '%' && buf != '(' && buf != ')' &&
-	   buf != '<' && buf != '>' && buf != '[' && buf != ']' &&
-	   buf != '{' && buf != '}' && buf != EOF) {
+    while (!isspace(buf) && buf!= '/' && buf != '%' && buf != '(' &&
+	   buf != ')' && buf != '<' && buf != '>' && buf != '[' &&
+	   buf != ']' && buf != '{' && buf != '}' && buf != EOF) {
       if (n < maxTokenLen)
 	*p++ = buf;
       ++n;
@@ -294,37 +312,21 @@ void Lexer::skipToNextLine() {
 int Lexer::getChar() {
   int c;
 
+ start:
   c = str->getChar();
-  if ((cr && c == '\n') || (lf && c == '\r')) {
-    c = str->getChar();
-    cr = c == '\r';
-    lf = c == '\n';
-  } else if (c == '\n') {
-    lf = true;
-  } else if (c == '\r') {
-    c = '\n';
-    cr = true;
+  if (c != '\n' && c != '\r') {
+    lf = cr = false;
   } else {
-    cr = lf = false;
+    if (c == '\n') {
+      lf = true;
+    } else {
+      cr = true;
+      c = '\n';
+    }
+    if (lf && cr) {
+      lf = cr = false;
+      goto start;
+    }
   }
   return c;
-}
-
-void Lexer::skipSpace() {
-  Boolean comment;
-
-  if (buf == EOF)
-    buf = getChar();
-  comment = false;
-  while (1) {
-    if (buf == '%')
-      comment = true;
-    else if (buf == '\n')
-      comment = false;
-    else if (!isspace(buf) && !comment)
-      break;
-    else if (buf == EOF)
-      break;
-    buf = getChar();
-  }
 }

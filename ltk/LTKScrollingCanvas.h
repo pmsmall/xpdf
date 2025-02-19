@@ -2,6 +2,8 @@
 //
 // LTKScrollingCanvas.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKSCROLLINGCANVAS_H

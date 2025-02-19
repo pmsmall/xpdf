@@ -2,6 +2,8 @@
 //
 // Stream.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef STREAM_H
@@ -52,7 +54,13 @@ public:
   // Check for a PDF header on this stream.
   Boolean checkHeader();
 
+  // Add filters to this stream according to the parameters in <dict>.
+  // Returns the new stream.
+  Stream *addFilters(Object *dict);
+
 private:
+
+  Stream *makeFilter(char *name, Stream *str, Object *params);
 
   int ref;			// reference count
 };
@@ -71,7 +79,7 @@ public:
   virtual int getPos() { return pos; }
   virtual void setPos(int pos1);
   virtual FILE *getFile() { return f; }
-  virtual Dict *getDict();
+  virtual Dict *getDict() { return dict.getDict(); }
 
 private:
 
@@ -80,6 +88,27 @@ private:
   int length;
   int pos;
   int savePos;
+  Object dict;
+};
+
+//------------------------------------------------------------------------
+// SubStream
+//------------------------------------------------------------------------
+
+class SubStream: public Stream {
+public:
+
+  SubStream(Stream *str1, Object *dict1);
+  virtual ~SubStream();
+  virtual void reset() {}
+  virtual int getChar() { return str->getChar(); }
+  virtual int getPos() { return str->getPos(); }
+  virtual FILE *getFile() { return str->getFile(); }
+  virtual Dict *getDict() { return dict.getDict(); }
+
+private:
+
+  Stream *str;
   Object dict;
 };
 
@@ -152,24 +181,14 @@ private:
   int colors;
   int bits;
   int early;
-  Boolean eof;			// true if at eof
+  FILE *zPipe;			// uncompress pipe
+  char zCmd[256];		// uncompress command
+  char *zName;			// .Z file name (in zCmd)
   int inputBuf;			// input buffer
   int inputBits;		// number of bits in input buffer
-  struct {			// decoding table
-    int length;
-    int head;
-    uchar tail;
-  } table[4096];
-  int nextCode;			// next code to be used
-  int nextBits;			// number of bits in next code word
-  int prevCode;			// previous code used in stream
-  int newChar;			// next char to be added to table
-  uchar seqBuf[4096];		// buffer for current sequence
-  int seqLength;		// length of current sequence
-  int seqIndex;			// index into current sequence
-  Boolean first;		// first code after a table clear
+  int inCodeBits;		// size of input code
 
-  void clearTable();
+  void dumpFile(FILE *f);
   int getCode();
 };
 
@@ -221,13 +240,24 @@ private:
   int getBit();
 };
 
-#if 0
 //------------------------------------------------------------------------
 // DCTStream
 //------------------------------------------------------------------------
 
 class DCTStream: public Stream {
+public:
+
+  DCTStream(Stream *str1);
+  virtual ~DCTStream();
+  virtual void reset();
+  virtual int getChar();
+  virtual int getPos() { return str->getPos(); }
+  virtual FILE *getFile() { return str->getFile(); }
+  virtual Dict *getDict() { return str->getDict(); }
+
+private:
+
+  Stream *str;			// stream
 };
-#endif
 
 #endif

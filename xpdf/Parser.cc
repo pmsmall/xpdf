@@ -2,6 +2,8 @@
 //
 // Parser.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -14,6 +16,7 @@
 
 Parser::Parser(Lexer *lexer1) {
   lexer = lexer1;
+  inlineImg = 0;
   lexer->getObj(&buf1);
   lexer->getObj(&buf2);
 }
@@ -29,6 +32,15 @@ Object *Parser::getObj(Object *obj) {
   Stream *str;
   Object obj2;
   int num;
+
+  // refill buffer after inline image data
+  if (inlineImg == 2) {
+    buf1.free();
+    buf2.free();
+    lexer->getObj(&buf1);
+    lexer->getObj(&buf2);
+    inlineImg = 0;
+  }
 
   // array
   if (buf1.isCmd("[")) {
@@ -59,7 +71,7 @@ Object *Parser::getObj(Object *obj) {
     if (buf1.isEOF())
       error(getPos(), "End of file inside dictionary");
     if (buf2.isCmd("stream")) {
-      if (str = makeStream(obj)) {
+      if ((str = makeStream(obj))) {
 	obj->initStream(str);
       } else {
 	obj->free();
@@ -91,11 +103,9 @@ Object *Parser::getObj(Object *obj) {
 }
 
 Stream *Parser::makeStream(Object *dict) {
-  Object obj, obj2;
-  Object params, params2;
+  Object obj;
   Stream *str;
   int pos, length;
-  int i;
 
   // get stream start position
   lexer->skipToNextLine();
@@ -116,31 +126,7 @@ Stream *Parser::makeStream(Object *dict) {
   str = new FileStream(lexer->getStream()->getFile(), pos, length, dict);
 
   // get filters
-  dict->dictLookup("Filter", &obj);
-  if (obj.isName()) {
-    dict->dictLookup("DecodeParms", &params);
-    str = makeFilter(obj.getName(), str, &params);
-    params.free();
-  } else if (obj.isArray()) {
-    dict->dictLookup("DecodeParms", &params);
-    for (i = 0; i < obj.arrayGetLength(); ++i) {
-      obj.arrayGet(i, &obj2);
-      if (params.isArray())
-	params.arrayGet(i, &params2);
-      else
-	params2.initNull();
-      if (obj2.isName())
-	str = makeFilter(obj2.getName(), str, &params2);
-      else
-	error(getPos(), "Bad filter name");
-      obj2.free();
-      params2.free();
-    }
-    params.free();
-  } else if (!obj.isNull()) {
-    error(getPos(), "Bad 'Filter' attribute in stream");
-  }
-  obj.free();
+  str = str->addFilters(dict);
 
   // skip over stream data
   lexer->getStream()->setPos(pos + length);
@@ -156,89 +142,15 @@ Stream *Parser::makeStream(Object *dict) {
   return str;
 }
 
-Stream *Parser::makeFilter(char *name, Stream *str, Object *params) {
-  int predictor;		// parameters
-  int colors;
-  int bits;
-  int early;
-  int encoding;
-  Boolean byteAlign;
-  Boolean black;
-  int columns, rows;
-  Object obj;
-
-  if (!strcmp(name, "ASCIIHexDecode")) {
-    str = new ASCIIHexStream(str);
-  } else if (!strcmp(name, "ASCII85Decode")) {
-    str = new ASCII85Stream(str);
-  } else if (!strcmp(name, "LZWDecode")) {
-    predictor = 1;
-    columns = 1;
-    colors = 1;
-    bits = 8;
-    early = 1;
-    if (params->isDict()) {
-      params->dictLookup("Predictor", &obj);
-      if (obj.isInt())
-	predictor = obj.getInt();
-      obj.free();
-      params->dictLookup("Columns", &obj);
-      if (obj.isInt())
-	columns = obj.getInt();
-      obj.free();
-      params->dictLookup("Colors", &obj);
-      if (obj.isInt())
-	colors = obj.getInt();
-      obj.free();
-      params->dictLookup("BitsPerComponent", &obj);
-      if (obj.isInt())
-	bits = obj.getInt();
-      obj.free();
-      params->dictLookup("EarlyChange", &obj);
-      if (obj.isInt())
-	early = obj.getInt();
-      obj.free();
-    }
-    str = new LZWStream(str, predictor, columns, colors, bits, early);
-//~  } else if (!strcmp(name, "RunLengthDecode")) {
-  } else if (!strcmp(name, "CCITTFaxDecode")) {
-    encoding = 0;
-    byteAlign = false;
-    columns = 1728;
-    rows = 0;
-    black = false;
-    if (params->isDict()) {
-      params->dictLookup("K", &obj);
-      if (obj.isInt())
-	encoding = obj.getInt();
-      obj.free();
-      params->dictLookup("EncodedByteAlign", &obj);
-      if (obj.isBool())
-	byteAlign = obj.getBool();
-      obj.free();
-      params->dictLookup("Columns", &obj);
-      if (obj.isInt())
-	columns = obj.getInt();
-      obj.free();
-      params->dictLookup("Rows", &obj);
-      if (obj.isInt())
-	rows = obj.getInt();
-      obj.free();
-      params->dictLookup("BlackIs1", &obj);
-      if (obj.isBool())
-	black = obj.getBool();
-      obj.free();
-    }
-    str = new CCITTFaxStream(str, encoding, byteAlign, columns, rows, black);
-//~  } else if (!strcmp(name, "DCTDecode")) {
-  } else {
-    error(getPos(), "Unknown filter '%s'", name);
-  }
-  return str;
-}
-
 void Parser::shift() {
+  if (inlineImg > 0)
+    ++inlineImg;
+  else if (buf2.isCmd("ID"))
+    inlineImg = 1;
   buf1.free();
   buf1 = buf2;
-  lexer->getObj(&buf2);
+  if (inlineImg > 0)		// don't buffer inline image data
+    buf2.initNull();
+  else
+    lexer->getObj(&buf2);
 }

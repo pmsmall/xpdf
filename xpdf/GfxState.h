@@ -2,6 +2,8 @@
 //
 // GfxState.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef GFXSTATE_H
@@ -224,12 +226,21 @@ public:
   Boolean isPath() { return path->isPath(); }
 
   // Transforms.
-  void transform(double x1, double y1, double *x2, double *y2);
-  void transformDelta(double x1, double y1, double *x2, double *y2);
+  void transform(double x1, double y1, double *x2, double *y2)
+    { *x2 = ctm[0] * x1 + ctm[2] * y1 + ctm[4];
+      *y2 = ctm[1] * x1 + ctm[3] * y1 + ctm[5]; }
+  void transformDelta(double x1, double y1, double *x2, double *y2)
+    { *x2 = ctm[0] * x1 + ctm[2] * y1;
+      *y2 = ctm[1] * x1 + ctm[3] * y1; }
+  void textTransform(double x1, double y1, double *x2, double *y2)
+    { *x2 = textMat[0] * x1 + textMat[2] * y1 + textMat[4];
+      *y2 = textMat[1] * x1 + textMat[3] * y1 + textMat[5]; }
+  void textTransformDelta(double x1, double y1, double *x2, double *y2)
+    { *x2 = textMat[0] * x1 + textMat[2] * y1;
+      *y2 = textMat[1] * x1 + textMat[3] * y1; }
   double transformWidth(double w);
-  void textTransform(double x1, double y1, double *x2, double *y2);
-  void textTransformDelta(double x1, double y1, double *x2, double *y2);
-  double getTransformedLineWidth() { return transformWidth(lineWidth); }
+  double getTransformedLineWidth()
+    { return transformWidth(lineWidth); }
   double getTransformedFontSize();
 
   // Change state parameters.

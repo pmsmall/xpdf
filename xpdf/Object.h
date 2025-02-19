@@ -2,6 +2,8 @@
 //
 // Object.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef OBJECT_H
@@ -135,10 +137,8 @@ public:
   // Special type checking.
   Boolean isName(char *name1)
     { return type == objName && !strcmp(name, name1); }
-  Boolean isDict(char *dictType)
-    { return type == objDict && dictIs(dictType); }
-  Boolean isStream(char *dictType)
-    { return type == objStream && streamIs(dictType); }
+  Boolean isDict(char *dictType);
+  Boolean isStream(char *dictType);
   Boolean isCmd(char *cmd1)
     { return type == objCmd && !strcmp(cmd, cmd1); }
 
@@ -241,6 +241,9 @@ __inline void Object::dictAdd(char *key, Object *val)
 __inline Boolean Object::dictIs(char *dictType)
   { return dict->is(dictType); }
 
+__inline Boolean Object::isDict(char *dictType)
+  { return type == objDict && dictIs(dictType); }
+
 __inline Object *Object::dictLookup(char *key, Object *obj)
   { return dict->lookup(key, obj); }
 
@@ -264,6 +267,9 @@ __inline Object *Object::dictGetValNF(int i, Object *obj)
 
 __inline Boolean Object::streamIs(char *dictType)
   { return stream->getDict()->is(dictType); }
+
+__inline Boolean Object::isStream(char *dictType)
+  { return type == objStream && streamIs(dictType); }
 
 __inline void Object::streamReset()
   { stream->reset(); }

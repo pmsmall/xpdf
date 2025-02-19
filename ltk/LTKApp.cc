@@ -2,6 +2,8 @@
 //
 // LTKApp.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -180,6 +182,10 @@ void LTKApp::doEvent(Boolean wait) {
 	s[n] = '\0';
 	win->keyPress(key, s, n);
       }
+      break;
+    case PropertyNotify:
+      if (win)
+	win->doPropChange(event.xproperty.atom);
       break;
     default:
       break;

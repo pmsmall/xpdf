@@ -2,6 +2,8 @@
 //
 // ltkbuild.widgets.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 ArgDesc windowArgs[] = {

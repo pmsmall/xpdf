@@ -2,6 +2,8 @@
 //
 // LTKLabel.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #ifndef LTKLABEL_H

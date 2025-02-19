@@ -2,6 +2,8 @@
 //
 // GfxFont.h
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -38,62 +40,58 @@ GfxFont::GfxFont(char *tag1, Dict *fontDict) {
 
   // get encoding
   fontDict->lookup("Encoding", &obj);
-  if (obj.isNull()) {
-    for (i = 0; i < 256; ++i)
-      isoMap[i] = pdfMap[i] = i;
-  } else if (obj.isName("MacRomanEncoding")) {
+  if (obj.isName("MacRomanEncoding")) {
     memcpy(isoMap, macRomanISOMap, sizeof(isoMap));
     memcpy(pdfMap, macRomanPDFMap, sizeof(pdfMap));
   } else if (obj.isName("WinAnsiEncoding")) {
     memcpy(isoMap, winAnsiISOMap, sizeof(isoMap));
     memcpy(pdfMap, winAnsiPDFMap, sizeof(pdfMap));
-  } else if (obj.isName()) {
-    error(0, "Unknown font encoding '%s'", obj.getName());
-    for (i = 0; i < 256; ++i)
-      isoMap[i] = pdfMap[i] = i;
   } else if (obj.isDict()) {
     getEncoding(obj.getDict());
   } else {
-    error(0, "Font encoding is wrong type (%s)", obj.getTypeName());
-    for (i = 0; i < 256; ++i)
-      isoMap[i] = pdfMap[i] = i;
+    if (obj.isName())
+      error(0, "Unknown font encoding '%s'", obj.getName());
+    else if (!obj.isNull())
+      error(0, "Font encoding is wrong type (%s)", obj.getTypeName());
+    memcpy(isoMap, standardISOMap, sizeof(isoMap));
+    memcpy(pdfMap, standardPDFMap, sizeof(pdfMap));
   }
   obj.free();
   for (i = 0; i < 256; ++i)
     revISOMap[isoMap[i]] = i;
 
   // get character widths
-  fontDict->lookup("FirstChar", &obj);
-  firstChar = obj.isInt() ? obj.getInt() : 0;
-  obj.free();
-  fontDict->lookup("LastChar", &obj);
-  lastChar = obj.isInt() ? obj.getInt() : 255;
-  obj.free();
-  for (i = 0; i < 256; ++i)
-    widths[i] = 0;
-  fontDict->lookup("Widths", &obj);
-  if (obj.isArray()) {
-    for (i = firstChar; i < lastChar; ++i) {
-      obj.arrayGet(i - firstChar, &obj2);
-      if (obj2.isNum())
-	widths[i] = obj2.getNum() / 1000;
-      obj2.free();
-    }
+  for (i = 0; i < numBuiltinFonts; ++i) {
+    if (name && !strcmp(builtinFonts[i].name, name->getCString()))
+      break;
+  }
+  if (i < numBuiltinFonts) {
+    for (j = 0; j < 256; ++j)
+      widths[j] = (double)builtinFonts[i].widths[pdfMap[j]] / 1000.0;
   } else {
-    for (i = 0; i < numBuiltinFonts; ++i) {
-      if (name && !strcmp(builtinFonts[i].name, name->getCString())) {
-	for (j = 0; j < 256; ++j)
-	  widths[j] = (double)builtinFonts[i].widths[pdfMap[j]] / 1000.0;
-	break;
+    fontDict->lookup("FirstChar", &obj);
+    firstChar = obj.isInt() ? obj.getInt() : 0;
+    obj.free();
+    fontDict->lookup("LastChar", &obj);
+    lastChar = obj.isInt() ? obj.getInt() : 255;
+    obj.free();
+    for (i = 0; i < 256; ++i)
+      widths[i] = 0;
+    fontDict->lookup("Widths", &obj);
+    if (obj.isArray()) {
+      for (i = firstChar; i < lastChar; ++i) {
+	obj.arrayGet(i - firstChar, &obj2);
+	if (obj2.isNum())
+	  widths[i] = obj2.getNum() / 1000;
+	obj2.free();
       }
-    }
-    if (i == numBuiltinFonts) {
+    } else {
       error(0, "No character widths resource for non-builtin font");
       for (i = 0; i < 255; ++i)
 	widths[i] = 0.3;
     }
+    obj.free();
   }
-  obj.free();
 
   // get info from font descriptor
   fontDict->lookup("FontDescriptor", &obj);
@@ -119,8 +117,8 @@ void GfxFont::getEncoding(Dict *dict) {
     memcpy(isoMap, winAnsiISOMap, sizeof(isoMap));
     memcpy(pdfMap, winAnsiPDFMap, sizeof(pdfMap));
   } else {
-    for (i = 0; i < 256; ++i)
-      isoMap[i] = pdfMap[i] = i;
+    memcpy(isoMap, standardISOMap, sizeof(isoMap));
+    memcpy(pdfMap, standardPDFMap, sizeof(pdfMap));
   }
   obj1.free();
 

@@ -2,6 +2,8 @@
 //
 // LTKWindow.cc
 //
+// Copyright 1996 Derek B. Noonburg
+//
 //========================================================================
 
 #pragma implementation
@@ -156,8 +158,9 @@ void LTKWindow::layout(int width1, int height1) {
     xwin = XCreateSimpleWindow(display, RootWindow(display, screenNum),
 			       0, 0, 1, 1, 0,
 			       fgColor, bgColor);
-    XSelectInput(display, xwin, ExposureMask | StructureNotifyMask |
-		 ButtonPressMask | KeyPressMask);
+    eventMask = ExposureMask | StructureNotifyMask | ButtonPressMask |
+                KeyPressMask;
+    XSelectInput(display, xwin, eventMask);
     gcValues.foreground = fgColor;
     gcValues.background = bgColor;
     gcValues.line_width = 0;
@@ -253,11 +256,25 @@ void LTKWindow::redraw() {
   box->redraw();
 }
 
+void LTKWindow::setPropChangeCbk(LTKWindowPropCbk propCbk1) {
+  propCbk = propCbk1;
+  if (propCbk)
+    eventMask |= PropertyChangeMask;
+  else
+    eventMask &= ~PropertyChangeMask;
+  XSelectInput(display, xwin, eventMask);
+}
+
 void LTKWindow::keyPress(KeySym key, char *s, int n) {
   if (keyWidget)
     keyWidget->keyPress(key, s, n);
   else if (keyCbk)
     (*keyCbk)(this, key, s, n);
+}
+
+void LTKWindow::doPropChange(Atom atom) {
+  if (propCbk)
+    (*propCbk)(this, atom);
 }
 
 GC LTKWindow::makeGC(unsigned long color, int lineWidth, int lineStyle) {
