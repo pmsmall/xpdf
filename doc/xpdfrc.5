@@ -1,7 +1,7 @@
-.\" Copyright 2002 Glyph & Cog, LLC
-.TH xpdfrc 5 "05 December 2002"
+.\" Copyright 2002-2003 Glyph & Cog, LLC
+.TH xpdfrc 5 "24 March 2003"
 .SH NAME
-xpdfrc \- configuration file for Xpdf tools (version 2.01)
+xpdfrc \- configuration file for Xpdf tools (version 2.02)
 .SH DESCRIPTION
 All of the Xpdf tools read a single configuration file.  If you have a
 .I .xpdfrc
@@ -190,15 +190,29 @@ display.  This mapping is used if the font name doesn't match any of
 the fonts declared with displayNamedCIDFont* commands.  There are no
 default CID font mappings.
 .TP
+.BI displayNamedCIDFontTT " PDF\-font\-name TT\-file"
+Maps a specific PDF CID (16-bit) font,
+.IR PDF\-font\-name ,
+to a (16-bit) TrueType font, for display.  There are no default CID
+font mappings.
+.TP
+.BI displayCIDFontTT " registry\-ordering TT\-file"
+Maps the
+.I registry\-ordering
+character collection to a (16-bit) TrueType font, for display.  This
+mapping is used if the font name doesn't match any of the fonts
+declared with displayNamedCIDFont* commands.  There are no default CID
+font mappings.
+.TP
 .BI fontDir " dir"
 Specifies a search directory for external font files.  There can be
 multiple fontDir directories.  If a PDF file uses a font but doesn't
 embed it, these directories will be searched for a matching font file.
 These fonts are used by both xpdf (for display) and pdftops (for
-embedding in the generated PostScript).  Only files with suffixes of
-".pfa", ".pfb", or ".ttf" will be used; other files in these
-directories will be ignored.  There are no default fontDir
-directories.
+embedding in the generated PostScript).  Type 1 fonts must have a
+suffix of ".pfa", ".pfb", ".ps", or no suffix at all.  TrueType fonts
+must have a ".ttf" suffix.  Other files in these directories will be
+ignored.  There are no default fontDir directories.
 .SH POSTSCRIPT CONTROL
 .TP
 .BI psPaperSize " width(pts) height(pts)"
@@ -208,10 +222,11 @@ and
 .I height
 parameters give the paper size in PostScript points.
 .TP
-.BR psPaperSize " letter | legal | A4 | A3"
+.BR psPaperSize " letter | legal | A4 | A3 | match"
 Sets the paper size for PostScript output to a standard size.  The
 default paper size is set when xpdf and pdftops are built, typically
-to "letter" or "A4".
+to "letter" or "A4".  This can also be set to "match", which will set
+the paper size to match the size specified in the PDF file.
 .TP
 .BR psDuplex " yes | no"
 If set to "yes", the generated PostScript will set the "Duplex"
@@ -443,7 +458,7 @@ Depending on build options, it may be placed elsewhere.
 This is the user's configuration file.  If it exists, it will be read
 in place of the system-wide file.
 .SH AUTHOR
-The Xpdf software and documentation are copyright 1996-2002 Glyph &
+The Xpdf software and documentation are copyright 1996-2003 Glyph &
 Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),

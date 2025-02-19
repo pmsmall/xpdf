@@ -2,7 +2,7 @@
 #
 # Xpdf Makefile
 #
-# Copyright 1996-2002 Glyph & Cog, LLC
+# Copyright 1996-2003 Glyph & Cog, LLC
 #
 #========================================================================
 
@@ -15,11 +15,11 @@ VPATH = @srcdir@
 GOOSRCDIR = $(srcdir)/../goo
 GOOLIBDIR = ../goo
 
-CXXFLAGS = @CXXFLAGS@ @DEFS@ -I.. -I$(GOOSRCDIR) -I$(srcdir) @freetype_CFLAGS@ @freetype2_CFLAGS@ @Xm_CFLAGS@ @Xt_CFLAGS@ @Xp_CFLAGS@ @Xext_CFLAGS@ @Xpm_CFLAGS@ @t1_CFLAGS@ @libpaper_CFLAGS@ @X_CFLAGS@
+CXXFLAGS = @CXXFLAGS@ @DEFS@ -I.. -I$(GOOSRCDIR) -I$(srcdir) @freetype_CFLAGS@ @freetype2_CFLAGS@ @Sgm_CFLAGS@ @Xm_CFLAGS@ @Xt_CFLAGS@ @Xp_CFLAGS@ @Xext_CFLAGS@ @Xpm_CFLAGS@ @t1_CFLAGS@ @libpaper_CFLAGS@ @X_CFLAGS@
 
 LDFLAGS = @LDFLAGS@
 
-XLIBS = @Xm_LIBS@ @Xt_LIBS@ @Xp_LIBS@ @Xext_LIBS@ @Xpm_LIBS@ @t1_LIBS@ @freetype_LIBS@ @freetype2_LIBS@ @X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
+XLIBS = @Sgm_LIBS@ @Xm_LIBS@ @Xt_LIBS@ @Xp_LIBS@ @Xext_LIBS@ @Xpm_LIBS@ @t1_LIBS@ @freetype_LIBS@ @freetype2_LIBS@ @X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
 
 OTHERLIBS = @LIBS@ @libpaper_LIBS@
 

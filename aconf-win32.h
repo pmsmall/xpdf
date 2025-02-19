@@ -1,7 +1,7 @@
 /*
  * aconf-win32.h
  *
- * Copyright 2002 Glyph & Cog, LLC
+ * Copyright 2002-2003 Glyph & Cog, LLC
  */
 
 #ifndef ACONF_H

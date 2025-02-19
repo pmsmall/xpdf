@@ -4,7 +4,7 @@ $! Main Xpdf compile script for VMS.
 $!
 $! Written by Patrick Moreau, Martin P.J. Zinser.
 $!
-$! Copyright 1996-2002 Glyph & Cog, LLC
+$! Copyright 1996-2003 Glyph & Cog, LLC
 $!
 $!========================================================================
 $!
@@ -59,11 +59,14 @@ $! Setup variables holding "config" information
 $!
 $ aconf_in_file = "aconf_h.in#aconf.h_in#aconf.h.in"
 $ mydefs        = "#"
+$ xlibs         = "xt#xmu#motif"
 $ cxxdefs       = ""
 $ libdefs       = "\"
 $ libincs       = ""
 $ float         = ""
 $ compress_def  = false
+$ ft2def        = false
+$ x11_save      = ""
 $ p2 = f$edit(p2,"upcase,trim")
 $ if f$edit(p3,"trim") .eqs. "" 
 $ then 
@@ -77,9 +80,9 @@ $!
 $! Start building the option file
 $!
 $ open/write optf xpdf.opt
-$ write optf "Identification=""xpdf 1.00"""
+$ write optf "Identification=""xpdf 2.01"""
 $ gosub check_create_vmslib
-$ write optf "SYS$SHARE:DECW$XLIBSHR.EXE/SHARE"
+$ gosub check_xlib
 $!
 $ if (f$getsyi("HW_MODEL").ge.1024) .and. - 
      (f$locate("T1LIB",f$edit(libdefs,"UPCASE")) .lt. f$length(libdefs)) -
@@ -88,12 +91,6 @@ $ incs = "sys$library:,[-],[],[-.goo]''libincs'"
 $!
 $ gosub check_compiler
 $ close optf
-$!
-$! Check that X11VMS is defined as a libary, since this is not an add-on but
-$! a pre-requisite to build Xpdf
-$!
-$ if (f$locate("X11VMS",f$edit(libdefs,"UPCASE")) .eq. f$length(libdefs)) - 
-    then goto x11vms_err
 $!
 $! aconf.h.in might be mapped in different ways, so go figure
 $!
@@ -127,8 +124,10 @@ $ endif
 $!
 $! Make sure old-style VMS is defined along with __VMS
 $!
-$ if f$locate("define ACONF_H",line) .lt. f$length(line) then -
-    write aconf "#define VMS 1"
+$ if f$locate("define ACONF_H",line) .lt. f$length(line) 
+$ then
+$    write aconf "#define VMS 1"
+$ endif
 $ goto aconf_loop
 $ACONF_EXIT:
 $ close aconf_in
@@ -153,9 +152,6 @@ $ write sys$output "C++ compiler required to build Xpdf"
 $ goto err_exit
 $FT2_ERR:
 $ write sys$output "Can not find [.internal] sub-dir in Freetype 2 tree"
-$ goto err_exit
-$X11VMS_ERR:
-$ write sys$output "X11VMS must be listed in vmslib.dat"
 $ goto err_exit
 $ERR_EXIT:
 $ set message/facil/ident/sever/text
@@ -202,14 +198,12 @@ $   type/out=vmslib.dat sys$input
 !   T1LIB:     http://www.decus.de:8080/www/vms/sw/t1lib.htmlx
 !   FREETYPE:  http://www.decus.de:8080/www/vms/sw/freetype2.htmlx
 !   XPM:       http://www.decus.de:8080/www/vms/sw/xpm.htmlx
-!   X11VMS:    http://www.decus.de:8080/www/vms/sw/xvmsutils.htmlx
 !   LIBPAPER:  http://www.decus.de:8080/www/vms/sw/libpaper.htmlx
 !
-!T1LIB    # pubbin:t1.olb        # public$root:[xtools.libs.t1lib.lib.t1lib] # t1lib.h    # HAVE_T1LIB_H
-!FREETYPE # pubbin:freetype.olb  # public$root:[xtools.libs.ft2.include.freetype],public$root:[xtools.libs.ft2.include] # freetype.h # HAVE_FREETYPE_H\FREETYPE2
-!XPM      # pubbin:libxpm.olb    # X11:                                      # xpm.h      # HAVE_X11_XPM_H
-!X11VMS   # pubbin:xvmsutils.olb # x11vms:                                   # vmsutil.h  # HAVE_X11VMS   
-!LIBPAPER # pubbin:libpaper.olb  # public$root:[util.libs.paper.lib]         # paper.h    # HAVE_PAPER_H
+!T1LIB    # pubbin:t1shr.exe        # public$root:[xtools.libs.t1lib.lib.t1lib] # t1lib.h    # HAVE_T1LIB_H
+!FREETYPE # pubbin:freetype2shr.exe # public$root:[xtools.libs.ft2.include.freetype],public$root:[xtools.libs.ft2.include] # freetype.h # HAVE_FREETYPE_H\FREETYPE2
+!XPM      # pubbin:libxpm.olb       # X11:                                      # xpm.h      # HAVE_X11_XPM_H
+!LIBPAPER # pubbin:libpapershr.exe  # public$root:[util.libs.paper.lib]         # paper.h    # HAVE_PAPER_H
 $   write sys$output "New driver file vmslib.dat created."
 $   write sys$output "Please customize libary locations for your site"
 $   write sys$output "and afterwards re-execute vms_make.com"
@@ -254,7 +248,10 @@ $   goto LIB_LOOP
 $ endif
 $ libdefs = libdefs +  cppdef + "\"
 $ libincs = libincs + "," + libsrc
-$ write optf libloc , "/lib"
+$ lqual = "/lib"
+$ libtype = f$edit(f$parse(libloc,,,"TYPE"),"UPCASE")
+$ if f$locate("EXE",libtype) .lt. f$length(libtype) then lqual = "/share"
+$ write optf libloc , lqual
 $!
 $! Nasty hack to get the freetype includes to work
 $!
@@ -265,7 +262,7 @@ $   if ((f$search("freetype:freetype.h") .nes. "") .and. -
         (f$search("freetype:[internal]ftobjs.h") .nes. ""))
 $   then
 $     write sys$output "Will use local definition of freetype logical"
-$     ft2def = 0
+$     ft2def = false
 $   else
 $     ft2elem = 0 
 $FT2_LOOP:
@@ -285,7 +282,7 @@ $             ft2dir = f$extract(0,ft2conc,ft2dir) + -
 $          endif
 $          ft2dir = ft2dir - "]" + ".]"
 $          define freetype 'ft2dev''ft2dir','ft2srcdir'
-$          ft2def = 1
+$          ft2def = true
 $        else
 $          goto ft2_err
 $        endif
@@ -294,6 +291,16 @@ $       ft2elem = ft2elem + 1
 $       goto ft2_loop
 $     endif
 $   endif	 
+$ endif
+$!
+$! Yet another special treatment for Xpm/X11
+$!
+$ if (libname .eqs. "XPM")
+$ then
+$   my_x11 = f$parse("''libsrc'xpm.h",,,"device") + - 
+             f$parse("''libsrc'xpm.h",,,"directory")
+$   x11_save = f$trnlnm("X11")
+$   define x11 'my_x11',decw$include   
 $ endif 
 $ goto LIB_LOOP
 $END_LIB:
@@ -320,13 +327,101 @@ $!
 $CHECK_CC_DEF:
 $ if (def .eqs. "HAVE_DIRENT_H")
 $ then
-$   open/write tmpc 'tc 
-$   write tmpc "#include <dirent.h>"
-$   close tmpc
+$   copy sys$input: 'tc
+$   deck
+#include <dirent.h>
+$   eod
 $   gosub cc_prop_check
-$ else
-$   write aconf "/* ", line, " */" 
+$   return
 $ endif
+$ if (def .eqs. "HAVE_STRINGS_H")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <strings.h>
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_POPEN")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <stdio.h>
+
+int main(){
+FILE *pipe;
+ pipe = popen("DIR","r");
+ pclose(pipe);
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_MKSTEMP")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <stdlib.h>
+
+int main(){
+  mkstemp("tempXXXXXX");
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_FSEEKO")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#define _LARGEFILE
+#include <stdio.h>
+
+int main(){
+FILE *fp;
+  fp = fopen("temp.txt","r");
+  fseeko(fp,1,SEEK_SET);
+  fclose(fp);
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "_LARGE_FILES")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#define _LARGEFILE
+#include <stdio.h>
+
+int main(){
+FILE *fp;
+  fp = fopen("temp.txt","r");
+  fseeko(fp,1,SEEK_SET);
+  fclose(fp);
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ if (def .eqs. "HAVE_XTAPPSETEXITFLAG")
+$ then
+$   copy sys$input: 'tc
+$   deck
+#include <X11/Intrinsic.h>
+
+int main(){
+  XtAppContext  app_context;
+  app_context = XtCreateApplicationContext();
+  XtAppSetExitFlag(app_context);
+  return 0;
+}
+$   eod
+$   gosub cc_prop_check
+$   return
+$ endif
+$ write aconf "/* ", line, " */" 
 $ return
 $!------------------------------------------------------------------------------
 $!
@@ -430,7 +525,7 @@ $   goto cxx_list
 $CLOSE_CXX:
 $   close list
 $   delete/noconfirm vms_xpdf_cc_test.*;*
-$   cxxcomp :== "cxx/prefix=all ''cxxdefs' ''float' /include=cxx$user_include/lis/show=all"
+$   cxxcomp :== "cxx/prefix=all ''cxxdefs' ''float' /include=cxx$user_include"
 $ endif
 $!
 $ if its_gnuc
@@ -441,6 +536,7 @@ $   write optf "gnu_cc:[000000]gcclib.olb/lib"
 $   write optf "sys$share:vaxcrtl.exe/share"
 $ endif
 $ return
+$-------------------------------------------------------------------------------
 $RESET_ENV:
 $ delete/sym/glob cxxcomp
 $ delete/sym/glob ccomp
@@ -473,6 +569,7 @@ $  else
 $    define cxx$system_include 'cxx_system'
 $  endif
 $ endif
+$ if (x11_save .nes. "") then define x11 'x11_save'
 $ return
 $!
 $!------------------------------------------------------------------------------
@@ -480,16 +577,62 @@ $!
 $! Check for properties of C/C++ compiler
 $!
 $CC_PROP_CHECK:
-$ cc_prop = false
+$ cc_prop = true
 $ set message/nofac/noident/nosever/notext
+$ on error then continue
 $ cc 'tmpnam'
-$ if $status then cc_prop = true
+$ if .not. ($status)  then cc_prop = false
+$ on error then continue
+$! The headers might lie about the capabilities of the RTL
+$ link 'tmpnam'
+$ if .not. ($status)  then cc_prop = false
 $ set message/fac/ident/sever/text
+$ on error then goto err_exit
 $ delete/nolog 'tmpnam'.*;*
 $ if cc_prop 
 $ then
 $   write aconf "#define ''def' 1"
+$   if (def .eqs. "HAVE_FSEEKO") .or. (def .eqs. "_LARGE_FILES") then - 
+      write aconf "#define _LARGEFILE"
 $ else 
 $   write aconf line
 $ endif
 $ return
+$!------------------------------------------------------------------------------
+$!
+$! Check Xlibs and write to options file
+$!
+$CHECK_XLIB:
+$ If F$Type (xlibs) .nes. "STRING" Then xlibs = ""
+$ need_xt = f$locate("XT",f$edit(xlibs,"upcase")) .lt. f$length(xlibs)
+$ need_xmu = f$locate("XMU",f$edit(xlibs,"upcase")) .lt. f$length(xlibs)
+$ need_xm  = f$locate("MOTIF",f$edit(xlibs,"upcase")) .lt. f$length(xlibs)
+$ On Error Then GoTo XUI
+$ @sys$update:decw$get_image_version sys$share:decw$xlibshr.exe decw$version
+$ if f$extract(4,3,decw$version).eqs."1.0"
+$ then
+$   if need_xt .or. need_xmu .or. need_xm then -
+      write optf "Sys$share:DECW$DWTLIBSHR.EXE/Share"
+$ endif
+$ if f$extract(4,3,decw$version).eqs."1.1"
+$ then
+$   if need_xm  then write optf "sys$share:decw$xmlibshr.exe/share"
+$   if need_xt  then write optf "sys$share:decw$xtshr.exe/share"
+$   if nedd_xmu then write optf "sys$share:decw$xmulibshr.exe/share"
+$ endif
+$ if f$extract(4,3,decw$version).eqs."1.2"
+$ then
+$   if need_xm  then write optf "sys$share:decw$xmlibshr12.exe/share"
+$   if need_xt  then write optf "sys$share:decw$xtlibshrr5.exe/share"
+$   if need_xmu then write optf "sys$share:decw$xmulibshrr5.exe/share"
+$ endif
+$ GoTo MAIN
+$ XUI:
+$!
+$   if need_xt .or. need_xmu then -
+      write optf "Sys$share:DECW$DWTLIBSHR.EXE/Share"
+$ MAIN:
+$ on error then goto err_exit
+$ write optf "sys$share:decw$xlibshr.exe/share"
+$ return
+$!------------------------------------------------------------------------------

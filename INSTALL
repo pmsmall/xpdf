@@ -1,11 +1,11 @@
 Xpdf
 ====
 
-version 2.01
-2002-dec-05
+version 2.02
+2003-mar-24
 
 The Xpdf software and documentation are
-copyright 1996-2002 Glyph & Cog, LLC.
+copyright 1996-2003 Glyph & Cog, LLC.
 
 Email: derekn@foolabs.com
 WWW: http://www.foolabs.com/xpdf/
@@ -46,7 +46,7 @@ different systems.
     --with-freetype2-includes=PATH
 
   (With the default installation, the library path is
-  /usr/local/include and the include path is
+  /usr/local/lib and the include path is
   /usr/local/include/freetype2.)
 
 * Alternatively, you can use FreeType 1.  The resulting library
@@ -173,6 +173,33 @@ With cygwin, the build procedure is the same as for Unix:
   * make
 
   * make install
+
+It is also possible to build the Xpdf viewer with the cygwin XFree86
+port (thanks to Michael A. Richmond for these instructions):
+
+  * make sure you have the lesstif, XFree86-base, and XFree86-prog
+    cygwin packages installed (all from the "XFree86" category)
+
+  * to build t1lib:
+    - cd T1Lib-x.y
+    - ./configure --without-x
+    - make without_doc
+    - make install
+    (this should install /usr/local/include/t1lib.h and
+    /usr/local/lib/libt1.a)
+
+  * to build xpdf:
+    - cd xpdf-x.yy
+    - ./configure --with-t1-library=/usr/local/lib
+        --with-t1-includes=/usr/local/include
+        --with-freetype2-library=/usr/X11R6/lib
+        --with-freetype2-includes=/usr/X11R6/include/freetype2
+        --with-Xm-library=/usr/X11R6/lib
+        --with-Xm-includes=/usr/X11R6/include
+      (all on one line)
+    - make
+    (this should build xpdf.exe, in addition to the command line
+    utilities)
 
 With djgpp:
 

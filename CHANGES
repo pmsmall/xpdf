@@ -1132,7 +1132,7 @@ Fixed color and font resource names in the xpdf man page.
 Was using delete instead of gfree in OutlineItem::~OutlineItem.
 Set the busy cursor in the find dialog while searching.
 Map variants of the copyright, trademark, and registered trademark
-  symbols to the proder Unicode codes, not to Adobe's corporate use
+  symbols to the proper Unicode codes, not to Adobe's corporate use
   area codes.
 Fixed a floating point exception bug in TextOutputDev (check for a
   too-small denominator).
@@ -1149,3 +1149,81 @@ Added multithreading protection to the GlobalParams class.
 Fixed a bug in end-of-stream detection with the TIFF predictor.
 Added some characters to MacRomanEncoding to match up with Apple's
   definition.
+
+2.02 (2003-mar-24)
+------------------
+Rewrote the text extractor code that assembles words into lines to
+  better handle vertically overlapping lines.
+Add the "match" option for paper size (in PostScript output).
+Added support for external 16-bit TrueType fonts; added the
+  displayCIDFontTT and displayNamedCIDFontTT commands to the xpdfrc
+  file.
+Added an Arabic language support package.
+Added the Windows-1255 encoding to the Hebrew language package.
+A missing NULL check was causing a crash when closing the file in a
+  single window (which clears out the window, but leaves it open).
+Deal with TrueType fonts whose glyph data is out of order - this
+  affected both FreeType rasterization and PostScript generation.
+Munge font names in PSOutputDev to avoid names that are problematic
+  for ghostscript because they start with an out-of-limits number
+  (e.g., 1e999foo).
+Modify the TrueType font encoding deciphering algorithm in yet another
+  attempt to match up with Acrobat's behavior.
+Bounds check the indexHigh value in indexed color spaces.
+The text extractor no longer bothers trying to get an average
+  character width for Type 3 fonts, since it generally doesn't work
+  very well (because Type 3 metrics are unreliable).
+Don't crash if the user hits ctrl-G ("find again") before doing a
+  find.
+Set the button pixmap foreground color correctly.
+Handle text drawn backward on 180 degree rotated pages.
+Added a magic call to XtUngrabButton after calling XmCreatePopupMenu
+  which appears to prevent some very odd problems (idea taken from the
+  DDD source code).
+Fix the MacOS X fix (needed to include <AvailabilityMacros.h>).
+Fixed a bunch of Motif 1.x / X11R5 incompatibilities.  [Thanks to
+  William Bader and Albert Chin-A-Young.]
+Fixed various bugs in previously untested code in the JBIG2 decoder.
+Modify the XPDFCore destructor to avoid a bogus warning message from
+  OpenMotif 2.2.
+Modified the Type 1C font parser to do proper bounds checking.
+Fixed the bounds checking in the TrueType font parser.
+Text extractor shouldn't do block merging in physical layout mode.
+Fixed a problem in PSOutputDev in level2sep mode with images in a
+  Separation color space and with a non-default Decode array.
+Text extraction with "-raw" was concatenating lines from the bottom of
+  one column and the top of the next.
+Handle Type 1C subroutines in the font converters.
+Correctly handle progressive JPEG images whose scans are slightly
+  different sizes (e.g., the Y scan rounds up to a multiple of 8
+  pixels and the Cb/Cr scans round up to 16 pixels).
+Avoid a potential divide-by-zero problem in TextOutputDev.
+Modified the T1Font and FTFont modules to correctly handle glyphs that
+  are larger than the font's claimed bounding box.
+Tweak dupMaxDeltaX parameter in TextOutputDev to avoid triggering on
+  double characters.
+Improved detection in pdfinfo for ISO paper sizes.  [Thanks to Hartmut
+  Henkel.]
+Xpdf wasn't responding to the TARGETS atom, which prevented pasting
+  the selection into various applications.  [Thanks to Phillip Ezolt.]
+Handle XObjects with recursive references in their Resources
+  dictionaries (in PSOutputDev).
+Change PSOutputDev to deal with invalid PDF files that use
+  non-embedded TrueType fonts with no encoding.
+Check for undersized Widths arrays in fonts.
+Add bounds checking code to Array class.
+Updated VMS build scripts.  [Thanks to Martin Zinser.]
+Tweak the TrueType font handling code (again):
+  - char codes in symbolic fonts may or may not be offset by 0xf000
+  - discard empty tables because they sometimes confuse FreeType
+Fixed bounds checking in the Flate decoder.
+Removed a bogus error message for exponential functions without
+  explicit C0/C1 values.  [Thanks to Hartmut Henkel.]
+Handle the other Unicode cmap type (platform=0) in TrueType fonts.
+Added support for the SGI Motif horizontal paned window widget.
+  [Thanks to Felix Ritter.]
+Ignore extra elements in link destination arrays.
+Accept external Type 1 font files with a suffix of ".ps" or no suffix
+  at all.
+Add a bounds check in the DCT decoder.
+Added instructions for building xpdf.exe under cygwin/XFree86.

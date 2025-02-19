@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl Copyright 1998-2002 Glyph & Cog, LLC
+dnl Copyright 1998-2003 Glyph & Cog, LLC
 
 AC_INIT(xpdf/xpdf.cc)
 AC_CONFIG_HEADER(aconf.h)
@@ -258,7 +258,7 @@ if test -z "$no_x"; then
   AC_SUBST(Xext_CFLAGS)
   smr_CHECK_LIB(Xp, Xp, [Motif library], 
                 XpStartPage, X11/extensions/Print.h,
-                $Xext_LIBS $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS, $X_CFLAGS)
+                $X_LIBS $X_PRE_LIBS $Xext_LIBS -lX11 $X_EXTRA_LIBS, $X_CFLAGS)
   AC_SUBST(Xp_LIBS)
   AC_SUBST(Xp_CFLAGS)
   smr_CHECK_LIB(Xt, Xt, [Motif library], 
@@ -268,11 +268,23 @@ if test -z "$no_x"; then
   AC_SUBST(Xt_CFLAGS)
   smr_CHECK_LIB(Xm, Xm, [Motif library], 
                 XmCreateForm, Xm/XmAll.h,
-                $Xt_LIBS $Xp_LIBS $Xext_LIBS $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS, $X_CFLAGS)
+                $X_LIBS $X_PRE_LIBS $Xt_LIBS $Xp_LIBS $Xext_LIBS -lX11 $X_EXTRA_LIBS, $X_CFLAGS)
   AC_SUBST(Xm_LIBS)
   AC_SUBST(Xm_CFLAGS)
-  if test ! "x$smr_have_Xm_library" = xyes; then
+  if test "x$smr_have_Xm_library" != xyes; then
     no_x="yes"
+  fi
+  smr_CHECK_LIB(Sgm, Sgm, [SGI Motif library], 
+                SgCreateHorzPanedWindow, Sgm/HPanedW.h,
+                $Xm_LIBS $X_LIBS $X_PRE_LIBS $Xt_LIBS $Xp_LIBS $Xext_LIBS -lX11 $X_EXTRA_LIBS, $X_CFLAGS)
+  AC_SUBST(Sgm_LIBS)
+  AC_SUBST(Sgm_CFLAGS)
+
+  dnl # check for XtAppSetExitFlag, which didn't exist prior to X11R6 (?)
+  if test "x$smr_have_Xt_library" = xyes; then
+    AC_CHECK_LIB(Xt, XtAppSetExitFlag,
+		 AC_DEFINE(HAVE_XTAPPSETEXITFLAG), ,
+                 [$X_LIBS])
   fi
 fi
 

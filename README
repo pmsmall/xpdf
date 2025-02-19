@@ -1,11 +1,11 @@
 Xpdf
 ====
 
-version 2.01
-2002-dec-05
+version 2.02
+2003-mar-24
 
 The Xpdf software and documentation are
-copyright 1996-2002 Glyph & Cog, LLC.
+copyright 1996-2003 Glyph & Cog, LLC.
 
 Email: derekn@foolabs.com
 WWW: http://www.foolabs.com/xpdf/
@@ -248,7 +248,8 @@ Thanks to:
 * Brendan Miller for the icon idea.
 * Olly Betts for help testing pdftotext.
 * Peter Ganten for the OS/2 port.
-* Michael Richmond for the Win32 port of pdftops and pdftotext.
+* Michael Richmond for the Win32 port of pdftops and pdftotext and the
+  xpdf/cygwin/XFree86 build instructions.
 * Frank M. Siegert for improvements in the PostScript code.
 * Leo Smiers for the decryption patches.
 * Rainer Menzner for creating t1lib, and for helping me adapt it to
@@ -387,9 +388,11 @@ Robert L. Hummel, _Programmer's Technical Reference: Data and Fax
 Communications_.  Ziff-Davis Press, 1993, ISBN 1-56276-077-7.
 [CCITT Group 3 and 4 fax decoding.]
 
-ISO, _Coding of Still Pictures_, IS 14492 Final Committee Draft.
-http://www.jpeg.org/fcd14492.pdf
-[The final draft of the JBIG2 spec.]
+ISO/IEC, _Information technology -- Lossy/lossless coding of bi-level
+images_.  ISO/IEC 14492, First edition (2001-12-15).
+http://webstore.ansi.org/
+[The official JBIG2 standard.  The final draft of this spec is
+available from http://www.jpeg.org/jbighomepage.html.]
 
 ITU, "Standardization of Group 3 facsimile terminals for document
 transmission", ITU-T Recommendation T.4, 1999.

@@ -130,39 +130,41 @@
 
        -paper size
               Set the paper size to  one  of  "letter",  "legal",
-              "A4", or "A3".  [config file: psPaperSize]
+              "A4",  or  "A3".   This can also be set to "match",
+              which will set the paper size  to  match  the  size
+              specified  in the PDF file.  [config file: psPaper-
+              Size]
 
        -paperw size
-              Set  the  paper  width,  in  points.  [config file:
-
+              Set the paper  width,  in  points.   [config  file:
               psPaperSize]
 
        -paperh size
-              Set the paper height,  in  points.   [config  file:
+              Set  the  paper  height,  in points.  [config file:
               psPaperSize]
 
        -duplex
-              Set  the  Duplex pagedevice entry in the PostScript
+              Set the Duplex pagedevice entry in  the  PostScript
               file.  This tells duplex-capable printers to enable
               duplexing.  [config file: psDuplex]
 
        -opw password
-              Specify  the owner password for the PDF file.  Pro-
-              viding this will bypass all security  restrictions.
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
-       -q     Don't  print any messages or errors.  [config file:
+       -q     Don't print any messages or errors.  [config  file:
               errQuiet]
 
        -cfg config-file
-              Read config-file in place of ~/.xpdfrc or the  sys-
+              Read  config-file in place of ~/.xpdfrc or the sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print  usage  information.   (-help  and --help are
+       -h     Print usage information.   (-help  and  --help  are
               equivalent.)
 
 2 XIT_CODE
@@ -182,7 +184,7 @@
 2 AUTHOR
 
        The  pdftops  software  and  documentation  are  copyright
-       1996-2002 Glyph & Cog, LLC.
+       1996-2003 Glyph & Cog, LLC.
 
 2 SEE_ALSO
 

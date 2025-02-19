@@ -5,7 +5,7 @@ xpdfrc(5)                                               xpdfrc(5)
 
 
 NAME
-       xpdfrc - configuration file for Xpdf tools (version 2.01)
+       xpdfrc - configuration file for Xpdf tools (version 2.02)
 
 DESCRIPTION
        All  of  the  Xpdf tools read a single configuration file.
@@ -61,7 +61,7 @@ CHARACTER MAPPING
 
 
 
-                         05 December 2002                       1
+                          24 March 2003                         1
 
 
 
@@ -127,7 +127,7 @@ DISPLAY FONTS
 
 
 
-                         05 December 2002                       2
+                          24 March 2003                         2
 
 
 
@@ -180,20 +180,20 @@ xpdfrc(5)                                               xpdfrc(5)
               any of the fonts declared with displayNamedCIDFont*
               commands.  There are no default CID font  mappings.
 
-       fontDir dir
-              Specifies  a  search  directory  for  external font
-              files.  There can be multiple fontDir  directories.
-              If  a  PDF  file  uses a font but doesn't embed it,
-              these directories will be searched for  a  matching
-              font  file.  These fonts are used by both xpdf (for
-              display) and pdftops (for embedding in  the  gener-
-              ated  PostScript).   Only  files  with  suffixes of
-              ".pfa", ".pfb", or ".ttf" will be used; other files
-              in these directories will be ignored.  There are no
+       displayNamedCIDFontTT PDF-font-name TT-file
+              Maps    a   specific   PDF   CID   (16-bit)   font,
+              PDF-font-name, to a  (16-bit)  TrueType  font,  for
+              display.  There are no default CID font mappings.
+
+       displayCIDFontTT registry-ordering TT-file
+              Maps  the registry-ordering character collection to
+              a (16-bit) TrueType font, for display.   This  map-
+              ping  is used if the font name doesn't match any of
+              the  fonts   declared   with   displayNamedCIDFont*
 
 
 
-                         05 December 2002                       3
+                          24 March 2003                         3
 
 
 
@@ -202,7 +202,20 @@ xpdfrc(5)                                               xpdfrc(5)
 xpdfrc(5)                                               xpdfrc(5)
 
 
-              default fontDir directories.
+              commands.   There are no default CID font mappings.
+
+       fontDir dir
+              Specifies a  search  directory  for  external  font
+              files.   There can be multiple fontDir directories.
+              If a PDF file uses a font  but  doesn't  embed  it,
+              these  directories  will be searched for a matching
+              font file.  These fonts are used by both xpdf  (for
+              display)  and  pdftops (for embedding in the gener-
+              ated PostScript).  Type 1 fonts must have a  suffix
+              of  ".pfa",  ".pfb",  ".ps",  or  no suffix at all.
+              TrueType fonts must have a  ".ttf"  suffix.   Other
+              files  in these directories will be ignored.  There
+              are no default fontDir directories.
 
 POSTSCRIPT CONTROL
        psPaperSize width(pts) height(pts)
@@ -210,11 +223,13 @@ POSTSCRIPT CONTROL
               width  and height parameters give the paper size in
               PostScript points.
 
-       psPaperSize letter | legal | A4 | A3
+       psPaperSize letter | legal | A4 | A3 | match
               Sets the paper size  for  PostScript  output  to  a
               standard  size.  The default paper size is set when
               xpdf and pdftops are built, typically  to  "letter"
-              or "A4".
+              or  "A4".   This  can also be set to "match", which
+              will set the paper size to match the size specified
+              in the PDF file.
 
        psDuplex yes | no
               If  set to "yes", the generated PostScript will set
@@ -241,6 +256,18 @@ POSTSCRIPT CONTROL
               ded, the PS-font-name font is substituted  for  it.
               The  writing mode must be either 'H' for horizontal
               or 'V' for  vertical.   The  PS-font-name  font  is
+
+
+
+                          24 March 2003                         4
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
               assumed  to  be  resident in the printer and to use
               the  specified  encoding  (which  must  have   been
               defined with the unicodeMap command).
@@ -256,17 +283,6 @@ POSTSCRIPT CONTROL
               be resident in the printer and to use the specified
               writing  mode  and  encoding  (which must have been
               defined with the unicodeMap command).
-
-
-
-                         05 December 2002                       4
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
 
        psEmbedType1Fonts yes | no
               If set to "no", prevents embedding of Type 1  fonts
@@ -306,6 +322,18 @@ xpdfrc(5)                                               xpdfrc(5)
               for  xpdf.   Commands  start  with a '|' character;
               anything else is a file.  If the file name or  com-
               mand  contains  spaces  it  must  be  quoted.  This
+
+
+
+                          24 March 2003                         5
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
               defaults to unset, which tells xpdf to  generate  a
               name   of   the  form  <file>.ps  for  a  PDF  file
               <file>.pdf.
@@ -321,18 +349,6 @@ TEXT CONTROL
               command  line.)   The encoding-name must be defined
               with the  unicodeMap  command  (see  above).   This
               defaults to "Latin1".
-
-
-
-
-                         05 December 2002                       5
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
 
        textEOL unix | dos | mac
               Sets  the  end-of-line  convention  to use for text
@@ -372,6 +388,18 @@ MISCELLANEOUS SETTINGS
 
        freetypeControl none | plain | low | high
               Sets  the  type of font rendering for FreeType (the
+
+
+
+                          24 March 2003                         6
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
               TrueType rasterizer) to use.   Options  are  "none"
               (don't use FreeType at all), "plain" (use non-anti-
               aliased fonts), "low" or "high"  (use  anti-aliased
@@ -388,17 +416,6 @@ MISCELLANEOUS SETTINGS
               Sets the command executed when you click on a movie
               annotation.  The string "%s" will be replaced  with
               the movie file name.  This has no default value.
-
-
-
-                         05 December 2002                       6
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
 
        mapNumericCharNames yes | no
               If set to "yes", the Xpdf tools will attempt to map
@@ -437,6 +454,18 @@ EXAMPLES
        # (note that this overrides the displayFontX command above)
        displayFontT1 Times-Roman           /usr/local/share/ghostscript/fonts/n021003l.pfb
        displayFontT1 Times-Italic          /usr/local/share/ghostscript/fonts/n021023l.pfb
+
+
+
+                          24 March 2003                         7
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
        displayFontT1 Times-Bold            /usr/local/share/ghostscript/fonts/n021004l.pfb
        displayFontT1 Times-BoldItalic      /usr/local/share/ghostscript/fonts/n021024l.pfb
        displayFontT1 Helvetica             /usr/local/share/ghostscript/fonts/n019003l.pfb
@@ -454,18 +483,6 @@ EXAMPLES
        displayCIDFontX Adobe-Japan1 "-*-fixed-medium-r-normal-*-%s-*-*-*-*-*-jisx0208.1983-0" JISX0208
 
        # use the Bakoma Type 1 fonts
-
-
-
-                         05 December 2002                       7
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
-
        # (this assumes they happen to be installed in /usr/local/fonts/bakoma)
        fontDir /usr/local/fonts/bakoma
 
@@ -503,9 +520,21 @@ FILES
               exists, it will be read in place of the system-wide
               file.
 
+
+
+
+                          24 March 2003                         8
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
 AUTHOR
        The  Xpdf  software  and   documentation   are   copyright
-       1996-2002 Glyph & Cog, LLC.
+       1996-2003 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),     pdftops(1),     pdftotext(1),     pdfinfo(1),
@@ -523,6 +552,43 @@ SEE ALSO
 
 
 
-                         05 December 2002                       8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          24 March 2003                         9
 
 
