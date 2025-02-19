@@ -34,9 +34,6 @@ void CDECL error(int pos, char *msg, ...) {
   if (errQuiet) {
     return;
   }
-  if (printCommands) {
-    fflush(stdout);
-  }
   if (pos >= 0) {
     fprintf(errFile, "Error (%d): ", pos);
   } else {

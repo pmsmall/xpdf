@@ -23,7 +23,7 @@ class Parser {
 public:
 
   // Constructor.
-  Parser(Lexer *lexerA);
+  Parser(XRef *xrefA, Lexer *lexerA);
 
   // Destructor.
   ~Parser();
@@ -45,6 +45,7 @@ public:
 
 private:
 
+  XRef *xref;			// the xref table for this PDF file
   Lexer *lexer;			// input stream
   Object buf1, buf2;		// next two tokens
   int inlineImg;		// set when inline image data is encountered

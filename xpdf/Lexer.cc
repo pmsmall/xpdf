@@ -44,22 +44,22 @@ static char specialChars[256] = {
 // Lexer
 //------------------------------------------------------------------------
 
-Lexer::Lexer(Stream *str) {
+Lexer::Lexer(XRef *xref, Stream *str) {
   Object obj;
 
   curStr.initStream(str);
-  streams = new Array();
+  streams = new Array(xref);
   streams->add(curStr.copy(&obj));
   strPtr = 0;
   freeArray = gTrue;
   curStr.streamReset();
 }
 
-Lexer::Lexer(Object *obj) {
+Lexer::Lexer(XRef *xref, Object *obj) {
   Object obj2;
 
   if (obj->isStream()) {
-    streams = new Array();
+    streams = new Array(xref);
     freeArray = gTrue;
     streams->add(obj->copy(&obj2));
   } else {

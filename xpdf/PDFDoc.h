@@ -14,13 +14,13 @@
 #endif
 
 #include <stdio.h>
+#include "XRef.h"
 #include "Link.h"
 #include "Catalog.h"
 #include "Page.h"
 
 class GString;
 class BaseStream;
-class XRef;
 class OutputDev;
 class Links;
 class LinkAction;
@@ -34,9 +34,9 @@ class PDFDoc {
 public:
 
   PDFDoc(GString *fileNameA, GString *ownerPassword = NULL,
-	 GString *userPassword = NULL);
+	 GString *userPassword = NULL, GBool printCommandsA = gFalse);
   PDFDoc(BaseStream *strA, GString *ownerPassword = NULL,
-	 GString *userPassword = NULL);
+	 GString *userPassword = NULL, GBool printCommandsA = gFalse);
   ~PDFDoc();
 
   // Was PDF document successfully opened?
@@ -44,6 +44,9 @@ public:
 
   // Get file name.
   GString *getFileName() { return fileName; }
+
+  // Get the xref table.
+  XRef *getXRef() { return xref; }
 
   // Get catalog.
   Catalog *getCatalog() { return catalog; }
@@ -124,6 +127,7 @@ private:
   XRef *xref;
   Catalog *catalog;
   Links *links;
+  GBool printCommands;
 
   GBool ok;
 };

@@ -66,7 +66,7 @@ static Gushort *defCharWidths[12] = {
 // GfxFont
 //------------------------------------------------------------------------
 
-GfxFont::GfxFont(char *tagA, Ref idA, Dict *fontDict) {
+GfxFont::GfxFont(XRef *xref, char *tagA, Ref idA, Dict *fontDict) {
   BuiltinFont *builtinFont;
   Object obj1, obj2, obj3, obj4;
   int missingWidth;
@@ -222,7 +222,7 @@ GfxFont::GfxFont(char *tagA, Ref idA, Dict *fontDict) {
       obj1.dictLookupNF("FontFile3", &obj2);
       if (obj2.isRef()) {
 	embFontID = obj2.getRef();
-	obj2.fetch(&obj3);
+	obj2.fetch(xref, &obj3);
 	if (obj3.isStream()) {
 	  obj3.streamGetDict()->lookup("Subtype", &obj4);
 	  if (obj4.isName("Type1"))
@@ -260,6 +260,18 @@ GfxFont::GfxFont(char *tagA, Ref idA, Dict *fontDict) {
       descent = 0.001 * obj2.getNum();
     }
     obj2.free();
+
+    // font FontBBox
+    fontBBox[0] = fontBBox[1] = fontBBox[2] = fontBBox[3] = 0;
+    if (obj1.dictLookup("FontBBox", &obj2)->isArray()) {
+      for (i = 0; i < 4 && i < obj2.arrayGetLength(); ++i) {
+	if (obj2.arrayGet(i, &obj3)->isNum()) {
+	  fontBBox[i] = obj3.getNum();
+	}
+	obj3.free();
+      }
+    }
+    obj2.free();
   }
   obj1.free();
 
@@ -293,7 +305,7 @@ GfxFont::GfxFont(char *tagA, Ref idA, Dict *fontDict) {
   if (type == fontType0) {
     getType0EncAndWidths(fontDict);
   } else {
-    getEncAndWidths(fontDict, builtinFont, missingWidth);
+    getEncAndWidths(xref, fontDict, builtinFont, missingWidth);
   }
 }
 
@@ -427,8 +439,8 @@ Object *GfxFont::getCharProc(int code, Object *proc) {
   return proc;
 }
 
-void GfxFont::getEncAndWidths(Dict *fontDict, BuiltinFont *builtinFont,
-			      int missingWidth) {
+void GfxFont::getEncAndWidths(XRef *xref, Dict *fontDict,
+			      BuiltinFont *builtinFont, int missingWidth) {
   Object obj1, obj2, obj3;
   char *buf;
   int len;
@@ -475,7 +487,7 @@ void GfxFont::getEncAndWidths(Dict *fontDict, BuiltinFont *builtinFont,
     if (extFontFile) {
       buf = readExtFontFile(&len);
     } else {
-      buf = readEmbFontFile(&len);
+      buf = readEmbFontFile(xref, &len);
     }
     if (buf) {
       if (type == fontType1) {
@@ -584,7 +596,7 @@ char *GfxFont::readExtFontFile(int *len) {
   return buf;
 }
 
-char *GfxFont::readEmbFontFile(int *len) {
+char *GfxFont::readEmbFontFile(XRef *xref, int *len) {
   char *buf;
   Object obj1, obj2;
   Stream *str;
@@ -592,7 +604,7 @@ char *GfxFont::readEmbFontFile(int *len) {
   int size, i;
 
   obj1.initRef(embFontID.num, embFontID.gen);
-  obj1.fetch(&obj2);
+  obj1.fetch(xref, &obj2);
   if (!obj2.isStream()) {
     error(-1, "Embedded font file is not a stream");
     obj2.free();
@@ -1029,7 +1041,7 @@ static int CDECL cmpWidthExcepV(const void *w1, const void *w2) {
 // GfxFontDict
 //------------------------------------------------------------------------
 
-GfxFontDict::GfxFontDict(Dict *fontDict) {
+GfxFontDict::GfxFontDict(XRef *xref, Dict *fontDict) {
   int i;
   Object obj1, obj2;
 
@@ -1037,10 +1049,10 @@ GfxFontDict::GfxFontDict(Dict *fontDict) {
   fonts = (GfxFont **)gmalloc(numFonts * sizeof(GfxFont *));
   for (i = 0; i < numFonts; ++i) {
     fontDict->getValNF(i, &obj1);
-    obj1.fetch(&obj2);
+    obj1.fetch(xref, &obj2);
     if (obj1.isRef() && obj2.isDict()) {
-      fonts[i] = new GfxFont(fontDict->getKey(i), obj1.getRef(),
-			     obj2.getDict());
+      fonts[i] = new GfxFont(xref, fontDict->getKey(i),
+			     obj1.getRef(), obj2.getDict());
     } else {
       error(-1, "font resource is not a dictionary");
       fonts[i] = NULL;

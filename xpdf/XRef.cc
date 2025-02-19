@@ -44,17 +44,10 @@
 #endif
 
 //------------------------------------------------------------------------
-// The global xref table
-//------------------------------------------------------------------------
-
-XRef *xref = NULL;
-
-//------------------------------------------------------------------------
 // XRef
 //------------------------------------------------------------------------
 
 XRef::XRef(BaseStream *strA, GString *ownerPassword, GString *userPassword) {
-  XRef *oldXref;
   int pos;
   int i;
 
@@ -63,11 +56,6 @@ XRef::XRef(BaseStream *strA, GString *ownerPassword, GString *userPassword) {
   entries = NULL;
   streamEnds = NULL;
   streamEndsLen = 0;
-
-  // get rid of old xref (otherwise it will try to fetch the Root object
-  // in the new document, using the old xref)
-  oldXref = xref;
-  xref = NULL;
 
   // read the trailer
   str = strA;
@@ -78,7 +66,6 @@ XRef::XRef(BaseStream *strA, GString *ownerPassword, GString *userPassword) {
   // try to reconstruct the xref table
   if (pos == 0) {
     if (!(ok = constructXRef())) {
-      xref = oldXref;
       return;
     }
 
@@ -98,14 +85,14 @@ XRef::XRef(BaseStream *strA, GString *ownerPassword, GString *userPassword) {
       size = 0;
       entries = NULL;
       if (!(ok = constructXRef())) {
-	xref = oldXref;
 	return;
       }
     }
   }
 
-  // set up new xref table
-  xref = this;
+  // now set the trailer dictionary's xref pointer so we can fetch
+  // indirect objects from it
+  trailerDict.getDict()->setXRef(this);
 
   // check for encryption
 #ifndef NO_DECRYPTION
@@ -113,7 +100,6 @@ XRef::XRef(BaseStream *strA, GString *ownerPassword, GString *userPassword) {
 #endif
   if (checkEncrypted(ownerPassword, userPassword)) {
     ok = gFalse;
-    xref = oldXref;
     return;
   }
 }
@@ -189,7 +175,8 @@ int XRef::readTrailer() {
 
   // read trailer dict
   obj.initNull();
-  parser = new Parser(new Lexer(str->makeSubStream(start + pos1, -1, &obj)));
+  parser = new Parser(NULL, new Lexer(NULL, str->makeSubStream(start + pos1,
+							       -1, &obj)));
   parser->getObj(&trailerDict);
   if (trailerDict.isDict()) {
     trailerDict.dictLookupNF("Size", &obj);
@@ -313,7 +300,8 @@ GBool XRef::readXRef(int *pos) {
 
   // read prev pointer from trailer dictionary
   obj.initNull();
-  parser = new Parser(new Lexer(str->makeSubStream(str->getPos(), -1, &obj)));
+  parser = new Parser(NULL, new Lexer(NULL, str->makeSubStream(str->getPos(),
+							       -1, &obj)));
   parser->getObj(&obj);
   if (!obj.isCmd("trailer")) {
     goto err1;
@@ -371,7 +359,7 @@ GBool XRef::constructXRef() {
     // got trailer dictionary
     if (!strncmp(p, "trailer", 7)) {
       obj.initNull();
-      parser = new Parser(new Lexer(
+      parser = new Parser(NULL, new Lexer(NULL,
 		      str->makeSubStream(start + pos + 7, -1, &obj)));
       if (!trailerDict.isNone())
 	trailerDict.free();
@@ -593,7 +581,7 @@ Object *XRef::fetch(int num, int gen, Object *obj) {
   e = &entries[num];
   if (e->gen == gen && e->offset >= 0) {
     obj1.initNull();
-    parser = new Parser(new Lexer(
+    parser = new Parser(this, new Lexer(this,
 	           str->makeSubStream(start + e->offset, -1, &obj1)));
     parser->getObj(&obj1);
     parser->getObj(&obj2);

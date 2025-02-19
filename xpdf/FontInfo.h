@@ -1287,7 +1287,7 @@ static char *winAnsiEncodingNames[winAnsiEncodingSize] = {
   "braceright",
   "asciitilde",
   "bullet",
-  "bullet",
+  "Euro",
   "bullet",
   "quotesinglbase",
   "florin",

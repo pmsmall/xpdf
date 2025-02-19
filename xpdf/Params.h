@@ -9,8 +9,7 @@
 #ifndef PARAMS_H
 #define PARAMS_H
 
-// Print commands as they're executed.
-extern GBool printCommands;
+#include "gtypes.h"
 
 // If this is set, error messages will be silently discarded.
 extern GBool errQuiet;

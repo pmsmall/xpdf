@@ -505,6 +505,69 @@ private:
 };
 
 //------------------------------------------------------------------------
+// GfxShading
+//------------------------------------------------------------------------
+
+class GfxShading {
+public:
+
+  GfxShading();
+  virtual ~GfxShading();
+
+  static GfxShading *parse(Object *obj);
+
+  int getType() { return type; }
+  GfxColorSpace *getColorSpace() { return colorSpace; }
+  GfxColor *getBackground() { return &background; }
+  GBool getHasBackground() { return hasBackground; }
+  void getBBox(double *xMinA, double *yMinA, double *xMaxA, double *yMaxA)
+    { *xMinA = xMin; *yMinA = yMin; *xMaxA = xMax; *yMaxA = yMax; }
+  GBool getHasBBox() { return hasBBox; }
+
+private:
+
+  int type;
+  GfxColorSpace *colorSpace;
+  GfxColor background;
+  GBool hasBackground;
+  double xMin, yMin, xMax, yMax;
+  GBool hasBBox;
+};
+
+//------------------------------------------------------------------------
+// GfxAxialShading
+//------------------------------------------------------------------------
+
+class GfxAxialShading: public GfxShading {
+public:
+
+  GfxAxialShading(double x0A, double y0A,
+		  double x1A, double y1A,
+		  double t0A, double t1A,
+		  Function **funcsA, int nFuncsA,
+		  GBool extend0A, GBool extend1A);
+  virtual ~GfxAxialShading();
+
+  static GfxAxialShading *parse(Dict *dict);
+
+  void getCoords(double *x0A, double *y0A, double *x1A, double *y1A)
+    { *x0A = x0; *y0A = y0; *x1A = x1; *y1A = y1; }
+  double getDomain0() { return t0; }
+  double getDomain1() { return t1; }
+  void getColor(double t, GfxColor *color);
+  GBool getExtend0() { return extend0; }
+  GBool getExtend1() { return extend1; }
+
+private:
+
+  double x0, y0, x1, y1;
+  double t0, t1;
+  Function *funcs[gfxColorMaxComps];
+  int nFuncs;
+  GBool extend0, extend1;
+};
+
+//------------------------------------------------------------------------
 // GfxImageColorMap
 //------------------------------------------------------------------------
 
@@ -718,6 +781,8 @@ public:
   GfxPath *getPath() { return path; }
   double getCurX() { return curX; }
   double getCurY() { return curY; }
+  void getClipBBox(double *xMin, double *yMin, double *xMax, double *yMax)
+    { *xMin = clipXMin; *yMin = clipYMin; *xMax = clipXMax; *yMax = clipYMax; }
   double getLineX() { return lineX; }
   double getLineY() { return lineY; }
 
@@ -794,6 +859,9 @@ public:
     { path->close(); curX = path->getLastX(); curY = path->getLastY(); }
   void clearPath();
 
+  // Update clip region.
+  void clip();
+
   // Text position.
   void textMoveTo(double tx, double ty)
     { lineX = tx; lineY = ty; textTransform(tx, ty, &curX, &curY); }
@@ -842,6 +910,9 @@ private:
   GfxPath *path;		// array of path elements
   double curX, curY;		// current point (user coords)
   double lineX, lineY;		// start of current text line (text coords)
+
+  double clipXMin, clipYMin,	// bounding box for clip region
+         clipXMax, clipYMax;
 
   GfxState *saved;		// next GfxState on stack
 

@@ -57,7 +57,6 @@ PBMOutputDev *PBMOutputDev::makePBMOutputDev(char *displayName,
   pixmapA = XCreatePixmap(displayA, dummyWinA, 1, 1, 1);
   out = new PBMOutputDev(displayA, screenA, pixmapA, dummyWinA,
 			 invertA, fileRootA);
-  out->startDoc();
   return out;
 }
 
@@ -85,7 +84,8 @@ PBMOutputDev::PBMOutputDev(Display *displayA, int screenA,
 			   int invertA, char *fileRootA):
   XOutputDev(displayA, pixmapA, 1,
 	     DefaultColormap(displayA, screenA),
-	     WhitePixel(displayA, DefaultScreen(displayA)))
+	     WhitePixel(displayA, DefaultScreen(displayA)),
+	     gFalse, 1, fontRastAALow, fontRastAAHigh)
 {
   display = displayA;
   screen = screenA;

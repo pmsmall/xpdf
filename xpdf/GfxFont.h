@@ -98,7 +98,7 @@ class GfxFont {
 public:
 
   // Constructor.
-  GfxFont(char *tagA, Ref idA, Dict *fontDict);
+  GfxFont(XRef *xref, char *tagA, Ref idA, Dict *fontDict);
 
   // Destructor.
   ~GfxFont();
@@ -174,18 +174,21 @@ public:
   // Return the font matrix.
   double *getFontMatrix() { return fontMat; }
 
+  // Return the font bounding box.
+  double *getFontBBox() { return fontBBox; }
+
   // Return the ascent and descent values.
   double getAscent() { return ascent; }
   double getDescent() { return descent; }
 
   // Read an external or embedded font file into a buffer.
   char *readExtFontFile(int *len);
-  char *readEmbFontFile(int *len);
+  char *readEmbFontFile(XRef *xref, int *len);
 
 private:
 
-  void getEncAndWidths(Dict *fontDict, BuiltinFont *builtinFont,
-		       int missingWidth);
+  void getEncAndWidths(XRef *xref, Dict *fontDict,
+		       BuiltinFont *builtinFont, int missingWidth);
   void findExtFontFile();
   void makeWidths(Dict *fontDict, FontEncoding *builtinEncoding,
 		  Gushort *builtinWidths, int missingWidth);
@@ -202,6 +205,7 @@ private:
   GString *extFontFile;		// external font file name
   Object charProcs;		// Type3 CharProcs dictionary
   double fontMat[6];		// font matrix
+  double fontBBox[4];		// font bounding box
   double ascent;		// max height above baseline
   double descent;		// max depth below baseline
   union {
@@ -225,7 +229,7 @@ class GfxFontDict {
 public:
 
   // Build the font dictionary, given the PDF font dictionary.
-  GfxFontDict(Dict *fontDict);
+  GfxFontDict(XRef *xref, Dict *fontDict);
 
   // Destructor.
   ~GfxFontDict();

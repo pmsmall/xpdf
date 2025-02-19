@@ -442,7 +442,30 @@ time_t getModTime(char *fileName) {
 }
 
 GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
-#if defined(VMS) || defined(__EMX__) || defined(WIN32) || defined(ACORN) || defined(MACOS)
+#if defined(WIN32)
+  //---------- Win32 ----------
+  char *s;
+  char buf[_MAX_PATH];
+  char *fp;
+
+  // There is a security hole here: an attacker can create a symlink
+  // with this file name after the tmpnam call and before the fopen
+  // call.  I will happily accept fixes to this function for non-Unix
+  // OSs.
+  if (!(s = tmpnam(NULL))) {
+    return gFalse;
+  }
+  GetFullPathName(s, _MAX_PATH, buf, &fp);
+  *name = new GString(buf);
+  if (ext) {
+    (*name)->append(ext);
+  }
+  if (!(*f = fopen((*name)->getCString(), mode))) {
+    delete (*name);
+    return gFalse;
+  }
+  return gTrue;
+#elif defined(VMS) || defined(__EMX__) || defined(ACORN) || defined(MACOS)
   //---------- non-Unix ----------
   char *s;
 

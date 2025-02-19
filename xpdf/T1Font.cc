@@ -57,7 +57,7 @@ T1FontEngine::~T1FontEngine() {
 //------------------------------------------------------------------------
 
 T1FontFile::T1FontFile(T1FontEngine *engineA, char *fontFileName,
-		       FontEncoding *fontEnc) {
+		       FontEncoding *fontEnc, double *bboxA) {
   int encStrSize;
   char *encPtr;
   int i;
@@ -66,6 +66,9 @@ T1FontFile::T1FontFile(T1FontEngine *engineA, char *fontFileName,
   engine = engineA;
   enc = NULL;
   encStr = NULL;
+  for (i = 0; i < 4; ++i) {
+    bbox[i] = bboxA[i];
+  }
 
   // load the font file
   if ((id = T1_AddFont(fontFileName)) < 0) {
@@ -115,6 +118,7 @@ T1Font::T1Font(T1FontFile *fontFileA, double *m) {
   T1FontEngine *engine;
   T1_TMATRIX matrix;
   BBox bbox;
+  double bbx0, bby0, bbx1, bby1;
   int x, y, xMin, xMax, yMin, yMax;
   int i;
 
@@ -129,49 +133,62 @@ T1Font::T1Font(T1FontFile *fontFileA, double *m) {
 
   // transform the four corners of the font bounding box -- the min
   // and max values form the bounding box of the transformed font
-  bbox = T1_GetFontBBox(id);
-  if (bbox.llx == 0 && bbox.lly == 0 &&
-      bbox.urx == 0 && bbox.ury == 0) {
-    // broken font, so we fake it (with values large enough that most
-    // glyphs should fit)
-    bbox.llx = bbox.lly = -500;
-    bbox.urx = bbox.ury = 1500;
+  if (fontFile->bbox[0] != 0 || fontFile->bbox[1] != 0 ||
+      fontFile->bbox[2] != 0 || fontFile->bbox[3] != 0) {
+    bbx0 = 0.001 * fontFile->bbox[0];
+    bby0 = 0.001 * fontFile->bbox[1];
+    bbx1 = 0.001 * fontFile->bbox[2];
+    bby1 = 0.001 * fontFile->bbox[3];
+  } else {
+    bbox = T1_GetFontBBox(id);
+    if (bbox.llx != 0 || bbox.lly != 0 &&
+	bbox.urx != 0 || bbox.ury != 0) {
+      bbx0 = 0.001 * bbox.llx;
+      bby0 = 0.001 * bbox.lly;
+      bbx1 = 0.001 * bbox.urx;
+      bby1 = 0.001 * bbox.ury;
+    } else {
+      // broken font, so we fake it (with values large enough that most
+      // glyphs should fit)
+      bbx0 = bby0 = -0.5;
+      bbx1 = bby1 = 1.5;
+    }
   }
-  x = (int)((m[0] * bbox.llx + m[2] * bbox.lly) * 0.001);
+  x = (int)(m[0] * bbx0 + m[2] * bby0);
   xMin = xMax = x;
-  y = (int)((m[1] * bbox.llx + m[3] * bbox.lly) * 0.001);
+  y = (int)(m[1] * bbx0 + m[3] * bby0);
   yMin = yMax = y;
-  x = (int)((m[0] * bbox.llx + m[2] * bbox.ury) * 0.001);
+  x = (int)(m[0] * bbx0 + m[2] * bby1);
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
-  y = (int)((m[1] * bbox.llx + m[3] * bbox.ury) * 0.001);
+  y = (int)(m[1] * bbx0 + m[3] * bby1);
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
     yMax = y;
   }
-  x = (int)((m[0] * bbox.urx + m[2] * bbox.lly) * 0.001);
+  x = (int)(m[0] * bbx1 + m[2] * bby0);
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
-  y = (int)((m[1] * bbox.urx + m[3] * bbox.lly) * 0.001);
+  y = (int)(m[1] * bbx1 + m[3] * bby0);
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
     yMax = y;
   }
-  x = (int)((m[0] * bbox.urx + m[2] * bbox.ury) * 0.001);
+  x = (int)(m[0] * bbx1 + m[2] * bby1);
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
-  y = (int)((m[1] * bbox.urx + m[3] * bbox.ury) * 0.001);
+  y = (int)(m[1] * bbx1 + m[3] * bby1);
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
@@ -187,6 +204,16 @@ T1Font::T1Font(T1FontFile *fontFileA, double *m) {
   if (yMax == yMin) {
     yMin = 0;
     yMax = (int)(1.2 * size);
+  }
+#endif
+#if 1 //~
+  //~ Another kludge: an unusually large xMin or yMin coordinate is
+  //~ probably wrong.
+  if (xMin > 0) {
+    xMin = 0;
+  }
+  if (yMin > 0) {
+    yMin = 0;
   }
 #endif
 #if 1 //~

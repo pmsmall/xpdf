@@ -1246,6 +1246,233 @@ GfxTilingPattern::GfxTilingPattern(GfxTilingPattern *pat):
 }
 
 //------------------------------------------------------------------------
+// GfxShading
+//------------------------------------------------------------------------
+
+GfxShading::GfxShading() {
+}
+
+GfxShading::~GfxShading() {
+  delete colorSpace;
+}
+
+GfxShading *GfxShading::parse(Object *obj) {
+  GfxShading *shading;
+  int typeA;
+  GfxColorSpace *colorSpaceA;
+  GfxColor backgroundA;
+  GBool hasBackgroundA;
+  double xMinA, yMinA, xMaxA, yMaxA;
+  GBool hasBBoxA;
+  Object obj1, obj2;
+  int i;
+
+  shading = NULL;
+  if (obj->isDict()) {
+
+    if (!obj->dictLookup("ShadingType", &obj1)->isInt()) {
+      error(-1, "Invalid ShadingType in shading dictionary");
+      obj1.free();
+      goto err1;
+    }
+    typeA = obj1.getInt();
+    obj1.free();
+    if (typeA != 2) {
+      error(-1, "Unimplemented shading type %d", typeA);
+      goto err1;
+    }
+
+    obj->dictLookup("ColorSpace", &obj1);
+    if (!(colorSpaceA = GfxColorSpace::parse(&obj1))) {
+      error(-1, "Bad color space in shading dictionary");
+      obj1.free();
+      goto err1;
+    }
+    obj1.free();
+
+    for (i = 0; i < gfxColorMaxComps; ++i) {
+      backgroundA.c[i] = 0;
+    }
+    hasBackgroundA = gFalse;
+    if (obj->dictLookup("Background", &obj1)->isArray()) {
+      if (obj1.arrayGetLength() == colorSpaceA->getNComps()) {
+	hasBackgroundA = gTrue;
+	for (i = 0; i < colorSpaceA->getNComps(); ++i) {
+	  backgroundA.c[i] = obj1.arrayGet(i, &obj2)->getNum();
+	  obj2.free();
+	}
+      } else {
+	error(-1, "Bad Background in shading dictionary");
+      }
+    }
+    obj1.free();
+
+    xMinA = yMinA = xMaxA = yMaxA = 0;
+    hasBBoxA = gFalse;
+    if (obj->dictLookup("BBox", &obj1)->isArray()) {
+      if (obj1.arrayGetLength() == 4) {
+	hasBBoxA = gTrue;
+	xMinA = obj1.arrayGet(0, &obj2)->getNum();
+	obj2.free();
+	yMinA = obj1.arrayGet(1, &obj2)->getNum();
+	obj2.free();
+	xMaxA = obj1.arrayGet(2, &obj2)->getNum();
+	obj2.free();
+	yMaxA = obj1.arrayGet(3, &obj2)->getNum();
+	obj2.free();
+      } else {
+	error(-1, "Bad BBox in shading dictionary");
+      }
+    }
+    obj1.free();
+
+    shading = GfxAxialShading::parse(obj->getDict());
+
+    if (shading) {
+      shading->type = typeA;
+      shading->colorSpace = colorSpaceA;
+      shading->background = backgroundA;
+      shading->hasBackground = hasBackgroundA;
+      shading->xMin = xMinA;
+      shading->yMin = yMinA;
+      shading->xMax = xMaxA;
+      shading->yMax = yMaxA;
+      shading->hasBBox = hasBBoxA;
+    }
+  }
+
+  return shading;
+
+ err1:
+  return NULL;
+}
+
+//------------------------------------------------------------------------
+// GfxAxialShading
+//------------------------------------------------------------------------
+
+GfxAxialShading::GfxAxialShading(double x0A, double y0A,
+				 double x1A, double y1A,
+				 double t0A, double t1A,
+				 Function **funcsA, int nFuncsA,
+				 GBool extend0A, GBool extend1A) {
+  int i;
+
+  x0 = x0A;
+  y0 = y0A;
+  x1 = x1A;
+  y1 = y1A;
+  t0 = t0A;
+  t1 = t1A;
+  nFuncs = nFuncsA;
+  for (i = 0; i < nFuncs; ++i) {
+    funcs[i] = funcsA[i];
+  }
+  extend0 = extend0A;
+  extend1 = extend1A;
+}
+
+GfxAxialShading::~GfxAxialShading() {
+  int i;
+
+  for (i = 0; i < nFuncs; ++i) {
+    delete funcs[i];
+  }
+}
+
+GfxAxialShading *GfxAxialShading::parse(Dict *dict) {
+  double x0A, y0A, x1A, y1A;
+  double t0A, t1A;
+  Function *funcsA[gfxColorMaxComps];
+  int nFuncsA;
+  GBool extend0A, extend1A;
+  Object obj1, obj2;
+  int i;
+
+  x0A = y0A = x1A = y1A = 0;
+  if (dict->lookup("Coords", &obj1)->isArray() &&
+      obj1.arrayGetLength() == 4) {
+    x0A = obj1.arrayGet(0, &obj2)->getNum();
+    obj2.free();
+    y0A = obj1.arrayGet(1, &obj2)->getNum();
+    obj2.free();
+    x1A = obj1.arrayGet(2, &obj2)->getNum();
+    obj2.free();
+    y1A = obj1.arrayGet(3, &obj2)->getNum();
+    obj2.free();
+  } else {
+    error(-1, "Missing or invalid Coords in shading dictionary");
+    goto err1;
+  }
+  obj1.free();
+
+  t0A = 0;
+  t1A = 1;
+  if (dict->lookup("Domain", &obj1)->isArray() &&
+      obj1.arrayGetLength() == 2) {
+    t0A = obj1.arrayGet(0, &obj2)->getNum();
+    obj2.free();
+    t1A = obj1.arrayGet(1, &obj2)->getNum();
+    obj2.free();
+  }
+  obj1.free();
+
+  dict->lookup("Function", &obj1);
+  if (obj1.isArray()) {
+    nFuncsA = obj1.arrayGetLength();
+    for (i = 0; i < nFuncsA; ++i) {
+      obj1.arrayGet(i, &obj2);
+      if (!(funcsA[i] = Function::parse(&obj2))) {
+	obj1.free();
+	obj2.free();
+	goto err1;
+      }
+      obj2.free();
+    }
+  } else {
+    nFuncsA = 1;
+    if (!(funcsA[0] = Function::parse(&obj1))) {
+      obj1.free();
+      goto err1;
+    }
+  }
+  obj1.free();
+  for (i = 0; i < nFuncsA; ++i) {
+    if (!funcsA[i]->isOk()) {
+      goto err2;
+    }
+  }
+
+  extend0A = extend1A = gFalse;
+  if (dict->lookup("Extend", &obj1)->isArray() &&
+      obj1.arrayGetLength() == 2) {
+    extend0A = obj1.arrayGet(0, &obj2)->getBool();
+    obj2.free();
+    extend1A = obj1.arrayGet(1, &obj2)->getBool();
+    obj2.free();
+  }
+  obj1.free();
+
+  return new GfxAxialShading(x0A, y0A, x1A, y1A, t0A, t1A,
+			     funcsA, nFuncsA, extend0A, extend1A);
+
+ err2:
+  for (i = 0; i < nFuncsA; ++i) {
+    delete funcsA[i];
+  }
+ err1:
+  return NULL;
+}
+
+void GfxAxialShading::getColor(double t, GfxColor *color) {
+  int i;
+
+  for (i = 0; i < nFuncs; ++i) {
+    funcs[i]->transform(&t, &color->c[i]);
+  }
+}
+
+//------------------------------------------------------------------------
 // GfxImageColorMap
 //------------------------------------------------------------------------
 
@@ -1651,6 +1878,11 @@ GfxState::GfxState(double dpi, PDFRectangle *pageBox, int rotate,
   curX = curY = 0;
   lineX = lineY = 0;
 
+  clipXMin = 0;
+  clipYMin = 0;
+  clipXMax = pageWidth;
+  clipYMax = pageHeight;
+
   saved = NULL;
 }
 
@@ -1787,6 +2019,47 @@ void GfxState::setLineDash(double *dash, int length, double start) {
 void GfxState::clearPath() {
   delete path;
   path = new GfxPath();
+}
+
+void GfxState::clip() {
+  double xMin, yMin, xMax, yMax, x, y;
+  GfxSubpath *subpath;
+  int i, j;
+
+  xMin = xMax = yMin = yMax = 0; // make gcc happy
+  for (i = 0; i < path->getNumSubpaths(); ++i) {
+    subpath = path->getSubpath(i);
+    for (j = 0; j < subpath->getNumPoints(); ++j) {
+      transform(subpath->getX(j), subpath->getY(j), &x, &y);
+      if (i == 0 && j == 0) {
+	xMin = xMax = x;
+	yMin = yMax = y;
+      } else {
+	if (x < xMin) {
+	  xMin = x;
+	} else if (x > xMax) {
+	  xMax = x;
+	}
+	if (y < yMin) {
+	  yMin = y;
+	} else if (y > yMax) {
+	  yMax = y;
+	}
+      }
+    }
+  }
+  if (xMin > clipXMin) {
+    clipXMin = xMin;
+  }
+  if (yMin > clipYMin) {
+    clipYMin = yMin;
+  }
+  if (xMax < clipXMax) {
+    clipXMax = xMax;
+  }
+  if (yMax < clipYMax) {
+    clipYMax = yMax;
+  }
 }
 
 void GfxState::textShift(double tx) {

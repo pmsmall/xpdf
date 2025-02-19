@@ -88,7 +88,6 @@ int main(int argc, char *argv[]) {
   initParams(xpdfUserConfigFile, xpdfSysConfigFile);
 
   // open PDF file
-  xref = NULL;
   if (ownerPassword[0]) {
     ownerPW = new GString(ownerPassword);
   } else {
@@ -117,8 +116,8 @@ int main(int argc, char *argv[]) {
     lastPage = doc->getNumPages();
 
   // write PBM files
-  rgbCubeSize = 1;
   pbmOut = PBMOutputDev::makePBMOutputDev(NULL, pbmRoot);
+  pbmOut->startDoc(doc->getXRef());
   doc->displayPages(pbmOut, firstPage, lastPage, resolution, 0, gFalse);
   PBMOutputDev::killPBMOutputDev(pbmOut);
 

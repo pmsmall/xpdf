@@ -28,9 +28,16 @@
 
 static int firstPage = 1;
 static int lastPage = 0;
+static GBool level1 = gFalse;
+static GBool level1Sep = gFalse;
+static GBool level2Sep = gFalse;
+static GBool doEPS = gFalse;
+static GBool doForm = gFalse;
+static GBool doOPI = gFalse;
 static GBool noEmbedFonts = gFalse;
 static GBool noEmbedTTFonts = gFalse;
-static GBool doForm = gFalse;
+static int paperWidth = defPaperWidth;
+static int paperHeight = defPaperHeight;
 static char ownerPassword[33] = "";
 static char userPassword[33] = "";
 static GBool printVersion = gFalse;
@@ -41,28 +48,28 @@ static ArgDesc argDesc[] = {
    "first page to print"},
   {"-l",      argInt,      &lastPage,       0,
    "last page to print"},
-  {"-paperw", argInt,      &paperWidth,     0,
-   "paper width, in points"},
-  {"-paperh", argInt,      &paperHeight,    0,
-   "paper height, in points"},
-  {"-level1", argFlag,     &psOutLevel1,    0,
+  {"-level1", argFlag,     &level1,         0,
    "generate Level 1 PostScript"},
-  {"-level1sep", argFlag,  &psOutLevel1Sep, 0,
+  {"-level1sep", argFlag,  &level1Sep,      0,
    "generate Level 1 separable PostScript"},
-  {"-level2sep", argFlag,  &psOutLevel2Sep, 0,
+  {"-level2sep", argFlag,  &level2Sep,      0,
    "generate Level 2 separable PostScript"},
-  {"-eps",    argFlag,     &psOutEPS,       0,
+  {"-eps",    argFlag,     &doEPS,          0,
    "generate Encapsulated PostScript (EPS)"},
+  {"-form",   argFlag,     &doForm,         0,
+   "generate a PostScript form"},
 #if OPI_SUPPORT
-  {"-opi",    argFlag,     &psOutOPI,       0,
+  {"-opi",    argFlag,     &doOPI,          0,
    "generate OPI comments"},
 #endif
   {"-noemb",  argFlag,     &noEmbedFonts,   0,
    "don't embed Type 1 fonts"},
   {"-noembtt", argFlag,    &noEmbedTTFonts, 0,
    "don't embed TrueType fonts"},
-  {"-form",   argFlag,     &doForm,         0,
-   "generate a PostScript form"},
+  {"-paperw", argInt,      &paperWidth,     0,
+   "paper width, in points"},
+  {"-paperh", argInt,      &paperHeight,    0,
+   "paper height, in points"},
   {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
    "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,    sizeof(userPassword),
@@ -86,6 +93,8 @@ int main(int argc, char *argv[]) {
   PDFDoc *doc;
   GString *fileName;
   GString *psFileName;
+  PSOutLevel level;
+  PSOutMode mode;
   GString *ownerPW, *userPW;
   PSOutputDev *psOut;
   GBool ok;
@@ -101,17 +110,28 @@ int main(int argc, char *argv[]) {
     }
     exit(1);
   }
-  if ((psOutLevel1 && psOutLevel1Sep) ||
-      (psOutLevel1Sep && psOutLevel2Sep) ||
-      (psOutLevel1 && psOutLevel2Sep)) {
+  if ((level1 && level1Sep) ||
+      (level1Sep && level2Sep) ||
+      (level1 && level2Sep)) {
     fprintf(stderr, "Error: use only one of -level1, -level1sep, and -level2sep.\n");
     exit(1);
   }
-  if (doForm && (psOutLevel1 || psOutLevel1Sep)) {
+  if (doEPS && doForm) {
+    fprintf(stderr, "Error: use only one of -eps and -form\n");
+    exit(1);
+  }
+  if (doForm && (level1 || level1Sep)) {
     fprintf(stderr, "Error: forms are only available with Level 2 output.\n");
     exit(1);
   }
   fileName = new GString(argv[1]);
+  level = level1 ? psLevel1
+                 : level1Sep ? psLevel1Sep
+                             : level2Sep ? psLevel2Sep
+                                         : psLevel2;
+  mode = doEPS ? psModeEPS
+               : doForm ? psModeForm
+                        : psModePS;
 
   // init error file
   errorInit();
@@ -120,7 +140,6 @@ int main(int argc, char *argv[]) {
   initParams(xpdfUserConfigFile, xpdfSysConfigFile);
 
   // open PDF file
-  xref = NULL;
   if (ownerPassword[0]) {
     ownerPW = new GString(ownerPassword);
   } else {
@@ -153,34 +172,38 @@ int main(int argc, char *argv[]) {
     psFileName = new GString(argv[2]);
   } else {
     p = fileName->getCString() + fileName->getLength() - 4;
-    if (!strcmp(p, ".pdf") || !strcmp(p, ".PDF"))
+    if (!strcmp(p, ".pdf") || !strcmp(p, ".PDF")) {
       psFileName = new GString(fileName->getCString(),
 			       fileName->getLength() - 4);
-    else
+    } else {
       psFileName = fileName->copy();
-    psFileName->append(psOutEPS ? ".eps" : ".ps");
+    }
+    psFileName->append(doEPS ? ".eps" : ".ps");
   }
 
   // get page range
-  if (firstPage < 1)
+  if (firstPage < 1) {
     firstPage = 1;
-  if (lastPage < 1 || lastPage > doc->getNumPages())
+  }
+  if (lastPage < 1 || lastPage > doc->getNumPages()) {
     lastPage = doc->getNumPages();
-  if (doForm)
-    lastPage = firstPage;
+  }
 
-  // check for multi-page EPS
-  if (psOutEPS && firstPage != lastPage) {
-    error(-1, "EPS files can only contain one page.");
+  // check for multi-page EPS or form
+  if ((doEPS || doForm) && firstPage != lastPage) {
+    error(-1, "EPS and form files can only contain one page.");
     goto err2;
   }
 
   // write PostScript file
-  psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
-			  firstPage, lastPage,
-			  !noEmbedFonts, !noEmbedTTFonts, doForm);
-  if (psOut->isOk())
+  psOut = new PSOutputDev(psFileName->getCString(), doc->getXRef(),
+			  doc->getCatalog(), firstPage, lastPage,
+			  level, mode, doOPI,
+			  !noEmbedFonts, !noEmbedTTFonts,
+			  paperWidth, paperHeight);
+  if (psOut->isOk()) {
     doc->displayPages(psOut, firstPage, lastPage, 72, 0, gFalse);
+  }
   delete psOut;
 
   // clean up

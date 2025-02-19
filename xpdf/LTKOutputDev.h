@@ -25,7 +25,11 @@ class LTKWindow;
 class LTKOutputDev: public XOutputDev {
 public:
 
-  LTKOutputDev(LTKWindow *winA, unsigned long paperColor);
+  LTKOutputDev(LTKWindow *winA, unsigned long paperColor,
+	       GBool installCmap, GBool rgbCubeSize,
+	       FontRastControl t1libControl,
+	       FontRastControl freetypeControl,
+	       GBool incrementalUpdateA);
 
   ~LTKOutputDev();
 
@@ -34,6 +38,9 @@ public:
   // Start a page.
   virtual void startPage(int pageNum, GfxState *state);
 
+  // End a page.
+  virtual void endPage();
+
   // Dump page contents to display.
   virtual void dump();
 
@@ -41,6 +48,7 @@ private:
 
   LTKWindow *win;		// window
   LTKScrollingCanvas *canvas;	// drawing canvas
+  GBool incrementalUpdate;	// incrementally update the display?
 };
 
 #endif

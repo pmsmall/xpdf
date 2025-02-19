@@ -826,3 +826,21 @@ Use XOutputDev's Type 3 font size hack in TextOutputDev too, so it
   does a little better job of extracting text in Type 3 fonts.
 Modify pdfimages to write one-bit images as PBM files.
 Work around a bug in cygwin's implementation of fseek.
+
+0.93a (2001-nov-21)
+-------------------
+Minor fixes to avoid compiler warnings.
+Cleaned up global variables -- moved many into instance vars and
+  function args.
+Minor fixes for OS/2.
+Fix the system config file path for VMS.
+Fix an uninitialized var in XOutputDev that caused crashes on Alphas.
+Don't incrementally update the display in full-screen mode.
+For Type 1/1C fonts, use the FontBBox from the PDF FontDescriptor
+  (instead of the one in the font file) if present -- this avoids
+  problems with fonts that have non-standard FontMatrixes.
+Add the Euro character to WinAnsiEncoding.
+Track the bounding box of the clip region to make rendering patterns
+  more efficient.
+Fix openTempFile() for Win32.
+Implemented the sh (shaded fill) operator for the axial shading type.

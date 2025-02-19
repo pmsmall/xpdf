@@ -61,6 +61,14 @@ class TTFont;
 // Misc types
 //------------------------------------------------------------------------
 
+// Font rasterizer control.
+enum FontRastControl {
+  fontRastNone,			// don't use this rasterizer
+  fontRastPlain,		// use it, without anti-aliasing
+  fontRastAALow,		// use it, with low-level anti-aliasing
+  fontRastAAHigh		// use it, with high-level anti-aliasing
+};
+
 struct BoundingRect {
   short xMin, xMax;		// min/max x values
   short yMin, yMax;		// min/max y values
@@ -69,29 +77,6 @@ struct BoundingRect {
 //------------------------------------------------------------------------
 // Parameters
 //------------------------------------------------------------------------
-
-// Install a private colormap.
-extern GBool installCmap;
-
-// Size of RGB color cube.
-extern int rgbCubeSize;
-
-#if HAVE_T1LIB_H
-// Type of t1lib font rendering to use:
-//     "none"   -- don't use t1lib
-//     "plain"  -- t1lib, without anti-aliasing
-//     "low"    -- t1lib, with low-level anti-aliasing
-//     "high"   -- t1lib, with high-level anti-aliasing
-extern GString *t1libControl;
-#endif
-
-#if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
-// Type of FreeType font rendering to use:
-//     "none"   -- don't use FreeType
-//     "plain"  -- FreeType, without anti-aliasing
-//     "aa"     -- FreeType, with anti-aliasing
-extern GString *freeTypeControl;
-#endif
 
 // If any of these are set, xpdf will use t1lib to render those font(s)
 // instead of using the X server font(s).
@@ -177,7 +162,8 @@ protected:
 class XOutputT1Font: public XOutputFont {
 public:
 
-  XOutputT1Font(GfxFont *gfxFont, GString *pdfBaseFont,
+  XOutputT1Font(XRef *xref, GfxFont *gfxFont,
+		GString *pdfBaseFont,
 		double m11, double m12, double m21, double m22,
 		Display *displayA, XOutputFontCache *cache);
 
@@ -208,7 +194,8 @@ private:
 class XOutputFTFont: public XOutputFont {
 public:
 
-  XOutputFTFont(GfxFont *gfxFont, GString *pdfBaseFont,
+  XOutputFTFont(XRef *xref, GfxFont *gfxFont,
+		GString *pdfBaseFont,
 		double m11, double m12, double m21, double m22,
 		Display *displayA, XOutputFontCache *cache);
 
@@ -239,9 +226,9 @@ private:
 class XOutputTTFont: public XOutputFont {
 public:
 
-  XOutputTTFont(GfxFont *gfxFont, double m11, double m12,
-		double m21, double m22, Display *displayA,
-		XOutputFontCache *cache);
+  XOutputTTFont(XRef *xref, GfxFont *gfxFont,
+		double m11, double m12, double m21, double m22,
+		Display *displayA, XOutputFontCache *cache);
 
   virtual ~XOutputTTFont();
 
@@ -324,7 +311,9 @@ class XOutputFontCache {
 public:
 
   // Constructor.
-  XOutputFontCache(Display *displayA, Guint depthA);
+  XOutputFontCache(Display *displayA, Guint depthA,
+		   FontRastControl t1libControlA,
+		   FontRastControl freetypeControlA);
 
   // Destructor.
   ~XOutputFontCache();
@@ -337,25 +326,23 @@ public:
 		Gulong *colors, int numColors);
 
   // Get a font.  This creates a new font if necessary.
-  XOutputFont *getFont(GfxFont *gfxFont, double m11, double m12,
+  XOutputFont *getFont(XRef *xref, GfxFont *gfxFont, double m11, double m12,
 		       double m21, double m22);
 
 #if HAVE_T1LIB_H
   // Get a t1lib font file.
-  T1FontFile *getT1Font(GfxFont *gfxFont, GString *pdfBaseFont);
-
-  // Use anti-aliased Type 1 fonts?
-  GBool getT1libAA() { return t1libAA; }
+  T1FontFile *getT1Font(XRef *xref, GfxFont *gfxFont,
+			GString *pdfBaseFont);
 #endif
 
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // Get a FreeType font file.
-  FTFontFile *getFTFont(GfxFont *gfxFont, GString *pdfBaseFont);
+  FTFontFile *getFTFont(XRef *xref, GfxFont *gfxFont, GString *pdfBaseFont);
 #endif
 
 #if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // Get a FreeType font file.
-  TTFontFile *getTTFont(GfxFont *gfxFont);
+  TTFontFile *getTTFont(XRef *xref, GfxFont *gfxFont);
 #endif
 
 private:
@@ -367,9 +354,7 @@ private:
   Guint depth;			// pixmap depth
 
 #if HAVE_T1LIB_H
-  GBool useT1lib;		// if false, t1lib is not used at all
-  GBool t1libAA;		// true for anti-aliased fonts
-  GBool t1libAAHigh;		// low or high-level anti-aliasing
+  FontRastControl t1libControl;	// t1lib settings
   T1FontEngine *t1Engine;	// Type 1 font engine
   XOutputT1Font *		// Type 1 fonts in reverse-LRU order
     t1Fonts[t1FontCacheSize];
@@ -380,6 +365,8 @@ private:
 #endif
 
 #if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
+  FontRastControl		// FreeType settings
+    freetypeControl;
   GBool useFreeType;		// if false, FreeType is not used at all
   GBool freeTypeAA;		// true for anti-aliased fonts
 #endif
@@ -427,7 +414,10 @@ public:
 
   // Constructor.
   XOutputDev(Display *displayA, Pixmap pixmapA, Guint depthA,
-	     Colormap colormapA, unsigned long paperColor);
+	     Colormap colormapA, unsigned long paperColor,
+	     GBool installCmap, int rgbCubeSize,
+	     FontRastControl t1libControl,
+	     FontRastControl freeTypeControl);
 
   // Destructor.
   virtual ~XOutputDev();
@@ -500,7 +490,7 @@ public:
   //----- special access
 
   // Called to indicate that a new PDF document has been loaded.
-  void startDoc();
+  void startDoc(XRef *xrefA);
 
   // Find a string.  If <top> is true, starts looking at <xMin>,<yMin>;
   // otherwise starts looking at top of page.  If <bottom> is true,
@@ -521,6 +511,7 @@ protected:
 
 private:
 
+  XRef *xref;			// the xref table for this PDF file
   Display *display;		// X display pointer
   int screenNum;		// X screen number
   Pixmap pixmap;		// pixmap to draw into

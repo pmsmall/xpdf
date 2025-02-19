@@ -36,18 +36,14 @@ Specifies the first page to print.
 .BI \-l " number"
 Specifies the last page to print.
 .TP
-.BI \-paperw " size"
-Set the paper width, in points.
-.TP
-.BI \-paperh " size"
-Set the paper height, in points.
-.TP
 .B \-level1
 Generate Level 1 PostScript.  The resulting PostScript files will be
 significantly larger (if they contain images), but will print on Level
 1 printers.  This also converts all images to black and white.  The
 default behavior is to generate Level 2 PostScript.  In particular,
-Level 2 supports color images and image compression.
+Level 2 supports color images and image compression.  No more than one
+of the PostScript level options (-level1, -level1sep, -level2sep) may
+be given.
 .TP
 .B \-level1sep
 Generate Level 1 separable PostScript.  All colors are converted to
@@ -62,7 +58,14 @@ handle custom (spot) colors.
 .B \-eps
 Generate an Encapsulated PostScript (EPS) file.  An EPS file contains
 a single image, so if you use this option with a multi-page PDF file,
-you must use -f and -l to specify a single page.
+you must use -f and -l to specify a single page.  No more than one of
+the mode options (-eps, -form) may be given.
+.TP
+.B \-form
+Generate a PostScript form which can be imported by software that
+understands forms.  A form contains a single page, so if you use this
+option with a multi-page PDF file, you must use -f and -l to specify a
+single page.  The -level1 option cannot be used with -form.
 .TP
 .B \-opi
 Generate OPI comments for all images and forms which have OPI
@@ -82,11 +85,11 @@ substitute base fonts instead.  Embedded fonts make PostScript files
 larger, but may be necessary for readable output.  Also, some
 PostScript interpreters do not have TrueType rasterizers.
 .TP
-.B \-form
-Generate a PostScript form which can be imported by software that
-understands forms.  Only one page is converted (since forms cannot
-contain multiple pages) and the -l option is ignored.  The -level1
-option cannot be used with -form.
+.BI \-paperw " size"
+Set the paper width, in points.
+.TP
+.BI \-paperh " size"
+Set the paper height, in points.
 .TP
 .BI \-opw " password"
 Specify the owner password for the PDF file.  Providing this will

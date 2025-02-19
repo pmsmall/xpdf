@@ -38,7 +38,7 @@
 //------------------------------------------------------------------------
 
 PDFDoc::PDFDoc(GString *fileNameA, GString *ownerPassword,
-	       GString *userPassword) {
+	       GString *userPassword, GBool printCommandsA) {
   Object obj;
   GString *fileName2;
 
@@ -49,6 +49,7 @@ PDFDoc::PDFDoc(GString *fileNameA, GString *ownerPassword,
   xref = NULL;
   catalog = NULL;
   links = NULL;
+  printCommands = printCommandsA;
 
   // try to open file
   fileName = fileNameA;
@@ -82,7 +83,7 @@ PDFDoc::PDFDoc(GString *fileNameA, GString *ownerPassword,
 }
 
 PDFDoc::PDFDoc(BaseStream *strA, GString *ownerPassword,
-	       GString *userPassword) {
+	       GString *userPassword, GBool printCommandsA) {
   ok = gFalse;
   fileName = NULL;
   file = NULL;
@@ -90,12 +91,11 @@ PDFDoc::PDFDoc(BaseStream *strA, GString *ownerPassword,
   xref = NULL;
   catalog = NULL;
   links = NULL;
+  printCommands = printCommandsA;
   ok = setup(ownerPassword, userPassword);
 }
 
 GBool PDFDoc::setup(GString *ownerPassword, GString *userPassword) {
-  Object catObj;
-
   // check header
   checkHeader();
 
@@ -107,8 +107,7 @@ GBool PDFDoc::setup(GString *ownerPassword, GString *userPassword) {
   }
 
   // read catalog
-  catalog = new Catalog(xref->getCatalog(&catObj));
-  catObj.free();
+  catalog = new Catalog(xref, printCommands);
   if (!catalog->isOk()) {
     error(-1, "Couldn't read page catalog");
     return gFalse;
@@ -205,8 +204,8 @@ GBool PDFDoc::isLinearized() {
 
   lin = gFalse;
   obj1.initNull();
-  parser = new Parser(new Lexer(str->makeSubStream(str->getStart(),
-						   -1, &obj1)));
+  parser = new Parser(xref, new Lexer(xref, str->makeSubStream(str->getStart(),
+							       -1, &obj1)));
   parser->getObj(&obj1);
   parser->getObj(&obj2);
   parser->getObj(&obj3);
@@ -250,4 +249,3 @@ void PDFDoc::getLinks(Page *page) {
   links = new Links(page->getAnnots(&obj), catalog->getBaseURI());
   obj.free();
 }
-

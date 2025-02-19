@@ -2426,7 +2426,7 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
   tableDir[4] = (nTablesOut >> 8) & 0xff;   // numTables
   tableDir[5] = nTablesOut & 0xff;
   tableDir[6] = 0;		// searchRange
-  tableDir[7] = 128;
+  tableDir[7] = (char)128;
   tableDir[8] = 0;		// entrySelector
   tableDir[9] = 3;
   tableDir[10] = 0;		// rangeShift

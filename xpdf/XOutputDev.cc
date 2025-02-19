@@ -70,18 +70,6 @@ typedef char *XPointer;
 // Parameters
 //------------------------------------------------------------------------
 
-GBool installCmap = gFalse;
-
-int rgbCubeSize = defaultRGBCube;
-
-#if HAVE_T1LIB_H
-GString *t1libControl = NULL;
-#endif
-
-#if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
-GString *freeTypeControl = NULL;
-#endif
-
 GString *t1Courier = NULL;
 GString *t1CourierBold = NULL;
 GString *t1CourierBoldOblique = NULL;
@@ -550,7 +538,8 @@ XOutputFont::~XOutputFont() {
 // XOutputT1Font
 //------------------------------------------------------------------------
 
-XOutputT1Font::XOutputT1Font(GfxFont *gfxFont, GString *pdfBaseFont,
+XOutputT1Font::XOutputT1Font(XRef *xref, GfxFont *gfxFont,
+			     GString *pdfBaseFont,
 			     double m11, double m12, double m21, double m22,
 			     Display *displayA, XOutputFontCache *cache):
   XOutputFont(gfxFont, m11, m12, m21, m22, displayA, cache)
@@ -573,7 +562,7 @@ XOutputT1Font::XOutputT1Font(GfxFont *gfxFont, GString *pdfBaseFont,
   }
 
   // load the font
-  if (!(fontFile = cache->getT1Font(gfxFont, pdfBaseFont))) {
+  if (!(fontFile = cache->getT1Font(xref, gfxFont, pdfBaseFont))) {
     return;
   }
 
@@ -618,7 +607,8 @@ void XOutputT1Font::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 // XOutputFTFont
 //------------------------------------------------------------------------
 
-XOutputFTFont::XOutputFTFont(GfxFont *gfxFont, GString *pdfBaseFont,
+XOutputFTFont::XOutputFTFont(XRef *xref, GfxFont *gfxFont,
+			     GString *pdfBaseFont,
 			     double m11, double m12, double m21, double m22,
 			     Display *displayA, XOutputFontCache *cache):
   XOutputFont(gfxFont, m11, m12, m21, m22, displayA, cache)
@@ -641,7 +631,7 @@ XOutputFTFont::XOutputFTFont(GfxFont *gfxFont, GString *pdfBaseFont,
   }
 
   // load the font
-  if (!(fontFile = cache->getFTFont(gfxFont, pdfBaseFont))) {
+  if (!(fontFile = cache->getFTFont(xref, gfxFont, pdfBaseFont))) {
     return;
   }
 
@@ -686,9 +676,9 @@ void XOutputFTFont::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 // XOutputTTFont
 //------------------------------------------------------------------------
 
-XOutputTTFont::XOutputTTFont(GfxFont *gfxFont, double m11, double m12,
-			     double m21, double m22, Display *displayA,
-			     XOutputFontCache *cache):
+XOutputTTFont::XOutputTTFont(XRef *xref, GfxFont *gfxFont,
+			     double m11, double m12, double m21, double m22,
+			     Display *displayA, XOutputFontCache *cache):
   XOutputFont(gfxFont, m11, m12, m21, m22, displayA, cache)
 {
   Ref embRef;
@@ -705,7 +695,7 @@ XOutputTTFont::XOutputTTFont(GfxFont *gfxFont, double m11, double m12,
   }
 
   // load the font
-  if (!(fontFile = cache->getTTFont(gfxFont))) {
+  if (!(fontFile = cache->getTTFont(xref, gfxFont))) {
     return;
   }
 
@@ -959,21 +949,15 @@ void XOutputServerFont::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 // XOutputFontCache
 //------------------------------------------------------------------------
 
-XOutputFontCache::XOutputFontCache(Display *displayA, Guint depthA) {
+XOutputFontCache::XOutputFontCache(Display *displayA, Guint depthA,
+				   FontRastControl t1libControlA,
+				   FontRastControl freetypeControlA) {
   display = displayA;
   depth = depthA;
 
 #if HAVE_T1LIB_H
   t1Engine = NULL;
-  if (t1libControl) {
-    useT1lib = t1libControl->cmp("none") != 0;
-    t1libAA = t1libControl->cmp("plain") != 0;
-    t1libAAHigh = t1libControl->cmp("high") == 0;
-  } else {
-    useT1lib = gFalse;
-    t1libAA = gFalse;
-    t1libAAHigh = gFalse;
-  }
+  t1libControl = t1libControlA;
 #endif
 
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
@@ -983,13 +967,7 @@ XOutputFontCache::XOutputFontCache(Display *displayA, Guint depthA) {
   ttEngine = NULL;
 #endif
 #if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
-  if (freeTypeControl) {
-    useFreeType = freeTypeControl->cmp("none") != 0;
-    freeTypeAA = freeTypeControl->cmp("plain") != 0;
-  } else {
-    useFreeType = gFalse;
-    freeTypeAA = gFalse;
-  }
+  freetypeControl = freetypeControlA;
 #endif
 
   clear();
@@ -1008,9 +986,12 @@ void XOutputFontCache::startDoc(int screenNum, Colormap colormap,
   clear();
 
 #if HAVE_T1LIB_H
-  if (useT1lib) {
+  if (t1libControl != fontRastNone) {
     t1Engine = new T1FontEngine(display, DefaultVisual(display, screenNum),
-				depth, colormap, t1libAA, t1libAAHigh);
+				depth, colormap,
+				t1libControl == fontRastAALow ||
+				  t1libControl == fontRastAAHigh,
+				t1libControl == fontRastAAHigh);
     if (t1Engine->isOk()) {
       if (trueColor) {
 	t1Engine->useTrueColor(rMul, rShift, gMul, gShift, bMul, bShift);
@@ -1025,9 +1006,11 @@ void XOutputFontCache::startDoc(int screenNum, Colormap colormap,
 #endif // HAVE_T1LIB_H
 
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-  if (useFreeType) {
+  if (freetypeControl != fontRastNone) {
     ftEngine = new FTFontEngine(display, DefaultVisual(display, screenNum),
-				depth, colormap, freeTypeAA);
+				depth, colormap,
+				freeTypeControl == fontRastAALow ||
+				  freeTypeControl == fontRastAAHigh);
     if (ftEngine->isOk()) {
       if (trueColor) {
 	ftEngine->useTrueColor(rMul, rShift, gMul, gShift, bMul, bShift);
@@ -1042,9 +1025,11 @@ void XOutputFontCache::startDoc(int screenNum, Colormap colormap,
 #endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 #if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-  if (useFreeType) {
+  if (freetypeControl != fontRastNone) {
     ttEngine = new TTFontEngine(display, DefaultVisual(display, screenNum),
-				depth, colormap, freeTypeAA);
+				depth, colormap,
+				freetypeControl == fontRastAALow ||
+				  freetypeControl == fontRastAAHigh);
     if (ttEngine->isOk()) {
       if (trueColor) {
 	ttEngine->useTrueColor(rMul, rShift, gMul, gShift, bMul, bShift);
@@ -1150,7 +1135,7 @@ void XOutputFontCache::clear() {
   nServerFonts = 0;
 }
 
-XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
+XOutputFont *XOutputFontCache::getFont(XRef *xref, GfxFont *gfxFont,
 				       double m11, double m12,
 				       double m21, double m22) {
 #if HAVE_T1LIB_H
@@ -1177,19 +1162,19 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 
   // is it the most recently used Type 1, TrueType, or server font?
 #if HAVE_T1LIB_H
-  if (useT1lib && nT1Fonts > 0 &&
+  if (t1libControl != fontRastNone && nT1Fonts > 0 &&
       t1Fonts[0]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
     return t1Fonts[0];
   }
 #endif
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-  if (useFreeType && nFTFonts > 0 &&
+  if (freetypeControl != fontRastNone && nFTFonts > 0 &&
       ftFonts[0]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
     return ftFonts[0];
   }
 #endif
 #if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-  if (useFreeType && nTTFonts > 0 &&
+  if (freetypeControl != fontRastNone && nTTFonts > 0 &&
       ttFonts[0]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
     return ttFonts[0];
   }
@@ -1201,7 +1186,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 
 #if HAVE_T1LIB_H
   // is it in the Type 1 cache?
-  if (useT1lib) {
+  if (t1libControl != fontRastNone) {
     for (i = 1; i < nT1Fonts; ++i) {
       if (t1Fonts[i]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
 	t1Font = t1Fonts[i];
@@ -1217,7 +1202,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // is it in the FreeType cache?
-  if (useFreeType) {
+  if (freetypeControl != fontRastNone) {
     for (i = 1; i < nFTFonts; ++i) {
       if (ftFonts[i]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
 	ftFont = ftFonts[i];
@@ -1233,7 +1218,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 
 #if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // is it in the TrueType cache?
-  if (useFreeType) {
+  if (freetypeControl != fontRastNone) {
     for (i = 1; i < nTTFonts; ++i) {
       if (ttFonts[i]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
 	ttFont = ttFonts[i];
@@ -1364,7 +1349,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // try to create a new FreeType font
-  if (useFreeType) {
+  if (freetypeControl != fontRastNone) {
     ftFont = new XOutputFTFont(gfxFont, t1FontName, m11, m12, m21, m22,
 			       display, this);
     if (ftFont->isOk()) {
@@ -1388,8 +1373,9 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 
 #if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // try to create a new TrueType font
-  if (useFreeType) {
-    ttFont = new XOutputTTFont(gfxFont, m11, m12, m21, m22, display, this);
+  if (freetypeControl != fontRastNone) {
+    ttFont = new XOutputTTFont(xref, gfxFont, m11, m12, m21, m22,
+			       display, this);
     if (ttFont->isOk()) {
 
       // insert in cache
@@ -1411,8 +1397,8 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 
 #if HAVE_T1LIB_H
   // try to create a new Type 1 font
-  if (useT1lib) {
-    t1Font = new XOutputT1Font(gfxFont, t1FontName, m11, m12, m21, m22,
+  if (t1libControl != fontRastNone) {
+    t1Font = new XOutputT1Font(xref, gfxFont, t1FontName, m11, m12, m21, m22,
 			       display, this);
     if (t1Font->isOk()) {
 
@@ -1465,7 +1451,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 }
 
 #if HAVE_T1LIB_H
-T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
+T1FontFile *XOutputFontCache::getT1Font(XRef *xref, GfxFont *gfxFont,
 					GString *pdfBaseFont) {
   Ref id;
   T1FontFile *fontFile;
@@ -1515,7 +1501,7 @@ T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
 	return NULL;
       }
       if (gfxFont->getType() == fontType1C) {
-	if (!(fontBuf = gfxFont->readEmbFontFile(&fontLen))) {
+	if (!(fontBuf = gfxFont->readEmbFontFile(xref, &fontLen))) {
 	  fclose(f);
 	  return NULL;
 	}
@@ -1526,7 +1512,7 @@ T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
       } else {
 	gfxFont->getEmbeddedFontID(&embRef);
 	refObj.initRef(embRef.num, embRef.gen);
-	refObj.fetch(&strObj);
+	refObj.fetch(xref, &strObj);
 	refObj.free();
 	strObj.streamReset();
 	while ((c = strObj.streamGetChar()) != EOF) {
@@ -1547,7 +1533,7 @@ T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
 
     // create the t1lib font
     fontFile = new T1FontFile(t1Engine, fileName->getCString(),
-			      gfxFont->getEncoding());
+			      gfxFont->getEncoding(), gfxFont->getFontBBox());
     if (!fontFile->isOk()) {
       error(-1, "Couldn't create t1lib font from '%s'",
 	    fileName->getCString());
@@ -1570,7 +1556,7 @@ T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
 #endif
 
 #if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont,
+FTFontFile *XOutputFontCache::getFTFont(XRef *xref, GfxFont *gfxFont,
 					GString *pdfBaseFont) {
   Ref id;
   FTFontFile *fontFile;
@@ -1614,7 +1600,7 @@ FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont,
 	return NULL;
       }
       refObj.initRef(embRef.num, embRef.gen);
-      refObj.fetch(&strObj);
+      refObj.fetch(xref, &strObj);
       refObj.free();
       strObj.streamReset();
       while ((c = strObj.streamGetChar()) != EOF) {
@@ -1654,7 +1640,7 @@ FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont,
 #endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 #if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
-TTFontFile *XOutputFontCache::getTTFont(GfxFont *gfxFont) {
+TTFontFile *XOutputFontCache::getTTFont(XRef *xref, GfxFont *gfxFont) {
   Ref id;
   TTFontFile *fontFile;
   GString *fileName;
@@ -1695,7 +1681,7 @@ TTFontFile *XOutputFontCache::getTTFont(GfxFont *gfxFont) {
     }
     gfxFont->getEmbeddedFontID(&embRef);
     refObj.initRef(embRef.num, embRef.gen);
-    refObj.fetch(&strObj);
+    refObj.fetch(xref, &strObj);
     refObj.free();
     strObj.streamReset();
     while ((c = strObj.streamGetChar()) != EOF) {
@@ -1731,7 +1717,10 @@ TTFontFile *XOutputFontCache::getTTFont(GfxFont *gfxFont) {
 //------------------------------------------------------------------------
 
 XOutputDev::XOutputDev(Display *displayA, Pixmap pixmapA, Guint depthA,
-		       Colormap colormapA, unsigned long paperColor) {
+		       Colormap colormapA, unsigned long paperColor,
+		       GBool installCmap, int rgbCubeSize,
+		       FontRastControl t1libControl,
+		       FontRastControl freetypeControl) {
   XVisualInfo visualTempl;
   XVisualInfo *visualList;
   int nVisuals;
@@ -1741,6 +1730,8 @@ XOutputDev::XOutputDev(Display *displayA, Pixmap pixmapA, Guint depthA,
   XColor *xcolors;
   int r, g, b, n, m, i;
   GBool ok;
+
+  xref = NULL;
 
   // get display/pixmap info
   display = displayA;
@@ -1888,7 +1879,8 @@ XOutputDev::XOutputDev(Display *displayA, Pixmap pixmapA, Guint depthA,
   // set up the font cache and fonts
   gfxFont = NULL;
   font = NULL;
-  fontCache = new XOutputFontCache(display, depth);
+  fontCache = new XOutputFontCache(display, depth,
+				   t1libControl, freetypeControl);
 
   // empty state stack
   save = NULL;
@@ -1910,7 +1902,8 @@ XOutputDev::~XOutputDev() {
   delete text;
 }
 
-void XOutputDev::startDoc() {
+void XOutputDev::startDoc(XRef *xrefA) {
+  xref = xrefA;
   fontCache->startDoc(screenNum, colormap, trueColor, rMul, gMul, bMul,
 		      rShift, gShift, bShift, colors, numColors);
 }
@@ -2162,7 +2155,7 @@ void XOutputDev::updateFont(GfxState *state) {
   state->getFontTransMat(&m11, &m12, &m21, &m22);
   m11 *= state->getHorizScaling();
   m12 *= state->getHorizScaling();
-  font = fontCache->getFont(gfxFont, m11, m12, m21, m22);
+  font = fontCache->getFont(xref, gfxFont, m11, m12, m21, m22);
   if (font) {
     font->updateGC(fillGC);
     font->updateGC(strokeGC);
@@ -3542,6 +3535,9 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   lastYStep = 1;
 
   for (y = 0; y < scaledHeight; ++y) {
+
+    // initialize error diffusion accumulator
+    errRight.r = errRight.g = errRight.b = 0;
 
     // y scale Bresenham
     yStep = yp;

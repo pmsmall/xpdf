@@ -81,7 +81,7 @@ public:
   ~TextPage();
 
   // Update the current font.
-  void TextPage::updateFont(GfxState *state);
+  void updateFont(GfxState *state);
 
   // Begin a new string.
   void beginString(GfxState *state, GString *s, GBool hexCodes);

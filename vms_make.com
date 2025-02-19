@@ -196,6 +196,7 @@ $  its_decc = false
 $  its_gnuc = true
 $ endif
 $!
+$ mydefs = mydefs + ",SYSTEM_XPDFRC=""DECW$SYSTEM_DEFAULTS:XPDFRC.DAT"""
 $ defs = "/define=(VMS,NO_POPEN''mydefs')"
 $ incs = "/include=([],[-.goo],[-.ltk]''myincs')"
 $!

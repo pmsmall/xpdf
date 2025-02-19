@@ -19,6 +19,7 @@
 #include "gmem.h"
 #include "GString.h"
 
+class XRef;
 class Array;
 class Dict;
 class Stream;
@@ -90,10 +91,8 @@ public:
     { initObj(objName); name = copyString(nameA); return this; }
   Object *initNull()
     { initObj(objNull); return this; }
-  Object *initArray();
-  Object *initDict();
-  Object *initDict(Dict *dictA)
-    { initObj(objDict); dict = dictA; return this; }
+  Object *initArray(XRef *xref);
+  Object *initDict(XRef *xref);
   Object *initStream(Stream *streamA);
   Object *initRef(int numA, int genA)
     { initObj(objRef); ref.num = numA; ref.gen = genA; return this; }
@@ -109,7 +108,7 @@ public:
 
   // If object is a Ref, fetch and return the referenced object.
   // Otherwise, return a copy of the object.
-  Object *fetch(Object *obj);
+  Object *fetch(XRef *xref, Object *obj);
 
   // Free object contents.
   void free();

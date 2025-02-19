@@ -189,8 +189,8 @@ distdepend:
 Array.o: ./Array.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h
 Catalog.o: ./Catalog.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
- ../goo/GString.h Array.h Dict.h Stream.h Page.h Error.h config.h \
- Link.h Catalog.h
+ ../goo/GString.h Array.h Dict.h Stream.h XRef.h Page.h Error.h \
+ config.h Link.h Catalog.h
 Decrypt.o: ./Decrypt.cc ../goo/gmem.h Decrypt.h ../goo/gtypes.h \
  ../goo/GString.h
 Dict.o: ./Dict.cc ../goo/gmem.h Object.h ../goo/gtypes.h \

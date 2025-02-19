@@ -25,33 +25,21 @@ class GfxSeparationColorSpace;
 class PSOutCustomColor;
 
 //------------------------------------------------------------------------
-// Parameters
-//------------------------------------------------------------------------
-
-// Generate Level 1 PostScript?
-extern GBool psOutLevel1;
-
-// Generate Level 1 separable PostScript?
-extern GBool psOutLevel1Sep;
-
-// Generate Level 2 separable PostScript?
-extern GBool psOutLevel2Sep;
-
-// Generate Encapsulated PostScript?
-extern GBool psOutEPS;
-
-#if OPI_SUPPORT
-// Generate OPI comments?
-extern GBool psOutOPI;
-#endif
-
-// Paper size.
-extern int paperWidth;
-extern int paperHeight;
-
-//------------------------------------------------------------------------
 // PSOutputDev
 //------------------------------------------------------------------------
+
+enum PSOutLevel {
+  psLevel1,
+  psLevel1Sep,
+  psLevel2,
+  psLevel2Sep
+};
+
+enum PSOutMode {
+  psModePS,
+  psModeEPS,
+  psModeForm
+};
 
 enum PSFileType {
   psFile,			// write to file
@@ -63,10 +51,11 @@ class PSOutputDev: public OutputDev {
 public:
 
   // Open a PostScript output file, and write the prolog.
-  PSOutputDev(char *fileName, Catalog *catalog,
+  PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
 	      int firstPage, int lastPage,
+	      PSOutLevel levelA, PSOutMode modeA, GBool doOPIA,
 	      GBool embedType1A, GBool embedTrueTypeA,
-	      GBool doFormA);
+	      int paperWidthA, int paperHeightA);
 
   // Destructor -- writes the trailer and closes the file.
   virtual ~PSOutputDev();
@@ -169,21 +158,29 @@ private:
 		 GBool invert, GBool inlineImg,
 		 Stream *str, int width, int height, int len);
   void dumpColorSpaceL2(GfxColorSpace *colorSpace);
+#if OPI_SUPPORT
   void opiBegin20(GfxState *state, Dict *dict);
   void opiBegin13(GfxState *state, Dict *dict);
   void opiTransform(GfxState *state, double x0, double y0,
 		    double *x1, double *y1);
   GBool getFileSpec(Object *fileSpec, Object *fileName);
+#endif
   void writePS(const char *fmt, ...);
   void writePSString(GString *s);
 
+  PSOutLevel level;		// PostScript level (1, 2, separation)
+  PSOutMode mode;		// PostScript mode (PS, EPS, form)
+  GBool doOPI;			// generate OPI comments?
   GBool embedType1;		// embed Type 1 fonts?
   GBool embedTrueType;		// embed TrueType fonts?
-  GBool doForm;			// generate a form?
+  int paperWidth;		// width of paper, in pts
+  int paperHeight;		// height of paper, in pts
 
   FILE *f;			// PostScript file
   PSFileType fileType;		// file / pipe / stdout
   int seqPage;			// current sequential page number
+
+  XRef *xref;			// the xref table for this PDF file
 
   Ref *fontIDs;			// list of object IDs of all used fonts
   int fontIDLen;		// number of entries in fontIDs array

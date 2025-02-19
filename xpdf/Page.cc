@@ -157,10 +157,13 @@ GBool PageAttrs::readBox(Dict *dict, char *key, PDFRectangle *box) {
 // Page
 //------------------------------------------------------------------------
 
-Page::Page(int num1, Dict *pageDict, PageAttrs *attrsA) {
+Page::Page(XRef *xrefA, int numA, Dict *pageDict, PageAttrs *attrsA,
+	   GBool printCommandsA) {
 
   ok = gTrue;
-  num = num1;
+  xref = xrefA;
+  num = numA;
+  printCommands = printCommandsA;
 
   // get attributes
   attrs = attrsA;
@@ -228,9 +231,9 @@ void Page::display(OutputDev *out, double dpi, int rotate,
   } else if (rotate < 0) {
     rotate += 360;
   }
-  gfx = new Gfx(out, num, attrs->getResourceDict(),
-		dpi, box, isCropped(), cropBox, rotate);
-  contents.fetch(&obj);
+  gfx = new Gfx(xref, out, num, attrs->getResourceDict(),
+		dpi, box, isCropped(), cropBox, rotate, printCommands);
+  contents.fetch(xref, &obj);
   if (!obj.isNull()) {
     gfx->display(&obj);
   }
@@ -247,7 +250,7 @@ void Page::display(OutputDev *out, double dpi, int rotate,
 
   // draw AcroForm widgets
   //~ need to reset CTM ???
-  formWidgets = new FormWidgets(annots.fetch(&obj));
+  formWidgets = new FormWidgets(xref, annots.fetch(xref, &obj));
   obj.free();
   if (printCommands && formWidgets->getNumWidgets() > 0) {
     printf("***** AcroForm widgets\n");

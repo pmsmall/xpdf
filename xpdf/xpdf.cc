@@ -222,6 +222,10 @@ static XrmOptionDescRec opts[] = {
   {NULL}
 };
 
+static GBool level1 = gFalse;
+static int paperWidth = defPaperWidth;
+static int paperHeight = defPaperHeight;
+static GBool printCommands = gFalse;
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
 static char remoteName[100] = "xpdf_";
@@ -402,6 +406,10 @@ int main(int argc, char *argv[]) {
   GString *name;
   GString *title;
   unsigned long paperColor;
+  GBool installCmap;
+  int rgbCubeSize;
+  GString *t1libControlStr, *freetypeControlStr;
+  FontRastControl t1libControl, freetypeControl;
   int pg;
   int x, y;
   Guint width, height;
@@ -418,13 +426,11 @@ int main(int argc, char *argv[]) {
   out = NULL;
   remoteAtom = None;
   doc = NULL;
-  xref = NULL;
   psFileName = NULL;
   fileReqDir = getCurrentDir();
   ret = 0;
 
   // parse args
-  paperWidth = paperHeight = -1;
   ok = parseArgs(argDesc, &argc, argv);
 
   // init error file
@@ -538,14 +544,15 @@ int main(int argc, char *argv[]) {
   }
 
   // get X resources
+  level1 = app->getBoolResource("psLevel1", gFalse);
   paperWidth = app->getIntResource("psPaperWidth", defPaperWidth);
   paperHeight = app->getIntResource("psPaperHeight", defPaperHeight);
-  psOutLevel1 = app->getBoolResource("psLevel1", gFalse);
   urlCommand = app->getStringResource("urlCommand", NULL);
   windowTitle = app->getStringResource("title", NULL);
   installCmap = app->getBoolResource("installCmap", gFalse);
-  if (installCmap)
+  if (installCmap) {
     win->setInstallCmap(gTrue);
+  }
   rgbCubeSize = app->getIntResource("rgbCubeSize", defaultRGBCube);
   paperColor = app->getColorResource("paperColor", "white",
 				     WhitePixel(display, app->getScreenNum()),
@@ -556,10 +563,32 @@ int main(int argc, char *argv[]) {
   useEUCJP = gFalse;
 #endif
 #if HAVE_T1LIB_H
-  t1libControl = app->getStringResource("t1libControl", "low");
+  t1libControlStr = app->getStringResource("t1libControl", "low");
+  if (!t1libControlStr->cmp("none")) {
+    t1libControl = fontRastNone;
+  } else if (!t1libControlStr->cmp("plain")) {
+    t1libControl = fontRastPlain;
+  } else if (!t1libControlStr->cmp("high")) {
+    t1libControl = fontRastAAHigh;
+  } else {
+    t1libControl = fontRastAALow;
+  }
+  delete t1libControlStr;
+#else
+  t1libControl = fontRastNone;
 #endif
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-  freeTypeControl = app->getStringResource("freeTypeControl", "aa");
+  freetypeControlStr = app->getStringResource("freeTypeControl", "aa");
+  if (!freetypeControlStr->cmp("none")) {
+    freetypeControl = fontRastNone;
+  } else if (!freetypeControlStr->cmp("plain")) {
+    freetypeControl = fontRastPlain;
+  } else {
+    freetypeControl = fontRastAALow;
+  }
+  delete freetypeControlStr;
+#else
+  freetypeControl = fontRastNone;
 #endif
   t1Courier = app->getStringResource("t1Courier", NULL);
   t1CourierBold = app->getStringResource("t1CourierBold", NULL);
@@ -682,8 +711,9 @@ int main(int argc, char *argv[]) {
   }
 
   // create output device
-  out = new LTKOutputDev(win, paperColor);
-  out->startDoc();
+  out = new LTKOutputDev(win, paperColor, installCmap, rgbCubeSize,
+			 t1libControl, freetypeControl, !fullScreen);
+  out->startDoc(doc ? doc->getXRef() : (XRef *)NULL);
 
   // display first page
   displayPage(pg, zoom, 0, gTrue);
@@ -734,16 +764,6 @@ int main(int argc, char *argv[]) {
   if (windowTitle) {
     delete windowTitle;
   }
-#if HAVE_T1LIB_H
-  if (t1libControl) {
-    delete t1libControl;
-  }
-#endif
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-  if (freeTypeControl) {
-    delete freeTypeControl;
-  }
-#endif
   if (t1Courier) {
     delete t1Courier;
   }
@@ -841,7 +861,7 @@ static GBool loadFile(GString *fileName) {
   } else {
     userPW = NULL;
   }
-  newDoc = new PDFDoc(fileName, ownerPW, userPW);
+  newDoc = new PDFDoc(fileName, ownerPW, userPW, printCommands);
   if (userPW) {
     delete userPW;
   }
@@ -859,8 +879,9 @@ static GBool loadFile(GString *fileName) {
   if (doc)
     delete doc;
   doc = newDoc;
-  if (out)
-    out->startDoc();
+  if (out) {
+    out->startDoc(doc->getXRef());
+  }
 
   // nothing displayed yet
   page = -99;
@@ -2215,8 +2236,11 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on) {
     psDialog->setBusyCursor(gTrue);
     win->setBusyCursor(gTrue);
     if (doc->okToPrint()) {
-      psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
-			      psFirstPage, psLastPage, gTrue, gTrue, gFalse);
+      psOut = new PSOutputDev(psFileName->getCString(), doc->getXRef(),
+			      doc->getCatalog(), psFirstPage, psLastPage,
+			      level1 ? psLevel1 : psLevel2,
+			      psModePS, gFalse, gTrue, gTrue,
+			      paperWidth, paperHeight);
       if (psOut->isOk()) {
 	doc->displayPages(psOut, psFirstPage, psLastPage, 72, 0, gFalse);
       }

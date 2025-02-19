@@ -159,7 +159,8 @@ with xpdf, as misc/hello.pdf .
 **************
 
 Xpdf is known to run under OS/2 with the EMX runtime environment and
-XFree86.  The configure script has not been tested on OS/2, however.
+XFree86.  Using a proper autoconf port you can generate a valid
+configure script version.
 
 
 ***************

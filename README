@@ -294,6 +294,7 @@ Thanks to:
   xpdf.
 * Pine Tree Systems A/S for funding the OPI and EPS support in
   pdftops.
+* Easy Software Products for funding the "sh" operator support.
 
 
 References
@@ -398,7 +399,7 @@ Fast 1-D DCT Algorithms with 11 Multiplications".  IEEE Intl. Conf. on
 Acoustics, Speech & Signal Processing, 1989, 988-991.
 [The fast IDCT algorithm used in the DCTDecode filter.]
 
-Microsoft, _TyueType 1.0 Font Files_, rev. 1.66.  1995.
+Microsoft, _TrueType 1.0 Font Files_, rev. 1.66.  1995.
 http://www.microsoft.com/typography/tt/tt.htm
 [The TrueType font spec (in MS Word format, naturally).]
 

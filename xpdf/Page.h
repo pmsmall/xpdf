@@ -77,7 +77,8 @@ class Page {
 public:
 
   // Constructor.
-  Page(int num1, Dict *pageDict, PageAttrs *attrsA);
+  Page(XRef *xrefA, int numA, Dict *pageDict, PageAttrs *attrsA,
+       GBool printCommandsA);
 
   // Destructor.
   ~Page();
@@ -101,10 +102,10 @@ public:
   Dict *getResourceDict() { return attrs->getResourceDict(); }
 
   // Get annotations array.
-  Object *getAnnots(Object *obj) { return annots.fetch(obj); }
+  Object *getAnnots(Object *obj) { return annots.fetch(xref, obj); }
 
   // Get contents.
-  Object *getContents(Object *obj) { return contents.fetch(obj); }
+  Object *getContents(Object *obj) { return contents.fetch(xref, obj); }
 
   // Display a page.
   void display(OutputDev *out, double dpi, int rotate,
@@ -112,10 +113,12 @@ public:
 
 private:
 
+  XRef *xref;			// the xref table for this PDF file
   int num;			// page number
   PageAttrs *attrs;		// page attributes
   Object annots;		// annotations array
   Object contents;		// page contents
+  GBool printCommands;		// print the drawing commands (for debugging)
   GBool ok;			// true if page is valid
 };
 

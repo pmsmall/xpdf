@@ -47,7 +47,7 @@ class T1FontFile: public SFontFile {
 public:
 
   T1FontFile(T1FontEngine *engineA, char *fontFileName,
-	     FontEncoding *fontEnc);
+	     FontEncoding *fontEnc, double *bboxA);
   GBool isOk() { return ok; }
   virtual ~T1FontFile();
 
@@ -57,6 +57,7 @@ private:
   int id;			// t1lib font ID
   char **enc;
   char *encStr;
+  double bbox[4];
   GBool ok;
 
   friend class T1Font;

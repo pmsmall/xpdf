@@ -28,15 +28,21 @@
 
 //------------------------------------------------------------------------
 
-LTKOutputDev::LTKOutputDev(LTKWindow *winA, unsigned long paperColor):
+LTKOutputDev::LTKOutputDev(LTKWindow *winA, unsigned long paperColor,
+			   GBool installCmap, GBool rgbCubeSize,
+			   FontRastControl t1libControl,
+			   FontRastControl freetypeControl,
+			   GBool incrementalUpdateA):
   XOutputDev(winA->getDisplay(),
 	     ((LTKScrollingCanvas *)winA->findWidget("canvas"))->getPixmap(),
-	     0, winA->getColormap(), paperColor)
+	     0, winA->getColormap(), paperColor,
+	     installCmap, rgbCubeSize, t1libControl, freetypeControl)
 {
   win = winA;
   canvas = (LTKScrollingCanvas *)win->findWidget("canvas");
   setPixmap(canvas->getPixmap(),
 	    canvas->getRealWidth(), canvas->getRealHeight());
+  incrementalUpdate = incrementalUpdateA;
 }
 
 LTKOutputDev::~LTKOutputDev() {
@@ -48,10 +54,21 @@ void LTKOutputDev::startPage(int pageNum, GfxState *state) {
   setPixmap(canvas->getPixmap(),
 	    canvas->getRealWidth(), canvas->getRealHeight());
   XOutputDev::startPage(pageNum, state);
-  canvas->redraw();
+  if (incrementalUpdate) {
+    canvas->redraw();
+  }
+}
+
+void LTKOutputDev::endPage() {
+  if (!incrementalUpdate) {
+    canvas->redraw();
+  }
+  XOutputDev::endPage();
 }
 
 void LTKOutputDev::dump() {
-  canvas->redraw();
+  if (incrementalUpdate) {
+    canvas->redraw();
+  }
   XOutputDev::dump();
 }

@@ -21,7 +21,8 @@
 #include "Decrypt.h"
 #endif
 
-Parser::Parser(Lexer *lexerA) {
+Parser::Parser(XRef *xrefA, Lexer *lexerA) {
+  xref = xrefA;
   lexer = lexerA;
   inlineImg = 0;
   lexer->getObj(&buf1);
@@ -64,7 +65,7 @@ Object *Parser::getObj(Object *obj) {
   // array
   if (buf1.isCmd("[")) {
     shift();
-    obj->initArray();
+    obj->initArray(xref);
     while (!buf1.isCmd("]") && !buf1.isEOF())
 #ifndef NO_DECRYPTION
       obj->arrayAdd(getObj(&obj2, fileKey, keyLength, objNum, objGen));
@@ -78,7 +79,7 @@ Object *Parser::getObj(Object *obj) {
   // dictionary or stream
   } else if (buf1.isCmd("<<")) {
     shift();
-    obj->initDict();
+    obj->initDict(xref);
     while (!buf1.isCmd(">>") && !buf1.isEOF()) {
       if (!buf1.isName()) {
 	error(getPos(), "Dictionary key must be a name object");

@@ -113,7 +113,6 @@ int main(int argc, char *argv[]) {
   initParams(xpdfUserConfigFile, xpdfSysConfigFile);
 
   // open PDF file
-  xref = NULL;
   if (ownerPassword[0]) {
     ownerPW = new GString(ownerPassword);
   } else {

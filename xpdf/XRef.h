@@ -107,10 +107,4 @@ private:
   GBool checkEncrypted(GString *ownerPassword, GString *userPassword);
 };
 
-//------------------------------------------------------------------------
-// The global xref table
-//------------------------------------------------------------------------
-
-extern XRef *xref;
-
 #endif
