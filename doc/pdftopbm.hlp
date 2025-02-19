@@ -62,6 +62,20 @@
        ticular,  high-resolution  output requires lots of memory.
        Also, non-scalable fonts will not look great.
 
+2 XIT_CODE
+
+       The Xpdf tools use the following exit codes:
+
+       0      No error.
+
+       1      Error opening a PDF file.
+
+       2      Error opening an output file.
+
+       3      Error related to PDF permissions.
+
+       99     Other error.
+
 2 AUTHOR
 
        The  pdftopbm  software  and  documentation  are copyright

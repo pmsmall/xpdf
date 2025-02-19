@@ -22,7 +22,6 @@ EXE = @EXE@
 
 all:
 	cd goo; $(MAKE)
-@X@	cd @UP_DIR@ltk; $(MAKE)
 	cd @UP_DIR@xpdf; $(MAKE) @XPDF_TARGET@
 
 all-no-x:
@@ -31,7 +30,6 @@ all-no-x:
 
 xpdf: dummy
 	cd goo; $(MAKE)
-	cd @UP_DIR@ltk; $(MAKE)
 	cd @UP_DIR@xpdf; $(MAKE) xpdf$(EXE)
 
 pdftops: dummy
@@ -89,17 +87,17 @@ install: dummy
 
 clean:
 	-cd goo; $(MAKE) clean
-	-cd @UP_DIR@ltk; $(MAKE) clean
 	-cd @UP_DIR@xpdf; $(MAKE) clean
 
 distclean: clean
 	rm -f config.log config.status config.cache
 	rm -f aconf.h
-	rm -f Makefile goo/Makefile ltk/Makefile xpdf/Makefile
-	rm -f goo/Makefile.dep ltk/Makefile.dep xpdf/Makefile.dep
-	rm -f goo/Makefile.in.bak ltk/Makefile.in.bak xpdf/Makefile.in.bak
+	rm -f Makefile goo/Makefile xpdf/Makefile
+	rm -f goo/Makefile.dep xpdf/Makefile.dep
+	rm -f goo/Makefile.in.bak xpdf/Makefile.in.bak
+	touch goo/Makefile.dep
+	touch xpdf/Makefile.dep
 
 depend:
 	cd goo; $(MAKE) depend
-	cd @UP_DIR@ltk; $(MAKE) depend
 	cd @UP_DIR@xpdf; $(MAKE) depend

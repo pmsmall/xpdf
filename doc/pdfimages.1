@@ -1,8 +1,8 @@
 .\" Copyright 1998-2002 Glyph & Cog, LLC
-.TH pdfimages 1 "20 May 2002"
+.TH pdfimages 1 "04 November 2002"
 .SH NAME
 pdfimages \- Portable Document Format (PDF) image extractor
-(version 1.01)
+(version 2.00)
 .SH SYNOPSIS
 .B pdfimages
 [options]
@@ -66,6 +66,23 @@ Print usage information.
 and
 .B \-\-help
 are equivalent.)
+.SH EXIT CODES
+The Xpdf tools use the following exit codes:
+.TP
+0
+No error.
+.TP
+1
+Error opening a PDF file.
+.TP
+2
+Error opening an output file.
+.TP
+3
+Error related to PDF permissions.
+.TP
+99
+Other error.
 .SH AUTHOR
 The pdfimages software and documentation are copyright Glyph & Cog,
 LLC.

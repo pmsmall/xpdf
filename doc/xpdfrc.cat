@@ -5,7 +5,7 @@ xpdfrc(5)                                               xpdfrc(5)
 
 
 NAME
-       xpdfrc - configuration file for Xpdf tools (version 1.01)
+       xpdfrc - configuration file for Xpdf tools (version 2.00)
 
 DESCRIPTION
        All  of  the  Xpdf tools read a single configuration file.
@@ -61,7 +61,7 @@ CHARACTER MAPPING
 
 
 
-                           20 May 2002                          1
+                         04 November 2002                       1
 
 
 
@@ -127,7 +127,7 @@ DISPLAY FONTS
 
 
 
-                           20 May 2002                          2
+                         04 November 2002                       2
 
 
 
@@ -193,7 +193,7 @@ POSTSCRIPT CONTROL
 
 
 
-                           20 May 2002                          3
+                         04 November 2002                       3
 
 
 
@@ -259,7 +259,7 @@ xpdfrc(5)                                               xpdfrc(5)
 
 
 
-                           20 May 2002                          4
+                         04 November 2002                       4
 
 
 
@@ -325,7 +325,7 @@ TEXT CONTROL
 
 
 
-                           20 May 2002                          5
+                         04 November 2002                       5
 
 
 
@@ -333,6 +333,15 @@ TEXT CONTROL
 
 xpdfrc(5)                                               xpdfrc(5)
 
+
+       textKeepTinyChars yes | no
+              If set to "yes",  text  extraction  will  keep  all
+              characters.   If  set to "no", text extraction will
+              discard tiny  (smaller  than  3  point)  characters
+              after  the first 20000 per page, avoiding extremely
+              slow run times for PDF files that use special fonts
+              to  do shading or cross-hatching.  This defaults to
+              "no".
 
 MISCELLANEOUS SETTINGS
        initialZoom -5..5 | page | width
@@ -363,6 +372,11 @@ MISCELLANEOUS SETTINGS
               URL.  (See the example below.)  This has no default
               value.
 
+       movieCommand command
+              Sets the command executed when you click on a movie
+              annotation.  The string "%s" will be replaced  with
+              the movie file name.  This has no default value.
+
        mapNumericCharNames yes | no
               If set to "yes", the Xpdf tools will attempt to map
               various numeric character names sometimes  used  in
@@ -370,6 +384,23 @@ MISCELLANEOUS SETTINGS
               text, and in other cases it leads to  gibberish  --
               there is no way for Xpdf to tell.  This defaults to
               "yes".
+
+       printCommands yes | no
+              If set to "yes", drawing commands  are  printed  as
+              they're  executed  (useful  for  debugging).   This
+
+
+
+                         04 November 2002                       6
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
+              defaults to "no".
 
        errQuiet yes | no
               If set to "yes",  this  suppresses  all  error  and
@@ -388,18 +419,6 @@ EXAMPLES
        cMapDir      Adobe-Japan1 /usr/local/share/xpdf/cmap/Adobe-Japan1
 
        # use an X server font for Times-Roman
-
-
-
-                           20 May 2002                          6
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
-
        # (this is the built-in default)
        displayFontX Times-Roman "-*-times-medium-r-normal-*-%s-*-*-*-*-*-iso8859-1" Latin1
 
@@ -435,6 +454,18 @@ xpdfrc(5)                                               xpdfrc(5)
        psEmbedTrueTypeFonts yes
        psFile               "| lpr -Pprinter5"
 
+
+
+
+                         04 November 2002                       7
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
        # assume that the PostScript printer has the Univers and
        # Univers-Bold fonts
        psFont Univers      Univers
@@ -454,18 +485,6 @@ FILES
        /usr/local/etc/xpdfrc
               This is the default location  for  the  system-wide
               configuration file.  Depending on build options, it
-
-
-
-                           20 May 2002                          7
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
-
               may be placed elsewhere.
 
        $HOME/.xpdfrc
@@ -504,25 +523,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                           20 May 2002                          8
+                         04 November 2002                       8
 
 

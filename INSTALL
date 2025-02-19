@@ -1,8 +1,8 @@
 Xpdf
 ====
 
-version 1.01
-2002-may-20
+version 2.00
+2002-nov-04
 
 The Xpdf software and documentation are
 copyright 1996-2002 Glyph & Cog, LLC.
@@ -17,6 +17,8 @@ Compiling xpdf
 Xpdf is written in C++ (with a little bit of C).  It should work with
 any ANSI-compliant C++ and C compilers.  The systems and compilers
 it's been tested with are listed on the xpdf web page.
+
+Xpdf requires the Motif (or Lesstif) toolkit.
 
 The following notes give specific instructions for compiling on
 different systems.
@@ -56,6 +58,13 @@ different systems.
     --with-freetype-library=PATH
     --with-freetype-includes=PATH
 
+* If you have Motif (or Lesstif) installed in a non-standard place,
+  you can use the following options to tell configure where to find
+  it:
+
+    --with-Xm-library=PATH
+    --with-Xm-includes=PATH
+
 * Run the configure script:
 
     ./configure
@@ -80,9 +89,6 @@ different systems.
     --enable-opi
         Enables support for generation of OPI (Open Prepress
         Interface) comments with pdftops.
-
-    --with-gzip
-        Use gzip instead of uncompress.
 
     --sysconfdir=DIR
         Look for the system-wide xpdfrc config file in this directory.
@@ -162,7 +168,7 @@ With cygwin, the build procedure is the same as for Unix:
 
   * Open a shell.
 
-  * ./configure --with-gzip
+  * ./configure
 
   * make
 

@@ -7,6 +7,8 @@
 #ifndef ACONF_H
 #define ACONF_H
 
+#include <aconf2.h>
+
 /*
  * Use A4 paper size instead of Letter for PostScript output.
  */
@@ -21,11 +23,6 @@
  * Include support for OPI comments.
  */
 #undef OPI_SUPPORT
-
-/*
- * Use gzip instead of uncompress.
- */
-#undef USE_GZIP
 
 /*
  * Directory with the Xpdf app-defaults file.
@@ -52,7 +49,11 @@
 #undef HAVE_MKSTEMP
 #undef HAVE_MKSTEMPS
 #undef SELECT_TAKES_INT
+#undef HAVE_FSEEKO
 #undef HAVE_FSEEK64
+#undef _FILE_OFFSET_BITS
+#undef _LARGE_FILES
+#undef _LARGEFILE_SOURCE
 
 /*
  * This is defined if using libXpm.

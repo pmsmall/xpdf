@@ -37,12 +37,15 @@ del *.o
 %CXX% %CXXFLAGS% -c GfxState.cc
 %CXX% %CXXFLAGS% -c GlobalParams.cc
 %CXX% %CXXFLAGS% -c ImageOutputDev.cc
+%CXX% %CXXFLAGS% -c JBIG2Stream.cc
 %CXX% %CXXFLAGS% -c Lexer.cc
 %CXX% %CXXFLAGS% -c Link.cc
 %CXX% %CXXFLAGS% -c NameToCharCode.cc
 %CXX% %CXXFLAGS% -c Object.cc
+%CXX% %CXXFLAGS% -c Outline.cc
 %CXX% %CXXFLAGS% -c OutputDev.cc
 %CXX% %CXXFLAGS% -c PDFDoc.cc
+%CXX% %CXXFLAGS% -c PDFDocEncoding.cc
 %CXX% %CXXFLAGS% -c PSOutputDev.cc
 %CXX% %CXXFLAGS% -c PSTokenizer.cc
 %CXX% %CXXFLAGS% -c Page.cc

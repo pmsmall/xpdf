@@ -1,7 +1,7 @@
 .\" Copyright 1996-2002 Glyph & Cog, LLC
-.TH xpdf 1 "20 May 2002"
+.TH xpdf 1 "04 November 2002"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 1.01)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 2.00)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -88,7 +88,7 @@ Set the initial zoom factor.  A number (-5 .. 5) specifies a zoom
 factor, where 0 means 72 dpi.  You may also specify \'page', to fit
 the page to the window size, or \'width', to fit the page width to the
 window width.
-.RB "[config file: " initialZoom ]
+.RB "[config file: " initialZoom "; or X resource: " xpdf.initialZoom ]
 .TP
 .BI \-t1lib " font-type"
 Set the type of font rendering for t1lib (the Type 1 rasterizer) to
@@ -165,6 +165,7 @@ Kill xpdf remote server (with -remote only).
 .TP
 .B \-cmd
 Print commands as they're executed (useful for debugging).
+.RB "[config file: " printCommands ]
 .TP
 .B \-q
 Don't print any messages or errors.
@@ -258,6 +259,9 @@ following commands:
 .B "Open..."
 Open a new PDF file via a file requester.
 .TP
+.B "Open in new window..."
+Create a new window and open a new PDF file via a file requester.
+.TP
 .B "Reload"
 Reload the current PDF file.  Note that Xpdf will reload the file
 automatically (on a page change or redraw) if it has changed since it
@@ -274,6 +278,11 @@ Rotate the page 90 degrees clockwise.  The two rotate commands are
 intended primarily for PDF files where the rotation isn't correctly
 specified in the file, but they're also useful if your X server
 doesn't support font rotation.
+.TP
+.B "Close"
+Close the current window.  If this is the only open window, the
+document is closed, but the window is left open (i.e., this menu
+command won't quit xpdf).
 .TP
 .B "Quit"
 Quit xpdf.
@@ -305,8 +314,20 @@ Reload the current PDF file.  Note that Xpdf will reload the file
 automatically (on a page change or redraw) if it has changed since it
 was last loaded.
 .TP
-.B f
+.B control-L
+Redraw the current page.
+.TP
+.B control-W
+Close the current window.
+.TP
+.B f or control-F
 Find a text string.
+.TP
+.B control-G
+Find next occurrence.
+.TP
+.B control-P
+Print.
 .TP
 .B n
 Move to the next page.  Scrolls to the top of the page, unless scroll
@@ -336,11 +357,17 @@ Scroll to top of current page.
 .B <End>
 Scroll to bottom of current page.
 .TP
+.B control-<Home>
+Scroll to first page of document.
+.TP
+.B control-<End>
+Scroll to last page of document.
+.TP
 .B arrows
 Scroll the current page.
 .TP
 .B g
-Activate the page number text field.
+Activate the page number text field ("goto page").
 .TP
 .B 0
 Set the zoom factor to zero (72 dpi).
@@ -356,9 +383,6 @@ Set the zoom factor to 'page' (fit page to window).
 .TP
 .B w
 Set the zoom factor to 'width' (fit page width to window).
-.TP
-.B control-L
-Redraw the current page.
 .TP
 .B q
 Quit xpdf.
@@ -428,6 +452,23 @@ The -raise option tells the server to raise its window; it can be
 specified with or without a file name and page number.
 .PP
 The -quit option tells the server to close its window and exit.
+.SH EXIT CODES
+The Xpdf tools use the following exit codes:
+.TP
+0
+No error.
+.TP
+1
+Error opening a PDF file.
+.TP
+2
+Error opening an output file.
+.TP
+3
+Error related to PDF permissions.
+.TP
+99
+Other error.
 .SH AUTHOR
 The xpdf software and documentation are copyright 1996-2002 Glyph &
 Cog, LLC.

@@ -6,7 +6,7 @@ pdffonts(1)                                           pdffonts(1)
 
 NAME
        pdffonts  -  Portable  Document Format (PDF) font analyzer
-       (version 1.01)
+       (version 2.00)
 
 SYNOPSIS
        pdffonts [options] [PDF-file]
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           20 May 2002                          1
+                         04 November 2002                       1
 
 
 
@@ -94,6 +94,19 @@ pdffonts(1)                                           pdffonts(1)
        -h     Print usage information.   (-help  and  --help  are
               equivalent.)
 
+EXIT CODES
+       The Xpdf tools use the following exit codes:
+
+       0      No error.
+
+       1      Error opening a PDF file.
+
+       2      Error opening an output file.
+
+       3      Error related to PDF permissions.
+
+       99     Other error.
+
 AUTHOR
        The  pdffonts  software  and  documentation  are copyright
        1996-2002 Glyph & Cog, LLC.
@@ -114,19 +127,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-                           20 May 2002                          2
+                         04 November 2002                       2
 
 

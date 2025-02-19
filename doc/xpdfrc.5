@@ -1,7 +1,7 @@
 .\" Copyright 2002 Glyph & Cog, LLC
-.TH xpdfrc 5 "20 May 2002"
+.TH xpdfrc 5 "04 November 2002"
 .SH NAME
-xpdfrc \- configuration file for Xpdf tools (version 1.01)
+xpdfrc \- configuration file for Xpdf tools (version 2.00)
 .SH DESCRIPTION
 All of the Xpdf tools read a single configuration file.  If you have a
 .I .xpdfrc
@@ -306,6 +306,13 @@ are:
 (This can be overridden with the "-eol" switch on the command line.)
 The default value is based on the OS where xpdf and pdftotext were
 built.
+.TP
+.BR textKeepTinyChars " yes | no"
+If set to "yes", text extraction will keep all characters.  If set to
+"no", text extraction will discard tiny (smaller than 3 point)
+characters after the first 20000 per page, avoiding extremely slow run
+times for PDF files that use special fonts to do shading or
+cross-hatching.  This defaults to "no".
 .SH MISCELLANEOUS SETTINGS
 .TP
 .BR initialZoom " -5..5 | page | width"
@@ -331,11 +338,20 @@ Sets the command executed when you click on a URL link.  The string
 "%s" will be replaced with the URL.  (See the example below.)  This
 has no default value.
 .TP
+.BI movieCommand " command"
+Sets the command executed when you click on a movie annotation.  The
+string "%s" will be replaced with the movie file name.  This has no
+default value.
+.TP
 .BI mapNumericCharNames " yes | no"
 If set to "yes", the Xpdf tools will attempt to map various numeric
 character names sometimes used in font subsets.  In some cases this
 leads to usable text, and in other cases it leads to gibberish --
 there is no way for Xpdf to tell.  This defaults to "yes".
+.TP
+.BI printCommands " yes | no"
+If set to "yes", drawing commands are printed as they're executed
+(useful for debugging).  This defaults to "no".
 .TP
 .BI errQuiet " yes | no"
 If set to "yes", this suppresses all error and warning messages from

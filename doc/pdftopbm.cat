@@ -6,7 +6,7 @@ pdftopbm(1)                                           pdftopbm(1)
 
 NAME
        pdftopbm  -  Portable  Document  Format  (PDF) to Portable
-       Bitmap (PBM) converter (version 1.01)
+       Bitmap (PBM) converter (version 2.00)
 
 SYNOPSIS
        pdftopbm [options] PDF-file PBM-root
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           20 May 2002                          1
+                         04 November 2002                       1
 
 
 
@@ -75,6 +75,19 @@ BUGS
        the capabilities and performance of the X server.  In par-
        ticular,  high-resolution  output requires lots of memory.
        Also, non-scalable fonts will not look great.
+
+EXIT CODES
+       The Xpdf tools use the following exit codes:
+
+       0      No error.
+
+       1      Error opening a PDF file.
+
+       2      Error opening an output file.
+
+       3      Error related to PDF permissions.
+
+       99     Other error.
 
 AUTHOR
        The pdftopbm  software  and  documentation  are  copyright
@@ -114,19 +127,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-                           20 May 2002                          2
+                         04 November 2002                       2
 
 

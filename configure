@@ -838,15 +838,25 @@ Optional Features:
                           PostScript output
   --enable-no-text-select do not allow text selection
   --enable-opi            include support for OPI comments
+  --disable-largefile     omit support for large files
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-gzip             use gzip instead of uncompress
   --with-appdef-dir       set app-defaults directory
   --with-x                use the X Window System
   --with-Xpm-library=PATH use Xpm library (pixmap library - used only for icon)
   --with-Xpm-includes=DIR set directory for Xpm headers
+  --with-Xext-library=PATH
+                          use Xext library (Motif library)
+  --with-Xext-includes=DIR
+                          set directory for Xext headers
+  --with-Xp-library=PATH use Xp library (Motif library)
+  --with-Xp-includes=DIR set directory for Xp headers
+  --with-Xt-library=PATH use Xt library (Motif library)
+  --with-Xt-includes=DIR set directory for Xt headers
+  --with-Xm-library=PATH use Xm library (Motif library)
+  --with-Xm-includes=DIR set directory for Xm headers
   --with-t1-library=PATH use t1 library (Type 1 font rasterizer)
   --with-t1-includes=DIR set directory for t1 headers
   --with-freetype2-library=PATH
@@ -1245,15 +1255,6 @@ if test "${enable_opi+set}" = set; then
   enableval="$enable_opi"
   cat >>confdefs.h <<\_ACEOF
 #define OPI_SUPPORT 1
-_ACEOF
-
-fi;
-
-# Check whether --with-gzip or --without-gzip was given.
-if test "${with_gzip+set}" = set; then
-  withval="$with_gzip"
-  cat >>confdefs.h <<\_ACEOF
-#define USE_GZIP 1
 _ACEOF
 
 fi;
@@ -5351,6 +5352,476 @@ _ACEOF
 
 fi
 
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+# Check whether --enable-largefile or --disable-largefile was given.
+if test "${enable_largefile+set}" = set; then
+  enableval="$enable_largefile"
+
+fi;
+if test "$enable_largefile" != no; then
+
+  echo "$as_me:$LINENO: checking for special C compiler options needed for large files" >&5
+echo $ECHO_N "checking for special C compiler options needed for large files... $ECHO_C" >&6
+if test "${ac_cv_sys_largefile_CC+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_cv_sys_largefile_CC=no
+     if test "$GCC" != yes; then
+       ac_save_CC=$CC
+       while :; do
+     	 # IRIX 6.2 and later do not support large files by default,
+     	 # so use the C compiler's -n32 option if that helps.
+         cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+     	 rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext
+     	 CC="$CC -n32"
+     	 rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_sys_largefile_CC=' -n32'; break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext
+         break
+       done
+       CC=$ac_save_CC
+       rm -f conftest.$ac_ext
+    fi
+fi
+echo "$as_me:$LINENO: result: $ac_cv_sys_largefile_CC" >&5
+echo "${ECHO_T}$ac_cv_sys_largefile_CC" >&6
+  if test "$ac_cv_sys_largefile_CC" != no; then
+    CC=$CC$ac_cv_sys_largefile_CC
+  fi
+
+  echo "$as_me:$LINENO: checking for _FILE_OFFSET_BITS value needed for large files" >&5
+echo $ECHO_N "checking for _FILE_OFFSET_BITS value needed for large files... $ECHO_C" >&6
+if test "${ac_cv_sys_file_offset_bits+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  while :; do
+  ac_cv_sys_file_offset_bits=no
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#define _FILE_OFFSET_BITS 64
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_sys_file_offset_bits=64; break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+  break
+done
+fi
+echo "$as_me:$LINENO: result: $ac_cv_sys_file_offset_bits" >&5
+echo "${ECHO_T}$ac_cv_sys_file_offset_bits" >&6
+if test "$ac_cv_sys_file_offset_bits" != no; then
+
+cat >>confdefs.h <<_ACEOF
+#define _FILE_OFFSET_BITS $ac_cv_sys_file_offset_bits
+_ACEOF
+
+fi
+rm -f conftest*
+  echo "$as_me:$LINENO: checking for _LARGE_FILES value needed for large files" >&5
+echo $ECHO_N "checking for _LARGE_FILES value needed for large files... $ECHO_C" >&6
+if test "${ac_cv_sys_large_files+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  while :; do
+  ac_cv_sys_large_files=no
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#define _LARGE_FILES 1
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_sys_large_files=1; break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+  break
+done
+fi
+echo "$as_me:$LINENO: result: $ac_cv_sys_large_files" >&5
+echo "${ECHO_T}$ac_cv_sys_large_files" >&6
+if test "$ac_cv_sys_large_files" != no; then
+
+cat >>confdefs.h <<_ACEOF
+#define _LARGE_FILES $ac_cv_sys_large_files
+_ACEOF
+
+fi
+rm -f conftest*
+fi
+
+echo "$as_me:$LINENO: checking for _LARGEFILE_SOURCE value needed for large files" >&5
+echo $ECHO_N "checking for _LARGEFILE_SOURCE value needed for large files... $ECHO_C" >&6
+if test "${ac_cv_sys_largefile_source+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  while :; do
+  ac_cv_sys_largefile_source=no
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <stdio.h>
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+return !fseeko;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#define _LARGEFILE_SOURCE 1
+#include <stdio.h>
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+return !fseeko;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_sys_largefile_source=1; break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+  break
+done
+fi
+echo "$as_me:$LINENO: result: $ac_cv_sys_largefile_source" >&5
+echo "${ECHO_T}$ac_cv_sys_largefile_source" >&6
+if test "$ac_cv_sys_largefile_source" != no; then
+
+cat >>confdefs.h <<_ACEOF
+#define _LARGEFILE_SOURCE $ac_cv_sys_largefile_source
+_ACEOF
+
+fi
+rm -f conftest*
+
+# We used to try defining _XOPEN_SOURCE=500 too, to work around a bug
+# in glibc 2.1.3, but that breaks too many other things.
+# If you want fseeko and ftello with glibc, upgrade to a fixed glibc.
+echo "$as_me:$LINENO: checking for fseeko" >&5
+echo $ECHO_N "checking for fseeko... $ECHO_C" >&6
+if test "${ac_cv_func_fseeko+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <stdio.h>
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+return fseeko && fseeko (stdin, 0, 0);
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_fseeko=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_func_fseeko=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_func_fseeko" >&5
+echo "${ECHO_T}$ac_cv_func_fseeko" >&6
+if test $ac_cv_func_fseeko = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_FSEEKO 1
+_ACEOF
+
+fi
+
 
 for ac_func in fseek64
 do
@@ -5513,13 +5984,6 @@ if test "$xpdf_cv_func_fseek64" = yes -a "$xpdf_cv_func_ftell64" = yes; then
 _ACEOF
 
 fi
-
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
 
 if test -z "$no_x"; then
   echo "$as_me:$LINENO: checking for ANSI C header files" >&5
@@ -6052,6 +6516,1344 @@ echo "$as_me: WARNING: requested Xpm library not found!" >&2;}
 
 
 
+fi
+
+if test -z "$no_x"; then
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-Xext-library or --without-Xext-library was given.
+if test "${with_Xext_library+set}" = set; then
+  withval="$with_Xext_library"
+  smr_cv_with_Xext_library=$withval
+fi;
+
+      echo "$as_me:$LINENO: checking whether to use Xext library" >&5
+echo $ECHO_N "checking whether to use Xext library... $ECHO_C" >&6
+if test "${smr_cv_with_Xext_library+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  smr_cv_with_Xext_library=maybe
+fi
+echo "$as_me:$LINENO: result: $smr_cv_with_Xext_library" >&5
+echo "${ECHO_T}$smr_cv_with_Xext_library" >&6
+
+
+  case x"$smr_cv_with_Xext_library" in
+      xyes | xmaybe)
+          Xext_LIBS="-lXext"
+          with_Xext=$smr_cv_with_Xext_library
+          ;;
+      xno)
+          Xext_LIBS=
+          with_Xext=no
+          ;;
+      *)
+          if test -f "$smr_cv_with_Xext_library"; then
+            Xext_LIBS=$smr_cv_with_Xext_library
+          elif test -d "$smr_cv_with_Xext_library"; then
+            Xext_LIBS="-L$smr_cv_with_Xext_library -lXext"
+          else
+            { { echo "$as_me:$LINENO: error: argument must be boolean, file, or directory" >&5
+echo "$as_me: error: argument must be boolean, file, or directory" >&2;}
+   { (exit 1); exit 1; }; }
+          fi
+          with_Xext=yes
+          ;;
+  esac
+
+
+
+
+
+
+
+  if test ! x"$with_Xext" = xno; then
+
+    # If we got this far, then the user didn't explicitly ask not to use
+    # the library.
+
+
+
+
+
+
+
+
+# Check whether --with-Xext-includes or --without-Xext-includes was given.
+if test "${with_Xext_includes+set}" = set; then
+  withval="$with_Xext_includes"
+  smr_cv_with_Xext_includes=$withval
+fi;
+
+      echo "$as_me:$LINENO: checking where to find the Xext header files" >&5
+echo $ECHO_N "checking where to find the Xext header files... $ECHO_C" >&6
+if test "${smr_cv_with_Xext_includes+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  smr_cv_with_Xext_includes=
+fi
+echo "$as_me:$LINENO: result: $smr_cv_with_Xext_includes" >&5
+echo "${ECHO_T}$smr_cv_with_Xext_includes" >&6
+
+  if test ! x"$smr_cv_with_Xext_includes" = x; then
+    if test -d "$smr_cv_with_Xext_includes"; then
+      Xext_CFLAGS="-I$smr_cv_with_Xext_includes"
+    else
+      { { echo "$as_me:$LINENO: error: argument must be a directory" >&5
+echo "$as_me: error: argument must be a directory" >&2;}
+   { (exit 1); exit 1; }; }
+    fi
+  else
+    Xext_CFLAGS=
+  fi
+
+        smr_test_CPPFLAGS="${CPPFLAGS+set}"
+  smr_save_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $Xext_CFLAGS $X_CFLAGS"
+
+
+for ac_header in X11/Xlib.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_header_compiler=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <$ac_header>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc in
+  yes:no )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+  no:yes )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header: check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+esac
+echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=$ac_header_preproc"
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+ smr_have_Xext_header=yes
+else
+  smr_have_Xext_header=no
+fi
+
+done
+
+
+  if test x"$smr_test_CPPFLAGS" = xset; then
+    CPPFLAGS=$smr_save_CPPFLAGS
+  else
+    unset CPPFLAGS
+  fi
+
+
+
+
+
+
+
+    # We need only look for the library if the header has been found
+    # (or no header is needed).
+    if test $smr_have_Xext_header != no; then
+
+       echo "$as_me:$LINENO: checking for XextAddDisplay in -lXext" >&5
+echo $ECHO_N "checking for XextAddDisplay in -lXext... $ECHO_C" >&6
+if test "${ac_cv_lib_Xext_XextAddDisplay+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lXext $Xext_CFLAGS $X_CFLAGS $Xext_LIBS $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char XextAddDisplay ();
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+XextAddDisplay ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_Xext_XextAddDisplay=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_Xext_XextAddDisplay=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_Xext_XextAddDisplay" >&5
+echo "${ECHO_T}$ac_cv_lib_Xext_XextAddDisplay" >&6
+if test $ac_cv_lib_Xext_XextAddDisplay = yes; then
+  smr_have_Xext_library=yes
+else
+  smr_have_Xext_library=no
+fi
+
+    fi
+
+    if test x"$smr_have_Xext_library" = xyes; then
+      echo "$as_me:$LINENO: result: using Xext library" >&5
+echo "${ECHO_T}using Xext library" >&6
+    else
+      Xext_LIBS=
+      Xext_CFLAGS=
+
+      if test x"$with_Xext" = xmaybe; then
+        echo "$as_me:$LINENO: result: not using Xext library" >&5
+echo "${ECHO_T}not using Xext library" >&6
+      else
+        { echo "$as_me:$LINENO: WARNING: requested Xext library not found!" >&5
+echo "$as_me: WARNING: requested Xext library not found!" >&2;}
+      fi
+    fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-Xp-library or --without-Xp-library was given.
+if test "${with_Xp_library+set}" = set; then
+  withval="$with_Xp_library"
+  smr_cv_with_Xp_library=$withval
+fi;
+
+      echo "$as_me:$LINENO: checking whether to use Xp library" >&5
+echo $ECHO_N "checking whether to use Xp library... $ECHO_C" >&6
+if test "${smr_cv_with_Xp_library+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  smr_cv_with_Xp_library=maybe
+fi
+echo "$as_me:$LINENO: result: $smr_cv_with_Xp_library" >&5
+echo "${ECHO_T}$smr_cv_with_Xp_library" >&6
+
+
+  case x"$smr_cv_with_Xp_library" in
+      xyes | xmaybe)
+          Xp_LIBS="-lXp"
+          with_Xp=$smr_cv_with_Xp_library
+          ;;
+      xno)
+          Xp_LIBS=
+          with_Xp=no
+          ;;
+      *)
+          if test -f "$smr_cv_with_Xp_library"; then
+            Xp_LIBS=$smr_cv_with_Xp_library
+          elif test -d "$smr_cv_with_Xp_library"; then
+            Xp_LIBS="-L$smr_cv_with_Xp_library -lXp"
+          else
+            { { echo "$as_me:$LINENO: error: argument must be boolean, file, or directory" >&5
+echo "$as_me: error: argument must be boolean, file, or directory" >&2;}
+   { (exit 1); exit 1; }; }
+          fi
+          with_Xp=yes
+          ;;
+  esac
+
+
+
+
+
+
+
+  if test ! x"$with_Xp" = xno; then
+
+    # If we got this far, then the user didn't explicitly ask not to use
+    # the library.
+
+
+
+
+
+
+
+
+# Check whether --with-Xp-includes or --without-Xp-includes was given.
+if test "${with_Xp_includes+set}" = set; then
+  withval="$with_Xp_includes"
+  smr_cv_with_Xp_includes=$withval
+fi;
+
+      echo "$as_me:$LINENO: checking where to find the Xp header files" >&5
+echo $ECHO_N "checking where to find the Xp header files... $ECHO_C" >&6
+if test "${smr_cv_with_Xp_includes+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  smr_cv_with_Xp_includes=
+fi
+echo "$as_me:$LINENO: result: $smr_cv_with_Xp_includes" >&5
+echo "${ECHO_T}$smr_cv_with_Xp_includes" >&6
+
+  if test ! x"$smr_cv_with_Xp_includes" = x; then
+    if test -d "$smr_cv_with_Xp_includes"; then
+      Xp_CFLAGS="-I$smr_cv_with_Xp_includes"
+    else
+      { { echo "$as_me:$LINENO: error: argument must be a directory" >&5
+echo "$as_me: error: argument must be a directory" >&2;}
+   { (exit 1); exit 1; }; }
+    fi
+  else
+    Xp_CFLAGS=
+  fi
+
+        smr_test_CPPFLAGS="${CPPFLAGS+set}"
+  smr_save_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $Xp_CFLAGS $X_CFLAGS"
+
+
+for ac_header in X11/extensions/Print.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_header_compiler=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <$ac_header>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc in
+  yes:no )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+  no:yes )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header: check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+esac
+echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=$ac_header_preproc"
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+ smr_have_Xp_header=yes
+else
+  smr_have_Xp_header=no
+fi
+
+done
+
+
+  if test x"$smr_test_CPPFLAGS" = xset; then
+    CPPFLAGS=$smr_save_CPPFLAGS
+  else
+    unset CPPFLAGS
+  fi
+
+
+
+
+
+
+
+    # We need only look for the library if the header has been found
+    # (or no header is needed).
+    if test $smr_have_Xp_header != no; then
+
+       echo "$as_me:$LINENO: checking for XpStartPage in -lXp" >&5
+echo $ECHO_N "checking for XpStartPage in -lXp... $ECHO_C" >&6
+if test "${ac_cv_lib_Xp_XpStartPage+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lXp $Xp_CFLAGS $X_CFLAGS $Xp_LIBS $Xext_LIBS $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char XpStartPage ();
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+XpStartPage ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_Xp_XpStartPage=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_Xp_XpStartPage=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_Xp_XpStartPage" >&5
+echo "${ECHO_T}$ac_cv_lib_Xp_XpStartPage" >&6
+if test $ac_cv_lib_Xp_XpStartPage = yes; then
+  smr_have_Xp_library=yes
+else
+  smr_have_Xp_library=no
+fi
+
+    fi
+
+    if test x"$smr_have_Xp_library" = xyes; then
+      echo "$as_me:$LINENO: result: using Xp library" >&5
+echo "${ECHO_T}using Xp library" >&6
+    else
+      Xp_LIBS=
+      Xp_CFLAGS=
+
+      if test x"$with_Xp" = xmaybe; then
+        echo "$as_me:$LINENO: result: not using Xp library" >&5
+echo "${ECHO_T}not using Xp library" >&6
+      else
+        { echo "$as_me:$LINENO: WARNING: requested Xp library not found!" >&5
+echo "$as_me: WARNING: requested Xp library not found!" >&2;}
+      fi
+    fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-Xt-library or --without-Xt-library was given.
+if test "${with_Xt_library+set}" = set; then
+  withval="$with_Xt_library"
+  smr_cv_with_Xt_library=$withval
+fi;
+
+      echo "$as_me:$LINENO: checking whether to use Xt library" >&5
+echo $ECHO_N "checking whether to use Xt library... $ECHO_C" >&6
+if test "${smr_cv_with_Xt_library+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  smr_cv_with_Xt_library=maybe
+fi
+echo "$as_me:$LINENO: result: $smr_cv_with_Xt_library" >&5
+echo "${ECHO_T}$smr_cv_with_Xt_library" >&6
+
+
+  case x"$smr_cv_with_Xt_library" in
+      xyes | xmaybe)
+          Xt_LIBS="-lXt"
+          with_Xt=$smr_cv_with_Xt_library
+          ;;
+      xno)
+          Xt_LIBS=
+          with_Xt=no
+          ;;
+      *)
+          if test -f "$smr_cv_with_Xt_library"; then
+            Xt_LIBS=$smr_cv_with_Xt_library
+          elif test -d "$smr_cv_with_Xt_library"; then
+            Xt_LIBS="-L$smr_cv_with_Xt_library -lXt"
+          else
+            { { echo "$as_me:$LINENO: error: argument must be boolean, file, or directory" >&5
+echo "$as_me: error: argument must be boolean, file, or directory" >&2;}
+   { (exit 1); exit 1; }; }
+          fi
+          with_Xt=yes
+          ;;
+  esac
+
+
+
+
+
+
+
+  if test ! x"$with_Xt" = xno; then
+
+    # If we got this far, then the user didn't explicitly ask not to use
+    # the library.
+
+
+
+
+
+
+
+
+# Check whether --with-Xt-includes or --without-Xt-includes was given.
+if test "${with_Xt_includes+set}" = set; then
+  withval="$with_Xt_includes"
+  smr_cv_with_Xt_includes=$withval
+fi;
+
+      echo "$as_me:$LINENO: checking where to find the Xt header files" >&5
+echo $ECHO_N "checking where to find the Xt header files... $ECHO_C" >&6
+if test "${smr_cv_with_Xt_includes+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  smr_cv_with_Xt_includes=
+fi
+echo "$as_me:$LINENO: result: $smr_cv_with_Xt_includes" >&5
+echo "${ECHO_T}$smr_cv_with_Xt_includes" >&6
+
+  if test ! x"$smr_cv_with_Xt_includes" = x; then
+    if test -d "$smr_cv_with_Xt_includes"; then
+      Xt_CFLAGS="-I$smr_cv_with_Xt_includes"
+    else
+      { { echo "$as_me:$LINENO: error: argument must be a directory" >&5
+echo "$as_me: error: argument must be a directory" >&2;}
+   { (exit 1); exit 1; }; }
+    fi
+  else
+    Xt_CFLAGS=
+  fi
+
+        smr_test_CPPFLAGS="${CPPFLAGS+set}"
+  smr_save_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $Xt_CFLAGS $X_CFLAGS"
+
+
+for ac_header in X11/Intrinsic.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_header_compiler=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <$ac_header>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc in
+  yes:no )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+  no:yes )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header: check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+esac
+echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=$ac_header_preproc"
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+ smr_have_Xt_header=yes
+else
+  smr_have_Xt_header=no
+fi
+
+done
+
+
+  if test x"$smr_test_CPPFLAGS" = xset; then
+    CPPFLAGS=$smr_save_CPPFLAGS
+  else
+    unset CPPFLAGS
+  fi
+
+
+
+
+
+
+
+    # We need only look for the library if the header has been found
+    # (or no header is needed).
+    if test $smr_have_Xt_header != no; then
+
+       echo "$as_me:$LINENO: checking for XtAppInitialize in -lXt" >&5
+echo $ECHO_N "checking for XtAppInitialize in -lXt... $ECHO_C" >&6
+if test "${ac_cv_lib_Xt_XtAppInitialize+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lXt $Xt_CFLAGS $X_CFLAGS $Xt_LIBS $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char XtAppInitialize ();
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+XtAppInitialize ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_Xt_XtAppInitialize=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_Xt_XtAppInitialize=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_Xt_XtAppInitialize" >&5
+echo "${ECHO_T}$ac_cv_lib_Xt_XtAppInitialize" >&6
+if test $ac_cv_lib_Xt_XtAppInitialize = yes; then
+  smr_have_Xt_library=yes
+else
+  smr_have_Xt_library=no
+fi
+
+    fi
+
+    if test x"$smr_have_Xt_library" = xyes; then
+      echo "$as_me:$LINENO: result: using Xt library" >&5
+echo "${ECHO_T}using Xt library" >&6
+    else
+      Xt_LIBS=
+      Xt_CFLAGS=
+
+      if test x"$with_Xt" = xmaybe; then
+        echo "$as_me:$LINENO: result: not using Xt library" >&5
+echo "${ECHO_T}not using Xt library" >&6
+      else
+        { echo "$as_me:$LINENO: WARNING: requested Xt library not found!" >&5
+echo "$as_me: WARNING: requested Xt library not found!" >&2;}
+      fi
+    fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-Xm-library or --without-Xm-library was given.
+if test "${with_Xm_library+set}" = set; then
+  withval="$with_Xm_library"
+  smr_cv_with_Xm_library=$withval
+fi;
+
+      echo "$as_me:$LINENO: checking whether to use Xm library" >&5
+echo $ECHO_N "checking whether to use Xm library... $ECHO_C" >&6
+if test "${smr_cv_with_Xm_library+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  smr_cv_with_Xm_library=maybe
+fi
+echo "$as_me:$LINENO: result: $smr_cv_with_Xm_library" >&5
+echo "${ECHO_T}$smr_cv_with_Xm_library" >&6
+
+
+  case x"$smr_cv_with_Xm_library" in
+      xyes | xmaybe)
+          Xm_LIBS="-lXm"
+          with_Xm=$smr_cv_with_Xm_library
+          ;;
+      xno)
+          Xm_LIBS=
+          with_Xm=no
+          ;;
+      *)
+          if test -f "$smr_cv_with_Xm_library"; then
+            Xm_LIBS=$smr_cv_with_Xm_library
+          elif test -d "$smr_cv_with_Xm_library"; then
+            Xm_LIBS="-L$smr_cv_with_Xm_library -lXm"
+          else
+            { { echo "$as_me:$LINENO: error: argument must be boolean, file, or directory" >&5
+echo "$as_me: error: argument must be boolean, file, or directory" >&2;}
+   { (exit 1); exit 1; }; }
+          fi
+          with_Xm=yes
+          ;;
+  esac
+
+
+
+
+
+
+
+  if test ! x"$with_Xm" = xno; then
+
+    # If we got this far, then the user didn't explicitly ask not to use
+    # the library.
+
+
+
+
+
+
+
+
+# Check whether --with-Xm-includes or --without-Xm-includes was given.
+if test "${with_Xm_includes+set}" = set; then
+  withval="$with_Xm_includes"
+  smr_cv_with_Xm_includes=$withval
+fi;
+
+      echo "$as_me:$LINENO: checking where to find the Xm header files" >&5
+echo $ECHO_N "checking where to find the Xm header files... $ECHO_C" >&6
+if test "${smr_cv_with_Xm_includes+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  smr_cv_with_Xm_includes=
+fi
+echo "$as_me:$LINENO: result: $smr_cv_with_Xm_includes" >&5
+echo "${ECHO_T}$smr_cv_with_Xm_includes" >&6
+
+  if test ! x"$smr_cv_with_Xm_includes" = x; then
+    if test -d "$smr_cv_with_Xm_includes"; then
+      Xm_CFLAGS="-I$smr_cv_with_Xm_includes"
+    else
+      { { echo "$as_me:$LINENO: error: argument must be a directory" >&5
+echo "$as_me: error: argument must be a directory" >&2;}
+   { (exit 1); exit 1; }; }
+    fi
+  else
+    Xm_CFLAGS=
+  fi
+
+        smr_test_CPPFLAGS="${CPPFLAGS+set}"
+  smr_save_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $Xm_CFLAGS $X_CFLAGS"
+
+
+for ac_header in Xm/XmAll.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_header_compiler=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <$ac_header>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc in
+  yes:no )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+  no:yes )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header: check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+esac
+echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=$ac_header_preproc"
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+ smr_have_Xm_header=yes
+else
+  smr_have_Xm_header=no
+fi
+
+done
+
+
+  if test x"$smr_test_CPPFLAGS" = xset; then
+    CPPFLAGS=$smr_save_CPPFLAGS
+  else
+    unset CPPFLAGS
+  fi
+
+
+
+
+
+
+
+    # We need only look for the library if the header has been found
+    # (or no header is needed).
+    if test $smr_have_Xm_header != no; then
+
+       echo "$as_me:$LINENO: checking for XmCreateForm in -lXm" >&5
+echo $ECHO_N "checking for XmCreateForm in -lXm... $ECHO_C" >&6
+if test "${ac_cv_lib_Xm_XmCreateForm+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lXm $Xm_CFLAGS $X_CFLAGS $Xm_LIBS $Xt_LIBS $Xp_LIBS $Xext_LIBS $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char XmCreateForm ();
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+XmCreateForm ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_Xm_XmCreateForm=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_Xm_XmCreateForm=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_Xm_XmCreateForm" >&5
+echo "${ECHO_T}$ac_cv_lib_Xm_XmCreateForm" >&6
+if test $ac_cv_lib_Xm_XmCreateForm = yes; then
+  smr_have_Xm_library=yes
+else
+  smr_have_Xm_library=no
+fi
+
+    fi
+
+    if test x"$smr_have_Xm_library" = xyes; then
+      echo "$as_me:$LINENO: result: using Xm library" >&5
+echo "${ECHO_T}using Xm library" >&6
+    else
+      Xm_LIBS=
+      Xm_CFLAGS=
+
+      if test x"$with_Xm" = xmaybe; then
+        echo "$as_me:$LINENO: result: not using Xm library" >&5
+echo "${ECHO_T}not using Xm library" >&6
+      else
+        { echo "$as_me:$LINENO: WARNING: requested Xm library not found!" >&5
+echo "$as_me: WARNING: requested Xm library not found!" >&2;}
+      fi
+    fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+  if test ! "x$smr_have_Xm_library" = xyes; then
+    no_x="yes"
+  fi
 fi
 
 if test -z "$no_x"; then
@@ -8077,7 +9879,7 @@ fi
 
 
 
-ac_config_files="$ac_config_files Makefile xpdf/Makefile ltk/Makefile goo/Makefile"
+ac_config_files="$ac_config_files Makefile xpdf/Makefile goo/Makefile"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -8551,7 +10353,6 @@ do
   # Handling of arguments.
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
   "xpdf/Makefile" ) CONFIG_FILES="$CONFIG_FILES xpdf/Makefile" ;;
-  "ltk/Makefile" ) CONFIG_FILES="$CONFIG_FILES ltk/Makefile" ;;
   "goo/Makefile" ) CONFIG_FILES="$CONFIG_FILES goo/Makefile" ;;
   "aconf.h" ) CONFIG_HEADERS="$CONFIG_HEADERS aconf.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
@@ -8661,6 +10462,14 @@ s,@X_LIBS@,$X_LIBS,;t t
 s,@X_EXTRA_LIBS@,$X_EXTRA_LIBS,;t t
 s,@Xpm_LIBS@,$Xpm_LIBS,;t t
 s,@Xpm_CFLAGS@,$Xpm_CFLAGS,;t t
+s,@Xext_LIBS@,$Xext_LIBS,;t t
+s,@Xext_CFLAGS@,$Xext_CFLAGS,;t t
+s,@Xp_LIBS@,$Xp_LIBS,;t t
+s,@Xp_CFLAGS@,$Xp_CFLAGS,;t t
+s,@Xt_LIBS@,$Xt_LIBS,;t t
+s,@Xt_CFLAGS@,$Xt_CFLAGS,;t t
+s,@Xm_LIBS@,$Xm_LIBS,;t t
+s,@Xm_CFLAGS@,$Xm_CFLAGS,;t t
 s,@t1_LIBS@,$t1_LIBS,;t t
 s,@t1_CFLAGS@,$t1_CFLAGS,;t t
 s,@freetype2_LIBS@,$freetype2_LIBS,;t t
@@ -9117,8 +10926,8 @@ fi
 
 
 if test -n "$no_x"; then
-  { echo "$as_me:$LINENO: WARNING: Couldn't find X -- you will be able to compile
+  { echo "$as_me:$LINENO: WARNING: Couldn't find X / Motif -- you will be able to compile
         pdftops, pdftotext, pdfinfo, pdffonts, and pdfimages, but not xpdf" >&5
-echo "$as_me: WARNING: Couldn't find X -- you will be able to compile
+echo "$as_me: WARNING: Couldn't find X / Motif -- you will be able to compile
         pdftops, pdftotext, pdfinfo, pdffonts, and pdfimages, but not xpdf" >&2;}
 fi

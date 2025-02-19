@@ -6,7 +6,7 @@ pdfimages(1)                                         pdfimages(1)
 
 NAME
        pdfimages - Portable Document Format (PDF) image extractor
-       (version 1.01)
+       (version 2.00)
 
 SYNOPSIS
        pdfimages [options] PDF-file image-root
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           20 May 2002                          1
+                         04 November 2002                       1
 
 
 
@@ -72,6 +72,19 @@ pdfimages(1)                                         pdfimages(1)
 
        -h     Print usage information.   (-help  and  --help  are
               equivalent.)
+
+EXIT CODES
+       The Xpdf tools use the following exit codes:
+
+       0      No error.
+
+       1      Error opening a PDF file.
+
+       2      Error opening an output file.
+
+       3      Error related to PDF permissions.
+
+       99     Other error.
 
 AUTHOR
        The  pdfimages  software  and  documentation are copyright
@@ -114,19 +127,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-                           20 May 2002                          2
+                         04 November 2002                       2
 
 

@@ -2,7 +2,7 @@
 1 xpdfrc
 2 NCLUDE_FILE
 
-       xpdfrc - configuration file for Xpdf tools (version 1.01)
+       xpdfrc - configuration file for Xpdf tools (version 2.00)
 
        include config-file
               Includes  the specified config file.  The effect of
@@ -257,6 +257,15 @@
               the  command  line.)  The default value is based on
               the OS where xpdf and pdftotext were built.
 
+       textKeepTinyChars yes | no
+              If set to "yes",  text  extraction  will  keep  all
+              characters.   If  set to "no", text extraction will
+              discard tiny  (smaller  than  3  point)  characters
+              after  the first 20000 per page, avoiding extremely
+              slow run times for PDF files that use special fonts
+              to  do shading or cross-hatching.  This defaults to
+              "no".
+
 2 ISCELLANEOUS_SETTING
 
        initialZoom -5..5 | page | width
@@ -287,6 +296,11 @@
               URL.  (See the example below.)  This has no default
               value.
 
+       movieCommand command
+              Sets the command executed when you click on a movie
+              annotation.   The string "%s" will be replaced with
+              the movie file name.  This has no default value.
+
        mapNumericCharNames yes | no
               If set to "yes", the Xpdf tools will attempt to map
               various  numeric  character names sometimes used in
@@ -294,6 +308,11 @@
               text,  and  in other cases it leads to gibberish --
               there is no way for Xpdf to tell.  This defaults to
               "yes".
+
+       printCommands yes | no
+              If  set  to  "yes", drawing commands are printed as
+              they're  executed  (useful  for  debugging).   This
+              defaults to "no".
 
        errQuiet yes | no
               If  set  to  "yes",  this  suppresses all error and

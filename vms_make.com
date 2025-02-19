@@ -19,9 +19,6 @@ $!
 $!     opi_support    - Compile Xpdf with support for the Open Prepress 
 $!                      Interface (OPI)
 $!
-$!     compress       - Use compress to decode embeded images (instead of the 
-$!                      default gzip)
-$!
 $! 2.) Compiler detection:
 $!
 $!     In case you want to override the automatic compiler detection
@@ -87,7 +84,7 @@ $!
 $ if (f$getsyi("HW_MODEL").ge.1024) .and. - 
      (f$locate("T1LIB",f$edit(libdefs,"UPCASE")) .lt. f$length(libdefs)) -
      then float  = "/float=ieee_float"
-$ incs = "sys$library:,[-],[],[-.goo],[-.ltk]''libincs'"     
+$ incs = "sys$library:,[-],[],[-.goo]''libincs'"     
 $!
 $ gosub check_compiler
 $ close optf
@@ -138,9 +135,6 @@ $ close aconf_in
 $ close aconf
 $ write sys$output "Compiling in [.GOO]"
 $ set default [.goo]
-$ @vms_make
-$ write sys$output "Compiling in [.LTK]"
-$ set default [-.ltk]
 $ @vms_make
 $ write sys$output "Compiling in [.XPDF]"
 $ set default [-.xpdf]
@@ -372,7 +366,6 @@ $   write sys$output "Qualifier ''qual' not recognized, will be ignored"
 $   goto def_loop
 $ endif
 $FINISH_DEF:
-$ if .not.compress_def then  mydefs = mydefs + "USE_GZIP#"
 $ return
 $!
 $!------------------------------------------------------------------------------

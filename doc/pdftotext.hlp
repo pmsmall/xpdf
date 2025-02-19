@@ -83,6 +83,20 @@
        mangled beyond recognition.  There is  no  way  (short  of
        OCR) to extract text from these files.
 
+2 XIT_CODE
+
+       The Xpdf tools use the following exit codes:
+
+       0      No error.
+
+       1      Error opening a PDF file.
+
+       2      Error opening an output file.
+
+       3      Error related to PDF permissions.
+
+       99     Other error.
+
 2 AUTHOR
 
        The  pdftotext  software  and  documentation are copyright

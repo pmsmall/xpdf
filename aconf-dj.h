@@ -23,11 +23,6 @@
 #undef OPI_SUPPORT
 
 /*
- * Use gzip instead of uncompress.
- */
-#define USE_GZIP 1
-
-/*
  * Directory with the Xpdf app-defaults file.
  */
 #undef APPDEFDIR

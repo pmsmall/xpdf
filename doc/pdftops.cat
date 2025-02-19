@@ -6,7 +6,7 @@ pdftops(1)                                             pdftops(1)
 
 NAME
        pdftops  -  Portable  Document  Format (PDF) to PostScript
-       converter (version 1.01)
+       converter (version 2.00)
 
 SYNOPSIS
        pdftops [options] [PDF-file [PS-file]]
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           20 May 2002                          1
+                         04 November 2002                       1
 
 
 
@@ -127,7 +127,7 @@ pdftops(1)                                             pdftops(1)
 
 
 
-                           20 May 2002                          2
+                         04 November 2002                       2
 
 
 
@@ -193,7 +193,7 @@ pdftops(1)                                             pdftops(1)
 
 
 
-                           20 May 2002                          3
+                         04 November 2002                       3
 
 
 
@@ -203,6 +203,19 @@ pdftops(1)                                             pdftops(1)
 
 
               equivalent.)
+
+EXIT CODES
+       The Xpdf tools use the following exit codes:
+
+       0      No error.
+
+       1      Error opening a PDF file.
+
+       2      Error opening an output file.
+
+       3      Error related to PDF permissions.
+
+       99     Other error.
 
 AUTHOR
        The  pdftops  software  and  documentation  are  copyright
@@ -246,19 +259,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-                           20 May 2002                          4
+                         04 November 2002                       4
 
 

@@ -1,4 +1,4 @@
-Subject: ANNOUNCE: Xpdf 1.01 - a PDF viewer for X
+Subject: ANNOUNCE: Xpdf 2.00 - a PDF viewer for X
 
 
 Glyph & Cog, LLC is pleased to announce a new version of Xpdf, the
@@ -10,17 +10,14 @@ Xpdf runs under the X Window System on Unix, VMS, and OS/2.  The non-X
 components (pdftops, pdftotext, etc.) also run on Win32 systems and
 should run on pretty much any system with a decent C++ compiler.
 
-Noticeable changes:
-* Glyph & Cog, LLC formed to handle all commercial licensing of Xpdf.
-* Optimized the 1-bit image code and the incremental display update
-  code.
-* Implemented 16-bit font embedding for PostScript output.
-* Implemented Type 3 fonts (viewer and PostScript conversion).
-* Added a simple reverse video mode (-rv switch, xpdf.reverseVideo
-  resource).
-* Many minor enhancements and bug fixes.
+Major changes:
+* Switched to the Motif toolkit.
+* Support multiple open documents (in separate windows).
+* Added document outlines to the viewer.
+* Modified the text extraction (placement) algorithm.
+* Implemented the JBIG2 decoder.
 
-See the `CHANGES' file for a complete list.
+See the `CHANGES' file for a complete list of changes.
 
 Source (C++ and C) is available, and it should be fairly easy to
 compile for UNIX, VMS, OS/2, and Win32.
