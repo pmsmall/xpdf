@@ -15,6 +15,7 @@
 #include "parseargs.h"
 #include "GString.h"
 #include "GList.h"
+#include "gfile.h"
 #include "GlobalParams.h"
 #include "XpdfViewer.h"
 #include "XpdfApp.h"
@@ -30,6 +31,7 @@ static char paperColorArg[256] = "";
 static char matteColorArg[256] = "";
 static char fsMatteColorArg[256] = "";
 static char initialZoomArg[256] = "";
+static int rotateArg = 0;
 static char antialiasArg[16] = "";
 static char vectorAntialiasArg[16] = "";
 static char textEncArg[128] = "";
@@ -49,6 +51,7 @@ static ArgDesc argDesc[] = {
   {"-mattecolor",   argString, matteColorArg,      sizeof(matteColorArg),      "color of matte background"},
   {"-fsmattecolor", argString, fsMatteColorArg,    sizeof(fsMatteColorArg),    "color of matte background in full-screen mode"},
   {"-z",            argString, initialZoomArg,     sizeof(initialZoomArg),     "initial zoom level (percent, 'page', 'width')"},
+  {"-rot",          argInt,    &rotateArg,         0,                          "initial page rotation: 0, 90, 180, or 270"},
   {"-aa",           argString, antialiasArg,       sizeof(antialiasArg),       "enable font anti-aliasing: yes, no"},
   {"-aaVector",     argString, vectorAntialiasArg, sizeof(vectorAntialiasArg), "enable vector anti-aliasing: yes, no"},
   {"-enc",          argString, textEncArg,         sizeof(textEncArg),         "output text encoding name"},
@@ -70,6 +73,8 @@ static ArgDesc argDesc[] = {
 // XpdfApp
 //------------------------------------------------------------------------
 
+static void mungeOpenFileName(const char *fileName, GString *cmd);
+
 XpdfApp::XpdfApp(int &argc, char **argv):
   QApplication(argc, argv)
 {
@@ -86,7 +91,7 @@ XpdfApp::XpdfApp(int &argc, char **argv):
 
   ok = parseArgs(argDesc, &argc, argv);
   if (!ok || printVersionArg || printHelpArg) {
-    fprintf(stderr, "xpdf version %s\n", xpdfVersion);
+    fprintf(stderr, "xpdf version %s [www.xpdfreader.com]\n", xpdfVersion);
     fprintf(stderr, "%s\n", xpdfCopyright);
     if (!printVersionArg) {
       printUsage("xpdf", "[<PDF-file> [:<page> | +<dest>]] ...", argDesc);
@@ -135,6 +140,9 @@ XpdfApp::XpdfApp(int &argc, char **argv):
     fsMatteColor = QColor(color->getCString());
     delete color;
   }
+  color = globalParams->getSelectionColor();
+  selectionColor = QColor(color->getCString());
+  delete color;
   if (antialiasArg[0]) {
     if (!globalParams->setAntialias(antialiasArg)) {
       fprintf(stderr, "Bad '-aa' value on command line\n");
@@ -192,7 +200,9 @@ XpdfApp::XpdfApp(int &argc, char **argv):
     sock->connectToServer(sockName, QIODevice::WriteOnly);
     if (sock->waitForConnected(5000)) {
       if (argc >= 2) {
-	cmd = GString::format("openFileIn({0:s},tab)\n", argv[1]);
+	cmd = new GString("openFileIn(");
+	mungeOpenFileName(argv[1], cmd);
+	cmd->append(",tab)\nraise\n");
 	sock->write(cmd->getCString());
 	delete cmd;
 	while (sock->bytesToWrite()) {
@@ -211,7 +221,8 @@ XpdfApp::XpdfApp(int &argc, char **argv):
 #else
 	QString qFileName = QString::fromLocal8Bit(argv[1]);
 #endif
-	openInNewWindow(qFileName, 1, "", passwordArg, fullScreen, "default");
+	openInNewWindow(qFileName, 1, "", rotateArg, passwordArg,
+			fullScreen, "default");
       } else {
 	newWindow(fullScreen, "default");
       }
@@ -246,14 +257,32 @@ XpdfApp::XpdfApp(int &argc, char **argv):
 #endif
       if (viewers->getLength() > 0) {
 	ok = ((XpdfViewer *)viewers->get(0))
-	         ->openInNewTab(qFileName, pg, dest, passwordArg, gFalse);
+	         ->openInNewTab(qFileName, pg, dest, rotateArg,
+				passwordArg, gFalse);
       } else {
-	ok = openInNewWindow(qFileName, pg, dest, passwordArg, fullScreen);
+	ok = openInNewWindow(qFileName, pg, dest, rotateArg,
+			     passwordArg, fullScreen);
       }
     }
   } else {
     newWindow(fullScreen);
   }
+}
+
+// Process the file name for the "-open" flag: convert a relative path
+// to absolute, and add escape chars as needed.  Append the modified
+// name to [cmd].
+static void mungeOpenFileName(const char *fileName, GString *cmd) {
+  GString *path = new GString(fileName);
+  makePathAbsolute(path);
+  for (int i = 0; i < path->getLength(); ++i) {
+    char c = path->getChar(i);
+    if (c == '(' || c == ')' || c == ',' || c == '\x01') {
+      cmd->append('\x01');
+    }
+    cmd->append(c);
+  }
+  delete path;
 }
 
 XpdfApp::~XpdfApp() {
@@ -272,16 +301,18 @@ XpdfViewer *XpdfApp::newWindow(GBool fullScreen,
   if (remoteServerName) {
     viewer->startRemoteServer(remoteServerName);
   }
+  viewer->tweakSize();
   viewer->show();
   return viewer;
 }
 
 GBool XpdfApp::openInNewWindow(QString fileName, int page, QString dest,
-			       QString password, GBool fullScreen,
+			       int rotate, QString password, GBool fullScreen,
 			       const char *remoteServerName) {
   XpdfViewer *viewer;
 
-  viewer = XpdfViewer::create(this, fileName, page, dest, password, fullScreen);
+  viewer = XpdfViewer::create(this, fileName, page, dest, rotate,
+			      password, fullScreen);
   if (!viewer) {
     return gFalse;
   }

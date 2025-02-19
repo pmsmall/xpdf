@@ -15,6 +15,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <QApplication>
 #include <QMutex>
 #include <QKeyEvent>
 #include <QPaintEvent>
@@ -41,7 +42,7 @@
 #include "OptionalContent.h"
 #include "Link.h"
 #include "Annot.h"
-#include "Form.h"
+#include "AcroForm.h"
 #include "TextString.h"
 #include "QtPDFCore.h"
 #include "XpdfWidget.h"
@@ -113,6 +114,10 @@ void XpdfWidget::setup(const QColor &paperColor, const QColor &matteColor,
 
   keyPassthrough = false;
   mousePassthrough = false;
+  lastMousePressX[0] = lastMousePressX[1] = lastMousePressX[2] = 0;
+  lastMousePressY[0] = lastMousePressY[1] = lastMousePressY[2] = 0;
+  lastMousePressTime[0] = lastMousePressTime[1] = lastMousePressTime[2] = 0;
+  lastMouseEventWasPress = false;
 
   viewport()->installEventFilter(this);
   touchPanEnabled = false;
@@ -202,6 +207,13 @@ void XpdfWidget::setConfig(const QString &command) {
 void XpdfWidget::enableHyperlinks(bool on) {
   try {
     core->enableHyperlinks((GBool)on);
+  } catch (GMemException e) {
+  }
+}
+
+void XpdfWidget::enableExternalHyperlinks(bool on) {
+  try {
+    core->enableExternalHyperlinks((GBool)on);
   } catch (GMemException e) {
   }
 }
@@ -944,7 +956,7 @@ XpdfFormFieldHandle XpdfWidget::onFormField(int page, double xx, double yy) {
 
 QString XpdfWidget::getFormFieldType(XpdfFormFieldHandle field) {
   try {
-    return ((FormField *)field)->getType();
+    return ((AcroFormField *)field)->getType();
   } catch (GMemException e) {
     return QString();
   }
@@ -956,7 +968,7 @@ QString XpdfWidget::getFormFieldName(XpdfFormFieldHandle field) {
   int length, i;
 
   try {
-    u = ((FormField *)field)->getName(&length);
+    u = ((AcroFormField *)field)->getName(&length);
     for (i = 0; i < length; ++i) {
       s.append((QChar)u[i]);
     }
@@ -973,7 +985,7 @@ QString XpdfWidget::getFormFieldValue(XpdfFormFieldHandle field) {
   int length, i;
 
   try {
-    u = ((FormField *)field)->getValue(&length);
+    u = ((AcroFormField *)field)->getValue(&length);
     for (i = 0; i < length; ++i) {
       s.append((QChar)u[i]);
     }
@@ -988,8 +1000,8 @@ void XpdfWidget::getFormFieldBBox(XpdfFormFieldHandle field, int *pageNum,
 				  double *xMin, double *yMin,
 				  double *xMax, double *yMax) {
   try {
-    *pageNum = ((FormField *)field)->getPageNum();
-    ((FormField *)field)->getBBox(xMin, yMin, xMax, yMax);
+    *pageNum = ((AcroFormField *)field)->getPageNum();
+    ((AcroFormField *)field)->getBBox(xMin, yMin, xMax, yMax);
   } catch (GMemException e) {
   }
 }
@@ -1528,6 +1540,84 @@ bool XpdfWidget::find(const QString &text, int flags) {
   }
 }
 
+QVector<XpdfFindResult> XpdfWidget::findAll(const QString &text, int firstPage,
+					    int lastPage, int flags) {
+  QVector<XpdfFindResult> v;
+  try {
+    if (!core->getDoc()) {
+      return v;
+    }
+    int len = text.length();
+    Unicode *u = (Unicode *)gmallocn(len, sizeof(Unicode));
+    for (int i = 0; i < len; ++i) {
+      u[i] = (Unicode)text[i].unicode();
+    }
+    GList *results = core->findAll(u, len,
+				   (flags & findCaseSensitive) ? gTrue : gFalse,
+				   (flags & findWholeWord) ? gTrue : gFalse,
+				   firstPage, lastPage);
+    gfree(u);
+    for (int i = 0; i < results->getLength(); ++i) {
+      FindResult *result = (FindResult *)results->get(i);
+      v.append(XpdfFindResult(result->page, result->xMin, result->yMin,
+			      result->xMax, result->yMax));
+    }
+    deleteGList(results, FindResult);
+    return v;
+  } catch (GMemException e) {
+    return v;
+  }
+}
+
+bool XpdfWidget::hasPageLabels() {
+  try {
+    if (!core->getDoc()) {
+      return false;
+    }
+    return core->getDoc()->getCatalog()->hasPageLabels();
+  } catch (GMemException e) {
+    return false;
+  }
+}
+
+QString XpdfWidget::getPageLabelFromPageNum(int pageNum) {
+  try {
+    if (!core->getDoc()) {
+      return QString();
+    }
+    TextString *ts = core->getDoc()->getCatalog()->getPageLabel(pageNum);
+    if (!ts) {
+      return QString();
+    }
+    QString qs;
+    Unicode *u = ts->getUnicode();
+    for (int i = 0; i < ts->getLength(); ++i) {
+      qs.append((QChar)u[i]);
+    }
+    delete ts;
+    return qs;
+  } catch (GMemException e) {
+    return QString();
+  }
+}
+
+int XpdfWidget::getPageNumFromPageLabel(QString pageLabel) {
+  try {
+    if (!core->getDoc()) {
+      return -1;
+    }
+    TextString *ts = new TextString();
+    for (int i = 0; i < pageLabel.size(); ++i) {
+      ts->append((Unicode)pageLabel.at(i).unicode());
+    }
+    int pg = core->getDoc()->getCatalog()->getPageNumFromPageLabel(ts);
+    delete ts;
+    return pg;
+  } catch (GMemException e) {
+    return -1;
+  }
+}
+
 int XpdfWidget::getOutlineNumChildren(XpdfOutlineHandle outline) {
   GList *items;
 
@@ -1991,11 +2081,21 @@ void XpdfWidget::keyPressEvent(QKeyEvent *e) {
 void XpdfWidget::mousePressEvent(QMouseEvent *e) {
   int x, y;
 
+  lastMousePressX[0] = lastMousePressX[1];
+  lastMousePressY[0] = lastMousePressY[1];
+  lastMousePressTime[0] = lastMousePressTime[1];
+  lastMousePressX[1] = lastMousePressX[2];
+  lastMousePressY[1] = lastMousePressY[2];
+  lastMousePressTime[1] = lastMousePressTime[2];
+  lastMousePressX[2] = e->x();
+  lastMousePressY[2] = e->y();
+  lastMousePressTime[2] = e->timestamp();
+  lastMouseEventWasPress = true;
   if (!mousePassthrough) {
     x = (int)(e->x() * scaleFactor);
     y = (int)(e->y() * scaleFactor);
     if (e->button() == Qt::LeftButton) {
-      core->startSelection(x, y);
+      core->startSelection(x, y, e->modifiers() & Qt::ShiftModifier);
     } else if (e->button() == Qt::MidButton) {
       core->startPan(x, y);
     }
@@ -2006,6 +2106,13 @@ void XpdfWidget::mousePressEvent(QMouseEvent *e) {
 void XpdfWidget::mouseReleaseEvent(QMouseEvent *e) {
   int x, y;
 
+  // some versions of Qt drop mouse press events in double-clicks (?)
+  if (!lastMouseEventWasPress) {
+    mousePressEvent(e);
+  }
+  lastMouseEventWasPress = false;
+
+  x = y = 0;
   if (!mousePassthrough) {
     x = (int)(e->x() * scaleFactor);
     y = (int)(e->y() * scaleFactor);
@@ -2016,6 +2123,29 @@ void XpdfWidget::mouseReleaseEvent(QMouseEvent *e) {
     }
   }
   emit mouseRelease(e);
+
+  // double and triple clicks have to be "quick" and "nearby";
+  // single clicks just have to be "nearby"
+  ulong maxTime = (ulong)QApplication::doubleClickInterval();
+  int maxDistance = QApplication::startDragDistance();
+  if (e->timestamp() - lastMousePressTime[0] < 2 * maxTime &&
+      abs(e->x() - lastMousePressX[0]) + abs(e->y() - lastMousePressY[0])
+        <= maxDistance) {
+    if (!mousePassthrough && e->button() == Qt::LeftButton) {
+      core->selectLine(x, y);
+    }
+    emit mouseTripleClick(e);
+  } else if (e->timestamp() - lastMousePressTime[1] < maxTime &&
+      abs(e->x() - lastMousePressX[1]) + abs(e->y() - lastMousePressY[1])
+        <= maxDistance) {
+    if (!mousePassthrough && e->button() == Qt::LeftButton) {
+      core->selectWord(x, y);
+    }
+    emit mouseDoubleClick(e);
+  } else if (abs(e->x() - lastMousePressX[2]) + abs(e->y() - lastMousePressY[2])
+        <= maxDistance) {
+    emit mouseClick(e);
+  }
 }
 
 void XpdfWidget::mouseMoveEvent(QMouseEvent *e) {
