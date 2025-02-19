@@ -389,6 +389,11 @@ void QtPDFCore::selectWord(int wx, int wy) {
     return;
   }
   PDFCore::selectWord(pg, x, y);
+#ifndef NO_TEXT_SELECT
+  if (hasSelection()) {
+    copySelection(gFalse);
+  }
+#endif
 }
 
 void QtPDFCore::selectLine(int wx, int wy) {
@@ -405,6 +410,11 @@ void QtPDFCore::selectLine(int wx, int wy) {
     return;
   }
   PDFCore::selectLine(pg, x, y);
+#ifndef NO_TEXT_SELECT
+  if (hasSelection()) {
+    copySelection(gFalse);
+  }
+#endif
 }
 
 void QtPDFCore::doLinkCbk(LinkAction *action) {
@@ -623,7 +633,17 @@ GBool QtPDFCore::doAction(LinkAction *action) {
       if (globalParams->getLaunchCommand()) {
 	cmd->insert(0, ' ');
 	cmd->insert(0, globalParams->getLaunchCommand());
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	QString cmdStr(cmd->getCString());
+	QStringList tokens = QProcess::splitCommand(cmdStr);
+	if (!tokens.isEmpty()) {
+	  QString program = tokens[0];
+	  tokens.removeFirst();
+	  QProcess::startDetached(program, tokens);
+	}
+#else
 	QProcess::startDetached(cmd->getCString());
+#endif
       } else {
 	msg = new GString("About to execute the command:\n");
 	msg->append(cmd);
@@ -632,7 +652,17 @@ GBool QtPDFCore::doAction(LinkAction *action) {
 				  QMessageBox::Ok | QMessageBox::Cancel,
 				  QMessageBox::Ok)
 	    == QMessageBox::Ok) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	  QString cmdStr(cmd->getCString());
+	  QStringList tokens = QProcess::splitCommand(cmdStr);
+	  if (!tokens.isEmpty()) {
+	    QString program = tokens[0];
+	    tokens.removeFirst();
+	    QProcess::startDetached(program, tokens);
+	  }
+#else
 	  QProcess::startDetached(cmd->getCString());
+#endif
 	}
 	delete msg;
       }
@@ -822,7 +852,17 @@ void QtPDFCore::runCommand(GString *cmdFmt, GString *arg) {
   } else {
     cmd = cmdFmt->copy();
   }
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+  QString cmdStr(cmd->getCString());
+  QStringList tokens = QProcess::splitCommand(cmdStr);
+  if (!tokens.isEmpty()) {
+    QString program = tokens[0];
+    tokens.removeFirst();
+    QProcess::startDetached(program, tokens);
+  }
+#else
   QProcess::startDetached(cmd->getCString());
+#endif
   delete cmd;
 }
 

@@ -212,7 +212,7 @@ GString *SysFontInfo::mungeName1(GString *in) {
   return out;
 }
 
-// Remove trailing "Identity-H"/"Identity-V" from the name.
+// Remove trailing encoding tags from the name.
 // Split the name into tokens at space/comma/dash/underscore.
 // Remove trailing "MT" or "BT" from tokens.
 // Remove trailing "PS" and "WGL4" from tokens.
@@ -222,7 +222,9 @@ GString *SysFontInfo::mungeName2(GString *in) {
   GString *out = new GString();
   char *p0 = in->getCString();
   while (*p0) {
-    if (!strcmp(p0, "Identity-H") || !strcmp(p0, "Identity-V")) {
+    if (!strcmp(p0, "Identity-H") || !strcmp(p0, "Identity-V") ||
+	!strcmp(p0, "GB2312") ||
+	!strcmp(p0, "UniGB-UCS2-H") || !strcmp(p0, "UniGB-UCS2-V")) {
       break;
     }
     char *p1;
@@ -722,6 +724,7 @@ GlobalParams::GlobalParams(const char *cfgFileName) {
   disableFreeTypeHinting = gFalse;
   antialias = gTrue;
   vectorAntialias = gTrue;
+  imageMaskAntialias = gTrue;
   antialiasPrinting = gFalse;
   strokeAdjust = strokeAdjustNormal;
   screenType = screenUnset;
@@ -734,6 +737,7 @@ GlobalParams::GlobalParams(const char *cfgFileName) {
   enablePathSimplification = gFalse;
   drawAnnotations = gTrue;
   drawFormFields = gTrue;
+  enableXFA = gTrue;
   overprintPreview = gFalse;
   paperColor = new GString("#ffffff");
   matteColor = new GString("#808080");
@@ -746,11 +750,14 @@ GlobalParams::GlobalParams(const char *cfgFileName) {
   mapNumericCharNames = gTrue;
   mapUnknownCharNames = gFalse;
   mapExtTrueTypeFontsViaUnicode = gTrue;
+  useTrueTypeUnicodeMapping = gFalse;
   droppedFonts = new GHash(gTrue);
   createDefaultKeyBindings();
   popupMenuCmds = new GList();
   tabStateFile = appendToPath(getHomeDir(), ".xpdf.tab-state");
+  savePageNumbers = gTrue;
   printCommands = gFalse;
+  printStatusInfo = gFalse;
   errQuiet = gFalse;
   debugLogFile = NULL;
 
@@ -1177,6 +1184,9 @@ void GlobalParams::parseLine(char *buf, GString *fileName, int line) {
     } else if (!cmd->cmp("vectorAntialias")) {
       parseYesNo("vectorAntialias", &vectorAntialias,
 		 tokens, fileName, line);
+    } else if (!cmd->cmp("imageMaskAntialias")) {
+      parseYesNo("imageMaskAntialias", &imageMaskAntialias,
+		 tokens, fileName, line);
     } else if (!cmd->cmp("antialiasPrinting")) {
       parseYesNo("antialiasPrinting", &antialiasPrinting,
 		 tokens, fileName, line);
@@ -1210,6 +1220,9 @@ void GlobalParams::parseLine(char *buf, GString *fileName, int line) {
     } else if (!cmd->cmp("drawFormFields")) {
       parseYesNo("drawFormFields", &drawFormFields,
 		 tokens, fileName, line);
+    } else if (!cmd->cmp("enableXFA")) {
+      parseYesNo("enableXFA", &enableXFA,
+		 tokens, fileName, line);
     } else if (!cmd->cmp("overprintPreview")) {
       parseYesNo("overprintPreview", &overprintPreview,
 		 tokens, fileName, line);
@@ -1241,6 +1254,10 @@ void GlobalParams::parseLine(char *buf, GString *fileName, int line) {
       parseYesNo("mapExtTrueTypeFontsViaUnicode",
 		 &mapExtTrueTypeFontsViaUnicode,
 		 tokens, fileName, line);
+    } else if (!cmd->cmp("useTrueTypeUnicodeMapping")) {
+      parseYesNo("useTrueTypeUnicodeMapping",
+		 &useTrueTypeUnicodeMapping,
+		 tokens, fileName, line);
     } else if (!cmd->cmp("dropFont")) {
       parseDropFont(tokens, fileName, line);
     } else if (!cmd->cmp("bind")) {
@@ -1251,8 +1268,12 @@ void GlobalParams::parseLine(char *buf, GString *fileName, int line) {
       parsePopupMenuCmd(tokens, fileName, line);
     } else if (!cmd->cmp("tabStateFile")) {
       parseString("tabStateFile", &tabStateFile, tokens, fileName, line);
+    } else if (!cmd->cmp("savePageNumbers")) {
+      parseYesNo("savePageNumbers", &savePageNumbers, tokens, fileName, line);
     } else if (!cmd->cmp("printCommands")) {
       parseYesNo("printCommands", &printCommands, tokens, fileName, line);
+    } else if (!cmd->cmp("printStatusInfo")) {
+      parseYesNo("printStatusInfo", &printStatusInfo, tokens, fileName, line);
     } else if (!cmd->cmp("errQuiet")) {
       parseYesNo("errQuiet", &errQuiet, tokens, fileName, line);
     } else if (!cmd->cmp("debugLogFile")) {
@@ -1272,8 +1293,6 @@ void GlobalParams::parseLine(char *buf, GString *fileName, int line) {
       } else if (!cmd->cmp("fontpath") || !cmd->cmp("fontmap")) {
 	error(errConfig, -1,
 	      "The config file format has changed since Xpdf 0.9x");
-      } else if (!cmd->cmp("enableXFA")) {
-	error(errConfig, -1, "The enableXFA option is no longer used");
       }
     }
   }
@@ -2106,6 +2125,7 @@ GlobalParams::~GlobalParams() {
   deleteGList(keyBindings, KeyBinding);
   deleteGList(popupMenuCmds, PopupMenuCmd);
   delete tabStateFile;
+  delete debugLogFile;
 
   cMapDirs->startIter(&iter);
   while (cMapDirs->getNext(&iter, &key, (void **)&list)) {
@@ -3048,6 +3068,15 @@ GBool GlobalParams::getVectorAntialias() {
   return f;
 }
 
+GBool GlobalParams::getImageMaskAntialias() {
+  GBool f;
+
+  lockGlobalParams;
+  f = imageMaskAntialias;
+  unlockGlobalParams;
+  return f;
+}
+
 GBool GlobalParams::getAntialiasPrinting() {
   GBool f;
 
@@ -3156,6 +3185,15 @@ GBool GlobalParams::getDrawFormFields() {
   return draw;
 }
 
+GBool GlobalParams::getEnableXFA() {
+  GBool xfa;
+
+  lockGlobalParams;
+  xfa = enableXFA;
+  unlockGlobalParams;
+  return xfa;
+}
+
 
 
 GString *GlobalParams::getPaperColor() {
@@ -3239,6 +3277,15 @@ GBool GlobalParams::getMapExtTrueTypeFontsViaUnicode() {
   return map;
 }
 
+GBool GlobalParams::getUseTrueTypeUnicodeMapping() {
+  GBool use;
+
+  lockGlobalParams;
+  use = useTrueTypeUnicodeMapping;
+  unlockGlobalParams;
+  return use;
+}
+
 GBool GlobalParams::isDroppedFont(const char *fontName) {
   GBool isDropped;
 
@@ -3309,11 +3356,29 @@ GString *GlobalParams::getTabStateFile() {
   return s;
 }
 
+GBool GlobalParams::getSavePageNumbers() {
+  GBool s;
+
+  lockGlobalParams;
+  s = savePageNumbers;
+  unlockGlobalParams;
+  return s;
+}
+
 GBool GlobalParams::getPrintCommands() {
   GBool p;
 
   lockGlobalParams;
   p = printCommands;
+  unlockGlobalParams;
+  return p;
+}
+
+GBool GlobalParams::getPrintStatusInfo() {
+  GBool p;
+
+  lockGlobalParams;
+  p = printStatusInfo;
   unlockGlobalParams;
   return p;
 }
@@ -3744,6 +3809,12 @@ void GlobalParams::setTabStateFile(char *tabStateFileA) {
 void GlobalParams::setPrintCommands(GBool printCommandsA) {
   lockGlobalParams;
   printCommands = printCommandsA;
+  unlockGlobalParams;
+}
+
+void GlobalParams::setPrintStatusInfo(GBool printStatusInfoA) {
+  lockGlobalParams;
+  printStatusInfo = printStatusInfoA;
   unlockGlobalParams;
 }
 

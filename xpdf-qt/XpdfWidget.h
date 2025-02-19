@@ -12,7 +12,7 @@
 //! <br><br>
 //! <a href="changes.html">Change history</a>
 //! <br><br>
-//! Copyright 2009-2021 Glyph & Cog, LLC
+//! Copyright 2009-2022 Glyph & Cog, LLC
 
 //! \file
 
@@ -640,15 +640,20 @@ public:
 
   //! Convert a page to a color image.
   //! This function converts the page number \a page to a 24-bit RGB
-  //! bitmap, at a resolution of \a dpi dots per inch.
-  QImage convertPageToImage(int page, double dpi);
+  //! bitmap, at a resolution of \a dpi dots per inch.  If \a
+  //! transparent is true, the returned image will be 32-bit ARGB
+  //! instead, and will include an alpha channel.
+  QImage convertPageToImage(int page, double dpi, bool transparent = false);
 
   //! Convert a rectangular region of a page to a color image.
-  //! This function converts a rectangular region, defined by
-  //! corners (\a x0,\a y0) and (\a x1,\a y1), of page number \a page
-  //! to a 24-bit RGB bitmap, at a resolution of \a dpi dots per inch.
+  //! This function converts a rectangular region, defined by corners
+  //! (\a x0,\a y0) and (\a x1,\a y1), of page number \a page to a
+  //! 24-bit RGB bitmap, at a resolution of \a dpi dots per inch.  If
+  //! \a transparent is true, the returned image will be 32-bit ARGB
+  //! instead, and will include an alpha channel.
   QImage convertRegionToImage(int page, double x0, double y0,
-			      double x1, double y1, double dpi);
+			      double x1, double y1, double dpi,
+			      bool transparent = false);
 
   //! Retrieve an embedded thumbnail image.
   //! This function returns the embedded thumbnail image for the

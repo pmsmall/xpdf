@@ -13,10 +13,23 @@
 
 #include <QApplication>
 #include <QColor>
+#include <QDateTime>
 #include "gtypes.h"
 
 class GList;
 class XpdfViewer;
+
+//------------------------------------------------------------------------
+
+struct XpdfSavedPageNumber {
+  XpdfSavedPageNumber(): pageNumber(1) {}
+  XpdfSavedPageNumber(const QString &fileNameA, int pageNumberA)
+    : fileName(fileNameA), pageNumber(pageNumberA) {}
+  QString fileName;
+  int pageNumber;
+};
+
+#define maxSavedPageNumbers 100
 
 //------------------------------------------------------------------------
 // XpdfApp
@@ -44,6 +57,14 @@ public:
 
   void closeWindowOrQuit(XpdfViewer *viewer);
 
+  // Called just before closing one or more PDF files.
+  void startUpdatePagesFile();
+  void updatePagesFile(const QString &fileName, int pageNumber);
+  void finishUpdatePagesFile();
+
+  // Return the saved page number for [fileName].
+  int getSavedPageNumber(const QString &fileName);
+
   void quit();
 
   //--- for use by XpdfViewer
@@ -57,6 +78,9 @@ public:
 
 private:
 
+  void readPagesFile();
+  void writePagesFile();
+
   int errorEventType;
   QColor paperColor;
   QColor matteColor;
@@ -65,6 +89,11 @@ private:
   GBool reverseVideo;
 
   GList *viewers;		// [XpdfViewer]
+
+  QString savedPagesFileName;
+  QDateTime savedPagesFileTimestamp;
+  XpdfSavedPageNumber savedPageNumbers[maxSavedPageNumbers];
+  GBool savedPagesFileChanged;
 };
 
 #endif

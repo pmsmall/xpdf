@@ -10,7 +10,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <QFileInfo>
 #include <QLocalSocket>
+#ifdef _WIN32
+#  include <shlobj.h>
+#endif
 #include "config.h"
 #include "parseargs.h"
 #include "GString.h"
@@ -234,7 +238,7 @@ XpdfApp::XpdfApp(int &argc, char **argv):
   if (argc >= 2) {
     i = 1;
     while (i < argc) {
-      pg = 1;
+      pg = -1;
       dest = "";
       if (i+1 < argc && argv[i+1][0] == ':') {
 	fileName = argv[i];
@@ -345,4 +349,151 @@ void XpdfApp::quit() {
     viewer->close();
   }
   QApplication::quit();
+}
+
+//------------------------------------------------------------------------
+
+void XpdfApp::startUpdatePagesFile() {
+  if (!globalParams->getSavePageNumbers()) {
+    return;
+  }
+  readPagesFile();
+  savedPagesFileChanged = gFalse;
+}
+
+void XpdfApp::updatePagesFile(const QString &fileName, int pageNumber) {
+  if (!globalParams->getSavePageNumbers()) {
+    return;
+  }
+  if (fileName.isEmpty()) {
+    return;
+  }
+  QString canonicalFileName = QFileInfo(fileName).canonicalFilePath();
+  if (canonicalFileName.isEmpty()) {
+    return;
+  }
+  XpdfSavedPageNumber s(canonicalFileName, pageNumber);
+  for (int i = 0; i < maxSavedPageNumbers; ++i) {
+    XpdfSavedPageNumber next = savedPageNumbers[i];
+    savedPageNumbers[i] = s;
+    if (next.fileName == canonicalFileName) {
+      break;
+    }
+    s = next;
+  }
+  savedPagesFileChanged = gTrue;
+}
+
+void XpdfApp::finishUpdatePagesFile() {
+  if (!globalParams->getSavePageNumbers()) {
+    return;
+  }
+  if (savedPagesFileChanged) {
+    writePagesFile();
+  }
+}
+
+int XpdfApp::getSavedPageNumber(const QString &fileName) {
+  if (!globalParams->getSavePageNumbers()) {
+    return 1;
+  }
+  readPagesFile();
+  QString canonicalFileName = QFileInfo(fileName).canonicalFilePath();
+  if (canonicalFileName.isEmpty()) {
+    return 1;
+  }
+  for (int i = 0; i < maxSavedPageNumbers; ++i) {
+    if (savedPageNumbers[i].fileName == canonicalFileName) {
+      return savedPageNumbers[i].pageNumber;
+    }
+  }
+  return 1;
+}
+
+void XpdfApp::readPagesFile() {
+  // construct the file name (first time only)
+  if (savedPagesFileName.isEmpty()) {
+#ifdef _WIN32
+    char path[MAX_PATH];
+    if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL,
+			SHGFP_TYPE_CURRENT, path) != S_OK) {
+      return;
+    }
+    savedPagesFileName = QString::fromLocal8Bit(path);
+    savedPagesFileName.append("/xpdf");
+    CreateDirectory(savedPagesFileName.toLocal8Bit().constData(), NULL);
+    savedPagesFileName.append("/xpdf.pages");
+#else
+    GString *path = getHomeDir();
+    savedPagesFileName = QString::fromUtf8(path->getCString());
+    delete path;
+    savedPagesFileName.append("/.xpdf.pages");
+#endif
+  }
+
+  // no change since last read, so no need to re-read
+  if (savedPagesFileTimestamp.isValid() &&
+      QFileInfo(savedPagesFileName).lastModified() == savedPagesFileTimestamp) {
+    return;
+  }
+
+  // mark all entries invalid
+  for (int i = 0; i < maxSavedPageNumbers; ++i) {
+    savedPageNumbers[i].fileName.clear();
+    savedPageNumbers[i].pageNumber = 1;
+  }
+
+  // read the file
+  FILE *f = openFile(savedPagesFileName.toUtf8().constData(), "rb");
+  if (!f) {
+    return;
+  }
+  char buf[1024];
+  if (!fgets(buf, sizeof(buf), f) ||
+      strcmp(buf, "xpdf.pages-1\n") != 0) {
+    fclose(f);
+    return;
+  }
+  int i = 0;
+  while (i < maxSavedPageNumbers && fgets(buf, sizeof(buf), f)) {
+    int n = (int)strlen(buf);
+    if (n > 0 && buf[n-1] == '\n') {
+      buf[n-1] = '\0';
+    }
+    char *p = buf;
+    while (*p != ' ' && *p) {
+      ++p;
+    }
+    if (!*p) {
+      continue;
+    }
+    *p++ = '\0';
+    savedPageNumbers[i].pageNumber = atoi(buf);
+    savedPageNumbers[i].fileName = QString::fromUtf8(p);
+    ++i;
+  }
+  fclose(f);
+
+  // save the timestamp
+  savedPagesFileTimestamp = QFileInfo(savedPagesFileName).lastModified();
+}
+
+void XpdfApp::writePagesFile() {
+  if (savedPagesFileName.isEmpty()) {
+    return;
+  }
+  FILE *f = openFile(savedPagesFileName.toUtf8().constData(), "wb");
+  if (!f) {
+    return;
+  }
+  fprintf(f, "xpdf.pages-1\n");
+  for (int i = 0; i < maxSavedPageNumbers; ++i) {
+    if (!savedPageNumbers[i].fileName.isEmpty()) {
+      fprintf(f, "%d %s\n",
+	      savedPageNumbers[i].pageNumber,
+	      savedPageNumbers[i].fileName.toUtf8().constData());
+    }
+  }
+  fclose(f);
+  savedPagesFileTimestamp = QFileInfo(savedPagesFileName).lastModified();
 }

@@ -8,7 +8,7 @@
 #
 #========================================================================
 
-if ((QT4_FOUND OR Qt5Widgets_FOUND)
+if ((QT4_FOUND OR Qt5Widgets_FOUND OR Qt6Widgets_FOUND)
     AND HAVE_SPLASH AND MULTITHREADED AND USE_EXCEPTIONS)
   include_directories("${PROJECT_SOURCE_DIR}")
   include_directories("${PROJECT_BINARY_DIR}")
@@ -28,6 +28,12 @@ if ((QT4_FOUND OR Qt5Widgets_FOUND)
   if (Qt5Widgets_FOUND AND NOT (Qt5Widgets_VERSION VERSION_LESS 5.7.0))
     set(CMAKE_CXX_STANDARD 11)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  endif ()
+
+  if (WIN32)
+    set(XPDF_MANIFEST "${PROJECT_SOURCE_DIR}/xpdf/winLongPath.exe.manifest")
+  else ()
+    set(XPDF_MANIFEST "")
   endif ()
 
   if (XPDFWIDGET_PRINTING)
@@ -52,14 +58,19 @@ if ((QT4_FOUND OR Qt5Widgets_FOUND)
     qt4_wrap_cpp(XPDFVIEWER_MOC XpdfViewer.h)
     qt4_wrap_cpp(XPDFAPP_MOC XpdfApp.h)
     qt4_add_resources(XPDF_ICONS icons.qrc)
-  else ()
+  elseif (Qt5Widgets_FOUND)
     qt5_wrap_cpp(XPDFWIDGET_MOC XpdfWidget.h)
     qt5_wrap_cpp(XPDFVIEWER_MOC XpdfViewer.h)
     qt5_wrap_cpp(XPDFAPP_MOC XpdfApp.h)
     qt5_add_resources(XPDF_ICONS icons.qrc)
+  else ()
+    qt6_wrap_cpp(XPDFWIDGET_MOC XpdfWidget.h)
+    qt6_wrap_cpp(XPDFVIEWER_MOC XpdfViewer.h)
+    qt6_wrap_cpp(XPDFAPP_MOC XpdfApp.h)
+    qt6_add_resources(XPDF_ICONS icons.qrc)
   endif ()
 
-  # workaround for a conflict between the Qt5 QDateTime and windows.h
+  # workaround for a conflict between the Qt5/6 QDateTime and windows.h
   if (WIN32)
     add_definitions(-DNOMINMAX)
   endif ()
@@ -81,6 +92,7 @@ if ((QT4_FOUND OR Qt5Widgets_FOUND)
     ${XPDFVIEWER_MOC}
     ${XPDFWIDGET_MOC}
     ${XPDF_ICONS}
+    ${XPDF_MANIFEST}
   )
   target_link_libraries(xpdf ${QT_LIBRARIES} ${EXTRA_QT_LIBRARIES}
                         ${PAPER_LIBRARY}
@@ -92,8 +104,10 @@ if ((QT4_FOUND OR Qt5Widgets_FOUND)
   set_property(TARGET xpdf PROPERTY WIN32_EXECUTABLE 1)
   if (QT4_FOUND)
     set_property(TARGET xpdf PROPERTY QT4_NO_LINK_QTMAIN ON)
-  else ()
+  elseif (Qt5Widgets_FOUND)
     set_property(TARGET xpdf PROPERTY Qt5_NO_LINK_QTMAIN ON)
+  else ()
+    set_property(TARGET xpdf PROPERTY Qt6_NO_LINK_QTMAIN ON)
   endif ()
 
   install(TARGETS xpdf RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

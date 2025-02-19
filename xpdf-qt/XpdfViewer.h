@@ -38,6 +38,7 @@ class QSignalMapper;
 class QSplitter;
 class QStackedLayout;
 class QStackedWidget;
+class QTextBrowser;
 class QTimer;
 class QToolBar;
 class QToolButton;
@@ -153,6 +154,10 @@ public:
   // Execute a command [cmd], with [event] for context.
   void execCmd(const char *cmd, QInputEvent *event);
 
+public slots:
+
+  bool close();
+
 private slots:
 
   void remoteServerConnection();
@@ -199,6 +204,7 @@ private slots:
   void toggleToolbarMenuAction(bool checked);
   void toggleSidebarMenuAction(bool checked);
   void viewPageLabelsMenuAction(bool checked);
+  void documentInfoMenuAction();
   void newTabMenuAction();
   void newWindowMenuAction();
   void closeTabMenuAction();
@@ -216,7 +222,7 @@ private slots:
   void forwardButtonPressed();
   void zoomOutButtonPressed();
   void zoomInButtonPressed();
-  void zoomIndexChanged(const QString &zoomText);
+  void zoomIndexChanged(int idx);
   void zoomEditingFinished();
   void fitWidthButtonPressed();
   void fitPageButtonPressed();
@@ -228,6 +234,8 @@ private slots:
   void newTabButtonPressed();
 
   void switchTab(QListWidgetItem *current, QListWidgetItem *previous);
+  void tabsReordered(const QModelIndex &srcParent, int srcStart, int srcEnd,
+		     const QModelIndex &destParent, int destRow);
   void infoComboBoxChanged(int idx);
   void outlineItemClicked(const QModelIndex& idx);
   void layerItemClicked(const QModelIndex& idx);
@@ -280,6 +288,7 @@ private:
   void cmdGotoLastPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdGotoPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdHelp(GString *args[], int nArgs, QInputEvent *event);
+  void cmdHideMenuBar(GString *args[], int nArgs, QInputEvent *event);
   void cmdHideToolbar(GString *args[], int nArgs, QInputEvent *event);
   void cmdHorizontalContinuousMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdLinearSelectMode(GString *args[], int nArgs, QInputEvent *event);
@@ -292,6 +301,7 @@ private:
   void cmdOpen(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenErrorWindow(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenFile(GString *args[], int nArgs, QInputEvent *event);
+  void cmdOpenFile2(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenFileAtDest(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenFileAtDestIn(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenFileAtPage(GString *args[], int nArgs, QInputEvent *event);
@@ -336,7 +346,12 @@ private:
   void cmdSelectLine(GString *args[], int nArgs, QInputEvent *event);
   void cmdSelectWord(GString *args[], int nArgs, QInputEvent *event);
   void cmdSetSelection(GString *args[], int nArgs, QInputEvent *event);
+  void cmdShowAttachmentsPane(GString *args[], int nArgs, QInputEvent *event);
+  void cmdShowDocumentInfo(GString *args[], int nArgs, QInputEvent *event);
   void cmdShowKeyBindings(GString *args[], int nArgs, QInputEvent *event);
+  void cmdShowLayersPane(GString *args[], int nArgs, QInputEvent *event);
+  void cmdShowMenuBar(GString *args[], int nArgs, QInputEvent *event);
+  void cmdShowOutlinePane(GString *args[], int nArgs, QInputEvent *event);
   void cmdShowToolbar(GString *args[], int nArgs, QInputEvent *event);
   void cmdShrinkSidebar(GString *args[], int nArgs, QInputEvent *event);
   void cmdSideBySideContinuousMode(GString *args[], int nArgs, QInputEvent *event);
@@ -347,6 +362,7 @@ private:
   void cmdStartSelection(GString *args[], int nArgs, QInputEvent *event);
   void cmdToggleContinuousMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdToggleFullScreenMode(GString *args[], int nArgs, QInputEvent *event);
+  void cmdToggleMenuBar(GString *args[], int nArgs, QInputEvent *event);
   void cmdToggleSelectMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdToggleSidebar(GString *args[], int nArgs, QInputEvent *event);
   void cmdToggleSidebarMoveResizeWin(GString *args[], int nArgs, QInputEvent *event);
@@ -408,6 +424,10 @@ private:
   void statusIndicatorOk();
   void statusIndicatorError();
   void showFindError();
+  void createDocumentInfoDialog();
+  void updateDocumentInfoDialog(XpdfWidget *view);
+  QString createDocumentInfoMetadataHTML(XpdfWidget *view);
+  QString createDocumentInfoFontsHTML(XpdfWidget *view);
   void createKeyBindingsDialog();
   QString createKeyBindingsHTML();
   void createAboutDialog();
@@ -461,6 +481,7 @@ private:
 
   GList *tabInfo;		// [XpdfTabInfo]
   XpdfTabInfo *currentTab;
+  XpdfTabInfo *lastOpenedTab;
 
   double scaleFactor;
 
@@ -470,6 +491,9 @@ private:
   QTimer *findErrorTimer;
 
   XpdfErrorWindow *errorWindow;
+  QDialog *documentInfoDialog;
+  QTextBrowser *documentInfoMetadataTab;
+  QTextBrowser *documentInfoFontsTab;
   QDialog *keyBindingsDialog;
   QDialog *aboutDialog;
 #if XPDFWIDGET_PRINTING

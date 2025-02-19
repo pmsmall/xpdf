@@ -124,11 +124,11 @@ PDFDoc::PDFDoc(wchar_t *fileNameA, int fileNameLen, GString *ownerPassword,
   init(coreA);
 
   // handle a Windows shortcut
-  wchar_t wPath[MAX_PATH + 1];
-  int n = fileNameLen < MAX_PATH ? fileNameLen : MAX_PATH;
+  wchar_t wPath[winMaxLongPath + 1];
+  int n = fileNameLen < winMaxLongPath ? fileNameLen : winMaxLongPath;
   memcpy(wPath, fileNameA, n * sizeof(wchar_t));
   wPath[n] = L'\0';
-  readWindowsShortcut(wPath, MAX_PATH + 1);
+  readWindowsShortcut(wPath, winMaxLongPath + 1);
   int wPathLen = (int)wcslen(wPath);
 
   // save both Unicode and 8-bit copies of the file name
@@ -178,14 +178,14 @@ PDFDoc::PDFDoc(char *fileNameA, GString *ownerPassword,
   fileName = new GString(fileNameA);
 
 #if defined(_WIN32)
-  wchar_t wPath[MAX_PATH + 1];
+  wchar_t wPath[winMaxLongPath + 1];
   i = 0;
   j = 0;
-  while (j < MAX_PATH && getUTF8(fileName, &i, &u)) {
+  while (j < winMaxLongPath && getUTF8(fileName, &i, &u)) {
     wPath[j++] = (wchar_t)u;
   }
   wPath[j] = L'\0';
-  readWindowsShortcut(wPath, MAX_PATH + 1);
+  readWindowsShortcut(wPath, winMaxLongPath + 1);
   int wPathLen = (int)wcslen(wPath);
 
   fileNameU = (wchar_t *)gmallocn(wPathLen + 1, sizeof(wchar_t));
@@ -452,6 +452,11 @@ void PDFDoc::displayPages(OutputDev *out, int firstPage, int lastPage,
   int page;
 
   for (page = firstPage; page <= lastPage; ++page) {
+    if (globalParams->getPrintStatusInfo()) {
+      fflush(stderr);
+      printf("[processing page %d]\n", page);
+      fflush(stdout);
+    }
     displayPage(out, page, hDPI, vDPI, rotate, useMediaBox, crop, printing,
 		abortCheckCbk, abortCheckCbkData);
     catalog->doneWithPage(page);
@@ -597,8 +602,8 @@ GBool PDFDoc::saveEmbeddedFileU(int idx, const char *path) {
 GBool PDFDoc::saveEmbeddedFile(int idx, const wchar_t *path, int pathLen) {
   FILE *f;
   OSVERSIONINFO version;
-  wchar_t path2w[_MAX_PATH + 1];
-  char path2c[_MAX_PATH + 1];
+  wchar_t path2w[winMaxLongPath + 1];
+  char path2c[MAX_PATH + 1];
   int i;
   GBool ret;
 
@@ -606,13 +611,13 @@ GBool PDFDoc::saveEmbeddedFile(int idx, const wchar_t *path, int pathLen) {
   version.dwOSVersionInfoSize = sizeof(version);
   GetVersionEx(&version);
   if (version.dwPlatformId == VER_PLATFORM_WIN32_NT) {
-    for (i = 0; i < pathLen && i < _MAX_PATH; ++i) {
+    for (i = 0; i < pathLen && i < winMaxLongPath; ++i) {
       path2w[i] = path[i];
     }
     path2w[i] = 0;
     f = _wfopen(path2w, L"wb");
   } else {
-    for (i = 0; i < pathLen && i < _MAX_PATH; ++i) {
+    for (i = 0; i < pathLen && i < MAX_PATH; ++i) {
       path2c[i] = (char)path[i];
     }
     path2c[i] = 0;
