@@ -10,6 +10,7 @@
 #define FTFONT_H
 
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if FREETYPE2
 
 #ifdef __GNUC__
 #pragma interface
@@ -97,6 +98,7 @@ private:
   GBool ok;
 };
 
+#endif // FREETYPE2
 #endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 
 #endif

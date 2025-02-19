@@ -14,7 +14,7 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion "0.92a"
+#define xpdfVersion "0.92b"
 
 // supported PDF version
 #define supportedPDFVersionStr "1.3"
@@ -54,6 +54,9 @@
 
 // number of TrueType (FreeType) fonts to cache
 #define ttFontCacheSize 32
+
+// number of FreeType (TrueType and Type 1) fonts to cache
+#define ftFontCacheSize 32
 
 //------------------------------------------------------------------------
 // popen

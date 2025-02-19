@@ -706,7 +706,7 @@ Check for <freetype.h> in addition to <freetype/freetype.h>.
 Upgraded the configure script to smr_macros 0.2.4 - this should fix a
   bug where configure wasn't correctly finding t1lib.
 
-0.92a (2001-dec-17)
+0.92a (2000-dec-17)
 -------------------
 Added 'extern "C" { ... }' in various places for ANSI C++ compliance.
 Tweaked the code that figures out DPI for fit-to-page and fit-to-width
@@ -714,3 +714,11 @@ Tweaked the code that figures out DPI for fit-to-page and fit-to-width
 Fixed the image transformation code in XOutputDev -- no more missing
   lines.
 Implemented color key image masking in XOutputDev.
+
+0.92b (2001-jan-07)
+-------------------
+Fixed a bug in the error-checking code in the Separation/DeviceN color
+  space parsing functions.  [Thanks to Lidia Mirkin.]
+Added wheel mouse support (mouse buttons 4 and 5).  [Thanks to
+  Thorsten Schreiner.]
+Added preliminary support for FreeType 2 (disabled by default).

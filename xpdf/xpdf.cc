@@ -1204,13 +1204,41 @@ static void menuCbk(LTKMenuItem *item) {
 
 static void buttonPressCbk(LTKWidget *canvas1, int n,
 			   int mx, int my, int button, GBool dblClick) {
-  if (!doc || doc->getNumPages() == 0)
+  if (!doc || doc->getNumPages() == 0) {
     return;
-  if (button == 1) {
+  }
+  switch (button) {
+  case 1:
     setSelection(mx, my, mx, my);
-  } else if (!fullScreen && button == 2) {
-    panMX = mx - hScrollbar->getPos();
-    panMY = my - vScrollbar->getPos();
+    break;
+  case 2:
+    if (!fullScreen) {
+      panMX = mx - hScrollbar->getPos();
+      panMY = my - vScrollbar->getPos();
+    }
+    break;
+  case 4: // mouse wheel up
+    if (fullScreen) {
+      gotoPrevPage(1, gTrue, gFalse);
+    } else if (vScrollbar->getPos() == 0) {
+      gotoPrevPage(1, gFalse, gTrue);
+    } else {
+      vScrollbar->setPos(vScrollbar->getPos() - canvas->getHeight(),
+			 canvas->getHeight());
+      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    }
+    break;
+  case 5: // mouse wheel down
+    if (fullScreen ||
+	vScrollbar->getPos() >=
+	canvas->getRealHeight() - canvas->getHeight()) {
+      gotoNextPage(1, gTrue);
+    } else {
+      vScrollbar->setPos(vScrollbar->getPos() + canvas->getHeight(),
+			 canvas->getHeight());
+      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    }
+    break;
   }
 }
 

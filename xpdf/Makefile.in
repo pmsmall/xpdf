@@ -44,6 +44,7 @@ CXX_SRC = \
 	$(srcdir)/Decrypt.cc \
 	$(srcdir)/Dict.cc \
 	$(srcdir)/Error.cc \
+	$(srcdir)/FTFont.cc \
 	$(srcdir)/FontEncoding.cc \
 	$(srcdir)/FontFile.cc \
 	$(srcdir)/FormWidget.cc \
@@ -86,11 +87,12 @@ all-no-x: pdftops$(EXE) pdftotext$(EXE) pdfinfo$(EXE) \
 
 #------------------------------------------------------------------------
 
-XPDF_OBJS = Array.o Catalog.o Decrypt.o Dict.o Error.o FontEncoding.o \
-	FontFile.o FormWidget.o Gfx.o GfxFont.o GfxState.o Lexer.o \
-	Link.o LTKOutputDev.o Object.o OutputDev.o Page.o Params.o \
-	Parser.o PDFDoc.o PSOutputDev.o SFont.o Stream.o T1Font.o \
-	TextOutputDev.o TTFont.o XOutputDev.o XRef.o xpdf.o
+XPDF_OBJS = Array.o Catalog.o Decrypt.o Dict.o Error.o FTFont.o \
+	FontEncoding.o FontFile.o FormWidget.o Gfx.o GfxFont.o \
+	GfxState.o Lexer.o Link.o LTKOutputDev.o Object.o OutputDev.o \
+	Page.o Params.o Parser.o PDFDoc.o PSOutputDev.o SFont.o \
+	Stream.o T1Font.o TextOutputDev.o TTFont.o XOutputDev.o XRef.o \
+	xpdf.o
 XPDF_LIBS = -L$(LTKLIBDIR) -lLTK -L$(GOOLIBDIR) -lGoo $(XLIBS) $(OTHERLIBS) -lm
 
 xpdf$(EXE): $(XPDF_OBJS) \
@@ -140,7 +142,7 @@ pdfinfo$(EXE): $(PDFINFO_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
 
 #------------------------------------------------------------------------
 
-PDFTOPBM_OBJS = Array.o Catalog.o Decrypt.o Dict.o Error.o \
+PDFTOPBM_OBJS = Array.o Catalog.o Decrypt.o Dict.o Error.o FTFont.o \
 	FontEncoding.o FontFile.o FormWidget.o Gfx.o GfxFont.o \
 	GfxState.o Lexer.o Link.o Object.o OutputDev.o PBMOutputDev.o \
 	Page.o Params.o Parser.o PDFDoc.o SFont.o Stream.o T1Font.o \
@@ -191,6 +193,9 @@ Decrypt.o: ./Decrypt.cc ../goo/gmem.h Decrypt.h ../goo/gtypes.h \
 Dict.o: ./Dict.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h XRef.h
 Error.o: ./Error.cc ../goo/gtypes.h Params.h Error.h config.h
+FTFont.o: ./FTFont.cc ../goo/gmem.h \
+ /tmp/ft/include/freetype2/freetype/internal/ftobjs.h FTFont.h SFont.h \
+ ../goo/gtypes.h
 FontEncoding.o: ./FontEncoding.cc ../goo/gmem.h FontEncoding.h \
  ../goo/gtypes.h
 FontFile.o: ./FontFile.cc ../goo/gmem.h Error.h config.h FontFile.h \
@@ -229,8 +234,8 @@ Page.o: ./Page.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
 Params.o: ./Params.cc ../goo/gtypes.h ../goo/gmem.h ../goo/GString.h \
  ../goo/gfile.h Params.h
 Parser.o: ./Parser.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
- ../goo/GString.h Array.h Dict.h Stream.h Parser.h Lexer.h Error.h \
- config.h Decrypt.h
+ ../goo/GString.h Array.h Dict.h Stream.h Parser.h Lexer.h XRef.h \
+ Error.h config.h Decrypt.h
 PBMOutputDev.o: ./PBMOutputDev.cc ../goo/gmem.h ../goo/GString.h \
  Object.h ../goo/gtypes.h Array.h Dict.h Stream.h GfxState.h GfxFont.h \
  FontEncoding.h Error.h config.h Params.h PBMOutputDev.h XOutputDev.h \
@@ -252,12 +257,12 @@ TextOutputDev.o: ./TextOutputDev.cc ../goo/GString.h ../goo/gmem.h \
  config.h Error.h GfxState.h ../goo/gtypes.h Object.h Array.h Dict.h \
  Stream.h FontEncoding.h TextOutputDev.h GfxFont.h OutputDev.h \
  TextOutputFontInfo.h
-TTFont.o: ./TTFont.cc ../goo/gmem.h TTFont.h SFont.h ../goo/gtypes.h
+TTFont.o: ./TTFont.cc
 XOutputDev.o: ./XOutputDev.cc ../goo/gmem.h ../goo/gfile.h \
  ../goo/gtypes.h ../goo/GString.h Object.h Array.h Dict.h Stream.h \
  Link.h GfxState.h GfxFont.h FontEncoding.h FontFile.h Error.h \
  config.h Params.h TextOutputDev.h OutputDev.h XOutputDev.h T1Font.h \
- SFont.h TTFont.h XOutputFontInfo.h
+ SFont.h FTFont.h XOutputFontInfo.h
 XRef.o: ./XRef.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h Lexer.h Parser.h Decrypt.h \
  Error.h config.h XRef.h

@@ -768,7 +768,7 @@ void Gfx::opSetFillColorSpace(Object args[], int numArgs) {
   if (colorSpace) {
     state->setFillColorSpace(colorSpace);
   } else {
-    error(getPos(), "Bad color space");
+    error(getPos(), "Bad color space (fill)");
   }
   for (i = 0; i < gfxColorMaxComps; ++i) {
     color.c[i] = 0;
@@ -794,7 +794,7 @@ void Gfx::opSetStrokeColorSpace(Object args[], int numArgs) {
   if (colorSpace) {
     state->setStrokeColorSpace(colorSpace);
   } else {
-    error(getPos(), "Bad color space");
+    error(getPos(), "Bad color space (stroke)");
   }
   for (i = 0; i < gfxColorMaxComps; ++i) {
     color.c[i] = 0;

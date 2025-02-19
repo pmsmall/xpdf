@@ -910,16 +910,20 @@ GfxColorSpace *GfxSeparationColorSpace::parse(Array *arr) {
     goto err3;
   }
   obj1.free();
-  func = Function::parse(arr->get(3, &obj1));
-  obj1.free();
-  if (!func->isOk()) {
+  arr->get(3, &obj1);
+  if (!(func = Function::parse(&obj1))) {
     goto err4;
   }
+  if (!func->isOk()) {
+    goto err5;
+  }
+  obj1.free();
   cs = new GfxSeparationColorSpace(name, alt, func);
   return cs;
 
- err4:
+ err5:
   delete func;
+ err4:
   delete alt;
  err3:
   delete name;
@@ -1018,19 +1022,23 @@ GfxColorSpace *GfxDeviceNColorSpace::parse(Array *arr) {
     goto err3;
   }
   obj1.free();
-  func = Function::parse(arr->get(3, &obj1));
-  obj1.free();
-  if (!func->isOk()) {
+  arr->get(3, &obj1);
+  if (!(func = Function::parse(&obj1))) {
     goto err4;
   }
+  if (!func->isOk()) {
+    goto err5;
+  }
+  obj1.free();
   cs = new GfxDeviceNColorSpace(nComps, alt, func);
   for (i = 0; i < nComps; ++i) {
     cs->names[i] = names[i];
   }
   return cs;
 
- err4:
+ err5:
   delete func;
+ err4:
   delete alt;
  err3:
   for (i = 0; i < nComps; ++i) {
@@ -1274,7 +1282,7 @@ Function *Function::parse(Object *funcObj) {
   } else if (funcType == 2) {
     func = new ExponentialFunction(funcObj, dict);
   } else {
-    error(-1, "Unimplemented function type");
+    error(-1, "Unimplemented function type (%d)", funcType);
     return NULL;
   }
   if (!func->isOk()) {
@@ -1345,8 +1353,8 @@ GBool Function::init(Dict *dict) {
       range[i][1] = obj2.getNum();
       obj2.free();
     }
-    obj1.free();
   }
+  obj1.free();
 
   return gTrue;
 
@@ -1616,8 +1624,8 @@ ExponentialFunction::ExponentialFunction(Object *funcObj, Dict *dict) {
       c0[i] = obj2.getNum();
       obj2.free();
     }
-    obj1.free();
   }
+  obj1.free();
 
   //----- C1
   if (dict->lookup("C1", &obj1)->isArray()) {
@@ -1636,8 +1644,8 @@ ExponentialFunction::ExponentialFunction(Object *funcObj, Dict *dict) {
       c1[i] = obj2.getNum();
       obj2.free();
     }
-    obj1.free();
   }
+  obj1.free();
 
   //----- N (exponent)
   if (!dict->lookup("N", &obj1)->isNum()) {

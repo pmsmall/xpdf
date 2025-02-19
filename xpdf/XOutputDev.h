@@ -36,9 +36,15 @@ class T1Font;
 #endif
 
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if FREETYPE2
+class FTFontEngine;
+class FTFontFile;
+class FTFont;
+#else
 class TTFontEngine;
 class TTFontFile;
 class TTFont;
+#endif
 #endif
 
 //------------------------------------------------------------------------
@@ -195,6 +201,39 @@ private:
 #endif
 
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if FREETYPE2
+
+//------------------------------------------------------------------------
+// XOutputFTFont
+//------------------------------------------------------------------------
+
+class XOutputFTFont: public XOutputFont {
+public:
+
+  XOutputFTFont(GfxFont *gfxFont, double m11, double m12,
+		double m21, double m22, Display *display,
+		XOutputFontCache *cache);
+
+  virtual ~XOutputFTFont();
+
+  // Was font created successfully?
+  virtual GBool isOk();
+
+  // Update <gc> with this font.
+  virtual void updateGC(GC gc);
+
+  // Draw character <c> at <x>,<y>.
+  virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
+			GC gc, double x, double y, int c);
+
+private:
+
+  FTFontFile *fontFile;
+  FTFont *font;
+};
+
+#else // FREETYPE2
+
 //------------------------------------------------------------------------
 // XOutputTTFont
 //------------------------------------------------------------------------
@@ -223,7 +262,9 @@ private:
   TTFontFile *fontFile;
   TTFont *font;
 };
-#endif
+
+#endif // FREETYPE2
+#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
 
 //------------------------------------------------------------------------
 // XOutputServerFont
@@ -270,10 +311,17 @@ struct XOutputT1FontFile {
 #endif
 
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if FREETYPE2
+struct XOutputFTFontFile {
+  int num, gen;
+  FTFontFile *fontFile;
+};
+#else
 struct XOutputTTFontFile {
   int num, gen;
   TTFontFile *fontFile;
 };
+#endif
 #endif
 
 class XOutputFontCache {
@@ -305,8 +353,13 @@ public:
 #endif
 
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if FREETYPE2
+  // Get a FreeType font file.
+  FTFontFile *getFTFont(GfxFont *gfxFont);
+#else
   // Get a FreeType font file.
   TTFontFile *getTTFont(GfxFont *gfxFont);
+#endif
 #endif
 
 private:
@@ -333,6 +386,15 @@ private:
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
   GBool useFreeType;		// if false, FreeType is not used at all
   GBool freeTypeAA;		// true for anti-aliased fonts
+#if FREETYPE2
+  FTFontEngine *ftEngine;	// FreeType font engine
+  XOutputFTFont *		// FreeType fonts in reverse-LRU order
+    ftFonts[ftFontCacheSize];
+  int nFTFonts;			// number of valid entries in ftFonts[]
+  XOutputFTFontFile *		// list of FreeType font files
+    ftFontFiles;
+  int ftFontFilesSize;		// size of ftFontFiles array
+#else
   TTFontEngine *ttEngine;	// TrueType font engine
   XOutputTTFont *		// TrueType fonts in reverse-LRU order
     ttFonts[ttFontCacheSize];
@@ -340,6 +402,7 @@ private:
   XOutputTTFontFile *		// list of TrueType font files
     ttFontFiles;
   int ttFontFilesSize;		// size of ttFontFiles array
+#endif
 #endif
 
   XOutputServerFont *		// X server fonts in reverse-LRU order

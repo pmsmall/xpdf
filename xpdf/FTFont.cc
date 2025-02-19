@@ -9,6 +9,7 @@
 #endif
 
 #if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if FREETYPE2
 
 #include <math.h>
 #include <string.h>
@@ -41,7 +42,7 @@ FTFontFile::FTFontFile(FTFontEngine *engine, char *fontFileName) {
 
   ok = gFalse;
   this->engine = engine;
-#if 1 //~
+#if 0 //~
   int err;
   if ((err = FT_New_Face(engine->lib, fontFileName, 0, &face))) {
     fprintf(stderr, "failed at FT_New_Face (%d %x)\n", err, err);
@@ -52,35 +53,56 @@ FTFontFile::FTFontFile(FTFontEngine *engine, char *fontFileName) {
     return;
   }
 #endif
-#if 1 //~
+#if 0 //~
   printf("FT module = %s\n", face->driver->root.clazz->module_name);
 #endif
 
   // Choose a cmap:
-  // 1. If the font contains a Windows-symbol cmap, use it.
-  // 2. Otherwise, use the first cmap in the TTF file.
-  // 3. If the Windows-Symbol cmap is used (from either step 1 or step
+  // 1. If the font contains an Adobe cmap (which means it's a Type 1
+  //    or Type 1C font), use it.
+  // 2. If the font contains a Windows-symbol cmap, use it.
+  // 3. Otherwise, use the first cmap in the TTF file.
+  // 4. If the Windows-Symbol cmap is used (from either step 1 or step
   //    2), offset all character indexes by 0xf000.
   // This seems to match what acroread does, but may need further
   // tweaking.
+#if 0 //~
+  printf("available cmaps:\n");
   for (i = 0; i < face->num_charmaps; ++i) {
-#if 1 //~
-    printf("%d %d\n", face->charmaps[i]->platform_id, face->charmaps[i]->encoding_id);
-#else
-    if (face->charmaps[i]->platform_id == 3 &&
-	face->charmaps[i]->encoding_id == 0) {
+    printf("  %d: %d %d\n", i,
+	   face->charmaps[i]->platform_id,
+	   face->charmaps[i]->encoding_id);
+  }
+#endif
+  for (i = 0; i < face->num_charmaps; ++i) {
+    if (face->charmaps[i]->platform_id == 7) {
       break;
     }
-#endif
   }
   if (i >= face->num_charmaps) {
-    i = 0;
+    for (i = 0; i < face->num_charmaps; ++i) {
+      if (face->charmaps[i]->platform_id == 3 &&
+	  face->charmaps[i]->encoding_id == 0) {
+	break;
+      }
+    }
+    if (i >= face->num_charmaps) {
+      i = 0;
+    }
   }
+#if 0 //~
+  printf("chose cmap %d\n", i);
+#endif
+  charMapOffset = 0;
+#if 1 //~ CFF (Type 1C) fonts don't get a charmap ???
+  if (face->num_charmaps == 0) {
+    ok = gTrue;
+    return;
+  }
+#endif
   if (face->charmaps[i]->platform_id == 3 &&
       face->charmaps[i]->encoding_id == 0) {
     charMapOffset = 0xf000;
-  } else {
-    charMapOffset = 0;
   }
   if (FT_Set_Charmap(face, face->charmaps[i])) {
 #if 1 //~
@@ -416,4 +438,5 @@ Guchar *FTFont::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
   return ret;
 }
 
+#endif // FREETYPE2
 #endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
