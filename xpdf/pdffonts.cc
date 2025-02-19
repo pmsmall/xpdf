@@ -13,9 +13,10 @@
 #include <string.h>
 #include <math.h>
 #include <limits.h>
+#include "gmem.h"
+#include "gmempp.h"
 #include "parseargs.h"
 #include "GString.h"
-#include "gmem.h"
 #include "GlobalParams.h"
 #include "Error.h"
 #include "Object.h"
@@ -156,11 +157,11 @@ int main(int argc, char *argv[]) {
 
   // scan the fonts
   if (showFontLoc || showFontLocPS) {
-    printf("name                                 type              emb sub uni object ID location\n");
-    printf("------------------------------------ ----------------- --- --- --- --------- --------\n");
+    printf("name                                 type              emb sub uni prob object ID location\n");
+    printf("------------------------------------ ----------------- --- --- --- ---- --------- --------\n");
   } else {
-    printf("name                                 type              emb sub uni object ID\n");
-    printf("------------------------------------ ----------------- --- --- --- ---------\n");
+    printf("name                                 type              emb sub uni prob object ID\n");
+    printf("------------------------------------ ----------------- --- --- --- ---- ---------\n");
   }
   fonts = NULL;
   fontsLen = fontsSize = 0;
@@ -377,12 +378,13 @@ static void scanFont(GfxFont *font, PDFDoc *doc) {
   }
 
   // print the font info
-  printf("%-36s %-17s %-3s %-3s %-3s",
+  printf("%-36s %-17s %-3s %-3s %-3s %-4s",
 	 name ? name->getCString() : "[none]",
 	 fontTypeNames[font->getType()],
 	 emb ? "yes" : "no",
 	 subset ? "yes" : "no",
-	 hasToUnicode ? "yes" : "no");
+	 hasToUnicode ? "yes" : "no",
+	 font->problematicForUnicode() ? " X" : "");
   if (fontRef.gen >= 100000) {
     printf(" [none]");
   } else {
