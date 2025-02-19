@@ -23,10 +23,8 @@
 
 Lexer::Lexer(Stream *str1, GBool freeStream1) {
   str = str1;
-  buf = EOF;
-  cr = lf = gFalse;
-  freeStream = freeStream1;
   str->reset();
+  freeStream = freeStream1;
 }
 
 Lexer::~Lexer() {
@@ -35,305 +33,327 @@ Lexer::~Lexer() {
 }
 
 Object *Lexer::getObj(Object *obj) {
-  char token[maxTokenLen+1];
   char *p;
-  int n;
-  GBool comment;
-  GBool real;
-  int x;
-  GBool next;
+  int c, c2;
+  GBool comment, neg, done;
+  int xi;
+  double xf, scale;
+  GString *s;
+  int n, m;
 
   // skip whitespace and comments
-  if (buf == EOF)
-    buf = getChar();
   comment = gFalse;
   while (1) {
-    if (!isspace(buf)) {
-      if (!comment)
-	break;
-      if (buf == '%')
-	comment = gTrue;
-      else if (buf == '\n')
+    if ((c = str->getChar()) == EOF)
+      return obj->initEOF();
+    if (comment) {
+      if (c == '\r' || c == '\n')
 	comment = gFalse;
-      else if (buf == EOF)
-	break;
+    } else if (c == '%') {
+      comment = gTrue;
+    } else if (!isspace(c)) {
+      break;
     }
-    buf = getChar();
   }
 
-  // check for end of stream
-  if (buf == EOF)
-    return obj->initEOF();
-
   // start reading token
-  p = token;
-  n = 0;
+  switch (c) {
 
   // number
-  if ((buf >= '0' && buf <= '9') || buf == '-' || buf == '.') {
-    real = gFalse;
-    do {
-      if (n < maxTokenLen)
-	*p++ = buf;
-      ++n;
-      if (buf == '.')
-	real = gTrue;
-      buf = getChar();
-    } while ((buf >= '0' && buf <= '9') || (!real && buf == '.'));
-    *p = '\0';
-    if (real)
-      obj->initReal(atof(token));
-    else
-      obj->initInt(atoi(token));
+  case '0': case '1': case '2': case '3': case '4':
+  case '5': case '6': case '7': case '8': case '9':
+  case '-': case '.':
+    neg = gFalse;
+    xi = 0;
+    if (c == '-') {
+      neg = gTrue;
+    } else if (c == '.') {
+      goto doReal;
+    } else {
+      xi = c - '0';
+    }
+    while (1) {
+      c = str->lookChar();
+      if (isdigit(c)) {
+	str->getChar();
+	xi = xi * 10 + (c - '0');
+      } else if (c == '.') {
+	str->getChar();
+	goto doReal;
+      } else {
+	break;
+      }
+    }
+    if (neg)
+      xi = -xi;
+    obj->initInt(xi);
+    break;
+  doReal:
+    xf = xi;
+    scale = 0.1;
+    while (1) {
+      c = str->lookChar();
+      if (!isdigit(c))
+	break;
+      str->getChar();
+      xf = xf + scale * (c - '0');
+      scale *= 0.1;
+    }
+    if (neg)
+      xf = -xf;
+    obj->initReal(xf);
+    break;
 
   // string
-  } else if (buf == '(') {
-    buf = getChar();
-    while (buf != ')' && buf != EOF) {
-      next = gTrue;
-      if (buf == '\\') {
-	buf = getChar();
-	switch (buf) {
+  case '(':
+    p = tokBuf;
+    n = 0;
+    done = gFalse;
+    s = NULL;
+    do {
+      c2 = EOF;
+      switch (c = str->getChar()) {
+
+      case EOF:
+      case '\r':
+      case '\n':
+	error(getPos(), "Unterminated string");
+	done = gTrue;
+	break;
+
+      case ')':
+	done = gTrue;
+	break;
+
+      case '\\':
+	switch (c = str->getChar()) {
 	case 'n':
-	  if (n < maxTokenLen)
-	    *p++ = '\n';
-	  ++n;
+	  c2 = '\n';
 	  break;
 	case 'r':
-	  if (n < maxTokenLen)
-	    *p++ = '\r';
-	  ++n;
+	  c2 = '\r';
 	  break;
 	case 't':
-	  if (n < maxTokenLen)
-	    *p++ = '\t';
-	  ++n;
+	  c2 = '\t';
 	  break;
 	case 'b':
-	  if (n < maxTokenLen)
-	    *p++ = '\b';
-	  ++n;
+	  c2 = '\b';
 	  break;
 	case 'f':
-	  if (n < maxTokenLen)
-	    *p++ = '\f';
-	  ++n;
+	  c2 = '\f';
 	  break;
 	case '\\':
-	  if (n < maxTokenLen)
-	    *p++ = '\\';
-	  ++n;
-	  break;
 	case '(':
-	  if (n < maxTokenLen)
-	    *p++ = '(';
-	  ++n;
-          break;
 	case ')':
-	  if (n < maxTokenLen)
-	    *p++ = ')';
-	  ++n;
+	  c2 = c;
 	  break;
-	case '0':
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	  x = buf - '0';
-	  buf = getChar();
-	  if (buf >= '0' && buf <= '7') {
-	    x = (x << 3) + (buf - '0');
-	    buf = getChar();
-	    if (buf >= '0' && buf <= '7')
-	      x = (x << 3) + (buf - '0');
-	    else
-	      next = gFalse;
-	  } else
-	    next = gFalse;
-	  if (n < maxTokenLen)
-	    *p++ = (char)x;
-	  ++n;
+	case '0': case '1': case '2': case '3':
+	case '4': case '5': case '6': case '7':
+	  c2 = c - '0';
+	  c = str->lookChar();
+	  if (c >= '0' && c <= '7') {
+	    str->getChar();
+	    c2 = (c2 << 3) + (c - '0');
+	    c = str->lookChar();
+	    if (c >= '0' && c <= '7') {
+	      str->getChar();
+	      c2 = (c2 << 3) + (c - '0');
+	    }
+	  }
+	  break;
+	case '\r':
+	  c = str->lookChar();
+	  if (c == '\n')
+	    str->getChar();
 	  break;
 	case '\n':
 	  break;
+	case EOF:
+	  error(getPos(), "Unterminated string");
+	  done = gTrue;
+	  break;
 	default:
-	  if (n < maxTokenLen)
-	    *p++ = buf;
-	  ++n;
+	  c2 = c;
 	  break;
 	}
-      } else {
-	if (n < maxTokenLen)
-	  *p++ = buf;
+	break;
+
+      default:
+	c2 = c;
+	break;
+      }
+
+      if (c2 != EOF) {
+	if (n == tokBufSize) {
+	  if (!s)
+	    s = new GString(tokBuf, tokBufSize);
+	  else
+	    s->append(tokBuf, tokBufSize);
+	  p = tokBuf;
+	  n = 0;
+	}
+	*p++ = (char)c2;
 	++n;
       }
-      if (next)
-	buf = getChar();
-    }
-    *p = '\0';
-    if (buf == EOF)
-      error(getPos(), "End of file inside string");
+    } while (!done);
+    if (!s)
+      s = new GString(tokBuf, n);
     else
-      buf = EOF;  // kill the closing paren
-    obj->initString(token, p - token);
+      s->append(tokBuf, n);
+    obj->initString(s);
+    break;
 
   // name
-  } else if (buf == '/') {
-    buf = getChar();
-    while (!isspace(buf) && buf!= '/' && buf != '%' && buf != '(' &&
-	   buf != ')' && buf != '<' && buf != '>' && buf != '[' &&
-	   buf != ']' && buf != '{' && buf != '}' && buf != EOF) {
-      if (n < maxTokenLen)
-	*p++ = buf;
-      ++n;
-      buf = getChar();
+  case '/':
+    p = tokBuf;
+    n = 0;
+    while ((c = str->lookChar()) != EOF && !isspace(c) &&
+	   c != '/' && c != '%' && c != '(' && c != ')' &&
+	   c != '<' && c != '>' && c != '[' && c != ']' &&
+	   c != '{' && c != '}') {
+      str->getChar();
+      if (++n == tokBufSize) {
+	error(getPos(), "Name token too long");
+	break;
+      }
+      *p++ = c;
     }
     *p = '\0';
-    obj->initName(token);
+    obj->initName(tokBuf);
+    break;
 
   // array punctuation
-  } else if (buf == '[' || buf == ']') {
-    token[0] = buf;
-    token[1] = '\0';
-    buf = EOF;
-    obj->initCmd(token);
+  case '[':
+  case ']':
+    tokBuf[0] = c;
+    tokBuf[1] = '\0';
+    obj->initCmd(tokBuf);
+    break;
 
   // hex string or dict punctuation
-  } else if (buf == '<') {
-    buf = getChar();
+  case '<':
+    c = str->lookChar();
 
     // dict punctuation
-    if (buf == '<') {
-      token[0] = token[1] = '<';
-      token[2] = '\0';
-      buf = EOF;
-      obj->initCmd(token);
+    if (c == '<') {
+      str->getChar();
+      tokBuf[0] = tokBuf[1] = '<';
+      tokBuf[2] = '\0';
+      obj->initCmd(tokBuf);
 
     // hex string
     } else {
+      p = tokBuf;
+      m = n = 0;
+      c2 = 0;
+      s = NULL;
       while (1) {
-	while (isspace(buf))
-	  buf = getChar();
-	if (buf == '>') {
-	  buf = EOF;
+	c = str->getChar();
+	if (c == '>') {
 	  break;
-	}
-	if (buf == EOF) {
-	  error(getPos(), "End of file inside hex string");
+	} else if (c == EOF) {
+	  error(getPos(), "Unterminated hex string");
 	  break;
+	} else if (!isspace(c)) {
+	  c2 = c2 << 4;
+	  if (c >= '0' && c <= '9')
+	    c2 += (c - '0');
+	  else if (c >= 'A' && c <= 'F')
+	    c2 += (c - 'A' + 10);
+	  else if (c >= 'a' && c <= 'f')
+	    c2 += (c - 'a' + 10);
+	  else
+	    error(getPos(), "Illegal character <%02x> in hex string", c);
+	  if (++m == 2) {
+	    if (n == tokBufSize) {
+	      if (!s)
+		s = new GString(tokBuf, tokBufSize);
+	      else
+		s->append(tokBuf, tokBufSize);
+	      p = tokBuf;
+	      n = 0;
+	    }
+	    *p++ = (char)c2;
+	    ++n;
+	    c2 = 0;
+	    m = 0;
+	  }
 	}
-	if (buf >= '0' && buf <= '9') {
-	  x = (buf - '0') << 4;
-	} else if (buf >= 'A' && buf <= 'F') {
-	  x = (buf - 'A' + 10) << 4;
-	} else if (buf >= 'a' && buf <= 'f') {
-	  x = (buf - 'a' + 10) << 4;
-	} else {
-	  error(getPos(), "Illegal character <%02x> in hex string", buf);
-	  x = 0;
-	}
-	do {
-	  buf = getChar();
-	} while (isspace(buf));
-	if (buf == EOF) {
-	  error(getPos(), "End of file inside hex string");
-	  break;
-	}
-	if (buf >= '0' && buf <= '9') {
-	  x += buf - '0';
-	} else if (buf >= 'A' && buf <= 'F') {
-	  x += buf - 'A' + 10;
-	} else if (buf >= 'a' && buf <= 'f') {
-	  x += buf - 'a' + 10;
-	} else if (buf != '>') {
-	  error(getPos(), "Illegal character <%02x> in hex string", buf);
-	}
-	if (n < maxTokenLen)
-	  *p++ = (char)x;
-	++n;
-	if (buf == '>') {
-	  buf = EOF;
-	  break;
-	}
-	buf = getChar();
       }
-      *p = '\0';
-      obj->initString(token, p - token);
+      if (!s)
+	s = new GString(tokBuf, n);
+      else
+	s->append(tokBuf, n);
+      if (m == 1)
+	s->append((char)(c2 << 4));
+      obj->initString(s);
     }
+    break;
 
   // dict punctuation
-  } else if (buf == '>') {
-    buf = getChar();
-    if (buf == '>') {
-      token[0] = token[1] = '>';
-      token[2] = '\0';
-      buf = EOF;
-      obj->initCmd(token);
+  case '>':
+    c = str->lookChar();
+    if (c == '>') {
+      str->getChar();
+      tokBuf[0] = tokBuf[1] = '>';
+      tokBuf[2] = '\0';
+      obj->initCmd(tokBuf);
     } else {
       error(getPos(), "Illegal character '>'");
       obj->initError();
     }
-
-  // command
-  } else if (buf != ')' && buf != '{' && buf != '}') {
-    do {
-      if (n < maxTokenLen)
-	*p++ = buf;
-      ++n;
-      buf = getChar();
-    } while (!isspace(buf) && buf != '%' && buf != '(' && buf != ')' &&
-	     buf != '<' && buf != '>' && buf != '[' && buf != ']' &&
-	     buf != '{' && buf != '}' && buf != EOF);
-    *p = '\0';
-    if (!strcmp(token, "true"))
-      obj->initBool(gTrue);
-    else if (!strcmp(token, "false"))
-      obj->initBool(gFalse);
-    else if (!strcmp(token, "null"))
-      obj->initNull();
-    else
-      obj->initCmd(token);
+    break;
 
   // error
-  } else {
-    error(getPos(), "Illegal character '%c'", buf);
-    buf = EOF;  // eat the character to avoid an infinite loop
+  case ')':
+  case '{':
+  case '}':
+    error(getPos(), "Illegal character '%c'", c);
     obj->initError();
+    break;
+
+  // command
+  default:
+    p = tokBuf;
+    *p++ = c;
+    n = 1;
+    while ((c = str->lookChar()) != EOF && !isspace(c) &&
+	   c != '%' && c != '(' && c != ')' &&
+	   c != '<' && c != '>' && c != '[' && c != ']' &&
+	   c != '{' && c != '}') {
+      str->getChar();
+      if (++n == tokBufSize) {
+	error(getPos(), "Command token too long");
+	break;
+      }
+      *p++ = c;
+    }
+    *p = '\0';
+    if (!strcmp(tokBuf, "true"))
+      obj->initBool(gTrue);
+    else if (!strcmp(tokBuf, "false"))
+      obj->initBool(gFalse);
+    else if (!strcmp(tokBuf, "null"))
+      obj->initNull();
+    else
+      obj->initCmd(tokBuf);
+    break;
   }
 
   return obj;
 }
 
 void Lexer::skipToNextLine() {
-  if (buf == EOF)
-    buf = getChar();
-  while (buf != '\n' && buf != EOF)
-    buf = getChar();
-  getChar();  // skip over end-of-line chars
-  buf = EOF;
-}
-
-int Lexer::getChar() {
   int c;
 
- start:
-  c = str->getChar();
-  if (c != '\n' && c != '\r') {
-    lf = cr = gFalse;
-  } else {
-    if (c == '\n') {
-      lf = gTrue;
-    } else {
-      cr = gTrue;
-      c = '\n';
-    }
-    if (lf && cr) {
-      lf = cr = gFalse;
-      goto start;
+  while (1) {
+    c = str->getChar();
+    if (c == EOF || c == '\n')
+      return;
+    if (c == '\r') {
+      if ((c = str->lookChar()) == '\n')
+	str->getChar();
+      return;
     }
   }
-  return c;
 }

@@ -12,6 +12,8 @@
 #include <gmem.h>
 #include <cover.h>
 
+#ifdef COVER
+
 typedef struct _CoverEntry {
   char *name;
   int num;
@@ -71,3 +73,5 @@ void doCoverDump(FILE *f) {
   }
   gfree(hashTab);
 }
+
+#endif

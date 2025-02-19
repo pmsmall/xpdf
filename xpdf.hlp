@@ -1,0 +1,256 @@
+! Generated automatically by mantohlp
+1 xpdf
+
+       xpdf  -  Portable  Document Format (PDF) file viewer for X
+       (version 0.6)
+
+       xpdf [options] [PDF-file [page]]
+
+       Xpdf is a viewer for Portable Document Format (PDF) files.
+       (These  are  also  sometimes  also called 'Acrobat' files,
+       from the name of Adobe's PDF software.)  Xpdf  runs  under
+       UNIX or VMS and the X Window System.
+
+       To run xpdf, simply type:
+
+              xpdf file.pdf
+
+       where  file.pdf  is  your  PDF file.  The file name can be
+       followed by a number specifying the page which  should  be
+       displayed first, e.g.:
+
+              xpdf file.pdf 18
+
+2 OPTIONS
+
+       X  resources are listed in square brackets with the corre-
+       sponding option.
+
+       -err   Send error messages to /dev/tty instead  of  stderr
+              (useful  if  xpdf  is started from another applica-
+              tion, e.g., netscape which  otherwise  pops  up  an
+              annoying little window for every error).
+
+       -z number
+              Set  the initial zoom factor (-5 .. 5).  [xpdf.ini-
+              tialZoom]
+
+       -g geometry
+              Set the initial  window  geometry.   (-geometry  is
+              equivalent.)  [xpdf.geometry]
+
+       -remote name
+              Start/contact  xpdf  remote  server  with specified
+              name (see the REMOTE SERVER MODE section below).
+
+       -raise Raise  xpdf  remote  server  window  (with  -remote
+              only).
+
+       -quit  Kill xpdf remote server (with -remote only).
+
+       -rgb number
+              Set  the  size of largest RGB cube xpdf will try to
+              allocate.  The default is 5 (for a 5x5x5 cube); set
+              to   a  smaller  number  to  conserve  color  table
+              entries.
+
+       -ps PS-file
+              Set the default file name  for  PostScript  output.
+              This can also be of the form '|command' to pipe the
+              PostScript through a command.  [xpdf.psFile]
+
+       -cmd   Print commands  as  they're  executed  (useful  for
+              debugging).
+
+       -h     Print usage information.  (-help is equivalent.)
+
+       Several  other  standard X options and resources will work
+       as expected:
+
+       -display display
+              [xpdf.display]
+
+       -fg color
+              (-foreground is equivalent.)  [xpdf.foreground]
+
+       -bg color
+              (-background is equivalent.)  [xpdf.background]
+
+       -font font
+              (-fn is equivalent.)  [xpdf.font]
+
+       The color and font options only affect the user  interface
+       elements, not the PDF display (the 'paper').
+
+2 CONTROLS
+
+   On-screen controls, at the bottom of the xpdf window
+       left/right arrow buttons
+              Move to the previous/next page.
+
+       double left/right arrow buttons
+              Move backward or forward by ten pages.
+
+       'Page' entry box
+              Move  to  a specific page number.  Click in the box
+              to activate it, type  the  page  number,  then  hit
+              return.
+
+       magnifying glass buttons
+              Increase and decrease the resolution, i.e., zoom in
+              and zoom out.
+
+       print button
+              Bring up a dialog for generating a PostScript file.
+              The  dialog  has  options  to  set  the pages to be
+              printed and the PostScript  file  name.   The  file
+              name  can  be  '-' for stdout or '|command' to pipe
+              the PostScript through a command, e.g., '|lpr'.
+
+       curved arrow buttons
+              Rotate the  page  clockwise  and  counterclockwise.
+              These  are  intended  primarily for PDF files where
+              the rotation isn't correctly specified in the file,
+              but  they're  also  useful if your X server doesn't
+              support font rotation.
+
+       '?' button
+              Bring up the 'about xpdf' window.
+
+       'Quit' button
+              Quit xpdf.
+
+   Links
+       Clicking on a hyperlink will jump to the  link's  destina-
+       tion.   Currently,  only  links within PDF documents or to
+       another PDF file are supported.  Clicking on  a  URL  link
+       just  prints  the URL.  Clicking on any other type of link
+       (e.g., links to executable programs) prints an error  mes-
+       sage.
+
+   Key bindings
+       n      Move to the next page.
+
+       p      Move to the previous page.
+
+       <Space> or <PageDown> or <Next>
+              Scroll  down  on  the  current  page; if already at
+
+              bottom, move to next page.
+
+       <Backspace> or <Delete> or <PageUp> or <Previous>
+              Scroll up on the current page; if already  at  top,
+              move to previous page.
+
+       <Home> Scroll to top of current page.
+
+       <End>  Scroll to bottom of current page.
+
+       arrows Scroll the current page.
+
+       control-L
+              Redraw the current page.
+
+       q      Quit xpdf.
+
+2 WEB_BROWSERS
+
+       If  you  want  to  run xpdf automatically from netscape or
+       mosaic (and probably other browsers) when you click  on  a
+       link to a PDF file, you need to edit (or create) the files
+       .mime.types and  .mailcap  in  your  home  directory.   In
+       .mime.types add the line:
+
+              application/pdf pdf
+
+       In .mailcap add the lines:
+
+              # Use xpdf to view PDF files.
+              application/pdf; xpdf -err %s
+
+       Make sure that xpdf is on your executable search path.
+
+2 REMOTE_SERVER_MODE
+
+       Xpdf  can be started in remote server mode by specifying a
+       server name (in addition to the file name  and  page  num-
+       ber).  For example:
+
+              xpdf -remote myServer file.pdf
+
+       If  there is currently no xpdf running in server mode with
+       the name 'myServer', a new xpdf window will be opened.  If
+       another command:
+
+              xpdf -remote myServer another.pdf 9
+
+       is  issued,  a  new  copy  of  xpdf  will  not be started.
+       Instead, the first xpdf (the server) will load another.pdf
+       and display page nine.  If the file name is the same:
+
+              xpdf -remote myServer another.pdf 4
+
+       the xpdf server will simply display the specified page.
+
+       The -raise option tells the server to raise its window; it
+       can be specified with or without a file name and page num-
+       ber.
+
+       The  -quit option tells the server to close its window and
+       exit.
+
+2 CONFIGURATION_FILE
+
+       Xpdf will read a file called .xpdfrc from your home direc-
+       tory (if it exists).  This file can contain two  types  of
+       entries.
+
+       fontpath directory
+              Look for Type 1 fonts in directory.  Xpdf uses this
+              only to get the font encoding.   For  display,  the
+              font must also be mapped with a fontmap entry.
+
+       fontmap PDF-font X-font
+              Map  PDF-font  (as  referenced in a PDF file) to X-
+              font, which should be a standard X font  descriptor
+              with '%s' in the pixel size position.
+
+       For example, use:
+
+              fontmap        TimesCE-Roman       -*-times-medium-
+              r-*-*-%s-*-*-*-*-*-iso8859-2
+
+       to map the  Central  European  (Latin-2)  version  of  the
+       Times-Roman  font.  This assumes that you've installed the
+       appropriate X fonts (see mkfontdir(1)).  Xpdf knows  about
+       the ISO8859-2 encoding, so you don't need a fontpath entry
+       for these fonts.  To use the Bakoma Type 1 fonts, do this:
+
+              fontpath /home/derekn/fonts/bakoma
+              fontmap      cmb10      -bakoma-cmb10-medium-r-nor-
+              mal--%s-*-*-*-p-*-adobe-fontspecific
+              fontmap    cmbsy10    -bakoma-cmbsy10-medium-r-nor-
+              mal--%s-*-*-*-p-*-adobe-fontspecific
+              etc...
+
+       This  assumes  that the Type 1 font files are available in
+       the directory /home/derekn/fonts/bakoma.
+
+2 BUGS
+
+       This  is  a  beta  release  of xpdf, and there are still a
+       bunch of PDF features which I have yet to implement.
+
+       At this point, the biggest problem is that embedded  fonts
+       are not handled properly.
+
+2 AUTHOR
+
+       The  xpdf  software  and  documentation are copyright 1996
+       Derek B. Noonburg (derekn@ece.cmu.edu).
+
+2 SEE_ALSO
+
+       pdftops(1)
+       http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
+

@@ -62,6 +62,10 @@ GString *LTKApp::getStringResource(char *inst, char *def) {
   return ltkGetStringResource(resourceDB, appName, inst, def);
 }
 
+int LTKApp::getIntResource(char *inst, int def) {
+  return ltkGetIntResource(resourceDB, appName, inst, def);
+}
+
 unsigned long LTKApp::getColorResource(char *inst,
 				       char *def1, unsigned long def2,
 				       XColor *xcol) {

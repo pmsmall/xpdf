@@ -112,7 +112,7 @@ Stream *Parser::makeStream(Object *dict) {
 
   // get stream start position
   lexer->skipToNextLine();
-  pos = lexer->getPos() - 1;
+  pos = lexer->getPos();
 
   // get length
   dict->dictLookup("Length", &obj);
@@ -132,7 +132,7 @@ Stream *Parser::makeStream(Object *dict) {
   str = str->addFilters(dict);
 
   // skip over stream data
-  lexer->getStream()->setPos(pos + length);
+  lexer->setPos(pos + length);
 
   // refill token buffers and check for 'endstream'
   shift();  // kill '>>'
@@ -146,10 +146,12 @@ Stream *Parser::makeStream(Object *dict) {
 }
 
 void Parser::shift() {
-  if (inlineImg > 0)
+  if (inlineImg > 0) {
     ++inlineImg;
-  else if (buf2.isCmd("ID"))
+  } else if (buf2.isCmd("ID")) {
+    lexer->skipChar();		// skip char after 'ID' command
     inlineImg = 1;
+  }
   buf1.free();
   buf1 = buf2;
   if (inlineImg > 0)		// don't buffer inline image data

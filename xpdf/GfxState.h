@@ -70,11 +70,15 @@ public:
   int getBits() { return bits; }
 
   // Get color mode.
+  GfxColorMode getMode() { return mode; }
   GBool isIndexed() { return indexed; }
 
   // Convert an input value to a color.
   void getRGB(Guchar x[4], Guchar *r, Guchar *g, Guchar *b);
   void getGray(Guchar x[4], Guchar *gray);
+
+  // Get color corresponding to index.
+  Guchar *lookupIndex(int i) { return lookup[i]; }
 
 private:
 
@@ -101,19 +105,24 @@ public:
   ~GfxSubpath();
 
   // Copy.
-  GfxSubpath *copy() { return new GfxSubpath(x, y, n, size); }
+  GfxSubpath *copy() { return new GfxSubpath(this); }
 
   // Get points.
   int getNumPoints() { return n; }
   double getX(int i) { return x[i]; }
   double getY(int i) { return y[i]; }
+  GBool getCurve(int i) { return curve[i]; }
 
   // Get last point.
   double getLastX() { return x[n-1]; }
   double getLastY() { return y[n-1]; }
 
-  // Add a segment.
+  // Add a line segment.
   void lineTo(double x1, double y1);
+
+  // Add a Bezier curve.
+  void curveTo(double x1, double y1, double x2, double y2,
+	       double x3, double y3);
 
   // Close the subpath.
   void close()
@@ -122,10 +131,12 @@ public:
 private:
 
   double *x, *y;		// points
+  GBool *curve;			// curve[i] => point i is a control point
+				//   for a Bezier curve
   int n;			// number of points
   int size;			// size of x/y arrays
 
-  GfxSubpath(double *x1, double *y1, int n1, int size1);
+  GfxSubpath(GfxSubpath *subpath);
 };
 
 class GfxPath {
@@ -157,6 +168,11 @@ public:
   // Add a segment to the last subpath.
   void lineTo(double x, double y) { subpaths[n-1]->lineTo(x, y); }
 
+  // Add a Bezier curve to the last subpath
+  void curveTo(double x1, double y1, double x2, double y2,
+	       double x3, double y3)
+    { subpaths[n-1]->curveTo(x1, y1, x2, y2, x3, y3); }
+
   // Close the last subpath.
   void close() { subpaths[n-1]->close(); }
 
@@ -179,7 +195,7 @@ public:
   // Construct a default GfxState, for a device with resolution <dpi>,
   // page box (<x1>,<y1>)-(<x2>,<y2>), page rotation <rotate>, and
   // coordinate system specified by <upsideDown>.
-  GfxState(int dpi, int x1, int y1, int x2, int y2, int rotate,
+  GfxState(int dpi, int x1a, int y1a, int x2a, int y2a, int rotate,
 	   GBool upsideDown);
 
   // Destructor.
@@ -190,6 +206,10 @@ public:
 
   // Accessors.
   double *getCTM() { return ctm; }
+  int getX1() { return x1; }
+  int getY1() { return y1; }
+  int getX2() { return x2; }
+  int getY2() { return y2; }
   int getPageWidth() { return pageWidth; }
   int getPageHeight() { return pageHeight; }
   GfxColor *getFillColor() { return &fillColor; }
@@ -285,7 +305,8 @@ public:
   void lineTo(double x, double y)
     { path->lineTo(curX = x, curY = y); }
   void curveTo(double x1, double y1, double x2, double y2,
-	       double x3, double y3);
+	       double x3, double y3)
+    { path->curveTo(x1, y1, x2, y2, curX = x3, curY = y3); }
   void closePath()
     { path->close(); curX = path->getLastX(); curY = path->getLastY(); }
   void clearPath();
@@ -302,6 +323,7 @@ public:
 private:
 
   double ctm[6];		// coord transform matrix
+  int x1, y1, x2, y2;		// page corners (user coords)
   int pageWidth, pageHeight;	// page size (pixels)
 
   GfxColor fillColor;		// fill color
@@ -333,9 +355,6 @@ private:
   GfxState *saved;		// next GfxState on stack
 
   GfxState(GfxState *state);
-  void doCurveTo(double x0, double y0, double x1, double y1,
-		 double x2, double y2, double x3, double y3,
-		 int splits);
 };
 
 #endif

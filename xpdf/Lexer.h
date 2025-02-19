@@ -16,7 +16,7 @@
 #include "Object.h"
 #include "Stream.h"
 
-#define maxTokenLen 255
+#define tokBufSize 128		// size of token buffer
 
 //------------------------------------------------------------------------
 // Lexer
@@ -34,8 +34,11 @@ public:
   // Get the next object from the input stream.
   Object *getObj(Object *obj);
 
-  // Skip to the next line in the input stream.
+  // Skip to the beginning of the next line in the input stream.
   void skipToNextLine();
+
+  // Skip over one character.
+  void skipChar() { str->getChar(); }
 
   // Get stream.
   Stream *getStream() { return str; }
@@ -43,14 +46,14 @@ public:
   // Get current position in file.
   int getPos() { return str->getPos(); }
 
+  // Set position in file.
+  void setPos(int pos) { str->setPos(pos); }
+
 private:
 
   Stream *str;			// input stream
-  int buf;			// next character
-  GBool cr, lf;			// used for filtering CR/LF
   GBool freeStream;		// should Lexer free the Stream?
-
-  int getChar();
+  char tokBuf[tokBufSize];	// temporary token buffer
 };
 
 #endif

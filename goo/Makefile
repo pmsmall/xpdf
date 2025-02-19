@@ -13,13 +13,13 @@ CXXFLAGS = $(CXXFLAGS2) -I.
 
 #------------------------------------------------------------------------
 
-GOO_CXX_OBJS = GString.o gmempp.o
+GOO_CXX_OBJS = GString.o gmempp.o fileNames.o
 GOO_C_OBJS = gmem.o parseargs.o cover.o
 GOO_OBJS = $(GOO_CXX_OBJS) $(GOO_C_OBJS)
 
 libGoo.a: $(GOO_OBJS)
 	rm -f libGoo.a
-	ar q libGoo.a $(GOO_OBJS)
+	$(AR) libGoo.a $(GOO_OBJS)
 	$(RANLIB) libGoo.a
 
 #------------------------------------------------------------------------
@@ -44,6 +44,8 @@ depend:
 GString.o: GString.cc \
  GString.h
 gmempp.o: gmempp.cc gmem.h
+fileNames.o: fileNames.cc \
+ GString.h fileNames.h gtypes.h
 gmem.o: gmem.c \
  gmem.h
 parseargs.o: parseargs.c \

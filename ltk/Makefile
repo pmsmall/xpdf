@@ -34,7 +34,7 @@ LTK_OBJS =	LTKApp.o \
 
 libLTK.a: $(LTK_OBJS)
 	rm -f libLTK.a
-	ar q libLTK.a $(LTK_OBJS)
+	$(AR) libLTK.a $(LTK_OBJS)
 	$(RANLIB) libLTK.a
 
 #------------------------------------------------------------------------
@@ -68,51 +68,57 @@ depend:
 LTKApp.o: LTKApp.cc \
  ../goo/gtypes.h LTKApp.h \
  ../goo/GString.h \
- LTKResources.h LTKWindow.h LTKMisc.h LTKWidget.h
+ LTKResources.h LTKWindow.h LTKMisc.h \
+ LTKWidget.h
 LTKBorder.o: LTKBorder.cc \
  ../goo/gtypes.h \
  LTKBorder.h
 LTKBox.o: LTKBox.cc \
- LTKWindow.h ../goo/gtypes.h ../goo/GString.h \
- LTKBox.h LTKBorder.h LTKWidget.h
+ LTKWindow.h ../goo/gtypes.h \
+ ../goo/GString.h LTKBox.h LTKBorder.h \
+ LTKWidget.h
 LTKButton.o: LTKButton.cc \
- LTKWindow.h ../goo/gtypes.h ../goo/GString.h \
- LTKButton.h LTKWidget.h LTKBorder.h
+ LTKWindow.h ../goo/gtypes.h \
+ ../goo/GString.h LTKButton.h LTKWidget.h \
+ LTKBorder.h
 LTKCanvas.o: LTKCanvas.cc \
- LTKWindow.h ../goo/gtypes.h ../goo/GString.h \
- LTKCanvas.h LTKWidget.h
+ LTKWindow.h ../goo/gtypes.h \
+ ../goo/GString.h LTKCanvas.h LTKWidget.h
 LTKDblBufCanvas.o: LTKDblBufCanvas.cc \
- LTKWindow.h ../goo/gtypes.h ../goo/GString.h \
- LTKDblBufCanvas.h LTKWidget.h
+ LTKWindow.h ../goo/gtypes.h \
+ ../goo/GString.h LTKDblBufCanvas.h LTKWidget.h
 LTKEmpty.o: LTKEmpty.cc \
- LTKWindow.h ../goo/gtypes.h ../goo/GString.h \
- LTKEmpty.h LTKWidget.h
+ LTKWindow.h ../goo/gtypes.h \
+ ../goo/GString.h LTKEmpty.h LTKWidget.h
 LTKLabel.o: LTKLabel.cc \
  LTKLabel.h ../goo/GString.h \
  LTKWidget.h ../goo/gtypes.h LTKWindow.h
 LTKMisc.o: LTKMisc.cc \
- LTKMisc.h ../goo/GString.h LTKWindow.h \
+ LTKMisc.h \
+ ../goo/GString.h LTKWindow.h \
  ../goo/gtypes.h LTKWidget.h
 LTKResources.o: LTKResources.cc \
  ../goo/gtypes.h ../goo/GString.h \
- LTKConfig.h LTKMisc.h LTKResources.h
+ ../goo/fileNames.h LTKConfig.h LTKMisc.h LTKResources.h
 LTKScrollbar.o: LTKScrollbar.cc \
  LTKApp.h \
- ../goo/gtypes.h ../goo/GString.h LTKWindow.h \
- LTKScrollbar.h LTKWidget.h LTKBorder.h
+ ../goo/gtypes.h ../goo/GString.h \
+ LTKWindow.h LTKScrollbar.h LTKWidget.h \
+ LTKBorder.h
 LTKScrollingCanvas.o: LTKScrollingCanvas.cc \
- LTKWindow.h ../goo/gtypes.h ../goo/GString.h \
- LTKScrollingCanvas.h LTKWidget.h
+ LTKWindow.h ../goo/gtypes.h \
+ ../goo/GString.h LTKScrollingCanvas.h \
+ LTKWidget.h
 LTKTextIn.o: LTKTextIn.cc \
  ../goo/gtypes.h ../goo/GString.h \
  LTKWindow.h LTKTextIn.h LTKWidget.h LTKBorder.h
 LTKWidget.o: LTKWidget.cc \
- LTKWindow.h ../goo/gtypes.h ../goo/GString.h \
- LTKWidget.h
+ LTKWindow.h ../goo/gtypes.h \
+ ../goo/GString.h LTKWidget.h
 LTKWindow.o: LTKWindow.cc \
- LTKConfig.h \
- LTKApp.h ../goo/gtypes.h \
- ../goo/GString.h LTKWindow.h LTKWidget.h LTKBox.h LTKBorder.h
+ LTKConfig.h LTKApp.h \
+ ../goo/gtypes.h ../goo/GString.h LTKWindow.h LTKWidget.h LTKBox.h \
+ LTKBorder.h
 ltkbuild.o: ltkbuild.cc \
  ../goo/gtypes.h \
  ../goo/gmem.h ../goo/GString.h ltkbuild-widgets.h

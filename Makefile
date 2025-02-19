@@ -23,6 +23,8 @@ pdftops:
 install:
 	install -c xpdf/xpdf $(PREFIX)/bin
 	install -c xpdf/pdftops $(PREFIX)/bin
+	install -c xpdf.1 $(PREFIX)/man/man1
+	install -c pdftops.1 $(PREFIX)/man/man1
 
 clean:
 	cd goo; $(MAKE) clean

@@ -11,71 +11,48 @@
 #endif
 
 #include <stddef.h>
+#include <string.h>
 #include <gmem.h>
 #include <GString.h>
 #include "Error.h"
 #include "Object.h"
 #include "Array.h"
 #include "Dict.h"
-#include "Catalog.h"
 #include "Link.h"
 
 //------------------------------------------------------------------------
-// LinkGoto
+// LinkDest
 //------------------------------------------------------------------------
 
-LinkGoto::LinkGoto(Array *a, Catalog *catalog) {
-  remote = gFalse;
-  fileName = NULL;
-  ok = getPosition(a, catalog);
-}
-
-LinkGoto::LinkGoto(GString *fileName1, Array *a, Catalog *catalog) {
-  remote = gTrue;
-  fileName = fileName1->copy();
-  ok = getPosition(a, catalog);
-}
-
-LinkGoto::LinkGoto(Dict *fileSpec, Array *a, Catalog *catalog) {
-  Object obj1;
-
-  remote = gTrue;
-  fileName = NULL;
-  if (!fileSpec->lookup("Unix", &obj1)->isString()) {
-    obj1.free();
-    fileSpec->lookup("F", &obj1);
-  }
-  if (obj1.isString()) {
-    fileName = obj1.getString()->copy();
-  } else {
-    error(0, "Can't get remote file name for link");
-    ok = gFalse;
-  }
-  obj1.free();
-  ok = ok && getPosition(a, catalog);
-}
-
-GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
+LinkDest::LinkDest(Array *a, GBool remote) {
   Object obj1, obj2;
 
   // get page
-  if (!a->getNF(0, &obj1)->isRef()) {
-    error(0, "Bad annotation destination");
-    goto err2;
+  if (remote) {
+    if (!a->get(0, &obj1)->isInt()) {
+      error(-1, "Bad annotation destination");
+      goto err2;
+    }
+    pageNum = obj1.getInt() + 1;
+    pageRef.num = pageRef.gen = 0;
+    obj1.free();
+  } else {
+    if (!a->getNF(0, &obj1)->isRef()) {
+      error(-1, "Bad annotation destination");
+      goto err2;
+    }
+    pageRef.num = obj1.getRefNum();
+    pageRef.gen = obj1.getRefGen();
+    pageNum = 0;
+    obj1.free();
   }
-  pageNum = catalog->findPage(obj1.getRefNum(), obj1.getRefGen());
-  if (pageNum == 0) {
-    error(0, "Bad annotation destination page number");
-    goto err2;
-  }
-  obj1.free();
 
   // get destination info
   a->get(1, &obj1);
 
   // XYZ link
   if (obj1.isName("XYZ")) {
-    kind = gotoXYZ;
+    kind = destXYZ;
     a->get(2, &obj2);
     if (obj2.isNull()) {
       changeLeft = gFalse;
@@ -83,7 +60,7 @@ GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
       changeLeft = gTrue;
       left = obj2.getNum();
     } else {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     obj2.free();
@@ -94,7 +71,7 @@ GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
       changeTop = gTrue;
       top = obj2.getNum();
     } else {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     obj2.free();
@@ -105,20 +82,20 @@ GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
       changeZoom = gTrue;
       zoom = obj2.getNum();
     } else {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     obj2.free();
 
   // Fit link
   } else if (obj1.isName("Fit")) {
-    kind = gotoFit;
+    kind = destFit;
 
   // FitH link
   } else if (obj1.isName("FitH")) {
-    kind = gotoFitH;
+    kind = destFitH;
     if (!a->get(2, &obj2)->isNum()) {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     top = obj2.getNum();
@@ -126,9 +103,9 @@ GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
 
   // FitV link
   } else if (obj1.isName("FitV")) {
-    kind = gotoFitV;
+    kind = destFitV;
     if (!a->get(2, &obj2)->isNum()) {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     left = obj2.getNum();
@@ -136,27 +113,27 @@ GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
 
   // FitR link
   } else if (obj1.isName("FitR")) {
-    kind = gotoFitR;
+    kind = destFitR;
     if (!a->get(2, &obj2)->isNum()) {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     left = obj2.getNum();
     obj2.free();
     if (!a->get(3, &obj2)->isNum()) {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     bottom = obj2.getNum();
     obj2.free();
     if (!a->get(4, &obj2)->isNum()) {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     right = obj2.getNum();
     obj2.free();
     if (!a->get(5, &obj2)->isNum()) {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     top = obj2.getNum();
@@ -164,13 +141,13 @@ GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
 
   // FitB link
   } else if (obj1.isName("FitB")) {
-    kind = gotoFitB;
+    kind = destFitB;
 
   // FitBH link
   } else if (obj1.isName("FitBH")) {
-    kind = gotoFitBH;
+    kind = destFitBH;
     if (!a->get(2, &obj2)->isNum()) {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     top = obj2.getNum();
@@ -178,9 +155,9 @@ GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
 
   // FitBV link
   } else if (obj1.isName("FitBV")) {
-    kind = gotoFitBV;
+    kind = destFitBV;
     if (!a->get(2, &obj2)->isNum()) {
-      error(0, "Bad annotation destination position");
+      error(-1, "Bad annotation destination position");
       goto err1;
     }
     left = obj2.getNum();
@@ -188,23 +165,94 @@ GBool LinkGoto::getPosition(Array *a, Catalog *catalog) {
 
   // unknown link kind
   } else {
-    error(0, "Unknown annotation destination type");
+    error(-1, "Unknown annotation destination type");
     goto err2;
   }
 
   obj1.free();
-  return gTrue;
+  ok = gTrue;
+  return;
 
  err1:
   obj2.free();
  err2:
   obj1.free();
-  return gFalse;
+  ok = gFalse;
+}
+
+//------------------------------------------------------------------------
+// LinkGoto
+//------------------------------------------------------------------------
+
+LinkGoto::LinkGoto(char *subtype, Object *obj) {
+  Object obj1, obj2;
+  GBool remote;
+
+  fileName = NULL;
+  dest = NULL;
+  namedDest = NULL;
+
+  // destination specified directly in D entry
+  if (!subtype) {
+
+    // destination array
+    if (obj->isArray()) {
+      dest = new LinkDest(obj->getArray(), gFalse);
+      if (!dest->isOk()) {
+	delete dest;
+	dest = NULL;
+      }
+
+    // named destination
+    } else if (obj->isName()) {
+      namedDest = new GString(obj->getName());
+    }
+
+  // scan GoTo/GoToR/Launch action dictionary
+  } else if (obj->isDict()) {
+
+    // file key
+    obj->dictLookup("F", &obj1);
+    if (obj1.isString()) {
+      fileName = obj1.getString()->copy();
+    } else if (obj1.isDict()) {
+      if (!obj1.dictLookup("Unix", &obj2)->isString()) {
+	obj2.free();
+	obj1.dictLookup("F", &obj2);
+      }
+      if (obj2.isString())
+	fileName = obj2.getString()->copy();
+      else
+	error(-1, "Can't get remote file name for link");
+      obj2.free();
+    }
+    obj1.free();
+
+    // destination key (for GoTo and GoToR actions)
+    remote = !strcmp(subtype, "GoToR");
+    if (remote || !strcmp(subtype, "GoTo")) {
+      obj->dictLookup("D", &obj1);
+      if (obj1.isArray()) {
+	dest = new LinkDest(obj1.getArray(), remote);
+	if (!dest->isOk()) {
+	  delete dest;
+	  dest = NULL;
+	}
+      } else if (obj1.isString()) {
+	namedDest = obj1.getString()->copy();
+      }
+      obj1.free();
+    }
+  }
 }
 
 LinkGoto::~LinkGoto() {
   if (fileName)
     delete fileName;
+  if (dest)
+    delete dest;
+  if (namedDest)
+    delete namedDest;
 }
 
 //------------------------------------------------------------------------
@@ -235,36 +283,36 @@ LinkUnknown::~LinkUnknown() {
 // Link
 //------------------------------------------------------------------------
 
-Link::Link(Dict *dict, Catalog *catalog) {
-  Object obj1, obj2, obj3;
+Link::Link(Dict *dict) {
+  Object obj1, obj2;
 
   action = NULL;
 
   // get rectangle
   if (!dict->lookup("Rect", &obj1)->isArray()) {
-    error(0, "Annotation rectangle is wrong type");
+    error(-1, "Annotation rectangle is wrong type");
     goto err5;
   }
   if (!obj1.arrayGet(0, &obj2)->isInt()) {
-    error(0, "Bad annotation rectangle");
+    error(-1, "Bad annotation rectangle");
     goto err4;
   }
   x1 = obj2.getInt();
   obj2.free();
   if (!obj1.arrayGet(1, &obj2)->isInt()) {
-    error(0, "Bad annotation rectangle");
+    error(-1, "Bad annotation rectangle");
     goto err4;
   }
   y1 = obj2.getInt();
   obj2.free();
   if (!obj1.arrayGet(2, &obj2)->isInt()) {
-    error(0, "Bad annotation rectangle");
+    error(-1, "Bad annotation rectangle");
     goto err4;
   }
   x2 = obj2.getInt();
   obj2.free();
   if (!obj1.arrayGet(3, &obj2)->isInt()) {
-    error(0, "Bad annotation rectangle");
+    error(-1, "Bad annotation rectangle");
     goto err4;
   }
   y2 = obj2.getInt();
@@ -274,11 +322,11 @@ Link::Link(Dict *dict, Catalog *catalog) {
   // get border
   dict->lookup("Border", &obj1);
   if (!obj1.isArray()) {
-    error(0, "Annotation border is wrong type");
+    error(-1, "Annotation border is wrong type");
     goto err5;
   }
   if (!obj1.arrayGet(2, &obj2)->isNum()) {
-    error(0, "Bad annotation border");
+    error(-1, "Bad annotation border");
     goto err4;
   }
   borderW = obj2.getNum();
@@ -286,8 +334,8 @@ Link::Link(Dict *dict, Catalog *catalog) {
   obj1.free();
 
   // look for destination
-  if (dict->lookup("Dest", &obj1)->isArray()) {
-    action = new LinkGoto(obj1.getArray(), catalog);
+  if (!dict->lookup("Dest", &obj1)->isNull()) {
+    action = new LinkGoto(NULL, &obj1);
 
   // look for action
   } else {
@@ -295,32 +343,11 @@ Link::Link(Dict *dict, Catalog *catalog) {
     if (dict->lookup("A", &obj1)->isDict()) {
       obj1.dictLookup("S", &obj2);
 
-      // GoTo action
-      if (obj2.isName("GoTo")) {
+      // GoTo / GoToR / Launch action
+      if (obj2.isName("GoTo") || obj2.isName("GoToR") ||
+	  obj2.isName("Launch")) {
+	action = new LinkGoto(obj2.getName(), &obj1);
 	obj2.free();
-	if (obj1.dictLookup("D", &obj2)->isArray()) {
-	  action = new LinkGoto(obj2.getArray(), catalog);
-	} else {
-	  error(0, "Bad annotation action");
-	  action = NULL;
-	}
-	obj2.free();
-
-      // GoToR action
-      } else if (obj2.isName("GoToR")) {
-	obj2.free();
-	obj1.dictLookup("F", &obj2);
-	obj1.dictLookup("D", &obj3);
-	if (obj2.isString() && obj3.isArray()) {
-	  action = new LinkGoto(obj2.getString(), obj3.getArray(), catalog);
-	} else if (obj2.isDict() && obj3.isArray()) {
-	  action = new LinkGoto(obj2.getDict(), obj3.getArray(), catalog);
-	} else {
-	  error(0, "Bad annotation action");
-	  action = NULL;
-	}
-	obj2.free();
-	obj3.free();
 
       // URI action
       } else if (obj2.isName("URI")) {
@@ -329,7 +356,7 @@ Link::Link(Dict *dict, Catalog *catalog) {
 	if (obj2.isString()) {
 	  action = new LinkURI(obj2.getString());
 	} else {
-	  error(0, "Bad annotation action");
+	  error(-1, "Bad annotation action");
 	  action = NULL;
 	}
 	obj2.free();
@@ -341,11 +368,11 @@ Link::Link(Dict *dict, Catalog *catalog) {
 
       // action is missing or wrong type
       } else {
-	error(0, "Bad annotation action");
+	error(-1, "Bad annotation action");
 	action = NULL;
       }
     } else {
-      error(0, "Missing annotation destination/action");
+      error(-1, "Missing annotation destination/action");
       action = NULL;
     }
   }
@@ -376,7 +403,7 @@ Link::~Link() {
 // Links
 //------------------------------------------------------------------------
 
-Links::Links(Object *annots, Catalog *catalog) {
+Links::Links(Object *annots) {
   Object obj1, obj2;
   int size;
   int i;
@@ -393,7 +420,7 @@ Links::Links(Object *annots, Catalog *catalog) {
 	    size += 16;
 	    links = (Link **)grealloc(links, size * sizeof(Link *));
 	  }
-	  links[numLinks++] = new Link(obj1.getDict(), catalog);
+	  links[numLinks++] = new Link(obj1.getDict());
 	}
 	obj2.free();
       }
@@ -410,12 +437,12 @@ Links::~Links() {
   gfree(links);
 }
 
-Link *Links::find(int x, int y) {
+LinkAction *Links::find(int x, int y) {
   int i;
 
   for (i = 0; i < numLinks; ++i) {
-    if (links[i]->inRect(x, y))
-      return links[i];
+    if (links[i]->inRect(x, y) && links[i]->getAction())
+      return links[i]->getAction();
   }
   return NULL;
 }

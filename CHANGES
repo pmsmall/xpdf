@@ -38,7 +38,7 @@ Replaced calls to XrmCombineFileDatabase() with calls to
 Fixed problem with reading multiple xref tables in updated PDF files.
 Check for encryption and print appropriate error message.
 Rudimentary dithering of images.
-Fixed buf in CCITTFax filter (pass mode followed by horizontal mode).
+Fixed bug in CCITTFax filter (pass mode followed by horizontal mode).
 Optimized drawImage() and drawImageMask().
 Changed several things to ease porting:
   - changed '__inline' to 'inline' (to adhere to the ANSI standard)
@@ -60,6 +60,7 @@ If an X font is not found, try smaller and then larger sizes (this is
   useful for old or broken X servers which can't scale bitmap fonts).
 Added -rgb (color cube size) option.
 Various minor bug fixes.
+
 
 0.5 (96-may-23)
 ---------------
@@ -92,3 +93,86 @@ Top-level Makefile uses '$(MAKE)' instead of 'make' for making
 Space/PageDown/Next and Backspace/PageUp/Previous now moves to
   next/previous page if already scrolled to bottom/top of current
   page.
+
+
+0.5a (96-jul-09)
+----------------
+[not a public release]
+For PDF 1.2 (a.k.a. Amber, a.k.a. Acrobat 3) support:
+  - look for trailer after first xref instead of at end of file.
+Deal with font subsets by converting character names of the form
+  'Cnnnn' to the appropriate character from the standard encoding.
+Extract encoding from embedded Type 1 fonts.
+Kludge to fill one-pixel thick polygons.
+Changed X font encoding to use endash for hyphen (gets rid of too-long
+  hyphens).
+Handle Resources key in Pages dictionaries (needed for pstoedit
+  output).
+Fix comment handling in Parser (needed for pstoedit output).
+Move Bezier curve conversion from GfxState to XOutputDev; look at
+  flatness parameter in GfxState.
+Change all of the path functions in XOutputDev (stroke, fill, clip) to
+  use the same path transformation/conversion function.
+Rewrote PostScript output driver as a subclass of OutputDev; removed
+  duplicated code (ps_ functions) from Gfx.
+Fixed bug in xref code with small (< 1024 bytes) PDF files.
+Implemented BX/EX operators.
+Added PDFDoc class.
+
+
+0.6 (96-nov-12)
+---------------
+Add support for PostScript output to stdout (-) and to a command
+  (|lpr); added -ps option and psFile resource.
+Decryption is implemented but not included in the distribution due to
+  legal restrictions: the decryption algorithm is a trade secret of
+  RSA, Inc., and the U.S.A. still has bogus export controls on
+  cryptography software.
+Added .xpdfrc config file:
+  - Added fontmap parameter: user can map PDF font names to X fonts.
+  - Added fontpath parameter: search for Type 1 font if encoding is
+    not in PDF file.
+Incremental display: display is updated after every 200 commands.
+Added forward and backward by-10-page buttons.
+Links:
+  - Implement links with "Launch" actions that point to PDF files.
+  - Draw borders around links.
+  - Handle links with named destinations.
+  - GoToR links specify a page number instead of a page reference.
+Optimizations:
+  - Rewrote Stream to use buffering, and added lookChar() functions;
+    rewrote Lexer to take advantage of this.
+  - Use hash tables for name->code mapping in font encodings.
+  - Made XOutputDev::doCurve() iterative, changed /2 to *0.5, and
+    changed the flatness test.
+Added file name to window title.
+Implemented RunLength filter.
+Implemented forms.
+Convert ObjType to an enum.
+Changed isDict("Pages") to isDict() (in Catalog.cc) to deal with
+  incorrect PDF files.
+Changed color selection so that very pale colors don't map to white.
+Fixed bug in CCITTFax filter (multiple make-up codes).
+In GString::clear(): need to set length to 0 before calling resize().
+Base initial window size on first displayed page, not page 1; deal
+  correctly with rotated pages.
+Added ltkGetIntResource() and LTKApp::getIntResource().
+PostScript output fixes:
+  - Escape backslashes in strings.
+  - When doing ASCII85 encoding, keep both chars of EOF marker ('~>')
+    on same line.
+  - Add extra line '%-EOD-' after image data streams; call wrapper
+    functions for image and imagemask which look for this line -- this
+    should fix the 'too much data in stream' bug.
+  - Font tags can be reused for different fonts on different pages --
+    so use font object reference (number/generation) instead.
+Initialize character widths to zero (this caused crashes on OSF/1).
+Handle image masks which go outside of pixmap.
+Makefile.config changes:
+  - Remove -o in C++ compile rule.
+  - Add $(AR) variable.
+Code which read char widths from font dictionary read all but the last
+  width.
+Add 'return 0;' to main() in xpdf and pdftops.
+Allow fonts to use StandardEncoding.
+Convert man pages to VMS help files.

@@ -41,6 +41,12 @@ public:
   // Get next char from stream.
   virtual int getChar() = 0;
 
+  // Peek at next char in stream.
+  virtual int lookChar() = 0;
+
+  // Get next line from stream.
+  virtual char *getLine(char *buf, int size);
+
   // Get current position in file.
   virtual int getPos() = 0;
 
@@ -83,8 +89,13 @@ public:
   FileStream(FILE *f1, int start1, int length1, Object *dict1);
   virtual ~FileStream();
   virtual void reset();
-  virtual int getChar();
-  virtual int getPos() { return pos; }
+  virtual int getChar()
+    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
+      return *bufPtr++ & 0xff; }
+  virtual int lookChar()
+    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
+      return *bufPtr & 0xff; }
+  virtual int getPos() { return bufPos + (bufPtr - buf); }
   virtual void setPos(int pos1);
   virtual GBool isBinary(GBool last = gTrue) { return last; }
   virtual Stream *getBaseStream() { return this; }
@@ -100,10 +111,15 @@ public:
 
 private:
 
+  GBool fillBuf();
+
   FILE *f;
   int start;
   int length;
-  int pos;
+  char buf[256];
+  char *bufPtr;
+  char *bufEnd;
+  int bufPos;
   int savePos;
   Object dict;
 };
@@ -119,6 +135,7 @@ public:
   virtual ~SubStream();
   virtual void reset() {}
   virtual int getChar() { return str->getChar(); }
+  virtual int lookChar() { return str->lookChar(); }
   virtual int getPos() { return str->getPos(); }
   virtual GBool isBinary(GBool last = gTrue) { return last; }
   virtual Stream *getBaseStream() { return this; }
@@ -141,7 +158,9 @@ public:
   ASCIIHexStream(Stream *str1);
   virtual ~ASCIIHexStream();
   virtual void reset();
-  virtual int getChar();
+  virtual int getChar()
+    { int c = lookChar(); buf = EOF; return c; }
+  virtual int lookChar();
   virtual int getPos() { return str->getPos(); }
   virtual GString *getPSFilter(char *indent);
   virtual GBool isBinary(GBool last = gTrue);
@@ -152,6 +171,7 @@ public:
 private:
 
   Stream *str;
+  int buf;
   GBool eof;
 };
 
@@ -165,7 +185,9 @@ public:
   ASCII85Stream(Stream *str1);
   virtual ~ASCII85Stream();
   virtual void reset();
-  virtual int getChar();
+  virtual int getChar()
+    { int c = lookChar(); ++index; return c; }
+  virtual int lookChar();
   virtual int getPos() { return str->getPos(); }
   virtual GString *getPSFilter(char *indent);
   virtual GBool isBinary(GBool last = gTrue);
@@ -193,7 +215,12 @@ public:
 	    int bits1, int early1);
   virtual ~LZWStream();
   virtual void reset();
-  virtual int getChar();
+  virtual int getChar()
+    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
+      return *bufPtr++ & 0xff; }
+  virtual int lookChar()
+    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
+      return *bufPtr & 0xff; }
   virtual int getPos() { return str->getPos(); }
   virtual GString *getPSFilter(char *indent);
   virtual GBool isBinary(GBool last = gTrue);
@@ -215,19 +242,48 @@ private:
   int inputBuf;			// input buffer
   int inputBits;		// number of bits in input buffer
   int inCodeBits;		// size of input code
+  char buf[256];		// buffer
+  char *bufPtr;			// next char to read
+  char *bufEnd;			// end of buffer
 
   void dumpFile(FILE *f);
   int getCode();
+  GBool fillBuf();
 };
 
-#if 0
 //------------------------------------------------------------------------
 // RunLengthStream
 //------------------------------------------------------------------------
 
 class RunLengthStream: public Stream {
+public:
+
+  RunLengthStream(Stream *str1);
+  virtual ~RunLengthStream();
+  virtual void reset();
+  virtual int getChar()
+    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
+      return *bufPtr++ & 0xff; }
+  virtual int lookChar()
+    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
+      return *bufPtr & 0xff; }
+  virtual int getPos() { return str->getPos(); }
+  virtual GString *getPSFilter(char *indent);
+  virtual GBool isBinary(GBool last = gTrue);
+  virtual Stream *getBaseStream() { return str->getBaseStream(); }
+  virtual FILE *getFile() { return str->getFile(); }
+  virtual Dict *getDict() { return str->getDict(); }
+
+private:
+
+  Stream *str;
+  char buf[128];		// buffer
+  char *bufPtr;			// next char to read
+  char *bufEnd;			// end of buffer
+  GBool eof;
+
+  GBool fillBuf();
 };
-#endif
 
 //------------------------------------------------------------------------
 // CCITTFaxStream
@@ -242,7 +298,9 @@ public:
 		 int columns1, int rows1, GBool black1);
   virtual ~CCITTFaxStream();
   virtual void reset();
-  virtual int getChar();
+  virtual int getChar()
+    { int c = lookChar(); buf = EOF; return c; }
+  virtual int lookChar();
   virtual int getPos() { return str->getPos(); }
   virtual GString *getPSFilter(char *indent);
   virtual GBool isBinary(GBool last = gTrue);
@@ -266,6 +324,7 @@ private:
   short *codingLine;		// coding line changing elements
   int a0;			// index into codingLine
   int outputBits;		// remaining ouput bits
+  int buf;			// character buffer
 
   short getCode(CCITTCodeTable *table);
   int getBit();
@@ -300,6 +359,7 @@ public:
   virtual ~DCTStream();
   virtual void reset();
   virtual int getChar();
+  virtual int lookChar();
   virtual int getPos() { return str->getPos(); }
   virtual GString *getPSFilter(char *indent);
   virtual GBool isBinary(GBool last = gTrue);

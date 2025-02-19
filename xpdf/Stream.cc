@@ -40,8 +40,27 @@ extern "C" int unlink(char *filename);
 // Stream (base class)
 //------------------------------------------------------------------------
 
+char *Stream::getLine(char *buf, int size) {
+  int i;
+  int c;
+
+  for (i = 0; i < size - 1; ++i) {
+    c = getChar();
+    if (c == EOF || c == '\n')
+      break;
+    if (c == '\r') {
+      if ((c = lookChar()) == '\n')
+	getChar();
+      break;
+    }
+    buf[i] = c;
+  }
+  buf[i] = '\0';
+  return buf;
+}
+
 void Stream::setPos(int pos) {
-  error(0, "Internal: called setPos() on non-FileStream");
+  error(-1, "Internal: called setPos() on non-FileStream");
 }
 
 GString *Stream::getPSFilter(char *indent) {
@@ -134,7 +153,8 @@ Stream *Stream::makeFilter(char *name, Stream *str, Object *params) {
       obj.free();
     }
     str = new LZWStream(str, predictor, columns, colors, bits, early);
-//~  } else if (!strcmp(name, "RunLengthDecode")) {
+  } else if (!strcmp(name, "RunLengthDecode") || !strcmp(name, "RL")) {
+    str = new RunLengthStream(str);
   } else if (!strcmp(name, "CCITTFaxDecode")) {
     encoding = 0;
     byteAlign = gFalse;
@@ -180,7 +200,8 @@ FileStream::FileStream(FILE *f1, int start1, int length1, Object *dict1) {
   f = f1;
   start = start1;
   length = length1;
-  pos = start;
+  bufPtr = bufEnd = buf;
+  bufPos = start;
   savePos = -1;
   dict = *dict1;
 }
@@ -194,51 +215,67 @@ FileStream::~FileStream() {
 void FileStream::reset() {
   savePos = ftell(f);
   fseek(f, start, SEEK_SET);
-  pos = start;
+  bufPtr = bufEnd = buf;
+  bufPos = start;
 }
 
-int FileStream::getChar() {
-  int c;
+GBool FileStream::fillBuf() {
+  int n;
+  char *p;
 
-  if (length >= 0 && pos >= start + length)
-    return EOF;
-  c = fgetc(f);
-  if (c != EOF)
-    ++pos;
-  return c;
+  bufPos += bufEnd - buf;
+  bufPtr = bufEnd = buf;
+  if (length >= 0 && bufPos >= start + length)
+    return gFalse;
+  if (length >= 0 && bufPos + 256 > start + length)
+    n = start + length - bufPos;
+  else
+    n = 256;
+  n = fread(buf, 1, n, f);
+  bufEnd = buf + n;
+  if (bufPtr >= bufEnd)
+    return gFalse;
+  return gTrue;
 }
 
 void FileStream::setPos(int pos1) {
+  long size;
+
   if (pos1 >= 0) {
     fseek(f, pos1, SEEK_SET);
-    pos = pos1;
+    bufPos = pos1;
   } else {
+    fseek(f, 0, SEEK_END);
+    size = ftell(f);
+    if (pos1 < -size)
+      pos1 = -size;
     fseek(f, pos1, SEEK_END);
-    pos = ftell(f);
+    bufPos = ftell(f);
   }
+  bufPtr = bufEnd = buf;
 }
 
 GBool FileStream::checkHeader() {
-  char buf[headerSearchSize+1];
+  char hdrBuf[headerSearchSize+1];
   char *p;
   double version;
   int i;
 
   for (i = 0; i < headerSearchSize; ++i)
-    buf[i] = getChar();
-  buf[headerSearchSize] = '\0';
+    hdrBuf[i] = getChar();
+  hdrBuf[headerSearchSize] = '\0';
   for (i = 0; i < headerSearchSize - 5; ++i) {
-    if (!strncmp(&buf[i], "%PDF-", 5))
+    if (!strncmp(&hdrBuf[i], "%PDF-", 5))
       break;
   }
   if (i >= headerSearchSize - 5) {
-    error(0, "May not be a PDF file (continuing anyway)");
+    error(-1, "May not be a PDF file (continuing anyway)");
     return gFalse;
   }
   start += i;
-  p = strtok(&buf[i+5], " \t\n\r");
+  p = strtok(&hdrBuf[i+5], " \t\n\r");
   version = atof(p);
-  if (!(buf[i+5] >= '0' && buf[i+5] <= '9') || version > pdfVersionNum) {
+  if (!(hdrBuf[i+5] >= '0' && hdrBuf[i+5] <= '9') || version > pdfVersionNum) {
     error(getPos(), "PDF version %s -- xpdf supports version %s"
 	  " (continuing anyway)", p, pdfVersion);
     return gFalse;
@@ -265,6 +302,7 @@ SubStream::~SubStream() {
 
 ASCIIHexStream::ASCIIHexStream(Stream *str1) {
   str = str1;
+  buf = EOF;
   eof = gFalse;
 }
 
@@ -274,20 +312,26 @@ ASCIIHexStream::~ASCIIHexStream() {
 
 void ASCIIHexStream::reset() {
   str->reset();
+  buf = EOF;
   eof = gFalse;
 }
 
-int ASCIIHexStream::getChar() {
+int ASCIIHexStream::lookChar() {
   int c1, c2, x;
 
-  if (eof)
+  if (buf != EOF)
+    return buf;
+  if (eof) {
+    buf = EOF;
     return EOF;
+  }
   do {
     c1 = str->getChar();
   } while (isspace(c1));
   if (c1 == '>') {
     eof = gTrue;
-    return EOF;
+    buf = EOF;
+    return buf;
   }
   do {
     c2 = str->getChar();
@@ -315,7 +359,8 @@ int ASCIIHexStream::getChar() {
   } else {
     error(getPos(), "Illegal character <%02x> in ASCIIHex stream", c2);
   }
-  return x & 0xff;
+  buf = x & 0xff;
+  return buf;
 }
 
 GString *ASCIIHexStream::getPSFilter(char *indent) {
@@ -350,7 +395,7 @@ void ASCII85Stream::reset() {
   eof = gFalse;
 }
 
-int ASCII85Stream::getChar() {
+int ASCII85Stream::lookChar() {
   int k;
   Gulong t;
 
@@ -391,7 +436,7 @@ int ASCII85Stream::getChar() {
       }
     }
   }
-  return b[index++];
+  return b[index];
 }
 
 GString *ASCII85Stream::getPSFilter(char *indent) {
@@ -419,6 +464,7 @@ LZWStream::LZWStream(Stream *str1, int predictor1, int columns1, int colors1,
   bits = bits1;
   early = early1;
   zPipe = NULL;
+  bufPtr = bufEnd = buf;
 }
 
 LZWStream::~LZWStream() {
@@ -438,6 +484,7 @@ void LZWStream::reset() {
   FILE *f;
 
   str->reset();
+  bufPtr = bufEnd = buf;
   if (zPipe) {
 #ifdef NO_POPEN
     fclose(zPipe);
@@ -619,12 +666,12 @@ int LZWStream::getCode() {
   return code;
 }
 
-int LZWStream::getChar() {
-  int c;
+GBool LZWStream::fillBuf() {
+  int n;
 
   if (!zPipe)
-    return EOF;
-  if ((c = fgetc(zPipe)) == EOF) {
+    return gFalse;
+  if ((n = fread(buf, 1, 256, zPipe)) < 256) {
 #ifdef NO_POPEN
     fclose(zPipe);
 #else
@@ -633,7 +680,9 @@ int LZWStream::getChar() {
     zPipe = NULL;
     unlink(zName);
   }
-  return c;
+  bufPtr = buf;
+  bufEnd = buf + n;
+  return n > 0;
 }
 
 GString *LZWStream::getPSFilter(char *indent) {
@@ -646,6 +695,64 @@ GString *LZWStream::getPSFilter(char *indent) {
 
 GBool LZWStream::isBinary(GBool last) {
   return str->isBinary(gTrue);
+}
+
+//------------------------------------------------------------------------
+// RunLengthStream
+//------------------------------------------------------------------------
+
+RunLengthStream::RunLengthStream(Stream *str1) {
+  str = str1;
+  bufPtr = bufEnd = buf;
+  eof = gFalse;
+}
+
+RunLengthStream::~RunLengthStream() {
+  delete str;
+}
+
+void RunLengthStream::reset() {
+  str->reset();
+  bufPtr = bufEnd = buf;
+  eof = gFalse;
+}
+
+GString *RunLengthStream::getPSFilter(char *indent) {
+  GString *s;
+
+  s = str->getPSFilter(indent);
+  s->append(indent)->append("/RunLengthDecode filter\n");
+  return s;
+}
+
+GBool RunLengthStream::isBinary(GBool last) {
+  return str->isBinary(gTrue);
+}
+
+GBool RunLengthStream::fillBuf() {
+  int c;
+  int n, i;
+
+  if (eof)
+    return gFalse;
+  c = str->getChar();
+  if (c == 0x80 || c == EOF) {
+    eof = gTrue;
+    return gFalse;
+  }
+  if (c < 0x80) {
+    n = c + 1;
+    for (i = 0; i < n; ++i)
+      buf[i] = (char)str->getChar();
+  } else {
+    n = 0x101 - c;
+    c = str->getChar();
+    for (i = 0; i < n; ++i)
+      buf[i] = (char)c;
+  }
+  bufPtr = buf;
+  bufEnd = buf + n;
+  return gTrue;
 }
 
 //------------------------------------------------------------------------
@@ -668,6 +775,8 @@ CCITTFaxStream::CCITTFaxStream(Stream *str1, int encoding1, GBool byteAlign1,
   codingLine[0] = 0;
   codingLine[1] = refLine[2] = columns;
   a0 = 1;
+
+  buf = EOF;
 }
 
 CCITTFaxStream::~CCITTFaxStream() {
@@ -683,10 +792,11 @@ void CCITTFaxStream::reset() {
   codingLine[0] = 0;
   codingLine[1] = refLine[2] = columns;
   a0 = 1;
+  buf = EOF;
 }
 
-int CCITTFaxStream::getChar() {
-  short code1, code2;
+int CCITTFaxStream::lookChar() {
+  short code1, code2, code3;
   int a0New;
   int ret;
   int bits, i;
@@ -713,15 +823,21 @@ int CCITTFaxStream::getChar() {
 	break;
       case twoDimHoriz:
 	if ((a0 & 1) == 0) {
-	  if ((code1 = getCode(whiteTable)) >= 64)
-	    code1 += getCode(whiteTable);
-	  if ((code2 = getCode(blackTable)) >= 64)
-	    code2 += getCode(blackTable);
+	  code1 = code2 = 0;
+	  do {
+	    code1 += code3 = getCode(whiteTable);
+	  } while (code3 >= 64);
+	  do {
+	    code2 += code3 = getCode(blackTable);
+	  } while (code3 >= 64);
 	} else {
-	  if ((code1 = getCode(blackTable)) >= 64)
-	    code1 += getCode(blackTable);
-	  if ((code2 = getCode(whiteTable)) >= 64)
-	    code2 += getCode(whiteTable);
+	  code1 = code2 = 0;
+	  do {
+	    code1 += code3 = getCode(blackTable);
+	  } while (code3 >= 64);
+	  do {
+	    code2 += code3 = getCode(whiteTable);
+	  } while (code3 >= 64);
 	}
 	codingLine[a0 + 1] = a0New + code1;
 	++a0;
@@ -827,7 +943,8 @@ int CCITTFaxStream::getChar() {
       }
     } while (bits > 0 && codingLine[a0] < columns);
   }
-  return black ? (ret ^ 0xff) : ret;
+  buf = black ? (ret ^ 0xff) : ret;
+  return buf;
 }
 
 short CCITTFaxStream::getCode(CCITTCodeTable *table) {
@@ -983,18 +1100,7 @@ void DCTStream::reset() {
 int DCTStream::getChar() {
   int c;
 
-  if (y >= height)
-    return EOF;
-  if (dy >= mcuHeight) {
-    if (!readMCURow()) {
-      y = height;
-      return EOF;
-    }
-    comp = 0;
-    x = 0;
-    dy = 0;
-  }
-  c = rowBuf[comp][dy][x];
+  c = lookChar();
   if (++comp == numComps) {
     comp = 0;
     if (++x == width) {
@@ -1006,6 +1112,21 @@ int DCTStream::getChar() {
   if (y == height)
     readTrailer();
   return c;
+}
+
+int DCTStream::lookChar() {
+  if (y >= height)
+    return EOF;
+  if (dy >= mcuHeight) {
+    if (!readMCURow()) {
+      y = height;
+      return EOF;
+    }
+    comp = 0;
+    x = 0;
+    dy = 0;
+  }
+  return rowBuf[comp][dy][x];
 }
 
 void DCTStream::restart() {

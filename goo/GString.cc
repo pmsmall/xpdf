@@ -79,8 +79,8 @@ GString::~GString() {
 }
 
 GString *GString::clear() {
-  resize(0);
   s[length = 0] = '\0';
+  resize(0);
   return this;
 }
 
@@ -106,6 +106,14 @@ GString *GString::append(char *str) {
   resize(length + n);
   memcpy(s + length, str, n + 1);
   length += n;
+  return this;
+}
+
+GString *GString::append(char *str, int length1) {
+  resize(length + length1);
+  memcpy(s + length, str, length1);
+  length += length1;
+  s[length1] = '\0';
   return this;
 }
 

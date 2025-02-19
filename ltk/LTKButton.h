@@ -23,11 +23,11 @@
 // button action type
 //------------------------------------------------------------------------
 
-typedef enum {
+enum LTKButtonAction {
   ltkButtonClick,		// momentarily on
   ltkButtonSticky,		// stays on until setState() is called
   ltkButtonToggle		// press on, press off
-} LTKButtonAction;
+};
 
 //------------------------------------------------------------------------
 // LTKButton

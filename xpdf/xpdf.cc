@@ -13,10 +13,12 @@
 #include <X11/X.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
+#include <gtypes.h>
+#include <GString.h>
 #include <parseargs.h>
+#include <fileNames.h>
 #include <cover.h>
 #include <LTKAll.h>
-#include <GString.h>
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -25,9 +27,10 @@
 #include "Catalog.h"
 #include "Page.h"
 #include "Link.h"
+#include "PDFDoc.h"
 #include "XOutputDev.h"
-#include "PSOutput.h"
-#include "Flags.h"
+#include "PSOutputDev.h"
+#include "Params.h"
 #include "Error.h"
 #include "config.h"
 
@@ -41,7 +44,7 @@
 #define remoteCmdLength 256
 
 static void killApp();
-static GBool loadFile(GString *fileName1);
+static GBool loadFile(GString *fileName);
 static void displayPage(int page1, int zoom1, int rotate1);
 static void keyPressCbk(LTKWindow *win, KeySym key, char *s, int n);
 static void layoutCbk(LTKWindow *win);
@@ -49,7 +52,9 @@ static void propChangeCbk(LTKWindow *win, Atom atom);
 static void buttonPressCbk(LTKWidget *canvas1, int n,
 			   int mx, int my, int button);
 static void nextPageCbk(LTKWidget *button, int n, GBool on);
+static void nextTenPageCbk(LTKWidget *button, int n, GBool on);
 static void prevPageCbk(LTKWidget *button, int n, GBool on);
+static void prevTenPageCbk(LTKWidget *button, int n, GBool on);
 static void pageNumCbk(LTKWidget *textIn, int n, GString *text);
 static void zoomInCbk(LTKWidget *button, int n, GBool on);
 static void zoomOutCbk(LTKWidget *button, int n, GBool on);
@@ -66,7 +71,9 @@ static void scrollVertCbk(LTKWidget *scrollbar, int n, int val);
 static void scrollHorizCbk(LTKWidget *scrollbar, int n, int val);
 
 #include "leftArrow.xbm"
+#include "dblLeftArrow.xbm"
 #include "rightArrow.xbm"
+#include "dblRightArrow.xbm"
 #include "zoomIn.xbm"
 #include "zoomOut.xbm"
 #include "rotateCW.xbm"
@@ -86,6 +93,7 @@ static XrmOptionDescRec opts[] = {
   {"-font",            ".font",            XrmoptionSepArg,    NULL},
   {"-fn",              ".font",            XrmoptionSepArg,    NULL},
   {"-z",               ".initialZoom",     XrmoptionSepArg,    NULL},
+  {"-ps",              ".psFile",          XrmoptionSepArg,    NULL},
   {NULL}
 };
 
@@ -112,6 +120,8 @@ static ArgDesc argDesc[] = {
    "kill xpdf remote server (with -remote only)"},
   {"-rgb",      argInt,         &rgbCubeSize,   0,
    "biggest RGB cube to allocate (default is 5)"},
+  {"-ps",       argStringDummy, NULL,           0,
+   "default PostScript file/command name"},
   {"-cmd",      argFlag,        &printCommands, 0,
    "print commands as they're executed"},
   {"-h",        argFlag,        &printHelp,     0,
@@ -129,19 +139,18 @@ static int zoomDPI[maxZoom - minZoom + 1] = {
   72,
   86, 104, 124, 149, 179
 };
-#define defZoom "1"
+#define defZoom 1
 
-static GString *fileName;
-static FILE *file;
-static Catalog *catalog;
+static PDFDoc *doc;
+
 static XOutputDev *out;
-static Links *links;
 
 static int page;
 static int zoom;
 static int rotate;
 static GBool quit;
 
+static GString *defPSFileName;
 static GString *psFileName;
 static int psFirstPage, psLastPage;
 
@@ -160,12 +169,12 @@ int main(int argc, char *argv[]) {
   Window xwin;
   char cmd[remoteCmdLength];
   GString *name;
+  GString *title;
   int pg, zoom1;
   int x, y;
   Guint width, height;
   GBool ok;
   char s[20];
-  GString *str;
 
   // init coverage module
   coverInit(200);
@@ -175,6 +184,9 @@ int main(int argc, char *argv[]) {
 
   // init error file
   errorInit();
+
+  // read config file
+  initParams(xpdfConfigFile);
 
   // create LTKApp (and parse X-related args)
   app = new LTKApp("xpdf", opts, &argc, argv);
@@ -233,12 +245,18 @@ int main(int argc, char *argv[]) {
   fprintf(errFile, "%s\n", xpdfCopyright);
 
   // open PDF file
-  fileName = NULL;
+  doc = NULL;
+  xref = NULL;
+  defPSFileName = app->getStringResource("psFile", NULL);
   psFileName = NULL;
   if (!loadFile(name)) {
     delete app;
     exit(1);
   }
+
+  // check for legal page number
+  if (pg < 1 || pg > doc->getNumPages())
+    pg = 1;
 
   // create window
   win = makeWindow(app);
@@ -252,24 +270,34 @@ int main(int argc, char *argv[]) {
   canvas->setButtonPressCbk(&buttonPressCbk);
 
   // get X resources
-  str = app->getStringResource("initialZoom", defZoom);
-  zoom1 = atoi(str->getCString());
-  delete str;
+  zoom1 = app->getIntResource("initialZoom", defZoom);
+  if (zoom1 < minZoom)
+    zoom1 = minZoom;
+  else if (zoom1 > maxZoom)
+    zoom1 = maxZoom;
   x = -1;
   y = -1;
-  width = (catalog->getPage(1)->getWidth() *
-	   zoomDPI[zoom1 - minZoom]) / 72 + 28;
+  if (doc->getPageRotate(pg) == 90 || doc->getPageRotate(pg) == 270) {
+    width = doc->getPageHeight(pg);
+    height = doc->getPageWidth(pg);
+  } else {
+    width = doc->getPageWidth(pg);
+    height = doc->getPageHeight(pg);
+  }
+  width = (width * zoomDPI[zoom1 - minZoom]) / 72 + 28;
   if (width > (Guint)app->getDisplayWidth() - 100)
     width = app->getDisplayWidth() - 100;
-  height = (catalog->getPage(1)->getHeight() *
-	    zoomDPI[zoom1 - minZoom]) / 72 + 56;
+  height = (height * zoomDPI[zoom1 - minZoom]) / 72 + 56;
   if (height > (Guint)app->getDisplayHeight() - 100)
     height = app->getDisplayHeight() - 100;
   app->getGeometryResource("geometry", &x, &y, &width, &height);
 
   // finish setting up window
-  sprintf(s, "of %d", catalog->getNumPages());
+  sprintf(s, "of %d", doc->getNumPages());
   numPagesLabel->setText(s);
+  title = new GString("xpdf: ");
+  title->append(name);
+  win->setTitle(title);
   win->layout(x, y, width, height);
   win->map();
   aboutWin = NULL;
@@ -285,13 +313,6 @@ int main(int argc, char *argv[]) {
   out = new XOutputDev(win);
 
   // display first page
-  if (pg < 1 || pg > catalog->getNumPages())
-    pg = 1;
-  if (zoom1 < minZoom)
-    zoom1 = minZoom;
-  else if (zoom1 > maxZoom)
-    zoom1 = maxZoom;
-  links = NULL;
   displayPage(pg, zoom1, 0);
 
   // event loop
@@ -302,13 +323,11 @@ int main(int argc, char *argv[]) {
 
   // free stuff
   killApp();
-  if (links)
-    delete links;
-  delete catalog;
-  delete xref;
-  fclose(file);
-  delete fileName;
+  delete doc;
   delete psFileName;
+  if (defPSFileName)
+    delete defPSFileName;
+  freeParams();
 
   // check for memory leaks
   Object::memCheck(errFile);
@@ -316,6 +335,8 @@ int main(int argc, char *argv[]) {
 
   // print coverage info
   coverDump(errFile);
+
+  return 0;
 }
 
 static void killApp() {
@@ -328,14 +349,9 @@ static void killApp() {
   delete app;
 }
 
-static GBool loadFile(GString *fileName1) {
-  Catalog *oldCatalog;
-  XRef *oldXref;
-  FILE *oldFile;
-  GString *oldFileName;
-  FileStream *str;
-  Object catObj;
-  Object obj;
+static GBool loadFile(GString *fileName) {
+  GString *title;
+  PDFDoc *newDoc;
   char s[20];
   char *p;
 
@@ -345,54 +361,18 @@ static GBool loadFile(GString *fileName1) {
     XFlush(display);
   }
 
-  // save current document
-  oldCatalog = catalog;
-  oldXref = xref;
-  oldFile = file;
-  oldFileName = fileName;
-
-  // no xref yet
-  xref = NULL;
-
-  // new file name
-  fileName = fileName1;
-
-  // open PDF file and create stream
-  if (!(file = fopen(fileName->getCString(), "r"))) {
-    error(0, "Couldn't open file '%s'", fileName->getCString());
-    goto err1;
-  }
-  obj.initNull();
-  str = new FileStream(file, 0, -1, &obj);
-
-  // check header
-  str->checkHeader();
-
-  // read xref table
-  xref = new XRef(str);
-  delete str;
-  if (!xref->isOk()) {
-    error(0, "Couldn't read xref table");
-    goto err2;
-  }
-  if (xref->checkEncrypted())
-    goto err2;
-
-  // read catalog
-  catalog = new Catalog(xref->getCatalog(&catObj));
-  catObj.free();
-  if (!catalog->isOk()) {
-    error(0, "Couldn't read page catalog");
-    goto err3;
+  // open PDF file
+  newDoc = new PDFDoc(fileName);
+  if (!newDoc->isOk()) {
+    delete newDoc;
+    if (win)
+      win->setCursor(XC_top_left_arrow);
+    return gFalse;
   }
 
-  // delete old document
-  if (oldFileName) {
-    delete oldCatalog;
-    delete oldXref;
-    fclose(oldFile);
-    delete oldFileName;
-  }
+  // replace old document
+  delete doc;
+  doc = newDoc;
 
   // nothing displayed yet
   page = -99;
@@ -400,49 +380,36 @@ static GBool loadFile(GString *fileName1) {
   // init PostScript output params
   if (psFileName)
     delete psFileName;
-  p = fileName->getCString() + fileName->getLength() - 4;
-  if (!strcmp(p, ".pdf") || !strcmp(p, ".PDF"))
-    psFileName = new GString(fileName->getCString(),
-			     fileName->getLength() - 4);
-  else
-    psFileName = fileName->copy();
-  psFileName->append(".ps");
+  if (defPSFileName) {
+    psFileName = defPSFileName->copy();
+  } else {
+    p = fileName->getCString() + fileName->getLength() - 4;
+    if (!strcmp(p, ".pdf") || !strcmp(p, ".PDF"))
+      psFileName = new GString(fileName->getCString(),
+			       fileName->getLength() - 4);
+    else
+      psFileName = fileName->copy();
+    psFileName->append(".ps");
+  }
   psFirstPage = 1;
-  psLastPage = catalog->getNumPages();
+  psLastPage = doc->getNumPages();
 
-  // set up number-of-pages display, back to normal cursor
+  // set up title, number-of-pages display; back to normal cursor
   if (win) {
-    sprintf(s, "of %d", catalog->getNumPages());
+    title = new GString("xpdf: ");
+    title->append(fileName);
+    win->setTitle(title);
+    sprintf(s, "of %d", doc->getNumPages());
     numPagesLabel->setText(s);
     win->setCursor(XC_top_left_arrow);
   }
 
   // done
   return gTrue;
-
- err3:
-  delete catalog;
- err2:
-  delete xref;
-  fclose(file);
- err1:
-  delete fileName;
-
-  // restore old document
-  catalog = oldCatalog;
-  xref = oldXref;
-  file = oldFile;
-  fileName = oldFileName;
-  if (win)
-    win->setCursor(XC_top_left_arrow);
-
-  return gFalse;
 }
 
 static void displayPage(int page1, int zoom1, int rotate1) {
-  Page *p;
   char s[20];
-  Object obj;
 
   // busy cursor
   if (win) {
@@ -456,21 +423,12 @@ static void displayPage(int page1, int zoom1, int rotate1) {
   rotate = rotate1;
 
   // draw the page
-  if (printCommands)
-    printf("***** page %d *****\n", page);
-  p = catalog->getPage(page);
-  p->display(out, zoomDPI[zoom - minZoom], rotate);
+  doc->displayPage(out, page, zoomDPI[zoom - minZoom], rotate, gTrue);
   layoutCbk(win);
 
   // update page number display
   sprintf(s, "%d", page);
   pageNumText->setText(s);
-
-  // get links
-  if (links)
-    delete links;
-  links = new Links(p->getAnnots(&obj), catalog);
-  obj.free();
 
   // back to regular cursor
   win->setCursor(XC_top_left_arrow);
@@ -609,13 +567,13 @@ static void propChangeCbk(LTKWindow *win, Atom atom) {
       return;
     newFileName = new GString(p + 1);
     XFree(cmd);
-    if (newFileName->cmp(fileName)) {
+    if (newFileName->cmp(doc->getFileName())) {
       if (!loadFile(newFileName))
 	return;
     } else {
       delete newFileName;
     }
-    if (newPage != page && newPage >= 1 && newPage <= catalog->getNumPages())
+    if (newPage != page && newPage >= 1 && newPage <= doc->getNumPages())
       displayPage(newPage, zoom, rotate);
 
   // quit
@@ -626,70 +584,108 @@ static void propChangeCbk(LTKWindow *win, Atom atom) {
 
 static void buttonPressCbk(LTKWidget *canvas1, int n,
 			   int mx, int my, int button) {
-  Link *link;
   LinkAction *action = NULL;
-  LinkGoto *dest;
+  LinkGoto *gotoAction;
+  Object linkObj;
+  GString *fileName;
+  GBool needDel;
+  LinkDest *dest;
   LinkURI *uri;
+  Ref pageRef;
+  char *s;
+  int pg;
   double x, y;
   int dx, dy;
 
   if (button == 1) {
     out->cvtDevToUser(mx, my, &x, &y);
-    if ((link = links->find((int)x, (int)y)) &&
-	(action = link->getAction())) {
+    if ((action = doc->findLink((int)x, (int)y))) {
 
       // goto action
       if (action->getKind() == actionGoto) {
-	dest = (LinkGoto *)action;
-	if (dest->isRemote()) {
-	  if (!loadFile(dest->getFileName()->copy()))
+	gotoAction = (LinkGoto *)action;
+	if (gotoAction->getFileName()) {
+	  s = gotoAction->getFileName()->getCString();
+	  if (isAbsolutePath(s))
+	    fileName = new GString(s);
+	  else
+	    fileName = appendToPath(
+			  grabPath(doc->getFileName()->getCString()), s);
+	  if (!loadFile(fileName))
 	    return;
 	}
-	if (dest->getPageNum() != page)
-	  displayPage(dest->getPageNum(), zoom, rotate);
-	switch (dest->getDestKind()) {
-	case gotoXYZ:
-	  out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
-	  if (dest->getChangeLeft() || dest->getChangeTop()) {
-	    if (dest->getChangeLeft())
-	      hScrollbar->setPos(dx, canvas->getWidth());
-	    if (dest->getChangeTop())
-	      vScrollbar->setPos(dy, canvas->getHeight());
-	    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+	needDel = gFalse;
+	if (gotoAction->getNamedDest()) {
+	  doc->findDest(gotoAction->getNamedDest(), &linkObj);
+	  if (linkObj.isArray())
+	    gotoAction = new LinkGoto(NULL, &linkObj);
+	  else if (linkObj.isDict())
+	    gotoAction = new LinkGoto("GoTo", &linkObj);
+	  linkObj.free();
+	  if (gotoAction->isOk()) {
+	    needDel = gTrue;
+	  } else {
+	    delete gotoAction;
+	    gotoAction = NULL;
 	  }
-	  //~ what is the zoom parameter?
-	  break;
-	case gotoFit:
-	case gotoFitB:
-	  //~ do fit
-	  hScrollbar->setPos(0, canvas->getWidth());
-	  vScrollbar->setPos(0, canvas->getHeight());
-	  canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  break;
-	case gotoFitH:
-	case gotoFitBH:
-	  //~ do fit
-	  out->cvtUserToDev(0, dest->getTop(), &dx, &dy);
-	  hScrollbar->setPos(0, canvas->getWidth());
-	  vScrollbar->setPos(dy, canvas->getHeight());
-	  canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  break;
-	case gotoFitV:
-	case gotoFitBV:
-	  //~ do fit
-	  out->cvtUserToDev(dest->getLeft(), 0, &dx, &dy);
-	  hScrollbar->setPos(dx, canvas->getWidth());
-	  vScrollbar->setPos(0, canvas->getHeight());
-	  canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  break;
-	case gotoFitR:
-	  //~ do fit
-	  out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
-	  hScrollbar->setPos(dx, canvas->getWidth());
-	  vScrollbar->setPos(dy, canvas->getHeight());
-	  canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
-	  break;
 	}
+	if (!(gotoAction && (dest = gotoAction->getDest()))) {
+	  displayPage(1, zoom, 0);
+	} else {
+	  if (gotoAction->getFileName()) {
+	    pg = dest->getPageNum();
+	  } else {
+	    pageRef = dest->getPageRef();
+	    pg = doc->findPage(pageRef.num, pageRef.gen);
+	  }
+	  if (pg > 0 && pg != page)
+	    displayPage(pg, zoom, rotate);
+	  switch (dest->getKind()) {
+	  case destXYZ:
+	    out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
+	    if (dest->getChangeLeft() || dest->getChangeTop()) {
+	      if (dest->getChangeLeft())
+		hScrollbar->setPos(dx, canvas->getWidth());
+	      if (dest->getChangeTop())
+		vScrollbar->setPos(dy, canvas->getHeight());
+	      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+	    }
+	    //~ what is the zoom parameter?
+	    break;
+	  case destFit:
+	  case destFitB:
+	    //~ do fit
+	    hScrollbar->setPos(0, canvas->getWidth());
+	    vScrollbar->setPos(0, canvas->getHeight());
+	    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+	    break;
+	  case destFitH:
+	  case destFitBH:
+	    //~ do fit
+	    out->cvtUserToDev(0, dest->getTop(), &dx, &dy);
+	    hScrollbar->setPos(0, canvas->getWidth());
+	    vScrollbar->setPos(dy, canvas->getHeight());
+	    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+	    break;
+	  case destFitV:
+	  case destFitBV:
+	    //~ do fit
+	    out->cvtUserToDev(dest->getLeft(), 0, &dx, &dy);
+	    hScrollbar->setPos(dx, canvas->getWidth());
+	    vScrollbar->setPos(0, canvas->getHeight());
+	    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+	    break;
+	  case destFitR:
+	    //~ do fit
+	    out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
+	    hScrollbar->setPos(dx, canvas->getWidth());
+	    vScrollbar->setPos(dy, canvas->getHeight());
+	    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+	    break;
+	  }
+	}
+	if (needDel)
+	  delete gotoAction;
 
       // URI action
       } else if (action->getKind() == actionURI) {
@@ -698,7 +694,7 @@ static void buttonPressCbk(LTKWidget *canvas1, int n,
 
       // unknown action type
       } else if (action->getKind() == actionUnknown) {
-	error(0, "Unknown link action type: '%s'",
+	error(-1, "Unknown link action type: '%s'",
 	      ((LinkUnknown *)action)->getAction()->getCString());
       }
     }
@@ -706,9 +702,24 @@ static void buttonPressCbk(LTKWidget *canvas1, int n,
 }
 
 static void nextPageCbk(LTKWidget *button, int n, GBool on) {
-  if (page < catalog->getNumPages()) {
+  if (page < doc->getNumPages()) {
     vScrollbar->setPos(0, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
     displayPage(page + 1, zoom, rotate);
+  } else {
+    XBell(display, 0);
+  }
+}
+
+static void nextTenPageCbk(LTKWidget *button, int n, GBool on) {
+  int pg;
+
+  if (page < doc->getNumPages()) {
+    vScrollbar->setPos(0, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    if ((pg = page + 10) > doc->getNumPages())
+      pg = doc->getNumPages();
+    displayPage(pg, zoom, rotate);
   } else {
     XBell(display, 0);
   }
@@ -717,7 +728,22 @@ static void nextPageCbk(LTKWidget *button, int n, GBool on) {
 static void prevPageCbk(LTKWidget *button, int n, GBool on) {
   if (page > 1) {
     vScrollbar->setPos(0, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
     displayPage(page - 1, zoom, rotate);
+  } else {
+    XBell(display, 0);
+  }
+}
+
+static void prevTenPageCbk(LTKWidget *button, int n, GBool on) {
+  int pg;
+
+  if (page > 1) {
+    vScrollbar->setPos(0, canvas->getHeight());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    if ((pg = page - 10) < 1)
+      pg = 1;
+    displayPage(pg, zoom, rotate);
   } else {
     XBell(display, 0);
   }
@@ -728,7 +754,7 @@ static void pageNumCbk(LTKWidget *textIn, int n, GString *text) {
   char s[20];
 
   page1 = atoi(text->getCString());
-  if (page1 >= 1 && page1 <= catalog->getNumPages()) {
+  if (page1 >= 1 && page1 <= doc->getNumPages()) {
     displayPage(page1, zoom, rotate);
   } else {
     XBell(display, 0);
@@ -784,9 +810,8 @@ static void postScriptCbk(LTKWidget *button, int n, GBool on) {
 }
 
 static void psButtonCbk(LTKWidget *button, int n, GBool on) {
-  PSOutput *psOut;
+  PSOutputDev *psOut;
   LTKTextIn *widget;
-  int pg;
 
   // "Ok" button
   if (n == 1) {
@@ -799,8 +824,8 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on) {
     psLastPage = atoi(widget->getText());
     if (psLastPage < psFirstPage)
       psLastPage = psFirstPage;
-    else if (psLastPage > catalog->getNumPages())
-      psLastPage = catalog->getNumPages();
+    else if (psLastPage > doc->getNumPages())
+      psLastPage = doc->getNumPages();
     widget = (LTKTextIn *)psDialog->findWidget("fileName");
     if (psFileName)
       delete psFileName;
@@ -810,18 +835,15 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on) {
     psDialog->setCursor(XC_watch);
     win->setCursor(XC_watch);
     XFlush(display);
-    psOut = new PSOutput(psFileName->getCString(), catalog,
-			 psFirstPage, psLastPage);
-    if (psOut->isOk()) {
-      for (pg = psFirstPage; pg <= psLastPage; ++pg) {
-	if (printCommands)
-	  printf("***** page %d [PostScript] *****\n", page);
-	catalog->getPage(pg)->genPostScript(psOut, zoomDPI[zoom - minZoom],
-					    rotate);
+    if (doc->okToPrint()) {
+      psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
+			      psFirstPage, psLastPage);
+      if (psOut->isOk()) {
+	doc->displayPages(psOut, psFirstPage, psLastPage,
+			  zoomDPI[zoom - minZoom], rotate);
       }
-      psOut->trailer();
+      delete psOut;
     }
-    delete psOut;
 
     delete psDialog;
     win->setCursor(XC_top_left_arrow);

@@ -374,6 +374,21 @@ GC LTKWindow::makeGC(unsigned long color, int lineWidth, int lineStyle) {
   return gc;
 }
 
+void LTKWindow::setTitle(GString *title1) {
+  XTextProperty windowName, iconName;
+  char *title2;
+
+  delete title;
+  title = title1;
+  title2 = title->getCString();
+  if (xwin != None) {
+    XStringListToTextProperty(&title2, 1, &windowName);
+    XStringListToTextProperty(&title2, 1, &iconName);
+    XSetWMName(display, xwin, &windowName);
+    XSetWMIconName(display, xwin, &iconName);
+  }
+}
+
 void LTKWindow::setCursor(Guint cursor) {
   XDefineCursor(display, xwin, XCreateFontCursor(display, cursor));
 }

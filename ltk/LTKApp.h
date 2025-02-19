@@ -46,12 +46,13 @@ public:
   //---------- resources ----------
 
   GString *getStringResource(char *inst, char *def);
+  int getIntResource(char *inst, int def);
   unsigned long getColorResource(char *inst,
 				 char *def1, unsigned long def2,
 				 XColor *xcol);
   XFontStruct *LTKApp::getFontResource(char *inst,  char *def);
-  void LTKApp::getGeometryResource(char *inst, int *x, int *y,
-				   Guint *width, Guint *height);
+  void getGeometryResource(char *inst, int *x, int *y,
+			   Guint *width, Guint *height);
 
   //---------- window list ----------
 

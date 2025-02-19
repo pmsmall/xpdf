@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <gtypes.h>
-#include "Flags.h"
+#include "Params.h"
 #include "Error.h"
 
 // Send error messages to /dev/tty instead of stderr.
@@ -31,7 +31,12 @@ void errorInit() {
 void error(int pos, char *msg, ...) {
   va_list args;
 
-  fprintf(errFile, "Error (%d): ", pos);
+  if (printCommands)
+    fflush(stdout);
+  if (pos >= 0)
+    fprintf(errFile, "Error (%d): ", pos);
+  else
+    fprintf(errFile, "Error: ");
   va_start(args, msg);
   vfprintf(errFile, msg, args);
   va_end(args);

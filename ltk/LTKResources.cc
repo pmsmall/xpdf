@@ -18,6 +18,7 @@
 #include <X11/Xutil.h>
 #include <gtypes.h>
 #include <GString.h>
+#include <fileNames.h>
 #include <LTKConfig.h>
 #include <LTKMisc.h>
 #include <LTKResources.h>
@@ -40,9 +41,9 @@ void ltkGetOtherResources(Display *display,
     XrmMergeDatabases(db1, db);
   } else {
 #ifdef VMS
-    s = new GString("SYS$LOGIN:DECW$XRESOURCES.DAT");
+    s = new GString("DECW$USER_DEFAULTS:XPDF.DAT");
 #else
-    s = ltkGetHomeDir()->append("/.Xresources");
+    s = appendToPath(getHomeDir(), ".Xresources");
 #endif
     if ((f = fopen(s->getCString(), "r"))) {
       fclose(f);
@@ -51,9 +52,9 @@ void ltkGetOtherResources(Display *display,
     }
     delete s;
 #ifdef VMS
-    s = new GString("SYS$LOGIN:DECW$XDEFAULTS.DAT");
+    s = new GString("DECW$USER_DEFAULTS:DECW$XDEFAULTS.DAT");
 #else
-    s = ltkGetHomeDir()->append("/.Xdefaults");
+    s = appendToPath(getHomeDir(), ".Xdefaults");
 #endif
     if ((f = fopen(s->getCString(), "r"))) {
       fclose(f);
@@ -77,6 +78,27 @@ GString *ltkGetStringResource(XrmDatabase db, GString *appName,
     ret = new GString(val.addr, val.size);
   else
     ret = def ? new GString(def) : (GString *)NULL;
+  delete inst;
+  return ret;
+}
+
+int ltkGetIntResource(XrmDatabase db, GString *appName,
+		      char *instName, int def) {
+  GString *inst = appName->copy()->append(".")->append(instName);
+  XrmValue val;
+  char *resType[20];
+  char s[20];
+  int ret, n;
+
+  if (XrmGetResource(db, inst->getCString(), inst->getCString(),
+		     resType, &val)) {
+    n = val.size <= 19 ? val.size : 19;
+    strncpy(s, val.addr, n);
+    s[n] = '\0';
+    ret = atoi(s);
+  } else {
+    ret = def;
+  }
   delete inst;
   return ret;
 }

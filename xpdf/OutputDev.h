@@ -15,6 +15,7 @@
 
 #include <gtypes.h>
 
+class GString;
 class GfxState;
 class GfxColorSpace;
 class Stream;
@@ -32,25 +33,38 @@ public:
   // Destructor.
   virtual ~OutputDev() {}
 
+  //---- get info about output device
+
   // Does this device use upside-down coordinates?
   // (Upside-down means (0,0) is the top left corner of the page.)
-  virtual GBool upsideDown() { return gFalse; }
+  virtual GBool upsideDown() = 0;
 
-  // Set page size (in pixels).
-  virtual void setPageSize(int x, int y) {}
+  // Does this device use drawChar() or drawString()?
+  virtual GBool useDrawChar() = 0;
 
-  // Set transform matrix.
-  virtual void setCTM(double *ctm1);
+  //----- initialization and control
 
-  // Reset state and clear display, to prepare for a new page.
-  virtual void clear() {}
+  // Set default transform matrix.
+  virtual void setDefaultCTM(double *ctm1);
+
+  // Start a page.
+  virtual void startPage(int pageNum, GfxState *state) {}
+
+  // End a page.
+  virtual void endPage() {}
 
   // Dump page contents to display.
   virtual void dump() {}
 
+  //----- coordinate conversion
+
   // Convert between device and user coordinates.
   virtual void cvtDevToUser(int dx, int dy, double *ux, double *uy);
   virtual void cvtUserToDev(double ux, double uy, int *dx, int *dy);
+
+  //----- link borders
+  virtual void drawLinkBorder(double x1, double y1, double x2, double y2,
+			      double w) {}
 
   //----- save/restore graphics state
   virtual void saveState(GfxState *state) {}
@@ -58,7 +72,8 @@ public:
 
   //----- update graphics state
   virtual void updateAll(GfxState *state) {}
-  virtual void updateCTM(GfxState *state) {}
+  virtual void updateCTM(GfxState *state, double m11, double m12,
+			 double m21, double m22, double m31, double m32) {}
   virtual void updateLineDash(GfxState *state) {}
   virtual void updateFlatness(GfxState *state) {}
   virtual void updateLineJoin(GfxState *state) {}
@@ -67,7 +82,17 @@ public:
   virtual void updateLineWidth(GfxState *state) {}
   virtual void updateFillColor(GfxState *state) {}
   virtual void updateStrokeColor(GfxState *state) {}
-  virtual void updateFont(GfxState *state) {}
+
+  //----- update text state
+  virtual void updateFont(GfxState *state) = 0;
+  virtual void updateTextMat(GfxState *state) {}
+  virtual void updateCharSpace(GfxState *state) {}
+  virtual void updateRender(GfxState *state) {}
+  virtual void updateRise(GfxState *state) {}
+  virtual void updateWordSpace(GfxState *state) {}
+  virtual void updateHorizScaling(GfxState *state) {}
+  virtual void updateTextPos(GfxState *state) {}
+  virtual void updateTextShift(GfxState *state, double shift) {}
 
   //----- path painting
   virtual void stroke(GfxState *state) = 0;
@@ -80,13 +105,16 @@ public:
 
   //----- text drawing
   virtual void drawChar(GfxState *state, double x, double y,
-			Guchar c) = 0;
+			Guchar c) {}
+  virtual void drawString(GfxState *state, GString *s) {}
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Stream *str,
-			     int width, int height, GBool invert) = 0;
+			     int width, int height, GBool invert,
+			     GBool inlineImg) = 0;
   virtual void drawImage(GfxState *state, Stream *str, int width,
-			 int height, GfxColorSpace *colorSpace) = 0;
+			 int height, GfxColorSpace *colorSpace,
+			 GBool inlineImg) = 0;
 
 private:
 

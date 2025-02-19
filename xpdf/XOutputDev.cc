@@ -23,7 +23,7 @@
 #include "GfxState.h"
 #include "GfxFont.h"
 #include "Error.h"
-#include "Flags.h"
+#include "Params.h"
 #include "XOutputDev.h"
 
 #include "XOutputFontInfo.h"
@@ -32,22 +32,10 @@
 // Constants and macros
 //------------------------------------------------------------------------
 
-#define numTmpSubpaths 16	// number of elements in temporary arrays
-
 #define xoutRound(x) ((int)(x + 0.5))
 
-//------------------------------------------------------------------------
-// Misc types
-//------------------------------------------------------------------------
-
-struct BoundingRect {
-  short xMin, xMax;		// min/max x values
-  short yMin, yMax;		// min/max y values
-};
-
-struct RGBColor {
-  int r, g, b;
-};
+#define maxCurveSplits 6	// max number of splits when recursively
+				//   drawing Bezier curves
 
 //------------------------------------------------------------------------
 // Command line options
@@ -62,41 +50,42 @@ int rgbCubeSize = defaultRGBCube;
 struct FontMapEntry {
   char *pdfFont;
   char *xFont;
-  char **encoding;
-  int encodingSize;
+  GfxFontEncoding *encoding;
 };
 
 static FontMapEntry fontMap[] = {
   {"Courier",               "-*-courier-medium-r-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Courier-Bold",          "-*-courier-bold-r-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Courier-BoldOblique",   "-*-courier-bold-o-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Courier-Oblique",       "-*-courier-medium-o-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Helvetica",             "-*-helvetica-medium-r-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Helvetica-Bold",        "-*-helvetica-bold-r-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Helvetica-BoldOblique", "-*-helvetica-bold-o-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Helvetica-Oblique",     "-*-helvetica-medium-o-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Symbol",                "-*-symbol-medium-r-*-*-%s-*-*-*-*-*-adobe-fontspecific",
-   symbolEncoding,       symbolEncodingSize},
+   &symbolEncoding},
   {"Times-Bold",            "-*-times-bold-r-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Times-BoldItalic",      "-*-times-bold-i-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Times-Italic",          "-*-times-medium-i-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
+   &isoLatin1Encoding},
   {"Times-Roman",           "-*-times-medium-r-*-*-%s-*-*-*-*-*-iso8859-1",
-   isoEncoding,          isoEncodingSize},
-  {"ZapfDingbats",          "-*-zapfdingbats-medium-r-*-*-%s-*-*-*-*-*-itc-fontspecific",
-   zapfDingbatsEncoding, zapfDingbatsEncodingSize},
+   &isoLatin1Encoding},
+  {"ZapfDingbats",          "-*-zapfdingbats-medium-r-*-*-%s-*-*-*-*-*-*-*",
+   &zapfDingbatsEncoding},
   {NULL}
 };
+
+static FontMapEntry *userFontMap;
 
 //------------------------------------------------------------------------
 // Font substitutions
@@ -143,7 +132,7 @@ static FontSubst fontSubst[16] = {
 static Guchar substChars[] = {
   0x27,				// 100: quotesingle --> quoteright
   0x2d,				// 101: emdash --> hyphen
-  0x2d,				// 102: minus --> hyphen
+  0xad,				// 102: hyphen --> endash
   0x2f,				// 103: fraction --> slash
   0xb0,				// 104: ring --> degree
 };
@@ -199,8 +188,7 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
 			 double m21, double m22, Display *display1) {
   GString *pdfFont;
   FontMapEntry *p;
-  char **encoding;
-  int encodingSize;
+  GfxFontEncoding *encoding;
   char *fontNameFmt;
   char fontName[200], fontSize[100];
   GBool rotated;
@@ -219,7 +207,6 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
   mat22 = m22;
   display = display1;
   xFont = NULL;
-  revMap = NULL;
 
   // construct X font name
   pdfFont = gfxFont->getName();
@@ -228,22 +215,25 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
       if (!pdfFont->cmp(p->pdfFont))
 	break;
     }
+    if (!p->pdfFont) {
+      for (p = userFontMap; p->pdfFont; ++p) {
+	if (!pdfFont->cmp(p->pdfFont))
+	  break;
+      }
+    }
   } else {
     p = NULL;
   }
   if (p && p->pdfFont) {
     fontNameFmt = p->xFont;
     encoding = p->encoding;
-    encodingSize = p->encodingSize;
   } else {
-    encoding = isoEncoding;
-    encodingSize = isoEncodingSize;
+    encoding = &isoLatin1Encoding;
 //~ Some non-symbolic fonts are tagged as symbolic.
-//~    if (gfxFont->isSymbolic()) {
-//~      index = 12;
-//~      encoding = symbolEncoding;
-//~      encodingSize = symbolEncodingSize;
-//~    } else
+//    if (gfxFont->isSymbolic()) {
+//      index = 12;
+//      encoding = symbolEncoding;
+//    } else
     if (gfxFont->isFixedWidth()) {
       index = 8;
     } else if (gfxFont->isSerif()) {
@@ -296,14 +286,14 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
   sprintf(fontName, fontNameFmt, fontSize);
   xFont = XLoadQueryFont(display, fontName);
   if (!xFont) {
-    for (sz = startSize; sz >= 1; --sz) {
+    for (sz = startSize; sz >= startSize/2 && sz >= 1; --sz) {
       sprintf(fontSize, "%d", sz);
       sprintf(fontName, fontNameFmt, fontSize);
       if ((xFont = XLoadQueryFont(display, fontName)))
 	break;
     }
     if (!xFont) {
-      for (sz = startSize + 1; sz < 10; ++sz) {
+      for (sz = startSize + 1; sz < startSize + 10; ++sz) {
 	sprintf(fontSize, "%d", sz);
 	sprintf(fontName, fontNameFmt, fontSize);
 	if ((xFont = XLoadQueryFont(display, fontName)))
@@ -312,22 +302,46 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
       if (!xFont) {
 	sprintf(fontSize, "%d", startSize);
 	sprintf(fontName, fontNameFmt, fontSize);
-	error(0, "Failed to open font: '%s'", fontName);
+	error(-1, "Failed to open font: '%s'", fontName);
 	return;
       }
     }
   }
 
   // construct forward and reverse map
-  revMap = (Guchar *)gmalloc(encodingSize * sizeof(Guchar));
-  for (code = 0; code < 256; ++code) {
-    charName = gfxFont->getCharName(code);
-    if (charName) {
-      code2 = gfxFont->lookupCharName(charName, encoding, encodingSize, code);
-      if (code2 >= 0) {
+  for (code = 0; code < 256; ++code)
+    revMap[code] = 0;
+  if (encoding) {
+    code2 = 0; // to make gcc happy
+    for (code = 0; code < 256; ++code) {
+      if ((charName = gfxFont->getCharName(code)) &&
+	  (code2 = encoding->getCharCode(charName)) >= 0) {
 	map[code] = (Gushort)code2;
-	revMap[code2] = (Guchar)code;
+	if (code2 < 256)
+	  revMap[code2] = (Guchar)code;
+      } else {
+	map[code] = 0;
+//~ for font debugging
+//	error(-1, "font '%s', no char '%s'",
+//	      pdfFont->getCString(), charName);
       }
+    }
+  } else {
+    code2 = 0; // to make gcc happy
+    //~ this is a hack to get around the fact that X won't draw
+    //~ chars 0..31; this works when the fonts have duplicate encodings
+    //~ for those chars
+    for (code = 0; code < 32; ++code) {
+      if ((charName = gfxFont->getCharName(code)) &&
+	  (code2 = gfxFont->getCharCode(charName)) >= 0) {
+	map[code] = (Gushort)code2;
+	if (code2 < 256)
+	  revMap[code2] = (Guchar)code;
+      }
+    }
+    for (code = 32; code < 256; ++code) {
+      map[code] = (Gushort)code;
+      revMap[code] = (Guchar)code;
     }
   }
 }
@@ -336,8 +350,6 @@ XOutputFont::~XOutputFont() {
   delete tag;
   if (xFont)
     XFreeFont(display, xFont);
-  if (revMap)
-    gfree(revMap);
 }
 
 //------------------------------------------------------------------------
@@ -411,7 +423,7 @@ XOutputDev::XOutputDev(LTKWindow *win1) {
   XGCValues gcValues;
   XColor xcolor;
   Colormap colormap;
-  int r, g, b, n;
+  int r, g, b, n, m, i;
   GBool ok;
 
   // get pointer to X stuff
@@ -471,6 +483,23 @@ XOutputDev::XOutputDev(LTKWindow *win1) {
   // no clip region yet
   clipRegion = NULL;
 
+  // get user font map
+  for (n = 0; devFontMap[n].pdfFont; ++n) ;
+  userFontMap = (FontMapEntry *)gmalloc((n+1) * sizeof(FontMapEntry));
+  for (i = 0; i < n; ++i) {
+    userFontMap[i].pdfFont = devFontMap[i].pdfFont;
+    userFontMap[i].xFont = devFontMap[i].devFont;
+    m = strlen(userFontMap[i].xFont);
+    if (m >= 10 && !strcmp(userFontMap[i].xFont + m - 10, "-iso8859-2"))
+      userFontMap[i].encoding = &isoLatin2Encoding;
+    else if (m >= 13 && !strcmp(userFontMap[i].xFont + m - 13,
+				"-fontspecific"))
+      userFontMap[i].encoding = NULL;
+    else
+      userFontMap[i].encoding = &isoLatin1Encoding;
+  }
+  userFontMap[n].pdfFont = NULL;
+
   // set up the font cache and fonts
   gfxFont = NULL;
   font = NULL;
@@ -478,12 +507,10 @@ XOutputDev::XOutputDev(LTKWindow *win1) {
 
   // empty state stack
   save = NULL;
-
-  // initialize graphics state
-  clear();
 }
 
 XOutputDev::~XOutputDev() {
+  gfree(userFontMap);
   delete fontCache;
   XFreeGC(display, strokeGC);
   XFreeGC(display, fillGC);
@@ -492,15 +519,14 @@ XOutputDev::~XOutputDev() {
     XDestroyRegion(clipRegion);
 }
 
-void XOutputDev::setPageSize(int x, int y) {
-  canvas->resize(x, y);
-  pixmap = canvas->getPixmap();
-}
-
-void XOutputDev::clear() {
+void XOutputDev::startPage(int pageNum, GfxState *state) {
   XOutputState *s;
   XGCValues gcValues;
   XRectangle rect;
+
+  // set page size
+  canvas->resize(state->getPageWidth(), state->getPageHeight());
+  pixmap = canvas->getPixmap();
 
   // clear state stack
   while (save) {
@@ -512,6 +538,9 @@ void XOutputDev::clear() {
     delete s;
   }
   save = NULL;
+
+  // default line flatness
+  flatness = 0;
 
   // reset GCs
   gcValues.foreground = colors[0];
@@ -543,10 +572,36 @@ void XOutputDev::clear() {
   // clear window
   XFillRectangle(display, pixmap, paperGC,
 		 0, 0, canvas->getRealWidth(), canvas->getRealHeight());
+  canvas->redraw();
 }
 
 void XOutputDev::dump() {
   canvas->redraw();
+}
+
+void XOutputDev::drawLinkBorder(double x1, double y1, double x2, double y2,
+				double w) {
+  GfxColor color;
+  XPoint points[5];
+  int x, y;
+
+  color.setRGB(0, 0, 1);
+  XSetForeground(display, strokeGC, findColor(&color));
+  XSetLineAttributes(display, strokeGC, xoutRound(w),
+		     LineSolid, CapRound, JoinRound);
+  cvtUserToDev(x1, y1, &x, &y);
+  points[0].x = points[4].x = x;
+  points[0].y = points[4].y = y;
+  cvtUserToDev(x2, y1, &x, &y);
+  points[1].x = x;
+  points[1].y = y;
+  cvtUserToDev(x2, y2, &x, &y);
+  points[2].x = x;
+  points[2].y = y;
+  cvtUserToDev(x1, y2, &x, &y);
+  points[3].x = x;
+  points[3].y = y;
+  XDrawLines(display, pixmap, strokeGC, points, 5, CoordModeOrigin);
 }
 
 void XOutputDev::saveState(GfxState *state) {
@@ -584,6 +639,7 @@ void XOutputDev::restoreState(GfxState *state) {
     XDestroyRegion(clipRegion);
 
     // restore state
+    flatness = state->getFlatness();
     strokeGC = save->strokeGC;
     fillGC = save->fillGC;
     clipRegion = save->clipRegion;
@@ -605,12 +661,17 @@ void XOutputDev::updateAll(GfxState *state) {
   updateFont(state);
 }
 
-void XOutputDev::updateCTM(GfxState *state) {
+void XOutputDev::updateCTM(GfxState *state, double m11, double m12,
+			   double m21, double m22, double m31, double m32) {
   updateLineAttrs(state, gTrue);
 }
 
-void XOutputDev::updateLineDash(GfxState *state){
+void XOutputDev::updateLineDash(GfxState *state) {
   updateLineAttrs(state, gTrue);
+}
+
+void XOutputDev::updateFlatness(GfxState *state) {
+  flatness = state->getFlatness();
 }
 
 void XOutputDev::updateLineJoin(GfxState *state) {
@@ -644,7 +705,7 @@ void XOutputDev::updateLineAttrs(GfxState *state, GBool updateDash) {
   case 1: cap = CapRound; break;
   case 2: cap = CapProjecting; break;
   default:
-    error(0, "Bad line cap style (%d)", state->getLineCap());
+    error(-1, "Bad line cap style (%d)", state->getLineCap());
     cap = CapButt;
     break;
   }
@@ -653,7 +714,7 @@ void XOutputDev::updateLineAttrs(GfxState *state, GBool updateDash) {
   case 1: join = JoinRound; break;
   case 2: join = JoinBevel; break;
   default:
-    error(0, "Bad line join style (%d)", state->getLineJoin());
+    error(-1, "Bad line join style (%d)", state->getLineJoin());
     join = JoinMiter;
     break;
   }
@@ -697,43 +758,26 @@ void XOutputDev::updateFont(GfxState *state) {
 }
 
 void XOutputDev::stroke(GfxState *state) {
-  GfxPath *path;
-  GfxSubpath *subpath;
   XPoint *points;
-  double x, y;
-  int n, m, i, j;
+  int *lengths;
+  int n, size, numPoints, i, j;
 
-  // get path
-  path = state->getPath();
-  n = path->getNumSubpaths();
+  // transform points
+  n = convertPath(state, &points, &size, &numPoints, &lengths, gFalse);
 
-  // allocate points array
-  m = 0;
+  // draw each subpath
+  j = 0;
   for (i = 0; i < n; ++i) {
-    subpath = path->getSubpath(i);
-    if (subpath->getNumPoints() > m)
-      m = subpath->getNumPoints();
-  }
-  if (m <= numTmpPoints)
-    points = tmpPoints;
-  else
-    points = (XPoint *)gmalloc(m * sizeof(XPoint));
-
-  // draw the lines
-  for (i = 0; i < n; ++i) {
-    subpath = path->getSubpath(i);
-    m = subpath->getNumPoints();
-    for (j = 0; j < m; ++j) {
-      state->transform(subpath->getX(j), subpath->getY(j), &x, &y);
-      points[j].x = xoutRound(x);
-      points[j].y = xoutRound(y);
-    }
-    XDrawLines(display, pixmap, strokeGC, points, m, CoordModeOrigin);
+    XDrawLines(display, pixmap, strokeGC, points + j, lengths[i],
+	       CoordModeOrigin);
+    j += lengths[i];
   }
 
-  // free points
+  // free points and lengths arrays
   if (points != tmpPoints)
     gfree(points);
+  if (lengths != tmpLengths)
+    gfree(lengths);
 }
 
 void XOutputDev::fill(GfxState *state) {
@@ -744,197 +788,349 @@ void XOutputDev::eoFill(GfxState *state) {
   doFill(state, EvenOddRule);
 }
 
-// This contains a kludge to deal with fills with multiple subpaths.
-// First, it divides up the subpaths into non-overlapping polygons by
-// simply comparing bounding rectangles.  Second it handles filling
-// polygons with multiple disjoint subpaths by connecting all of the
-// subpaths to one point.  There really ought to be a better way of
-// doing this.
+//
+//  X doesn't color the pixels on the right-most and bottom-most
+//  borders of a polygon.  This means that one-pixel-thick polygons
+//  are not colored at all.  I think this is supposed to be a
+//  feature, but I can't figure out why.  So after it fills a
+//  polygon, it also draws lines around the border.  This is done
+//  only for single-component polygons, since it's not very
+//  compatible with the compound polygon kludge (see convertPath()).
+//
 void XOutputDev::doFill(GfxState *state, int rule) {
-  static int tmpLengths[numTmpSubpaths];
-  static BoundingRect tmpRects[numTmpSubpaths];
-  GfxPath *path;
-  GfxSubpath *subpath;
   XPoint *points;
   int *lengths;
-  BoundingRect *rects;
-  BoundingRect rect;
-  double x, y;
-  int x1, y1;
-  int n, m, i, j, k;
+  int n, size, numPoints, i, j;
 
   // set fill rule
   XSetFillRule(display, fillGC, rule);
 
-  // get path
-  path = state->getPath();
-  n = path->getNumSubpaths();
+  // transform points, build separate polygons
+  n = convertPath(state, &points, &size, &numPoints, &lengths, gTrue);
 
-  // allocate points and lengths arrays
-  m = 0;
-  for (i = 0; i < n; ++i)
-    m += path->getSubpath(i)->getNumPoints() + 2;
-  if (m < numTmpPoints)
-    points = tmpPoints;
-  else
-    points = (XPoint *)gmalloc(m * sizeof(XPoint));
-  if (n < numTmpSubpaths)
-    lengths = tmpLengths;
-  else
-    lengths = (int *)gmalloc(n * sizeof(int));
-
-  // allocate bounding rectangles array
-  if (n < numTmpSubpaths)
-    rects = tmpRects;
-  else
-    rects = (BoundingRect *)gmalloc(n * sizeof(BoundingRect));
-
-  // transform points
-  k = 0;
+  // fill them
+  j = 0;
   for (i = 0; i < n; ++i) {
-
-    // do one subpath
-    subpath = path->getSubpath(i);
-    m = subpath->getNumPoints();
-    for (j = 0; j < m; ++j) {
-
-      // transform a point
-      state->transform(subpath->getX(j), subpath->getY(j), &x, &y);
-      points[k+j].x = x1 = xoutRound(x);
-      points[k+j].y = y1 = xoutRound(y);
-
-      // update bounding rectangle
-      if (n > 1) {
-	if (j == 0) {
-	  rects[i].xMin = rects[i].xMax = x1;
-	  rects[i].yMin = rects[i].yMax = y1;
-	} else {
-	  if (x1 < rects[i].xMin)
-	    rects[i].xMin = x1;
-	  else if (x1 > rects[i].xMax)
-	    rects[i].xMax = x1;
-	  if (y1 < rects[i].yMin)
-	    rects[i].yMin = y1;
-	  else if (y1 > rects[i].yMax)
-	    rects[i].yMax = y1;
-	}
-      }
-    }
-
-    // close subpath if necessary
-    if (points[k].x != points[k+m-1].x || points[k].y != points[k+m-1].y) {
-      points[k+m] = points[k];
-      ++m;
-    }
-    lengths[i] = m;
-
-    // next subpath
-    k += m + 1;
-  }
-
-  // only one subpath
-  if (n == 1) {
-    XFillPolygon(display, pixmap, fillGC, points, lengths[0],
+    XFillPolygon(display, pixmap, fillGC, points + j, lengths[i],
 		 Complex, CoordModeOrigin);
-
-  // multiple subpaths
-  } else {
-    i = 0;
-    k = 0;
-    while (i < n) {
-      rect = rects[i];
-      m = lengths[i];
-      points[k+m] = points[k];
-      ++m;
-      for (j = i + 1; j < n; ++j) {
-	if (!(((rects[j].xMin > rect.xMin && rects[j].xMin < rect.xMax) ||
-	       (rects[j].xMax > rect.xMin && rects[j].xMax < rect.xMax) ||
-	       (rects[j].xMin < rect.xMin && rects[j].xMax > rect.xMax)) &&
-	      ((rects[j].yMin > rect.yMin && rects[j].yMin < rect.yMax) ||
-	       (rects[j].yMax > rect.yMin && rects[j].yMax < rect.yMax) ||
-	       (rects[j].yMin < rect.yMin && rects[j].yMax > rect.yMax))))
-	  break;
-	if (rects[j].xMin < rect.xMin)
-	  rect.xMin = rects[j].xMin;
-	if (rects[j].xMax > rect.xMax)
-	  rect.xMax = rects[j].xMax;
-	if (rects[j].yMin < rect.yMin)
-	  rect.yMin = rects[j].yMin;
-	if (rects[j].yMax > rect.yMax)
-	  rect.yMax = rects[j].yMax;
-	m += lengths[j];
-	points[k+m] = points[k];
-	++m;
-      }
-      XFillPolygon(display, pixmap, fillGC, points + k, m,
-		   Complex, CoordModeOrigin);
-      i = j;
-      k += m;
+    if (state->getPath()->getNumSubpaths() == 1) {
+      XDrawLines(display, pixmap, fillGC, points + j, lengths[i],
+		 CoordModeOrigin);
     }
+    j += lengths[i] + 1;
   }
 
-  // free points, lengths, and rectangles arrays
+  // free points and lengths arrays
   if (points != tmpPoints)
     gfree(points);
   if (lengths != tmpLengths)
     gfree(lengths);
-  if (rects != tmpRects)
-    gfree(rects);
 }
 
 void XOutputDev::clip(GfxState *state) {
-  XPoint *points;
-  int n;
-  Region region;
-
-  points = pathPoints(state, &n);
-  region = XPolygonRegion(points, n, WindingRule);
-  gfree(points);
-  XIntersectRegion(region, clipRegion, clipRegion);
-  XDestroyRegion(region);
-  XSetRegion(display, strokeGC, clipRegion);
-  XSetRegion(display, fillGC, clipRegion);
+  doClip(state, WindingRule);
 }
 
 void XOutputDev::eoClip(GfxState *state) {
-  XPoint *points;
-  int n;
-  Region region;
+  doClip(state, EvenOddRule);
+}
 
-  points = pathPoints(state, &n);
-  region = XPolygonRegion(points, n, EvenOddRule);
-  gfree(points);
+void XOutputDev::doClip(GfxState *state, int rule) {
+  Region region, region2;
+  XPoint *points;
+  int *lengths;
+  int n, size, numPoints, i, j;
+
+  // transform points, build separate polygons
+  n = convertPath(state, &points, &size, &numPoints, &lengths, gTrue);
+
+  // construct union of subpath regions
+  region = XPolygonRegion(points, lengths[0], rule);
+  j = lengths[0] + 1;
+  for (i = 1; i < n; ++i) {
+    region2 = XPolygonRegion(points + j, lengths[i], rule);
+    XUnionRegion(region2, region, region);
+    XDestroyRegion(region2);
+    j += lengths[i] + 1;
+  }
+
+  // intersect region with clipping region
   XIntersectRegion(region, clipRegion, clipRegion);
   XDestroyRegion(region);
   XSetRegion(display, strokeGC, clipRegion);
   XSetRegion(display, fillGC, clipRegion);
+
+  // free points and lengths arrays
+  if (points != tmpPoints)
+    gfree(points);
+  if (lengths != tmpLengths)
+    gfree(lengths);
 }
 
-XPoint *XOutputDev::pathPoints(GfxState *state, int *numPoints) {
-  XPoint *points;
+//
+// Transform points in the path and convert curves to line segments.
+// Builds a set of subpaths and returns the number of subpaths.
+// If <fill> is set, close any unclosed subpaths and activate a kludge
+// for polygon fills:  First, it divides up the subpaths into
+// non-overlapping polygons by simply comparing bounding rectangles.
+// Then it connects subaths within a single compound polygon to a single
+// point so that X can fill the polygon (sort of).
+//
+int XOutputDev::convertPath(GfxState *state, XPoint **points, int *size,
+			    int *numPoints, int **lengths, GBool fill) {
   GfxPath *path;
-  GfxSubpath *subpath;
-  double x, y;
-  int n, m, i, j, k;
+  BoundingRect *rects;
+  BoundingRect rect;
+  int n, i, ii, j, k, k0;
 
+  // get path and number of subpaths
   path = state->getPath();
   n = path->getNumSubpaths();
-  m = 0;
-  for (i = 0; i < n; ++i)
-    m += path->getSubpath(i)->getNumPoints();
-  points = (XPoint *)gmalloc(m * sizeof(XPoint));
-  k = 0;
+
+  // allocate lengths array
+  if (n < numTmpSubpaths)
+    *lengths = tmpLengths;
+  else
+    *lengths = (int *)gmalloc(n * sizeof(int));
+
+  // allocate bounding rectangles array
+  if (fill) {
+    if (n < numTmpSubpaths)
+      rects = tmpRects;
+    else
+      rects = (BoundingRect *)gmalloc(n * sizeof(BoundingRect));
+  } else {
+    rects = NULL;
+  }
+
+  // do each subpath
+  *points = tmpPoints;
+  *size = numTmpPoints;
+  *numPoints = 0;
   for (i = 0; i < n; ++i) {
-    subpath = path->getSubpath(i);
-    for (j = 0; j < subpath->getNumPoints(); ++j) {
-      state->transform(subpath->getX(j), subpath->getY(j), &x, &y);
-      points[k].x = xoutRound(x);
-      points[k].y = xoutRound(y);
-      ++k;
+
+    // transform the points
+    j = *numPoints;
+    convertSubpath(state, path->getSubpath(i), points, size, numPoints);
+
+    // construct bounding rectangle
+    if (fill) {
+      rects[i].xMin = rects[i].xMax = (*points)[j].x;
+      rects[i].yMin = rects[i].yMax = (*points)[j].y;
+      for (k = j + 1; k < *numPoints; ++k) {
+	if ((*points)[k].x < rects[i].xMin)
+	  rects[i].xMin = (*points)[k].x;
+	else if ((*points)[k].x > rects[i].xMax)
+	  rects[i].xMax = (*points)[k].x;
+	if ((*points)[k].y < rects[i].yMin)
+	  rects[i].yMin = (*points)[k].y;
+	else if ((*points)[k].y > rects[i].yMax)
+	  rects[i].yMax = (*points)[k].y;
+      }
+    }
+
+    // close subpath if necessary
+    if (fill && ((*points)[*numPoints-1].x != (*points)[j].x ||
+		 (*points)[*numPoints-1].y != (*points)[j].y)) {
+      addPoint(points, size, numPoints, (*points)[j].x, (*points)[j].y);
+    }
+
+    // length of this subpath
+    (*lengths)[i] = *numPoints - j;
+
+    // leave an extra point for compound fill hack
+    if (fill)
+      addPoint(points, size, numPoints, 0, 0);
+  }
+
+  // combine compound polygons
+  if (fill) {
+    i = j = k = 0;
+    while (i < n) {
+
+      // start with subpath i
+      rect = rects[i];
+      (*lengths)[j] = (*lengths)[i];
+      k0 = k;
+      (*points)[k + (*lengths)[i]] = (*points)[k0];
+      k += (*lengths)[i] + 1;
+      ++i;
+
+      // combine overlapping polygons
+      do {
+
+	// look for the first subsequent subpath, if any, which overlaps
+	for (ii = i; ii < n; ++ii) {
+	  if (((rects[ii].xMin > rect.xMin && rects[ii].xMin < rect.xMax) ||
+	       (rects[ii].xMax > rect.xMin && rects[ii].xMax < rect.xMax) ||
+	       (rects[ii].xMin < rect.xMin && rects[ii].xMax > rect.xMax)) &&
+	      ((rects[ii].yMin > rect.yMin && rects[ii].yMin < rect.yMax) ||
+	       (rects[ii].yMax > rect.yMin && rects[ii].yMax < rect.yMax) ||
+	       (rects[ii].yMin < rect.yMin && rects[ii].yMax > rect.yMax)))
+	    break;
+	}
+
+	// if there is an overlap, combine the polygons
+	if (ii < n) {
+	  for (; i <= ii; ++i) {
+	    if (rects[i].xMin < rect.xMin)
+	      rect.xMin = rects[j].xMin;
+	    if (rects[i].xMax > rect.xMax)
+	      rect.xMax = rects[j].xMax;
+	    if (rects[i].yMin < rect.yMin)
+	      rect.yMin = rects[j].yMin;
+	    if (rects[i].yMax > rect.yMax)
+	      rect.yMax = rects[j].yMax;
+	    (*lengths)[j] += (*lengths)[i] + 1;
+	    (*points)[k + (*lengths)[i]] = (*points)[k0];
+	    k += (*lengths)[i] + 1;
+	  }
+	}
+      } while (ii < n && i < n);
+
+      ++j;
+    }
+
+    // free bounding rectangles
+    if (rects != tmpRects)
+      gfree(rects);
+
+    n = j;
+  }
+
+  return n;
+}
+
+//
+// Transform points in a single subpath and convert curves to line
+// segments.
+//
+void XOutputDev::convertSubpath(GfxState *state, GfxSubpath *subpath,
+				XPoint **points, int *size, int *n) {
+  double x0, y0, x1, y1, x2, y2, x3, y3;
+  int m, i;
+
+  m = subpath->getNumPoints();
+  i = 0;
+  while (i < m) {
+    if (i >= 1 && subpath->getCurve(i)) {
+      state->transform(subpath->getX(i-1), subpath->getY(i-1), &x0, &y0);
+      state->transform(subpath->getX(i), subpath->getY(i), &x1, &y1);
+      state->transform(subpath->getX(i+1), subpath->getY(i+1), &x2, &y2);
+      state->transform(subpath->getX(i+2), subpath->getY(i+2), &x3, &y3);
+      doCurve(points, size, n, x0, y0, x1, y1, x2, y2, x3, y3);
+      i += 3;
+    } else {
+      state->transform(subpath->getX(i), subpath->getY(i), &x1, &y1);
+      addPoint(points, size, n, xoutRound(x1), xoutRound(y1));
+      ++i;
     }
   }
-  *numPoints = m;
-  return points;
+}
+
+//
+// Subdivide a Bezier curve.  This uses floating point to avoid
+// propagating rounding errors.  (The curves look noticeably more
+// jagged with integer arithmetic.)
+//
+void XOutputDev::doCurve(XPoint **points, int *size, int *n,
+			 double x0, double y0, double x1, double y1,
+			 double x2, double y2, double x3, double y3) {
+  double x[(1<<maxCurveSplits)+1][3];
+  double y[(1<<maxCurveSplits)+1][3];
+  int next[1<<maxCurveSplits];
+  int p1, p2, p3;
+  double xx1, yy1, xx2, yy2;
+  double dx, dy, mx, my, d1, d2;
+  double xl0, yl0, xl1, yl1, xl2, yl2;
+  double xr0, yr0, xr1, yr1, xr2, yr2, xr3, yr3;
+  double xh, yh;
+  double flat;
+
+  flat = (double)(flatness * flatness);
+
+  // initial segment
+  p1 = 0;
+  p2 = 1<<maxCurveSplits;
+  x[p1][0] = x0;  y[p1][0] = y0;
+  x[p1][1] = x1;  y[p1][1] = y1;
+  x[p1][2] = x2;  y[p1][2] = y2;
+  x[p2][0] = x3;  y[p2][0] = y3;
+  next[p1] = p2;
+
+  while (p1 < (1<<maxCurveSplits)) {
+
+    // get next segment
+    xl0 = x[p1][0];  yl0 = y[p1][0];
+    xx1 = x[p1][1];  yy1 = y[p1][1];
+    xx2 = x[p1][2];  yy2 = y[p1][2];
+    p2 = next[p1];
+    xr3 = x[p2][0];  yr3 = y[p2][0];
+
+    // compute distances from control points to midpoint of the
+    // straight line (this is a bit of a hack, but it's much faster
+    // than computing the actual distances to the line)
+    mx = (xl0 + xr3) * 0.5;
+    my = (yl0 + yr3) * 0.5;
+    dx = xx1 - mx;
+    dy = yy1 - my;
+    d1 = dx*dx + dy*dy;
+    dx = xx2 - mx;
+    dy = yy2 - my;
+    d2 = dx*dx + dy*dy;
+
+    // if curve is flat enough, or no more divisions allowed then
+    // add the straight line segment
+    if (p2 - p1 <= 1 || (d1 <= flat && d2 <= flat)) {
+      addPoint(points, size, n, xoutRound(xr3), xoutRound(yr3));
+      p1 = p2;
+
+    // otherwise, subdivide the curve
+    } else {
+      xl1 = (xl0 + xx1) * 0.5;
+      yl1 = (yl0 + yy1) * 0.5;
+      xh = (xx1 + xx2) * 0.5;
+      yh = (yy1 + yy2) * 0.5;
+      xl2 = (xl1 + xh) * 0.5;
+      yl2 = (yl1 + yh) * 0.5;
+      xr2 = (xx2 + xr3) * 0.5;
+      yr2 = (yy2 + yr3) * 0.5;
+      xr1 = (xh + xr2) * 0.5;
+      yr1 = (yh + yr2) * 0.5;
+      xr0 = (xl2 + xr1) * 0.5;
+      yr0 = (yl2 + yr1) * 0.5;
+
+      // add the new subdivision points
+      p3 = (p1 + p2) / 2;
+      x[p1][1] = xl1;  y[p1][1] = yl1;
+      x[p1][2] = xl2;  y[p1][2] = yl2;
+      next[p1] = p3;
+      x[p3][0] = xr0;  y[p3][0] = yr0;
+      x[p3][1] = xr1;  y[p3][1] = yr1;
+      x[p3][2] = xr2;  y[p3][2] = yr2;
+      next[p3] = p2;
+    }
+  }
+}
+
+//
+// Add a point to the points array.  (This would use a generic resizable
+// array type if C++ supported parameterized types in some reasonable
+// way -- templates are a disgusting kludge.)
+//
+void XOutputDev::addPoint(XPoint **points, int *size, int *k, int x, int y) {
+  if (*k >= *size) {
+    *size += 32;
+    if (*points == tmpPoints) {
+      *points = (XPoint *)gmalloc(*size * sizeof(XPoint));
+      memcpy(*points, tmpPoints, *k * sizeof(XPoint));
+    } else {
+      *points = (XPoint *)grealloc(*points, *size * sizeof(XPoint));
+    }
+  }
+  (*points)[*k].x = x;
+  (*points)[*k].y = y;
+  ++(*k);
 }
 
 void XOutputDev::drawChar(GfxState *state, double x, double y, Guchar c) {
@@ -972,9 +1168,10 @@ void XOutputDev::drawChar(GfxState *state, double x, double y, Guchar c) {
 		     xoutRound(2 * tx), xoutRound(2 * tx));
       break;
     case 1: // trademark
-//~      tx = state->getTransformedFontSize() *
-//~           (gfxFont->getWidth(c) -
-//~            gfxFont->getWidth(font->revCharMap('M')));
+//~ this should use a smaller font
+//      tx = state->getTransformedFontSize() *
+//           (gfxFont->getWidth(c) -
+//            gfxFont->getWidth(font->revCharMap('M')));
       tx = 0.9 * state->getTransformedFontSize() *
            gfxFont->getWidth(font->revMapChar('T'));
       y1 -= 0.33 * (double)font->getXFont()->ascent;
@@ -1006,10 +1203,12 @@ void XOutputDev::drawChar(GfxState *state, double x, double y, Guchar c) {
 }
 
 void XOutputDev::drawImageMask(GfxState *state, Stream *str,
-			       int width, int height, GBool invert) {
+			       int width, int height, GBool invert,
+			       GBool inlineImg) {
   XImage *image;
   int x0, y0;			// top left corner of image
   int w0, h0, w1, h1;		// size of image
+  int w2, h2;
   Guint depth;
   double xt, yt, wt, ht;
   GBool rotate, xFlip, yFlip;
@@ -1021,6 +1220,7 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   Gulong color;
   Gulong buf;
   int i, j;
+  int c1, c2;
 
   // get image position and size
   state->transform(0, 0, &xt, &yt);
@@ -1062,7 +1262,7 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
     j = height * ((width + 7) / 8);
     for (i = 0; i < j; ++i)
       str->getChar();
-    return;
+    goto done;
   }
 
   // Bresenham parameters
@@ -1073,13 +1273,19 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
 
   // allocate XImage
   depth = DefaultDepth(display, screenNum);
-  if (x0 < 0 || x0 + w0 > canvas->getRealWidth() ||
-      y0 < 0 || y0 + h0 > canvas->getRealHeight()) {
-    error(0, "Badly placed image mask");
-    return;
-  }
-  image = XGetImage(display, pixmap, x0, y0, w0, h0,
-		    (1 << depth) - 1, ZPixmap);
+  image = XCreateImage(display, DefaultVisual(display, screenNum),
+		       depth, ZPixmap, 0, NULL, w0, h0, 8, 0);
+  image->data = (char *)gmalloc(h0 * image->bytes_per_line);
+  if (x0 + w0 > canvas->getRealWidth())
+    w2 = canvas->getRealWidth() - x0;
+  else
+    w2 = w0;
+  if (y0 + h0 > canvas->getRealHeight())
+    h2 = canvas->getRealHeight() - y0;
+  else
+    h2 = h0;
+  XGetSubImage(display, pixmap, x0, y0, w2, h2, (1 << depth) - 1, ZPixmap,
+	       image, 0, 0);
 
   // allocate line buffer
   pixLine = (Guchar *)gmalloc(((width + 7) & ~7) * sizeof(Guchar));
@@ -1174,11 +1380,24 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   }
 
   // blit the image into the pixmap
-  XPutImage(display, pixmap, fillGC, image, 0, 0, x0, y0, w0, h0);
+  XPutImage(display, pixmap, fillGC, image, 0, 0, x0, y0, w2, h2);
 
   // free memory
+  gfree(image->data);
+  image->data = NULL;
   XDestroyImage(image);
   gfree(pixLine);
+
+  // if it was an inline image, skip the 'EI' tag
+ done:
+  if (inlineImg) {
+    c1 = str->getBaseStream()->getChar();
+    c2 = str->getBaseStream()->getChar();
+    while (!(c1 == 'E' && c2 == 'I') && c2 != EOF) {
+      c1 = c2;
+      c2 = str->getBaseStream()->getChar();
+    }
+  }
 }
 
 inline Gulong XOutputDev::findColor(RGBColor *x, RGBColor *err) {
@@ -1212,7 +1431,8 @@ inline Gulong XOutputDev::findColor(RGBColor *x, RGBColor *err) {
 }
 
 void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
-			   int height, GfxColorSpace *colorSpace) {
+			   int height, GfxColorSpace *colorSpace,
+			   GBool inlineImg) {
   XImage *image;
   int x0, y0;			// top left corner of image
   int w0, h0, w1, h1;		// size of image
@@ -1233,6 +1453,7 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   RGBColor color2, err;
   RGBColor *errRight, *errDown;
   int i, j, k;
+  int c1, c2;
 
   // get image position and size
   state->transform(0, 0, &xt, &yt);
@@ -1277,7 +1498,7 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
     k = height * ((nVals * nBits + 7) / 8);
     for (i = 0; i < k; ++i)
       str->getChar();
-    return;
+    goto done;
   }
 
   // Bresenham parameters
@@ -1474,6 +1695,17 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   gfree(pixLine);
   gfree(errRight);
   gfree(errDown);
+
+  // if it was an inline image, skip the 'EI' tag
+ done:
+  if (inlineImg) {
+    c1 = str->getBaseStream()->getChar();
+    c2 = str->getBaseStream()->getChar();
+    while (!(c1 == 'E' && c2 == 'I') && c2 != EOF) {
+      c1 = c2;
+      c2 = str->getBaseStream()->getChar();
+    }
+  }
 }
 
 Gulong XOutputDev::findColor(GfxColor *color) {
@@ -1491,6 +1723,15 @@ Gulong XOutputDev::findColor(GfxColor *color) {
     r = xoutRound(color->getR() * (numColors - 1));
     g = xoutRound(color->getG() * (numColors - 1));
     b = xoutRound(color->getB() * (numColors - 1));
+    // even a very light color shouldn't map to white
+    if (r == numColors - 1 && g == numColors - 1 && b == numColors - 1) {
+      if (color->getR() < 0.99)
+	--r;
+      if (color->getG() < 0.99)
+	--g;
+      if (color->getB() < 0.99)
+	--b;
+    }
     pixel = colors[(r * numColors + g) * numColors + b];
   }
   return pixel;

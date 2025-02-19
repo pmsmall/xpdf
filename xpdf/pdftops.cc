@@ -19,14 +19,11 @@
 #include "XRef.h"
 #include "Catalog.h"
 #include "Page.h"
-#include "Link.h"
-#include "PSOutput.h"
-#include "Flags.h"
+#include "PDFDoc.h"
+#include "PSOutputDev.h"
+#include "Params.h"
 #include "Error.h"
 #include "config.h"
-
-static void writePostScript(GString *psFileName);
-static GBool loadFile(GString *fileName);
 
 static int firstPage = 1;
 static int lastPage = 0;
@@ -45,12 +42,12 @@ static ArgDesc argDesc[] = {
   {NULL}
 };
 
-static FILE *file;
-static Catalog *catalog;
-
 int main(int argc, char *argv[]) {
+  PDFDoc *doc;
+  GString *fileName;
+  GString *psFileName;
+  PSOutputDev *psOut;
   GBool ok;
-  GString *fileName, *psFileName;
   char *p;
 
   // parse args
@@ -59,16 +56,19 @@ int main(int argc, char *argv[]) {
     printUsage("pdftops", "<PDF-file> [<PS-file>]", argDesc);
     exit(1);
   }
+  fileName = new GString(argv[1]);
 
   // init error file
   errorInit();
 
-  // load PDF file
-  fileName = new GString(argv[1]);
-  if (!loadFile(fileName)) {
-    delete fileName;
+  // read config file
+  initParams(xpdfConfigFile);
+
+  // open PDF file
+  xref = NULL;
+  doc = new PDFDoc(fileName);
+  if (!doc->isOk())
     exit(1);
-  }
 
   // construct PostScript file name
   if (argc == 3) {
@@ -86,81 +86,25 @@ int main(int argc, char *argv[]) {
   // get page range
   if (firstPage < 1)
     firstPage = 1;
-  if (lastPage < 1 || lastPage > catalog->getNumPages())
-    lastPage = catalog->getNumPages();
+  if (lastPage < 1 || lastPage > doc->getNumPages())
+    lastPage = doc->getNumPages();
 
   // write PostScript file
-  writePostScript(psFileName);
+  if (doc->okToPrint()) {
+    psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
+			    firstPage, lastPage);
+    if (psOut->isOk())
+      doc->displayPages(psOut, firstPage, lastPage, 72, 0);
+    delete psOut;
+  }
 
   // clean up
-  delete catalog;
-  delete xref;
-  fclose(file);
-  delete fileName;
   delete psFileName;
+  delete doc;
+  freeParams();
 
   // check for memory leaks
   Object::memCheck(errFile);
-}
 
-static GBool loadFile(GString *fileName) {
-  FileStream *str;
-  Object catObj;
-  Object obj;
-
-  // no xref yet
-  xref = NULL;
-
-  // open PDF file and create stream
-  if (!(file = fopen(fileName->getCString(), "r"))) {
-    error(0, "Couldn't open file '%s'", fileName->getCString());
-    goto err1;
-  }
-  obj.initNull();
-  str = new FileStream(file, 0, -1, &obj);
-
-  // check header
-  str->checkHeader();
-
-  // read xref table
-  xref = new XRef(str);
-  delete str;
-  if (!xref->isOk()) {
-    error(0, "Couldn't read xref table");
-    goto err2;
-  }
-  if (xref->checkEncrypted())
-    goto err2;
-
-  // read catalog
-  catalog = new Catalog(xref->getCatalog(&catObj));
-  catObj.free();
-  if (!catalog->isOk()) {
-    error(0, "Couldn't read page catalog");
-    goto err3;
-  }
-
-  // done
-  return gTrue;
-
- err3:
-  delete catalog;
- err2:
-  delete xref;
-  fclose(file);
- err1:
-  return gFalse;
-}
-
-static void writePostScript(GString *psFileName) {
-  PSOutput *psOut;
-  int pg;
-
-  psOut = new PSOutput(psFileName->getCString(), catalog,
-		       firstPage, lastPage);
-  if (psOut->isOk()) {
-    for (pg = firstPage; pg <= lastPage; ++pg)
-      catalog->getPage(pg)->genPostScript(psOut, 72, 0);
-  }
-  delete psOut;
+  return 0;
 }

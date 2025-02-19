@@ -22,13 +22,13 @@ $! CXXCOMP = "CXX /PREFIX=ALL /DEFINE=(VMS,NO_POPEN,USE_GZIP) /INCLUDE=([],[-.GO
 $! X_LIBS = "SYS$SHARE:DECW$XLIBSHR.EXE/SHARE"
 $!
 $ XPDF_OBJS = "Array.obj,Catalog.obj,Dict.obj,Error.obj,Gfx.obj,GfxFont.obj," + -
-              "GfxState.obj,Lexer.obj,Link.obj,Object.obj,OutputDev.obj,Page.obj," + -
-              "Parser.obj,PSOutput.obj,Stream.obj,XOutputDev.obj,XRef.obj,vms_unlink.obj"
+              "GfxState.obj,Lexer.obj,Link.obj,Object.obj,OutputDev.obj,Page.obj,Params.obj," + -
+              "Parser.obj,PDFDoc.obj,PSOutputDev.obj,Stream.obj,XOutputDev.obj,XRef.obj,vms_unlink.obj"
 $ XPDF_LIBS = "[-.goo]libgoo.olb/lib,[-.ltk]libltk.olb/lib"
 $!
 $ PDFTOPS_OBJS = "Array.obj,Catalog.obj,Dict.obj,Error.obj,Gfx.obj,GfxFont.obj," + -
-                 "GfxState.obj,Lexer.obj,Link.obj,Object.obj,OutputDev.obj,Page.obj," + -
-                 "Parser.obj,PSOutput.obj,Stream.obj,XRef.obj,vms_unlink.obj"
+                 "GfxState.obj,Lexer.obj,Link.obj,Object.obj,OutputDev.obj,Page.obj,Params.obj," + -
+                 "Parser.obj,PDFdoc.obj,PSOutputDev.obj,Stream.obj,XRef.obj,vms_unlink.obj"
 $ PDFTOPS_LIBS = "[-.goo]libgoo.olb/lib"
 $! Build xpdf-ltk.h
 $ def/user sys$input xpdf.ltk
@@ -47,8 +47,10 @@ $ CXXCOMP Link.cc
 $ CXXCOMP Object.cc
 $ CXXCOMP OutputDev.cc
 $ CXXCOMP Page.cc
+$ CXXCOMP Params.cc
 $ CXXCOMP Parser.cc
-$ CXXCOMP PSOutput.cc
+$ CXXCOMP PDFDoc.cc
+$ CXXCOMP PSOutputDev.cc
 $ CXXCOMP Stream.cc
 $ CXXCOMP XOutputDev.cc
 $ CXXCOMP XRef.cc

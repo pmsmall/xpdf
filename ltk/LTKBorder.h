@@ -20,19 +20,19 @@
 #define ltkBorderWidth 2
 
 // Type of border.
-typedef enum {
+enum LTKBorder {
   ltkBorderNone,
   ltkBorderRaised,
   ltkBorderSunken
-} LTKBorder;
+};
 
 // Triangle orientation.
-typedef enum {
+enum LTKTriangle {
   ltkTriLeft,
   ltkTriRight,
   ltkTriUp,
   ltkTriDown
-} LTKTriangle;
+};
 
 extern Gulong ltkGetBrightColor(Display *display, int screenNum,
 				XColor *bg, Gulong def);

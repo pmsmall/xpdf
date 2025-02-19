@@ -18,7 +18,6 @@
 #include <gtypes.h>
 #include <gmem.h>
 #include <GString.h>
-#include "XRef.h"
 
 class Array;
 class Dict;
@@ -37,34 +36,39 @@ struct Ref {
 // object types
 //------------------------------------------------------------------------
 
-typedef int ObjType;
+enum ObjType {
+  // simple objects
+  objBool,			// boolean
+  objInt,			// integer
+  objReal,			// real
+  objString,			// string
+  objName,			// name
+  objNull,			// null
 
-// simple objects
-#define objBool     0		// boolean
-#define objInt      1		// integer
-#define objReal     2		// real
-#define objString   3		// string
-#define objName     4		// name
-#define objNull     5		// null
+  // complex objects
+  objArray,			// array
+  objDict,			// dictionary
+  objStream,			// stream
+  objRef,			// indirect reference
 
-// complex objects
-#define objArray    6		// array
-#define objDict     7		// dictionary
-#define objStream   8		// stream
-#define objRef      9		// indirect reference
+  // special objects
+  objCmd,			// command name
+  objError,			// error return from Lexer
+  objEOF,			// end of file return from Lexer
+  objNone			// uninitialized object
+};
 
-// special objects
-#define objCmd      10		// command name
-#define objError    11		// error return from Lexer
-#define objEOF      12		// end of file return from Lexer
-#define objNone     13		// uninitialized object
-
-// misc
-#define numObjTypes 14		// number of object types
+#define numObjTypes 14		// total number of object types
 
 //------------------------------------------------------------------------
 // Object
 //------------------------------------------------------------------------
+
+#ifdef DEBUG_MEM
+#define initObj(t) ++numAlloc[type = t]
+#else
+#define initObj(t) type = t
+#endif
 
 class Object {
 public:
@@ -75,77 +79,35 @@ public:
 
   // Initialize an object.
   Object *initBool(GBool booln1)
-    { type = objBool; booln = booln1;
-#ifdef DEBUG_MEM
-      ++numAlloc[objBool];
-#endif
-      return this; }
+    { initObj(objBool); booln = booln1; return this; }
   Object *initInt(int intg1)
-    { type = objInt; intg = intg1;
-#ifdef DEBUG_MEM
-      ++numAlloc[objInt];
-#endif
-      return this; }
+    { initObj(objInt); intg = intg1; return this; }
   Object *initReal(double real1)
-    { type = objReal; real = real1;
-#ifdef DEBUG_MEM
-      ++numAlloc[objReal];
-#endif
-      return this; }
-  Object *initString(char *string1, int length)
-    { type = objString; string = new GString(string1, length);
-#ifdef DEBUG_MEM
-      ++numAlloc[objString];
-#endif
-      return this; }
+    { initObj(objReal); real = real1; return this; }
+  Object *initString(GString *string1)
+    { initObj(objString); string = string1; return this; }
   Object *initName(char *name1)
-    { type = objName; name = copyString(name1);
-#ifdef DEBUG_MEM
-      ++numAlloc[objName];
-#endif
-      return this; }
+    { initObj(objName); name = copyString(name1); return this; }
   Object *initNull()
-    { type = objNull;
-#ifdef DEBUG_MEM
-      ++numAlloc[objNull];
-#endif
-      return this; }
+    { initObj(objNull); return this; }
   Object *initArray();
   Object *initDict();
   Object *initStream(Stream *stream1);
   Object *initRef(int num1, int gen1)
-    { type = objRef; ref.num = num1; ref.gen = gen1;
-#ifdef DEBUG_MEM
-      ++numAlloc[objRef];
-#endif
-      return this; }
+    { initObj(objRef); ref.num = num1; ref.gen = gen1; return this; }
   Object *initCmd(char *cmd1)
-    { type = objCmd; cmd = copyString(cmd1);
-#ifdef DEBUG_MEM
-      ++numAlloc[objCmd];
-#endif
-      return this; }
+    { initObj(objCmd); cmd = copyString(cmd1); return this; }
   Object *initError()
-    { type = objError;
-#ifdef DEBUG_MEM
-      ++numAlloc[objError];
-#endif
-      return this; }
+    { initObj(objError); return this; }
   Object *initEOF()
-    { type = objEOF;
-#ifdef DEBUG_MEM
-      ++numAlloc[objEOF];
-#endif
-      return this; }
+    { initObj(objEOF); return this; }
 
   // Copy an object.
   Object *copy(Object *obj);
 
   // If object is a Ref, fetch and return the referenced object.
   // Otherwise, return a copy of the object.
-  Object *fetch(Object *obj)
-    { return (type == objRef && xref) ?
-	     xref->fetch(ref.num, ref.gen, obj) : copy(obj); }
+  Object *fetch(Object *obj);
 
   // Free object contents.
   void free();
@@ -185,6 +147,7 @@ public:
   Array *getArray() { return array; }
   Dict *getDict() { return dict; }
   Stream *getStream() { return stream; }
+  Ref getRef() { return ref; }
   int getRefNum() { return ref.num; }
   int getRefGen() { return ref.gen; }
 
@@ -208,6 +171,7 @@ public:
   GBool streamIs(char *dictType);
   void streamReset();
   int streamGetChar();
+  char *streamGetLine(char *buf, int size);
   int streamGetPos();
   void streamSetPos(int pos);
   FILE *streamGetFile();
@@ -310,6 +274,9 @@ inline void Object::streamReset()
 
 inline int Object::streamGetChar()
   { return stream->getChar(); }
+
+inline char *Object::streamGetLine(char *buf, int size)
+  { return stream->getLine(buf, size); }
 
 inline int Object::streamGetPos()
   { return stream->getPos(); }

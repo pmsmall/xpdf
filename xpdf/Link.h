@@ -18,7 +18,6 @@
 class GString;
 class Array;
 class Dict;
-class Catalog;
 
 //------------------------------------------------------------------------
 // LinkAction
@@ -43,46 +42,34 @@ public:
   virtual LinkActionKind getKind() = 0;
 };
 
-
 //------------------------------------------------------------------------
-// LinkGoto
+// LinkDest
 //------------------------------------------------------------------------
 
-enum LinkGotoKind {
-  gotoXYZ,
-  gotoFit,
-  gotoFitH,
-  gotoFitV,
-  gotoFitR,
-  gotoFitB,
-  gotoFitBH,
-  gotoFitBV
+enum LinkDestKind {
+  destXYZ,
+  destFit,
+  destFitH,
+  destFitV,
+  destFitR,
+  destFitB,
+  destFitBH,
+  destFitBV
 };
 
-class LinkGoto: public LinkAction {
+class LinkDest {
 public:
 
-  // Build a LinkGoto from the array.
-  LinkGoto(Array *a, Catalog *catalog);
+  // Build a LinkDest from the array.
+  LinkDest(Array *a, GBool remote);
 
-  // Build a remote LinkGoto from the file name and array.
-  LinkGoto(GString *fileName1, Array *a, Catalog *catalog);
-
-  // Build a remote LinkGoto from the file specification and array.
-  LinkGoto(Dict *fileSpec, Array *a, Catalog *catalog);
-
-  // Destructor.
-  virtual ~LinkGoto();
-
-  // Was the LinkGoto created successfully?
-  virtual GBool isOk() { return ok; }
+  // Was the LinkDest created successfully?
+  GBool isOk() { return ok; }
 
   // Accessors.
-  virtual LinkActionKind getKind() { return actionGoto; }
-  GBool isRemote() { return remote; }
-  GString *getFileName() { return fileName; }
-  LinkGotoKind getDestKind() { return kind; }
+  LinkDestKind getKind() { return kind; }
   int getPageNum() { return pageNum; }
+  Ref getPageRef() { return pageRef; }
   double getLeft() { return left; }
   double getBottom() { return bottom; }
   double getRight() { return right; }
@@ -94,18 +81,48 @@ public:
 
 private:
 
-  GBool getPosition(Array *a, Catalog *catalog);
-
-  GBool remote;			// true if link refers to a different file
-  GString *fileName;		// remote file name
-  LinkGotoKind kind;		// destination type
-  int pageNum;			// destination page number
-  double left, bottom;		// destination position
+  LinkDestKind kind;		// destination type
+  int pageNum;			// remote page number
+  Ref pageRef;			// reference to page
+  double left, bottom;		// position
   double right, top;
-  double zoom;			// destination zoom factor
+  double zoom;			// zoom factor
   GBool changeLeft, changeTop;	// for destXYZ links, which position
   GBool changeZoom;		//   components to change
   GBool ok;			// set if created successfully
+};
+
+//------------------------------------------------------------------------
+// LinkGoto
+//------------------------------------------------------------------------
+
+class LinkGoto: public LinkAction {
+public:
+
+  // Build a LinkGoto from a destination array, named destination string,
+  // or action dictionary.  The <subtype> string is "GoTo", "GoToR",
+  // "Launch", or NULL (if there was no dictionary).
+  LinkGoto(char *subtype, Object *obj);
+
+  // Destructor.
+  virtual ~LinkGoto();
+
+  // Was the LinkGoto created successfully?
+  virtual GBool isOk() { return fileName || dest || namedDest; }
+
+  // Accessors.
+  virtual LinkActionKind getKind() { return actionGoto; }
+  GString *getFileName() { return fileName; }
+  LinkDest *getDest() { return dest; }
+  GString *getNamedDest() { return namedDest; }
+
+private:
+
+  GString *fileName;		// file name (NULL for local link)
+  LinkDest *dest;		// regular destination (NULL for remote
+				//   link with bad destination)
+  GString *namedDest;		// named destination (only one of dest and
+				//   and namedDest may be non-NULL)
 };
 
 //------------------------------------------------------------------------
@@ -166,7 +183,7 @@ class Link {
 public:
 
   // Construct a link, given its dictionary.
-  Link(Dict *dict, Catalog *catalog);
+  Link(Dict *dict);
 
   // Destructor.
   ~Link();
@@ -177,6 +194,10 @@ public:
 
   // Get action.
   LinkAction *getAction() { return action; }
+
+  // Get border corners and width.
+  void getBorder(int *xa1, int *ya1, int *xa2, int *ya2, double *wa)
+    { *xa1 = x1; *ya1 = y1; *xa2 = x2; *ya2 = y2; *wa = borderW; }
 
 private:
 
@@ -194,13 +215,18 @@ class Links {
 public:
 
   // Extract links from array of annotations.
-  Links(Object *annots, Catalog *catalog);
+  Links(Object *annots);
 
   // Destructor.
   ~Links();
 
-  // If point <x>,<y> is in a link, return the link; else return NULL.
-  Link *find(int x, int y);
+  // Iterate through list of links.
+  int getNumLinks() { return numLinks; }
+  Link *getLink(int i) { return links[i]; }
+
+  // If point <x>,<y> is in a link, return the associated action;
+  // else return NULL.
+  LinkAction *find(int x, int y);
 
 private:
 

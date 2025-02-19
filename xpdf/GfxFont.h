@@ -15,8 +15,47 @@
 
 #include <gtypes.h>
 #include <GString.h>
+#include "Object.h"
 
 class Dict;
+
+//------------------------------------------------------------------------
+// GfxFontEncoding
+//------------------------------------------------------------------------
+
+#define gfxFontEncHashSize 419
+
+class GfxFontEncoding {
+public:
+
+  // Construct an empty encoding.
+  GfxFontEncoding();
+
+  // Construct an encoding from an array of char names.
+  GfxFontEncoding(char **encoding1, int encSize);
+
+  // Destructor.
+  ~GfxFontEncoding();
+
+  // Add a char to the encoding.
+  void addChar(int code, char *name);
+
+  // Return the character name associated with <code>.
+  char *getCharName(int code) { return encoding[code]; }
+
+  // Return the code associated with <name>.
+  int getCharCode(char *name);
+
+private:
+
+  int hash(char *name);
+  void addChar1(int code, char *name);
+
+  char **encoding;		// code --> name mapping
+  GBool freeEnc;		// should we free the encoding array?
+  short				// name --> code hash table
+    hashTab[gfxFontEncHashSize];
+};
 
 //------------------------------------------------------------------------
 // GfxFont
@@ -32,13 +71,16 @@ class GfxFont {
 public:
 
   // Constructor.
-  GfxFont(char *tag1, Dict *fontDict);
+  GfxFont(char *tag1, Ref id1, Dict *fontDict);
 
   // Destructor.
   ~GfxFont();
 
   // Get font tag.
   GString *getTag() { return tag; }
+
+  // Get font dictionary ID.
+  Ref getID() { return id; }
 
   // Does this font match the tag?
   GBool matches(char *tag1) { return !tag->cmp(tag1); }
@@ -57,23 +99,27 @@ public:
   double getWidth(Guchar c) { return widths[c]; }
   double getWidth(GString *s);
 
-  // Get encoded character name.
-  char *getCharName(int code) { return encoding[code]; }
+  // Return the character name associated with <code>.
+  char *getCharName(int code) { return encoding->getCharName(code); }
 
-  // Look up a character name in an encoding.
-  int lookupCharName(char *name, char **enc, int encSize, int hint);
+  // Return the code associated with <name>.
+  int getCharCode(char *name) { return encoding->getCharCode(name); }
 
 private:
 
-  void makeEncoding(Dict *fontDict, char **builtinEncoding);
-  void makeWidths(Dict *fontDict, char **builtinEncoding,
-		  int builtinEncodingSize, Gushort *builtinWidths);
+  void makeEncoding(Dict *fontDict, GfxFontEncoding *builtinEncoding);
+  GfxFontEncoding *makeEncoding1(Object obj, Dict *fontDesc,
+				 GfxFontEncoding *builtinEncoding);
+  void getType1Encoding(Stream *str);
+  void makeWidths(Dict *fontDict, GfxFontEncoding *builtinEncoding,
+		  Gushort *builtinWidths);
 
-  GString *tag;
-  GString *name;
-  int flags;
-  double widths[256];
-  char *encoding[256];
+  GString *tag;			// PDF font tag
+  Ref id;			// reference (used as unique ID)
+  GString *name;		// font name
+  int flags;			// font descriptor flags
+  double widths[256];		// width of each char
+  GfxFontEncoding *encoding;	// font encoding
 };
 
 //------------------------------------------------------------------------

@@ -1,0 +1,48 @@
+! Generated automatically by mantohlp
+1 pdftops
+
+       pdftops  -  Portable  Document  Format (PDF) to PostScript
+       converter
+
+       pdftops [options] [PDF-file [PS-file]]
+
+       Pdftops converts Portable Document Format (PDF)  files  to
+       PostScript so they can be printed.
+
+       Pdftops  reads  the  PDF  file,  PDF-file,  and  writes  a
+       PostScript file, PS-file.  If PS-file  is  not  specified,
+       pdftops  converts file.pdf to file.ps.  If PS-file is '-',
+       the PostScript is sent to stdout.
+
+       The generated PostScript is Level 2.  This means  it  will
+       not  work  on  old  printers  which  only  support Level 1
+       PostScript.
+
+2 OPTIONS
+
+       -fnumber
+              Specifies the first page to print.
+
+       -lnumber
+              Specifies the last page to print.
+
+       -h     Print usage information.  (-help is equivalent.)
+
+2 BUGS
+
+       This  is  a beta release of pdftops, and there are still a
+       bunch of PDF features which I have yet to implement.
+
+       At this point, the biggest problem is that embedded  fonts
+       are not handled properly.
+
+2 AUTHOR
+
+       The  pdftops software and documentation are copyright 1996
+       Derek B. Noonburg (derekn@ece.cmu.edu).
+
+2 SEE_ALSO
+
+       xpdf(1)
+       http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
+

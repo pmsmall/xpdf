@@ -11,12 +11,12 @@
 #endif
 
 #include <stddef.h>
-#include <stdarg.h>
 #include "Object.h"
 #include "Array.h"
 #include "Dict.h"
 #include "Error.h"
 #include "Stream.h"
+#include "XRef.h"
 
 //------------------------------------------------------------------------
 // Object
@@ -45,29 +45,20 @@ int Object::numAlloc[numObjTypes] =
 #endif
 
 Object *Object::initArray() {
-  type = objArray;
+  initObj(objArray);
   array = new Array();
-#ifdef DEBUG_MEM
-  ++numAlloc[objArray];
-#endif
   return this;
 }
 
 Object *Object::initDict() {
-  type = objDict;
+  initObj(objDict);
   dict = new Dict();
-#ifdef DEBUG_MEM
-  ++numAlloc[objDict];
-#endif
   return this;
 }
 
 Object *Object::initStream(Stream *stream1) {
-  type = objStream;
+  initObj(objStream);
   stream = stream1;
-#ifdef DEBUG_MEM
-  ++numAlloc[objStream];
-#endif
   return this;
 }
 
@@ -99,6 +90,11 @@ Object *Object::copy(Object *obj) {
   ++numAlloc[type];
 #endif
   return obj;
+}
+
+Object *Object::fetch(Object *obj) {
+  return (type == objRef && xref) ?
+         xref->fetch(ref.num, ref.gen, obj) : copy(obj);
 }
 
 void Object::free() {
@@ -165,14 +161,21 @@ void Object::print(FILE *f) {
     for (i = 0; i < arrayGetLength(); ++i) {
       if (i > 0)
 	fprintf(f, " ");
-      arrayGet(i, &obj);
+      arrayGetNF(i, &obj);
       obj.print(f);
       obj.free();
     }
     fprintf(f, "]");
     break;
   case objDict:
-    fprintf(f, "<dict>");
+    fprintf(f, "<<");
+    for (i = 0; i < dictGetLength(); ++i) {
+      fprintf(f, " /%s ", dictGetKey(i));
+      dictGetValNF(i, &obj);
+      obj.print(f);
+      obj.free();
+    }
+    fprintf(f, " >>");
     break;
   case objStream:
     fprintf(f, "<stream>");
@@ -188,6 +191,7 @@ void Object::print(FILE *f) {
     break;
   case objEOF:
     fprintf(f, "<EOF>");
+    break;
   case objNone:
     fprintf(f, "<none>");
     break;

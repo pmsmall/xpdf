@@ -2,8 +2,8 @@ xpdf
 ====
 and pdftops
 
-version 0.5 (beta)
-96-may-23
+version 0.6 (beta)
+96-nov-12
 
 The xpdf and pdftops software and documentation are
 copyright 1996 Derek B. Noonburg.
@@ -32,12 +32,10 @@ Compatibility
 
 Xpdf is known to work on the following systems:
 
-* x86, Linux 1.2.13 a.out, gcc 2.7.2
-* x86, Linux 1.2.13 ELF, gcc 2.7.2
+* x86, Linux 2.0 ELF, gcc 2.7.2
 * PowerPC, AIX 4.1, gcc 2.7.0
-* SPARC, SunOS 4.1.3, gcc 2.7.2
-* MIPS, Ultrix 4.4, gcc 2.6.3
-* Alpha, OSF/1 3.2, gcc 2.7.0
+* SPARC, Solaris 2.5, gcc 2.7.2
+* Alpha, OSF/1 3.2, gcc 2.7.2
 * HP-PA, HP-UX 9.05, gcc 2.7.2
 
 It should work on pretty much any UNIX or VMS system which runs X11.
@@ -74,168 +72,14 @@ To run xpdf, simply type:
 
   xpdf file.pdf
 
-where 'file.pdf' is your PDF file.  The file name can be followed by a
-number specifying the page which should be displayed first, e.g.:
+To generate a PostScript file, hit the "print" button in xpdf, or run
+pdftops:
 
-  xpdf file.pdf 18
+  pdftops file.pdf
 
-On-screen controls, at the bottom of the xpdf window:
-
-  left/right arrow buttons:
-    Move to the previous/next page.
-
-  'Page' entry box:
-    Move to a specific page number.  Click in the box to activate it,
-    type the page number, then hit return.
-
-  magnifying glass buttons:
-    Increase and decrease the resolution, i.e., zoom in and zoom out.
-
-  print button:
-    Bring up a dialog for generating a PostScript file.  The dialog
-    has options to set the pages to be printed and the PostScript file
-    name.
-
-  curved arrow buttons:
-    Rotate the page clockwise and counterclockwise.  These are
-    intended primarily for PDF files where the rotation isn't
-    correctly specified in the file, but they're also useful if your X
-    server doesn't support font rotation.
-
-  '?' button:
-    Bring up the 'about xpdf' window.
-
-  'Quit' button:
-    Quit xpdf.
-
-Links:
-
-  Clicking on a hyperlink will jump to the link's destination.
-  Currently, only links within PDF documents or to another PDF file
-  are supported.  Clicking on a URL link just prints the URL.
-  Clicking on any other type of link (e.g., links to executable
-  programs) prints an error message.
-
-Key bindings:
-
-  n            move to the next page
-
-  p            move to the previous page
-
-  <Space>      scroll down on the current page; if already at bottom,
-  <PageDown>     move to next page
-  <Next>
-
-  <Backspace>  scroll up on the current page; if already at top, move
-  <Delete>       to previous page
-  <PageUp> 
-  <Previous>
-
-  <Home>       scroll to top of current page
-
-  <End>        scroll to bottom of current page
-
-  arrows       scroll the current page
-
-  control-L    redraw the current page
-
-  q            quit xpdf
-
-Command line options and X resources:
-
-  -err
-    Send error messages to /dev/tty instead of stderr (useful if xpdf
-    is started from another application, e.g., netscape which
-    otherwise pops up an annoying little window for every error).
-
-  -z <number>                [xpdf.initialZoom]
-    Set the initial zoom factor (-5 .. 5).
-
-  -g <geometry>              [xpdf.geometry]
-  -geometry <geometry>
-    Set the initial window geometry.
-
-  -remote <name>
-    Start/contact xpdf remote server with specified name (see the
-    'Remote server mode' section below).
-
-  -raise
-    Raise xpdf remote server window (with -remote only).
-
-  -quit
-    Kill xpdf remote server (with -remote only).
-
-  -rgb <number>
-    Set the size of largest RGB cube xpdf will try to allocate.  The
-    default is 5 (for a 5x5x5 cube); set to a smaller number to
-    conserve color table entries.
-
-  -cmd
-    Print commands as they're executed (useful for debugging).
-
-  -h or -help
-    Print usage information.
-
-Several other standard X options and resources will work as expected:
-
-  -display <display>         [xpdf.display]
-
-  -foreground <color>        [xpdf.foreground]
-  -fg <color>
-
-  -background <color>        [xpdf.background]
-  -bg <color>
-
-  -font <font>               [xpdf.font]
-  -fn <font>
-
-The color and font options only affect the user interface elements,
-not the PDF display (the 'paper').
-
-
-Web browsers
-------------
-
-If you want to run xpdf automatically from netscape or mosaic (and
-probably other browsers) when you click on a link to a PDF file, you
-need to edit (or create) the files '.mime.types' and '.mailcap' in
-your home directory.  In '.mime.types' add the line:
-
-    application/pdf pdf
-
-In '.mailcap' add the lines:
-
-    # Use xpdf to view PDF files.
-    application/pdf; xpdf -err %s
-
-Make sure that xpdf is on your executable search path.
-
-
-Remote server mode
-------------------
-
-Xpdf can be started in remote server mode by specifying a server name
-(in addition to the file name and page number).  For example:
-
-  xpdf -remote myServer file.pdf
-
-If there is currently no xpdf running in server mode with the name
-'myServer', a new xpdf window will be opened.  If another command:
-
-  xpdf -remote myServer another.pdf 9
-
-is issued, a new copy of xpdf will not be started.  Instead, the first
-xpdf (the server) will load 'another.pdf' and display page nine.  If
-the file name is the same:
-
-  xpdf -remote myServer another.pdf 4
-
-the xpdf server will simply display the specified page.
-
-The -raise option tells the server to raise its window; it can be
-specified with or without a file name and page number.
-
-The -quit option tells the server to close its window and exit.
+Command line options and many other details are described in the man
+pages (xpdf.1 and pdftops.1) and the VMS help files (xpdf.hlp and
+pdftops.hlp).
 
 
 Fonts
@@ -243,14 +87,21 @@ Fonts
 
 Xpdf uses X server fonts.  It requires the following fonts:
 
-* courier: medium-r, bold-r, medium-o, and bold-o
-* helvetica: medium-r, bold-r, medium-o, and bold-o
-* times: medium-r, bold-r, medium-i, and bold-i
-* symbol: medium-r
+* Courier: medium-r, bold-r, medium-o, and bold-o
+* Helvetica: medium-r, bold-r, medium-o, and bold-o
+* Times: medium-r, bold-r, medium-i, and bold-i
+* Symbol: medium-r
 * Zapf Dingbats: medium-r
 
 Most X installations should already have all of these fonts, except
-Zapf Dingbats (which isn't used very heavily anyway).
+Zapf Dingbats.  You can install a Type 1 Zapf Dingbats font -- see the
+mkfontdir(1) man page for details.  Use this font descriptor in your
+fonts.scale file:
+
+    -itc-zapfdingbats-medium-r-normal--0-0-0-0-p-0-adobe-fontspecific
+
+You can get a Type 1 font file from the ghostscript 4.x distribution
+(look for d050000l.pfb).
 
 X servers, starting at R5, support font scaling.  Xpdf will
 automatically take advantage of this.  There are two types of scaling.
@@ -258,52 +109,12 @@ The first type uses standard bitmap fonts: if a font doesn't exist in
 the requested size, the server will scale the bitmapped characters.
 This is reasonably fast, and the results are readable but not very
 pretty.  X servers can also handle true scalable, e.g., Type-1, fonts.
-(The free Adobe Acrobat Reader comes with a set of Type-1 fonts which
-can be used by X; see the mkfontdir(1) man page for details on setting
-these up.)  Scalable fonts are slower, especially since PDF documents
-tend to use lots of fonts, but they look much nicer.
+(See the mkfontdir(1) man page for details on setting these up.)
+Scalable fonts are slower, especially since PDF documents tend to use
+lots of fonts, but they look much nicer.
 
 Some X servers also support font rotation.  Xpdf will use this feature
 if available.
-
-
-PostScript output
------------------
-
-Xpdf can generate PostScript files.  Click on the 'printer' button,
-select the pages you want to print and the name for the PostScript
-file, and click 'Ok' (or hit return).
-
-There is also a separate program which converts PDF files to
-PostScript.  It runs from the command line, and can be compiled
-without the X includes and libraries.  To run it, type:
-
-  pdftops file.pdf
-
-to generate 'file.ps' or:
-
-  pdftops file.pdf anotherfile.ps
-
-to generate 'anotherfile.ps'.
-
-You can specify a range of pages to convert:
-
-  pdftops -f 3 -l 17 file.ps
-
-will generate PostScript for pages 3 through 17.
-
-Downloading fonts is not currently supported.  This means that if xpdf
-has trouble displaying the document, the PostScript output will
-probably look just as bad.
-
-The generated PostScript is Level 2.  If you have an old printer which
-supports only Level 1 PostScript, you won't be able to print the
-files.  I'm not sure how many Level 1 printers are out there -- if you
-want Level 1 PostScript output, send me email, and if there's enough
-interest, I'll work on it.
-
-The PostScript output has not been thoroughly tested yet.  Please send
-me email if you find any bugs.
 
 
 The Unisys LZW Patent
@@ -349,7 +160,8 @@ To compile xpdf for UNIX:
 
 * Edit Makefile.config in the top-level directory.  Set the compilers
   you want to use (e.g., gcc and g++) and add any necessary switches
-  and options (e.g., include and library directories).
+  and options (e.g., include and library directories).  You can also
+  set the installation directory here (the PREFIX variable).
 
 * If neither 'uncompress -c file.Z' nor 'gzip -d -c file.Z' decompress
   a standard UNIX .Z file to stdout on your system, you'll need to
@@ -364,8 +176,8 @@ To compile xpdf for UNIX:
   xpdf/pdftops.  There are no runtime configuration or support files;
   the binary can be moved to any directory.
 
-* If desired, type 'make PREFIX=/usr/local install'.  (You can change
-  '/usr/local' to some other directory, of course.)
+* If desired, type 'make install' to install the binaries and man
+  pages.
 
 To compile xpdf for VMS:
 
@@ -388,7 +200,7 @@ To compile xpdf for VMS:
    50
   -----
 
-* Type '@vmscomp.com' or '@vmsdecccomp' in the top-level directory.
+* Type '@vmscomp' or '@vmsdecccomp' in the top-level directory.
 
 * The executables will be left in '[.xpdf]xpdf' and '[.xpdf]pdftops'.
 
@@ -401,9 +213,10 @@ Xpdf may be distributed under the following conditions:
 1. This file ('README') is included, unmodified, in the distribution.
 
 2. The distribution includes:
-   a. all of the xpdf source code, unmodified; OR
+   a. all of the xpdf source code and documentation, unmodified; OR
    b. one or more xpdf executables, compiled from the unmodified
-      source code; OR
+      source code, plus the associated documentation (UNIX man pages
+      or VMS help files); OR
    c. both of the above.
 
 If you distribute xpdf, I would appreciate receiving a pointer (ftp
@@ -427,51 +240,6 @@ If you find a bug in xpdf, i.e., if it prints an error message,
 crashes, or incorrectly displays a document, and you don't see that
 bug listed here, please send me email, with a pointer (URL, ftp site,
 etc.) to the PDF file.
-
-This is a list of things which I plan to add (in approximate order of
-priority):
-
-* forms
-* text search/select/copy
-* separate program to extract all text from PDF file
-* text annotations
-* bookmarks
-* support for Adobe Acrobat Amber optimized PDF files
-* article threads
-* index window or mode -- outline and/or thumbnails
-* distribute with a small demo PDF file
-* RunLength filter (I haven't found a PDF file which uses this)
-* encryption (if I can get documentation)
-* adding text to clipping path
-* miter limit
-* text rendering mode (X display and PostScript output)
-* separate pdftoppm program (args are PDF file, page number, and
-  resolution (in dpi))
-
-There are also some problems which I know about.  This is a list of
-things which I plan to fix:
-
-* handle embedded Type-1 and Type-3 fonts
-  - on screen (dump Type-1 fonts to file and let X server load them?)
-  - embed in PostScript files
-* "cancel" button to stop page computation
-* pan by dragging with button 2
-* do a better job of scaling and dithering images
-  - look at 'Interpolate' param;
-* rotated (non-90) images
-* fix trademark ('TM') constructed char to use smaller font
-* greek small fonts
-* deal better with file names in GoToR links
-* deal better with TrueColor visuals (don't use RGB cube)
-* option and resource for private color map
-* "load file" button, file dialog
-* mark links on screen
-* support other link types
-* some kind of 'configure' script to build Makefile.config
-* "save bitmap" (PPM) command (how to generate 24-bit image?)
-* efficiently handle very large files - don't read entire catalog,
-  xref, etc. (is this necessary?)
-* don't allocate full-size pixmap (optional?  only if > N bytes?)
 
 
 Acknowledgments
@@ -498,6 +266,11 @@ Manual_, Adobe Developer Support Technical Note #5156.  1995.
 [Updates for PDF version 1.1.  Available on the WWW as
 http://www.adobe.com/PDFs/TN/5156.PDF_UPD.PDF.]
 
+Adobe Systems Inc., _Updates to the Portable Document Format Reference
+Manual_.
+[Update for Sections 5.7 and 6.12 (encryption), emailed to developers
+July 24, 1996.]
+
 Adobe Systems Inc., _PostScript Language Reference Manual_, 2nd ed.
 Addison-Wesley, 1990, ISBN 0-201-18127-4.
 [The official PostScript manual.]
@@ -505,6 +278,11 @@ Addison-Wesley, 1990, ISBN 0-201-18127-4.
 Adobe Systems Inc., _Supporting the DCT Filters in PostScript Level
 2_, Adobe Developer Support Technical Note #5116.  1992.
 [Description of the DCTDecode filter parameters.]
+
+Anonymous, RC4 source code.
+[This is the algorithm used to encrypt PDF files.  Available on
+various ftp sites, e.g., ftp://ftp.ox.ac.uk/pub/crypto/misc/rc4.tar.gz
+or ftp://idea.sec.dsi.unimi.it/pub/crypt/code/rc4.tar.gz.]
 
 CCITT, _Blue Book_, Volume VII Fascicle 3: "Terminal Equipment and
 Protocols for Telematic Services", Recommendations T.4 and T.6.
@@ -524,6 +302,9 @@ Christoph Loeffler, Adriaan Ligtenberg, George S. Moschytz, "Practical
 Fast 1-D DCT Algorithms with 11 Multiplications".  IEEE Intl. Conf. on
 Acoustics, Speech & Signal Processing, 1989, 988-991.
 [The fast IDCT algorithm used in the DCTDecode filter.]
+
+R. Rivest, "The MD5 Message-Digest Algorithm".  RFC 1321.
+[MD5 is used in PDF document encryption.]
 
 Gregory K. Wallace, "The JPEG Still Picture Compression Standard".
 [Good description of the JPEG standard.  Available on the net as

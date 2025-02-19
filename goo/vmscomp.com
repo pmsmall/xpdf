@@ -14,10 +14,11 @@ $! for Alpha with DEC compilers
 $! CCOMP = "CC /DECC /PREFIX=ALL /DEFINE=VMS /INCLUDE=[]"
 $! CXXCOMP = "CXX /PREFIX=ALL /DEFINE=VMS /INCLUDE=[]"
 $!
-$ GOO_OBJS = "GString.obj,gmempp.obj,gmem.obj,parseargs.obj,cover.obj"
+$ GOO_OBJS = "GString.obj,gmempp.obj,fileNames.obj,gmem.obj,parseargs.obj,cover.obj"
 $!
 $ CXXCOMP GString.cc
 $ CXXCOMP gmempp.cc
+$ CXXCOMP fileNames.cc
 $ CCOMP gmem.c
 $ CCOMP parseargs.c
 $ CCOMP cover.c

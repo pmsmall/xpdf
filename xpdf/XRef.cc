@@ -29,6 +29,16 @@
 				//   to look for 'startxref'
 
 //------------------------------------------------------------------------
+// Permission bits
+//------------------------------------------------------------------------
+
+#define permPrint    (1<<2)
+#define permChange   (1<<3)
+#define permCopy     (1<<4)
+#define permNotes    (1<<5)
+#define defPermFlags 0xfffc
+
+//------------------------------------------------------------------------
 // The global xref table
 //------------------------------------------------------------------------
 
@@ -39,12 +49,18 @@ XRef *xref = NULL;
 //------------------------------------------------------------------------
 
 XRef::XRef(FileStream *str) {
+  XRef *oldXref;
   int pos;
   int i;
 
   ok = gTrue;
+
+  // get rid of old xref (otherwise it will try to fetch the Root object
+  // in the new document, using the old xref)
+  oldXref = xref;
+  xref = NULL;
+
   entries = NULL;
-  encrypted = gFalse;
   file = str->getFile();
   start = str->getStart();
   pos = readTrailer(str);
@@ -56,31 +72,41 @@ XRef::XRef(FileStream *str) {
   for (i = 0; i < size; ++i)
     entries[i].offset = -1;
   while (readXRef(str, &pos)) ;
+  xref = this;
+  if (checkEncrypted()) {
+    ok = gFalse;
+    xref = oldXref;
+    return;
+  }
 }
 
 XRef::~XRef() {
   gfree(entries);
+  trailerDict.free();
 }
 
 // Read startxref position, xref table size, and root.  Returns
 // first xref position.
 int XRef::readTrailer(FileStream *str) {
   Parser *parser;
-  Object obj, obj2;
-  Dict *dict;
+  Object obj;
   char buf[xrefSearchSize+1];
-  int pos;
+  int n, pos, pos1;
   char *p;
+  int c;
   int i;
 
   // read last xrefSearchSize bytes
   str->setPos(-xrefSearchSize);
-  for (i = 0; i < xrefSearchSize; ++i)
-    buf[i] = str->getChar();
-  buf[xrefSearchSize] = '\0';
+  for (n = 0; n < xrefSearchSize; ++n) {
+    if ((c = str->getChar()) == EOF)
+      break;
+    buf[n] = c;
+  }
+  buf[n] = '\0';
 
   // find startxref
-  for (i = xrefSearchSize - 9; i >= 0; --i) {
+  for (i = n - 9; i >= 0; --i) {
     if (!strncmp(&buf[i], "startxref", 9))
       break;
   }
@@ -89,38 +115,57 @@ int XRef::readTrailer(FileStream *str) {
   for (p = &buf[i+9]; isspace(*p); ++p) ;
   pos = atoi(p);
 
-  // read trailer dict
-  for (--i; i >= 0; --i) {
-    if (!strncmp(&buf[i], "trailer", 7))
+  // find trailer dict by looking after first xref table
+  //~ there should be a better way to do this -- I need to look
+  //~ at the PDF 1.2 docs
+  str->setPos(start + pos);
+  for (i = 0; i < 4; ++i)
+    buf[i] = str->getChar();
+  if (strncmp(buf, "xref", 4))
+    return 0;
+  pos1 = pos + 4;
+  while (1) {
+    str->setPos(start + pos1);
+    for (i = 0; i < 35; ++i) {
+      if ((c = str->getChar()) == EOF)
+	return 0;
+      buf[i] = c;
+    }
+    if (!strncmp(buf, "trailer", 7))
       break;
+    p = buf;
+    while (isspace(*p)) ++p;
+    while ('0' <= *p && *p <= '9') ++p;
+    while (isspace(*p)) ++p;
+    n = atoi(p);
+    while ('0' <= *p && *p <= '9') ++p;
+    while (isspace(*p)) ++p;
+    pos1 += (p - buf) + n * 20;
   }
+  pos1 += 7;
+
+  // read trailer dict
   obj.initNull();
-  parser = new Parser(new Lexer(
-    new FileStream(file, str->getPos() - xrefSearchSize + i + 8, -1, &obj)));
-  parser->getObj(&obj);
-  if (obj.isDict()) {
-    dict = obj.getDict();
-    dict->lookup("Size", &obj2);
-    if (obj2.isInt())
-      size = obj2.getInt();
+  parser = new Parser(new Lexer(new FileStream(file, start + pos1, -1, &obj)));
+  parser->getObj(&trailerDict);
+  if (trailerDict.isDict()) {
+    trailerDict.dictLookup("Size", &obj);
+    if (obj.isInt())
+      size = obj.getInt();
     else
       pos = 0;
-    obj2.free();
-    dict->lookup("Root", &obj2);
-    if (obj2.isRef()) {
-      rootNum = obj2.getRefNum();
-      rootGen = obj2.getRefGen();
+    obj.free();
+    trailerDict.dictLookup("Root", &obj);
+    if (obj.isRef()) {
+      rootNum = obj.getRefNum();
+      rootGen = obj.getRefGen();
     } else {
       pos = 0;
     }
-    obj2.free();
-    dict->lookup("Encrypt", &obj2);
-    encrypted = !obj2.isNull();
-    obj2.free();
+    obj.free();
   } else {
     pos = 0;
   }
-  obj.free();
   delete parser;
 
   // return first xref position
@@ -215,16 +260,22 @@ GBool XRef::readXRef(FileStream *str, int *pos) {
 }
 
 GBool XRef::checkEncrypted() {
-  if (encrypted) {
-    error(0, "PDF file is encrypted and cannot be displayed");
-    error(0, "*	Please send email to devsup-person@adobe.com and ask");
-    error(0, "*	them to prove that PDF is truly an open standard by");
-    error(0, "*	releasing the decryption specs to developers.  Also,");
-    error(0, "*	please send email to the person responsible for this");
-    error(0, "*	file (webmaster@... might be a good place) and ask");
-    error(0, "*	them to stop using encrypted PDF files.");
+  Object obj;
+  GBool encrypted;
+
+  trailerDict.dictLookup("Encrypt", &obj);
+  if ((encrypted = !obj.isNull())) {
+    error(-1, "PDF file is encrypted and cannot be displayed");
+    error(-1, "* Decryption support is currently not included in xpdf");
+    error(-1, "* due to legal restrictions: the U.S.A. still has bogus");
+    error(-1, "* export controls on cryptography software.");
   }
+  obj.free();
   return encrypted;
+}
+
+GBool XRef::okToPrint() {
+  return gTrue;
 }
 
 Object *XRef::fetch(int num, int gen, Object *obj) {
@@ -242,10 +293,11 @@ Object *XRef::fetch(int num, int gen, Object *obj) {
     parser->getObj(&obj3);
     if (obj1.isInt() && obj1.getInt() == num &&
 	obj2.isInt() && obj2.getInt() == gen &&
-	obj3.isCmd("obj"))
+	obj3.isCmd("obj")) {
       parser->getObj(obj);
-    else
+    } else {
       obj->initNull();
+    }
     obj1.free();
     obj2.free();
     obj3.free();

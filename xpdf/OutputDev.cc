@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include "OutputDev.h"
 
-void OutputDev::setCTM(double *ctm1) {
+void OutputDev::setDefaultCTM(double *ctm1) {
   int i;
   double det;
 

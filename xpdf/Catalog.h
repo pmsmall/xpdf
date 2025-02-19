@@ -44,11 +44,17 @@ public:
   // not found.
   int findPage(int num, int gen);
 
+  // Find a named destination.  Returns the destination object
+  // (array or dictionary), or a null object if <name> is not a
+  // destination.
+  Object *findDest(GString *name, Object *obj);
+
 private:
 
   Page **pages;			// array of pages
   Ref *pageRefs;		// object ID for each page
   int numPages;			// number of pages
+  Object dests;			// named destination dictionary
   GBool ok;			// true if catalog is valid
 
   int readPageTree(Dict *pages, PageAttrs *attrs, int start);

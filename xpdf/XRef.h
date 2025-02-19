@@ -15,8 +15,9 @@
 
 #include <stdio.h>
 #include <gtypes.h>
+#include "Object.h"
 
-class Object;
+class Dict;
 class FileStream;
 
 //------------------------------------------------------------------------
@@ -41,8 +42,8 @@ public:
   // Is xref table valid?
   GBool isOk() { return ok; }
 
-  // Is the PDF file encrypted?
-  GBool checkEncrypted();
+  // Is printing allowed?  If not, print an error message.
+  GBool okToPrint();
 
   // Get catalog object.
   Object *getCatalog(Object *obj) { return fetch(rootNum, rootGen, obj); }
@@ -58,11 +59,12 @@ private:
   XRefEntry *entries;		// xref entries
   int size;			// size of <entries> array
   int rootNum, rootGen;		// catalog dict
-  GBool encrypted;		// true if file is encrypted
   GBool ok;			// true if xref table is valid
+  Object trailerDict;		// trailer dictionary
 
   int readTrailer(FileStream *str);
   GBool readXRef(FileStream *str, int *pos);
+  GBool checkEncrypted();
 };
 
 //------------------------------------------------------------------------

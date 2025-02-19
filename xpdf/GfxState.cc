@@ -270,24 +270,29 @@ GfxSubpath::GfxSubpath(double x1, double y1) {
   size = 16;
   x = (double *)gmalloc(size * sizeof(double));
   y = (double *)gmalloc(size * sizeof(double));
+  curve = (GBool *)gmalloc(size * sizeof(GBool));
   n = 1;
   x[0] = x1;
   y[0] = y1;
+  curve[0] = gFalse;
 }
 
 GfxSubpath::~GfxSubpath() {
   gfree(x);
   gfree(y);
+  gfree(curve);
 }
 
 // Used for copy().
-GfxSubpath::GfxSubpath(double *x1, double *y1, int n1, int size1) {
-  size = size1;
-  n = n1;
+GfxSubpath::GfxSubpath(GfxSubpath *subpath) {
+  size = subpath->size;
+  n = subpath->n;
   x = (double *)gmalloc(size * sizeof(double));
   y = (double *)gmalloc(size * sizeof(double));
-  memcpy(x, x1, n * sizeof(double));
-  memcpy(y, y1, n * sizeof(double));
+  curve = (GBool *)gmalloc(size * sizeof(GBool));
+  memcpy(x, subpath->x, n * sizeof(double));
+  memcpy(y, subpath->y, n * sizeof(double));
+  memcpy(curve, subpath->curve, n * sizeof(GBool));
 }
 
 void GfxSubpath::lineTo(double x1, double y1) {
@@ -295,10 +300,31 @@ void GfxSubpath::lineTo(double x1, double y1) {
     size += 16;
     x = (double *)grealloc(x, size * sizeof(double));
     y = (double *)grealloc(y, size * sizeof(double));
+    curve = (GBool *)grealloc(curve, size * sizeof(GBool));
   }
   x[n] = x1;
   y[n] = y1;
+  curve[n] = gFalse;
   ++n;
+}
+
+void GfxSubpath::curveTo(double x1, double y1, double x2, double y2,
+			 double x3, double y3) {
+  if (n+3 > size) {
+    size += 16;
+    x = (double *)grealloc(x, size * sizeof(double));
+    y = (double *)grealloc(y, size * sizeof(double));
+    curve = (GBool *)grealloc(curve, size * sizeof(GBool));
+  }
+  x[n] = x1;
+  y[n] = y1;
+  x[n+1] = x2;
+  y[n+1] = y2;
+  x[n+2] = x3;
+  y[n+2] = y3;
+  curve[n] = curve[n+1] = gTrue;
+  curve[n+2] = gFalse;
+  n += 3;
 }
 
 GfxPath::GfxPath() {
@@ -339,10 +365,14 @@ void GfxPath::moveTo(double x, double y) {
 // GfxState
 //------------------------------------------------------------------------
 
-GfxState::GfxState(int dpi, int x1, int y1, int x2, int y2, int rotate,
+GfxState::GfxState(int dpi, int x1a, int y1a, int x2a, int y2a, int rotate,
 		   GBool upsideDown) {
   double k;
 
+  x1 = x1a;
+  y1 = y1a;
+  x2 = x2a;
+  y2 = y2a;
   k = (double)dpi / 72.0;
   if (rotate == 90) {
     ctm[0] = 0;
@@ -478,47 +508,6 @@ void GfxState::setLineDash(double *dash, int length, double start) {
   lineDash = dash;
   lineDashLength = length;
   lineDashStart = start;
-}
-
-void GfxState::curveTo(double x1, double y1, double x2, double y2,
-		       double x3, double y3) {
-  doCurveTo(curX, curY, x1, y1, x2, y2, x3, y3, 0);
-}
-
-void GfxState::doCurveTo(double x0, double y0, double x1, double y1,
-			 double x2, double y2, double x3, double y3,
-			 int splits) {
-  double x4, y4, dx, dy;
-  double xl0, yl0, xl1, yl1, xl2, yl2, xl3, yl3;
-  double xr0, yr0, xr1, yr1, xr2, yr2, xr3, yr3;
-  double xh, yh;
-
-  x4 = 0.125 * (x0 + 3 * (x1 + x2) + x3);
-  y4 = 0.125 * (y0 + 3 * (y1 + y2) + y3);
-  dx = x4 - (x0 + x3) / 2;
-  dy = y4 - (y0 + y3) / 2;
-  if (dx*dx + dy*dy <= 0.1 || splits > 8) {
-    lineTo(x3, y3);
-  } else {
-    xl0 = x0;
-    yl0 = y0;
-    xl1 = (x0 + x1) / 2;
-    yl1 = (y0 + y1) / 2;
-    xh = (x1 + x2) / 2;
-    yh = (y1 + y2) / 2;
-    xl2 = (xl1 + xh) / 2;
-    yl2 = (yl1 + yh) / 2;
-    xr3 = x3;
-    yr3 = y3;
-    xr2 = (x2 + x3) / 2;
-    yr2 = (y2 + y3) / 2;
-    xr1 = (xh + xr2) / 2;
-    yr1 = (yh + yr2) / 2;
-    xl3 = xr0 = (xl2 + xr1) / 2;
-    yl3 = yr0 = (yl2 + yr1) / 2;
-    doCurveTo(xl0, yl0, xl1, yl1, xl2, yl2, xl3, yl3, splits + 1);
-    doCurveTo(xr0, yr0, xr1, yr1, xr2, yr2, xr3, yr3, splits + 1);
-  }
 }
 
 void GfxState::clearPath() {

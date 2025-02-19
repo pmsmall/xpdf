@@ -104,6 +104,9 @@ public:
   // Create a new GC with specified parameters.
   GC makeGC(unsigned long color, int lineWidth, int lineStyle);
 
+  // Set the window title.
+  void setTitle(GString *title1);
+
   // Set the cursor to one listed X11/cursorfont.h.
   void setCursor(Guint cursor);
 

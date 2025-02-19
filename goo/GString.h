@@ -56,6 +56,7 @@ public:
   GString *append(char c);
   GString *append(GString *str);
   GString *append(char *str);
+  GString *append(char *str, int length1);
 
   // Insert a character or string.
   GString *insert(int i, char c);

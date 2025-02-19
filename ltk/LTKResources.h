@@ -30,6 +30,9 @@ extern void ltkGetOtherResources(Display *display,
 extern GString *ltkGetStringResource(XrmDatabase db, GString *appName,
 				     char *instName, char *def);
 
+extern int ltkGetIntResource(XrmDatabase db, GString *appName,
+			     char *instName, int def);
+
 extern unsigned long ltkGetColorResource(
                 XrmDatabase db, GString *appName,
                 char *instName,

@@ -1,0 +1,44 @@
+Subject: ANNOUNCE: xpdf 0.6 - a PDF viewer for X
+
+
+I've just released a new version of xpdf, my Portable Document Format
+(PDF) viewer for X.
+
+If you've wanted to look at PDF files, but couldn't because Adobe
+didn't have a viewer for your system, you'll want to check out xpdf.
+
+Changes in version 0.6:
+
+* Basic support for PDF 1.2 files
+* Better font support
+* Print directly from xpdf -- '|lpr'
+* Fixed links between files
+* Fixed several bugs in PostScript output
+* Lots of other little things (see the `CHANGES' file) 
+
+(I have decryption code, but I'm not releasing it until I figure out
+how to get around the U.S. export restrictions.)
+
+Source (C++ and C) is available, and it should be fairly easy to
+compile for UNIX or VMS.
+
+Binaries are available for:
+
+* Linux 2.0 ELF (x86)
+* AIX 4.1 (PowerPC)
+* SunOS 4.1 (SPARC)
+* Ultrix 4.4 (MIPS)
+* OSF/1 3.2 (Alpha)
+* HP-UX 9.05 (HP-PA)
+
+More information, source code, and precompiled binaries are at:
+
+  http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
+  ftp://ftp.andrew.cmu.edu/pub/xpdf/
+
+Source and Linux binaries are on sunsite.unc.edu, currently in
+/pub/Linux/Incoming but they will be moved to:
+
+  ftp://sunsite.unc.edu/pub/Linux/X11/xapps/graphics/viewers/
+
+- Derek

@@ -1,8 +1,8 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH pdftops 1 "23 May 1996"
+.TH pdftops 1 "12 Nov 1996"
 .SH NAME
 pdftops \- Portable Document Format (PDF) to PostScript converter
-(version 0.5)
+(version 0.6)
 .SH SYNOPSIS
 .B pdftops
 [options]
@@ -22,7 +22,10 @@ If
 is not specified, pdftops converts
 .I file.pdf
 to
-.IR file.ps.
+.IR file.ps .
+If 
+.I PS-file
+is \'-', the PostScript is sent to stdout.
 .PP
 The generated PostScript is Level 2.  This means it will not work on
 old printers which only support Level 1 PostScript.

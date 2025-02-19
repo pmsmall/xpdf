@@ -32,19 +32,22 @@ Catalog::Catalog(Object *catDict) {
   pages = NULL;
   pageRefs = NULL;
   numPages = 0;
+
   if (!catDict->isDict("Catalog")) {
-    error(0, "Catalog object is wrong type (%s)", catDict->getTypeName());
+    error(-1, "Catalog object is wrong type (%s)", catDict->getTypeName());
     goto err1;
   }
+
+  // read page tree
   catDict->dictLookup("Pages", &pagesDict);
   if (!pagesDict.isDict("Pages")) {
-    error(0, "Top-level pages object is wrong type (%s)",
+    error(-1, "Top-level pages object is wrong type (%s)",
 	  pagesDict.getTypeName());
     goto err2;
   }
   pagesDict.dictLookup("Count", &obj);
   if (!obj.isInt()) {
-    error(0, "Page count in top-level pages object is wrong type (%s)",
+    error(-1, "Page count in top-level pages object is wrong type (%s)",
 	  obj.getTypeName());
     goto err3;
   }
@@ -59,6 +62,10 @@ Catalog::Catalog(Object *catDict) {
   }
   readPageTree(pagesDict.getDict(), NULL, 0);
   pagesDict.free();
+
+  // read named destination dictionary
+  catDict->dictLookup("Dests", &dests);
+
   return;
 
  err3:
@@ -66,6 +73,7 @@ Catalog::Catalog(Object *catDict) {
  err2:
   pagesDict.free();
  err1:
+  dests.initNull();
   ok = gFalse;
 }
 
@@ -80,6 +88,7 @@ Catalog::~Catalog() {
     gfree(pages);
     gfree(pageRefs);
   }
+  dests.free();
 }
 
 int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
@@ -93,7 +102,7 @@ int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
   attrs1 = new PageAttrs(attrs, pagesDict);
   pagesDict->lookup("Kids", &kids);
   if (!kids.isArray()) {
-    error(0, "Kids object (page %d) is wrong type (%s)",
+    error(-1, "Kids object (page %d) is wrong type (%s)",
 	  start+1, kids.getTypeName());
     goto err1;
   }
@@ -114,11 +123,13 @@ int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
       }
       kidRef.free();
       ++start;
-    } else if (kid.isDict("Pages")) {
+    //~ found one PDF file where a Pages object is missing the /Type entry
+    // } else if (kid.isDict("Pages")) {
+    } else if (kid.isDict()) {
       if ((start = readPageTree(kid.getDict(), attrs1, start)) < 0)
 	goto err2;
     } else {
-      error(0, "Kid object (page %d) is wrong type (%s)",
+      error(-1, "Kid object (page %d) is wrong type (%s)",
 	    start+1, kid.getTypeName());
       goto err2;
     }
@@ -147,4 +158,10 @@ int Catalog::findPage(int num, int gen) {
       return i + 1;
   }
   return 0;
+}
+
+Object *Catalog::findDest(GString *name, Object *obj) {
+  if (dests.isDict())
+    return dests.dictLookup(name->getCString(), obj);
+  return obj->initNull();
 }

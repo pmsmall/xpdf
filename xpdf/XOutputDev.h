@@ -24,11 +24,31 @@ class LTKApp;
 class LTKWindow;
 class GfxColor;
 class GfxFont;
+class GfxSubpath;
 struct RGBColor;
+
+//------------------------------------------------------------------------
+// Constants
+//------------------------------------------------------------------------
 
 #define maxRGBCube 8		// max size of RGB color cube
 
 #define numTmpPoints 256	// number of XPoints in temporary array
+#define numTmpSubpaths 16	// number of elements in temporary arrays
+				//   for fill/clip
+
+//------------------------------------------------------------------------
+// Misc types
+//------------------------------------------------------------------------
+
+struct BoundingRect {
+  short xMin, xMax;		// min/max x values
+  short yMin, yMax;		// min/max y values
+};
+
+struct RGBColor {
+  int r, g, b;
+};
 
 //------------------------------------------------------------------------
 // XOutputFont
@@ -65,7 +85,7 @@ private:
   Display *display;
   XFontStruct *xFont;
   Gushort map[256];
-  Guchar *revMap;
+  Guchar revMap[256];
 };
 
 //------------------------------------------------------------------------
@@ -117,18 +137,29 @@ public:
   // Destructor.
   virtual ~XOutputDev();
 
+  //---- get info about output device
+
   // Does this device use upside-down coordinates?
   // (Upside-down means (0,0) is the top left corner of the page.)
   virtual GBool upsideDown() { return gTrue; }
 
-  // Set page size (in pixels).
-  virtual void setPageSize(int x, int y);
+  // Does this device use drawChar() or drawString()?
+  virtual GBool useDrawChar() { return gTrue; }
 
-  // Reset state and clear display, to prepare for a new page.
-  virtual void clear();
+  //----- initialization and control
+
+  // Start a page.
+  virtual void startPage(int pageNum, GfxState *state);
+
+  // End a page.
+  virtual void endPage() {}
 
   // Dump page contents to display.
   virtual void dump();
+
+  //----- link borders
+  virtual void drawLinkBorder(double x1, double y1, double x2, double y2,
+			      double w);
 
   //----- save/restore graphics state
   virtual void saveState(GfxState *state);
@@ -136,14 +167,18 @@ public:
 
   //----- update graphics state
   virtual void updateAll(GfxState *state);
-  virtual void updateCTM(GfxState *state);
+  virtual void updateCTM(GfxState *state, double m11, double m12,
+			 double m21, double m22, double m31, double m32);
   virtual void updateLineDash(GfxState *state);
+  virtual void updateFlatness(GfxState *state);
   virtual void updateLineJoin(GfxState *state);
   virtual void updateLineCap(GfxState *state);
   virtual void updateMiterLimit(GfxState *state);
   virtual void updateLineWidth(GfxState *state);
   virtual void updateFillColor(GfxState *state);
   virtual void updateStrokeColor(GfxState *state);
+
+  //----- update text state
   virtual void updateFont(GfxState *state);
 
   //----- path painting
@@ -160,9 +195,11 @@ public:
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Stream *str,
-			     int width, int height, GBool invert);
+			     int width, int height, GBool invert,
+			     GBool inlineImg);
   virtual void drawImage(GfxState *state, Stream *str, int width,
-			 int height, GfxColorSpace *colorSpace);
+			 int height, GfxColorSpace *colorSpace,
+			 GBool inlineImg);
 
 private:
 
@@ -171,6 +208,7 @@ private:
   Display *display;		// X display pointer
   int screenNum;		// X screen number
   Pixmap pixmap;		// pixmap to draw into
+  int flatness;			// line flatness
   GC paperGC;			// GC for background
   GC strokeGC;			// GC with stroke color
   GC fillGC;			// GC with fill color
@@ -180,6 +218,10 @@ private:
   int numColors;		// size of color cube
   XPoint			// temporary points array
     tmpPoints[numTmpPoints];
+  int				// temporary arrays for fill/clip
+    tmpLengths[numTmpSubpaths];
+  BoundingRect
+    tmpRects[numTmpSubpaths];
   GfxFont *gfxFont;		// current PDF font
   XOutputFont *font;		// current font
   XOutputFontCache *fontCache;	// font cache
@@ -187,7 +229,15 @@ private:
 
   void updateLineAttrs(GfxState *state, GBool updateDash);
   void doFill(GfxState *state, int rule);
-  XPoint *pathPoints(GfxState *state, int *numPoints);
+  void doClip(GfxState *state, int rule);
+  int convertPath(GfxState *state, XPoint **points, int *size,
+		  int *numPoints, int **lengths, GBool fill);
+  void convertSubpath(GfxState *state, GfxSubpath *subpath,
+		      XPoint **points, int *size, int *n);
+  void doCurve(XPoint **points, int *size, int *k,
+	       double x0, double y0, double x1, double y1,
+	       double x2, double y2, double x3, double y3);
+  void addPoint(XPoint **points, int *size, int *k, int x, int y);
   Gulong findColor(GfxColor *color);
   Gulong findColor(RGBColor *x, RGBColor *err);
 };

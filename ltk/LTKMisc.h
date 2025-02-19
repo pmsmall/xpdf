@@ -15,10 +15,6 @@
 
 #include <GString.h>
 
-#ifndef VMS
-extern GString *ltkGetHomeDir(void);
-#endif
-
 extern void ltkError(char *msg, ...);
 
 #endif
