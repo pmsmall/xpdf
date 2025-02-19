@@ -20,6 +20,14 @@
 #include "LTKMenuButton.h"
 #include "LTKBorder.h"
 
+#ifdef XlibSpecificationRelease
+#if XlibSpecificationRelease < 5
+typedef char *XPointer;
+#endif
+#else
+typedef char *XPointer;
+#endif
+
 static void menuItemCbk(LTKMenuItem *item);
 
 LTKMenuButton::LTKMenuButton(char *name, int widgetNum, LTKMenu *menu):

@@ -506,3 +506,119 @@ Compare file version to pdfVersionNum+0.0001 to avoid floating point
 Added LDFLAGS to Makefiles.
 Removed strip entirely from configure and Makefiles.
 Fixed a bug in choosing the correct DCTStream color transform.
+
+0.91 (2000-aug-14)
+------------------
+Added TrueType font rendering, using FreeType.
+Support for Chinese fonts (Type 0 fonts using the Adobe-GB1-2
+  character collection).
+Decryption code is included with the main distribution (now that the
+  US export regulations are a little bit less irrational).
+Added (very basic) support for generating PostScript with Japanese
+  fonts -- only tested with ghostscript so far.
+Added support for generating EPS files (pdftops -eps).
+Much-improved image filtering in xpdf (for downsampling and for
+  transforms other than 0/90/180/270-degree rotations).
+Implemented a basic full-screen (presentation) mode (xpdf
+  -fullscreen).  (There is currently no way to switch between window
+  and full-screen modes on the fly -- this will be fixed in a later
+  release.)
+Added "reload" menu item.
+Do a better job with anti-aliased Type 1 fonts on non-white
+  backgrounds.
+Handle Lab color spaces.
+Handle non-null user passwords.
+Avoid security hole with tmpnam()/fopen() -- added openTempFile() in
+  goo/gfile.cc.  [Thanks to Joseph S. Myers for pointing this out.]
+Filter out quote marks (' and ") in URLs before running urlCommand to
+  avoid a potential security hole.  [Thanks to Frank Doepper for
+  pointing this out.]
+Fixed TrueColor detection to look at the complete list of available
+  visuals, not just the default visual.
+In gfile.h, changed NAMLEN(dirent) macro to NAMLEN(d).
+Removed copyright character from start-up banners.
+In the open and save dialogs, if the open/save button is pressed with
+  no file name, the dialog is not canceled.
+Added Xpm_CFLAGS to ltk/Makefile.
+XOutputDev::updateLineAttrs was using dashLength before it was
+  defined.
+In top-level Makefile.in, use INSTALL_PROGRAM instead of INSTALL.
+In man page, recommend -q instead of -err in .mailcap.
+Changes for GNOME / Bonobo support:
+  - Separated Stream classes into BaseStream and FilterStream trees.
+  - Got rid of all FileStream-specific stuff.
+  - Added a PDFDoc constructor that takes a BaseStream* instead of a
+    file name.
+Allow newlines inside strings (Photoshop does this).
+Don't require whitespace between tokens in consecutive content
+  streams (for pages that specify an array of streams).
+Look at MissingWidth when constructing font character widths array.
+Fixed a bug that caused incorrect PostScript output for images that
+  use 8-bit indexed color spaces with < 256 colors in the palette.
+Handle case where embedded font file is bad (this was seg faulting).
+Minor changes for Windows/pdftex.
+Work around a bug in PDF files from the IBM patent server.
+Fixed bugs in PostScript form generation: use pdfStartPage instead of
+  pdfSetup; problem with inline images.
+Minor bug fix in FlateStream::loadFixedCodes().
+Added %%DocumentMedia and %%PageMedia comments to the PostScript so
+  that gsview (a Windows frontend for ghostscript) gets the right
+  paper size.
+Draw AcroForm fields that have appearance annotations.
+Bounds check gray, CMYK, and RGB values (in GfxColor).
+Moved the link border drawing code into Page (from PDFDoc).
+Minor modifications for pdftohtml.
+PSOutputDev: use the Type 3 font scaling kludge from XOutputDev.
+Separation color spaces were handled incorrectly in images.
+Fixed a bug with form bounding boxes.
+Modified the t1lib support -- replace libt1x code with my own code.
+  Type 1 and TrueType fonts are now handled similarly, and clipping
+  works on Type 1 fonts.
+Don't print copyright banner (xpdf); add -v switch to get copyright
+  and version info (all apps); get rid of -err switch (xpdf).
+Automatically reload the PDF file if it has been changed, i.e., if the
+  modification time is different.
+Fixed a memory (malloc size) bug in CCITTFaxStream.
+Fixed two bugs in FontEncoding::hash() -- handle zero-length character
+  names (which were found in a (buggy?) PDF file), and handle
+  character names with high-bit-set characters (use unsigned ints).
+Added PDFDoc::isLinearized() and corresponding code in pdfinfo.cc.
+Handle files with an incorrect page count in the Pages dictionary
+  (FOP, from the Apache project produces a page count of 0).
+Handle TrueType equivalents to the Base14 fonts (Arial, TimesNewRoman,
+  CourierNew) -- Adobe's tools use these names without embedding the
+  fonts.
+Tweaked the Type 3 font sizing kludge.
+Changed pdfimages (ImageOutputDev) so it doesn't output JPEG files for
+  4-component color spaces, since these seem to confuse most image
+  viewers.
+Added support for generating OPI comments (pdftops -opi).
+In XOutputDev::drawImage() and drawImageMask(), check for images that
+  are completely off-page.
+Use the provided alternate or a default (DeviceGray/RGB/CMYK) color
+  space for ICCBased color spaces.
+Incorporated MacOS-specific code from Leonard Rosenthol.
+Configure script switches to C++ for the strings.h/bstring.h test.
+Gfx::opRestore() calls clearPath() to handle (apparently) buggy PDF
+  files produced by FreeHand.
+The /Type field in most dictionaries is optional (PDF 1.3 change).
+Move printCommands variable definition into Gfx.cc.
+If page is smaller than paper, center the PostScript output.
+Fix a minor bug in the SELECT_TAKES_INT detection in the configure
+  script.
+TextOutputDev filters out control characters.
+Changed enough occurrences of 'char *' to 'const char *' to keep gcc
+  2.95 from barfing.
+Support for Latin-2 and Latin-5 in pdftotext (however, this will only
+  work if the PDF file contains correct font encodings, which seems to
+  be rare).
+TextOutputDev converts "eightoldstyle" to "eight", etc.
+Don't use the return value from sprintf() -- most systems return the
+  length, but some return the string.
+Minor fixes for SunOS 4.
+Configure script looks for both select() and fd_set in sys/select.h.
+Configure script checks for gethostbyname() in -lbsd (for LynxOS).
+Fix missing closepath bug in PostScript output.
+Change PostScript portrait/landscape mode selection so it only uses
+  landscape if the page width is greater than the paper width.
+Tweaked the VMS code in makePathAbsolute().

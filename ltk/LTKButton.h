@@ -38,7 +38,7 @@ public:
 
   //---------- constructors and destructor ----------
 
-  LTKButton(char *name1, int widgetNum1, char *label1,
+  LTKButton(char *name1, int widgetNum1, const char *label1,
 	    LTKButtonAction action1, LTKBoolValCbk pressCbk1);
 
   LTKButton(char *name1, int widgetNum1,

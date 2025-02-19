@@ -16,10 +16,6 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#if HAVE_T1LIB_H
-#include <t1lib.h>
-#include <t1libx.h>
-#endif
 #include "config.h"
 #include "OutputDev.h"
 
@@ -31,6 +27,20 @@ class TextPage;
 struct RGBColor;
 class FontEncoding;
 class XOutputFontCache;
+class Link;
+class Catalog;
+
+#if HAVE_T1LIB_H
+class T1FontEngine;
+class T1FontFile;
+class T1Font;
+#endif
+
+#if HAVE_FREETYPE_FREETYPE_H
+class TTFontEngine;
+class TTFontFile;
+class TTFont;
+#endif
 
 //------------------------------------------------------------------------
 // Constants
@@ -74,6 +84,14 @@ extern int rgbCubeSize;
 extern GString *t1libControl;
 #endif
 
+#if HAVE_FREETYPE_FREETYPE_H
+// Type of FreeType font rendering to use:
+//     "none"   -- don't use FreeType
+//     "plain"  -- FreeType, without anti-aliasing
+//     "aa"     -- FreeType, with anti-aliasing
+extern GString *freeTypeControl;
+#endif
+
 // If any of these are set, xpdf will use t1lib to render those font(s)
 // instead of using the X server font(s).
 extern GString *t1Courier;
@@ -97,6 +115,11 @@ extern GBool useEUCJP;
 #if JAPANESE_SUPPORT
 // X font name pattern to use for Japanese text.
 extern GString *japan12Font;
+#endif
+
+#if CHINESE_SUPPORT
+// X font name pattern to use for Chinese text.
+extern GString *gb12Font;
 #endif
 
 //------------------------------------------------------------------------
@@ -124,8 +147,8 @@ public:
   virtual void updateGC(GC gc) = 0;
 
   // Draw character <c> at <x>,<y>.
-  virtual void drawChar(GfxState *state, Pixmap pixmap, GC gc,
-			double x, double y, int c) = 0;
+  virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
+			GC gc, double x, double y, int c) = 0;
 
   // Does this font use hex char codes?
   GBool isHex() { return hex; }
@@ -150,8 +173,6 @@ public:
 
   XOutputT1Font(GfxFont *gfxFont, GString *pdfBaseFont,
 		double m11, double m12, double m21, double m22,
-		double size, double ntm11, double ntm12,
-		double ntm21, double ntm22,
 		Display *display, XOutputFontCache *cache);
 
   virtual ~XOutputT1Font();
@@ -163,14 +184,44 @@ public:
   virtual void updateGC(GC gc);
 
   // Draw character <c> at <x>,<y>.
-  virtual void drawChar(GfxState *state, Pixmap pixmap, GC gc,
-			double x, double y, int c);
+  virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
+			GC gc, double x, double y, int c);
 
 private:
 
-  float size;			// font size
-  int t1ID;			// t1lib font ID
-  GBool t1libAA;		// true for anti-aliased fonts
+  T1FontFile *fontFile;
+  T1Font *font;
+};
+#endif
+
+#if HAVE_FREETYPE_FREETYPE_H
+//------------------------------------------------------------------------
+// XOutputTTFont
+//------------------------------------------------------------------------
+
+class XOutputTTFont: public XOutputFont {
+public:
+
+  XOutputTTFont(GfxFont *gfxFont, double m11, double m12,
+		double m21, double m22, Display *display,
+		XOutputFontCache *cache);
+
+  virtual ~XOutputTTFont();
+
+  // Was font created successfully?
+  virtual GBool isOk();
+
+  // Update <gc> with this font.
+  virtual void updateGC(GC gc);
+
+  // Draw character <c> at <x>,<y>.
+  virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
+			GC gc, double x, double y, int c);
+
+private:
+
+  TTFontFile *fontFile;
+  TTFont *font;
 };
 #endif
 
@@ -197,8 +248,8 @@ public:
   virtual void updateGC(GC gc);
 
   // Draw character <c> at <x>,<y>.
-  virtual void drawChar(GfxState *state, Pixmap pixmap, GC gc,
-			double x, double y, int c);
+  virtual void drawChar(GfxState *state, Pixmap pixmap, int w, int h,
+			GC gc, double x, double y, int c);
 
 private:
 
@@ -212,11 +263,16 @@ private:
 //------------------------------------------------------------------------
 
 #if HAVE_T1LIB_H
-struct XOutputT1BaseFont {
+struct XOutputT1FontFile {
   int num, gen;
-  int t1ID;
-  char **enc;
-  char *encStr;
+  T1FontFile *fontFile;
+};
+#endif
+
+#if HAVE_FREETYPE_FREETYPE_H
+struct XOutputTTFontFile {
+  int num, gen;
+  TTFontFile *fontFile;
 };
 #endif
 
@@ -224,25 +280,33 @@ class XOutputFontCache {
 public:
 
   // Constructor.
-  XOutputFontCache(Display *display);
+  XOutputFontCache(Display *display, Guint depth);
 
   // Destructor.
   ~XOutputFontCache();
 
   // Initialize (or re-initialize) the font cache for a new document.
-  void startDoc(int screenNum, Guint depth,
-		Colormap colormap);
+  void startDoc(int screenNum, Colormap colormap,
+		GBool trueColor,
+		int rMul, int gMul, int bMul,
+		int rShift, int gShift, int bShift,
+		Gulong *colors, int numColors);
 
   // Get a font.  This creates a new font if necessary.
   XOutputFont *getFont(GfxFont *gfxFont, double m11, double m12,
 		       double m21, double m22);
 
 #if HAVE_T1LIB_H
-  // Get a t1lib font.
-  int getT1Font(GfxFont *gfxFont, GString *pdfBaseFont);
+  // Get a t1lib font file.
+  T1FontFile *getT1Font(GfxFont *gfxFont, GString *pdfBaseFont);
 
   // Use anti-aliased Type 1 fonts?
   GBool getT1libAA() { return t1libAA; }
+#endif
+
+#if HAVE_FREETYPE_FREETYPE_H
+  // Get a FreeType font file.
+  TTFontFile *getTTFont(GfxFont *gfxFont);
 #endif
 
 private:
@@ -251,18 +315,31 @@ private:
   void clear();
 
   Display *display;		// X display pointer
+  Guint depth;			// pixmap depth
 
 #if HAVE_T1LIB_H
   GBool useT1lib;		// if false, t1lib is not used at all
   GBool t1libAA;		// true for anti-aliased fonts
   GBool t1libAAHigh;		// low or high-level anti-aliasing
-  GBool t1Init;			// set when t1lib has been initialized
+  T1FontEngine *t1Engine;	// Type 1 font engine
   XOutputT1Font *		// Type 1 fonts in reverse-LRU order
     t1Fonts[t1FontCacheSize];
   int nT1Fonts;			// number of valid entries in t1Fonts[]
-  XOutputT1BaseFont *		// list of t1lib base fonts
-    t1BaseFonts;
-  int t1BaseFontsSize;		// size of t1BaseFonts array
+  XOutputT1FontFile *		// list of Type 1 font files
+    t1FontFiles;
+  int t1FontFilesSize;		// size of t1FontFiles array
+#endif
+
+#if HAVE_FREETYPE_FREETYPE_H
+  GBool useFreeType;		// if false, FreeType is not used at all
+  GBool freeTypeAA;		// true for anti-aliased fonts
+  TTFontEngine *ttEngine;	// TrueType font engine
+  XOutputTTFont *		// TrueType fonts in reverse-LRU order
+    ttFonts[ttFontCacheSize];
+  int nTTFonts;			// number of valid entries in ttFonts[]
+  XOutputTTFontFile *		// list of TrueType font files
+    ttFontFiles;
+  int ttFontFilesSize;		// size of ttFontFiles array
 #endif
 
   XOutputServerFont *		// X server fonts in reverse-LRU order
@@ -313,8 +390,7 @@ public:
   virtual void endPage();
 
   //----- link borders
-  virtual void drawLinkBorder(double x1, double y1, double x2, double y2,
-			      double w);
+  virtual void drawLink(Link *link, Catalog *catalog);
 
   //----- save/restore graphics state
   virtual void saveState(GfxState *state);

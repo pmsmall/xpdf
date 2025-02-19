@@ -64,7 +64,7 @@ distdepend:
 	$(CC) $(CFLAGS) -MM $(C_SRC) >>Makefile.in
 
 #----- dependences -----
-GString.o: ./GString.cc GString.h
+GString.o: ./GString.cc gtypes.h GString.h
 gmempp.o: ./gmempp.cc gmem.h
 gfile.o: ./gfile.cc GString.h gfile.h gtypes.h
 gmem.o: ./gmem.c gmem.h

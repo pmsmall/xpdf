@@ -6,7 +6,7 @@ pdftops(1)                                             pdftops(1)
 
 NAME
        pdftops  -  Portable  Document  Format (PDF) to PostScript
-       converter (version 0.90)
+       converter (version 0.91)
 
 SYNOPSIS
        pdftops [options] [PDF-file [PS-file]]
@@ -17,8 +17,9 @@ DESCRIPTION
 
        Pdftops  reads  the  PDF  file,  PDF-file,  and  writes  a
        PostScript file, PS-file.  If PS-file  is  not  specified,
-       pdftops  converts file.pdf to file.ps.  If PS-file is '-',
-       the PostScript is sent to stdout.
+       pdftops converts file.pdf to file.ps (or file.eps with the
+       -eps option).  If PS-file is '-', the PostScript  is  sent
+       to stdout.
 
 OPTIONS
        -f number
@@ -34,34 +35,33 @@ OPTIONS
               Set the paper height, in points.
 
        -level1
-              Generate  Level  1   PostScript.    The   resulting
-              PostScript  files  will be significantly larger (if
-              they contain images), but will  print  on  Level  1
-              printers.   This  also converts all images to black
-              and white.  The default  behavior  is  to  generate
-              Level  2  PostScript.   In particular, Level 2 sup-
+              Generate   Level   1   PostScript.   The  resulting
+              PostScript files will be significantly  larger  (if
+              they  contain  images),  but  will print on Level 1
+              printers.  This also converts all images  to  black
+              and  white.   The  default  behavior is to generate
+              Level 2 PostScript.  In particular,  Level  2  sup-
               ports color images and image compression.
 
-       -noemb By default, any Type 1 fonts which are embedded  in
-              the  PDF  file are copied into the PostScript file.
+       -eps   Generate an Encapsulated PostScript (EPS) file.  An
+              EPS file contains a single image,  so  if  you  use
+              this  option  with  a multi-page PDF file, you must
+              use -f and -l to specify a single page.
+
+       -opi   Generate OPI comments  for  all  images  and  forms
+              which  have  OPI information.  (This option is only
+              available if pdftops was  compiled  with  OPI  sup-
+              port.)
+
+       -noemb By  default, any Type 1 fonts which are embedded in
+              the PDF file are copied into the  PostScript  file.
               This option causes pdftops to substitute base fonts
               instead.   Embedded  fonts  make  PostScript  files
               larger, but may be necessary for readable output.
 
-       -form  Generate a PostScript form which can be imported by
-              software  that understands forms.  Only one page is
-              converted  (since  forms  cannot  contain  multiple
-              pages)  and  the -l option is ignored.  The -level1
-              option cannot be used with -form.
-
-       -q     Don't print any messages or errors.
-
-       -h     Print usage information.  (-help is equivalent.)
 
 
-
-
-                           02 Aug 1999                          1
+                           14 Aug 2000                          1
 
 
 
@@ -70,12 +70,27 @@ OPTIONS
 pdftops(1)                                             pdftops(1)
 
 
+       -form  Generate a PostScript form which can be imported by
+              software that understands forms.  Only one page  is
+              converted  (since  forms  cannot  contain  multiple
+              pages) and the -l option is ignored.   The  -level1
+              option cannot be used with -form.
+
+       -upw password
+              Specify the user password for the PDF file.
+
+       -q     Don't print any messages or errors.
+
+       -v     Print copyright and version information.
+
+       -h     Print usage information.  (-help is equivalent.)
+
 BUGS
        No support for TrueType and Type 3 fonts.
 
 AUTHOR
        The  pdftops  software  and  documentation  are  copyright
-       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
        xpdf(1),  pdftotext(1),  pdfinfo(1),  pdftopbm(1),  pdfim-
@@ -112,21 +127,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                           02 Aug 1999                          2
+                           14 Aug 2000                          2
 
 

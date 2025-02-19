@@ -26,8 +26,14 @@
               page count
               encrypted flag (yes/no)
               print and copy permissions (if encrypted)
+              linearized (yes/no)
 
 2 OPTIONS
+
+       -upw password
+              Specify the user password for the PDF file.
+
+       -v     Print copyright and version information.
 
        -h     Print usage information.  (-help is equivalent.)
 
@@ -38,7 +44,7 @@
 2 AUTHOR
 
        The  pdfinfo  software  and  documentation  are  copyright
-       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 

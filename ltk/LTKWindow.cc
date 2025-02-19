@@ -37,6 +37,16 @@ typedef char *XPointer;
 typedef char *XPointer;
 #endif
 
+// This is used only to set the no-decorations hint.
+typedef struct {
+  Gulong flags;
+  Gulong functions;
+  Gulong decorations;
+  long input_mode;
+  Gulong status;
+} MotifWmHints;
+#define MWM_HINTS_DECORATIONS (1L << 1)
+
 static Bool isExposeEvent(Display *display, XEvent *e, XPointer w);
 
 LTKWindow::LTKWindow(LTKApp *app1, GBool dialog1, char *title1,
@@ -58,6 +68,7 @@ LTKWindow::LTKWindow(LTKApp *app1, GBool dialog1, char *title1,
   keyCbk = NULL;
   propCbk = NULL;
   layoutCbk = NULL;
+  decorated = gTrue;
   if (defaultWidgetName)
     defaultWidget = findWidget(defaultWidgetName);
   else
@@ -173,6 +184,8 @@ void LTKWindow::layout(int x, int y, int width1, int height1) {
   XTextProperty windowName, iconName;
   Atom protocol;
   GBool newWin;
+  Atom motifHintsAtom;
+  MotifWmHints motifHints;
 
   // create window and GC's so widgets can use font info, etc.
   if (xwin == None) {
@@ -295,6 +308,14 @@ void LTKWindow::layout(int x, int y, int width1, int height1) {
     }
     protocol = XInternAtom(display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(display, xwin, &protocol, 1);
+    if (!decorated) {
+      motifHintsAtom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+      motifHints.flags = MWM_HINTS_DECORATIONS;
+      motifHints.decorations = False;
+      XChangeProperty(display, xwin, motifHintsAtom, motifHintsAtom,
+		      32, PropModeReplace, (Guchar *)&motifHints,
+		      sizeof(MotifWmHints) / sizeof(long));
+    }
   }
 
   // call layout callback

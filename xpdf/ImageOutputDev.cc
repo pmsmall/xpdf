@@ -97,7 +97,8 @@ void ImageOutputDev::drawImage(GfxState *state, Stream *str, int width,
   int c;
 
   // dump JPEG file
-  if (dumpJPEG && str->getKind() == strDCT) {
+  if (dumpJPEG && str->getKind() == strDCT &&
+      colorMap->getNumPixelComps() == 3) {
 
     // open the image file
     sprintf(fileName, "%s-%03d.jpg", fileRoot, imgNum);

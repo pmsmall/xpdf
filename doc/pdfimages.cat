@@ -6,7 +6,7 @@ pdfimages(1)                                         pdfimages(1)
 
 NAME
        pdfimages - Portable Document Format (PDF) image extractor
-       (version 0.90)
+       (version 0.91)
 
 SYNOPSIS
        pdfimages [options] PDF-file image-root
@@ -34,7 +34,12 @@ OPTIONS
               format are saved as JPEG files.  All non-DCT images
               are saved in PBM/PPM format as usual.
 
+       -upw password
+              Specify the user password for the PDF file.
+
        -q     Don't print any messages or errors.
+
+       -v     Print copyright and version information.
 
        -h     Print usage information.  (-help is equivalent.)
 
@@ -46,7 +51,7 @@ BUGS
 
 AUTHOR
        The pdfimages software  and  documentation  are  copyright
-       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
        xpdf(1), pdftops(1), pdftotext(1), pdfinfo(1), pdftopbm(1)
@@ -56,11 +61,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-                           02 Aug 1999                          1
+                           14 Aug 2000                          1
 
 

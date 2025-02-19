@@ -1,7 +1,7 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH xpdf 1 "02 Aug 1999"
+.TH xpdf 1 "14 Aug 2000"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 0.90)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 0.91)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -37,11 +37,6 @@ xpdf
 .SH OPTIONS
 X resources are listed in square brackets with the corresponding
 option.
-.TP
-.B \-err
-Send error messages to /dev/tty instead of stderr (useful if xpdf is
-started from another application, e.g., netscape which otherwise pops
-up an annoying little window for every error).
 .TP
 .BI \-z " zoom"
 Set the initial zoom factor.  A number (-5 .. 5) specifies a zoom
@@ -98,6 +93,12 @@ non-anti-aliased fonts), \'low' or \'high' (use low-level or
 high-level anti-aliased fonts).
 .RB [ xpdf.t1libControl ]
 .TP
+.BI \-freetype " font-type"
+Set the type of font rendering for FreeType (the TrueType rasterizer)
+to use.  Options are \'none' (don't use FreeType at all), \'plain'
+(use non-anti-aliased fonts), or \'aa' (use anti-aliased fonts).
+.RB [ xpdf.freeTypeControl ]
+.TP
 .BI \-ps " PS-file"
 Set the default file name for PostScript output.  This can also be of
 the form \'|command' to pipe the PostScript through a command.
@@ -117,11 +118,23 @@ significantly larger (if they contain images), but will print on Level
 1 printers.  This also converts all images to black and white.
 .RB [ xpdf.psLevel1 ]
 .TP
+.BI \-upw " password"
+Specify the user password for the PDF file.
+.TP
+.B \-fullscreen
+Open xpdf in a full-screen mode, useful for presentations.  You may
+also want to specify '-bg black' (or similar) with this.  (There is
+currently no way to switch between window and full-screen modes on the
+fly.)
+.TP
 .B \-cmd
 Print commands as they're executed (useful for debugging).
 .TP
 .B \-q
 Don't print any messages or errors.
+.TP
+.B \-v
+Print copyright and version information.
 .TP
 .B \-h
 Print usage information.
@@ -164,6 +177,13 @@ is:
 .PP
 .RS
 -*-fixed-medium-r-normal-*-%s-*-*-*-*-*-jisx0208.1983-0
+.RE
+.TP
+.B xpdf.chineseFont
+Sets the X font name pattern to use for Chinese text.  The default is:
+.PP
+.RS
+-*-fangsong ti-medium-r-normal-*-%s-*-*-*-*-*-gb2312.1980-0
 .RE
 .TP
 .B xpdf.viKeys
@@ -250,7 +270,12 @@ following commands:
 .B "Open..."
 Open a new PDF file via a file requester.
 .TP
-.B "Save PDF..."
+.B "Reload"
+Reload the current PDF file.  Note that Xpdf will reload the file
+automatically (on a page change or redraw) if it has changed since it
+was last loaded.
+.TP
+.B "Save as..."
 Save the current file via a file requester.
 .TP
 .B "Rotate left"
@@ -341,7 +366,7 @@ add the lines:
 # Use xpdf to view PDF files.
 .RE
 .RS
-application/pdf; xpdf -err %s
+application/pdf; xpdf -q %s
 .RE
 .PP
 Make sure that xpdf is on your executable search path.
@@ -435,7 +460,7 @@ This assumes that the Type 1 font files are available in the directory
 .SH BUGS
 No support for TrueType and Type 3 fonts.
 .SH AUTHOR
-The xpdf software and documentation are copyright 1996-1999 Derek
+The xpdf software and documentation are copyright 1996-2000 Derek
 B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR pdftops (1),

@@ -1,11 +1,11 @@
 xpdf
 ====
 
-version 0.90
-99-aug-02
+version 0.91
+2000-aug-14
 
 The xpdf software and documentation are
-copyright 1996-1999 Derek B. Noonburg.
+copyright 1996-2000 Derek B. Noonburg.
 
 Email: derekn@foolabs.com
 WWW: http://www.foolabs.com/xpdf/
@@ -26,16 +26,23 @@ different systems.
 ***  UNIX  ***
 **************
 
-* Install t1lib (if desired).  The resulting libraries (libt1 and
-  libt1x) and include files (t1lib.h and t1libx.h) should be placed
-  somewhere on the standard search paths.  Alternatively, when you
-  configure xpdf, you can use the following options to tell configure
-  where to find the t1lib files:
+* Install t1lib (if desired).  The resulting library (libt1) and
+  include files (t1lib.h and t1libx.h) should be placed somewhere on
+  the standard search paths.  Alternatively, when you configure xpdf,
+  you can use the following options to tell configure where to find
+  the t1lib files:
 
     --with-t1-library=PATH
     --with-t1-includes=PATH
-    --with-t1x-library=PATH
-    --with-t1x-includes=PATH
+
+* Install FreeType (if desired).  The resulting library (libttf) and
+  include files (freetype/*.h) should be placed somewhere on the
+  standard search paths.  Alternatively, when you configure xpdf, you
+  can use the following options to tell configure where to find the
+  FreeType files:
+
+    --with-freetype-library=PATH
+    --with-freetype-includes=PATH
 
 * Run the configure script:
 
@@ -58,10 +65,19 @@ different systems.
         size of the binary (mostly with decoding tables).  The default
         is no Japanese font support.
 
+    --enable-chinese
+        Enables support for 16-bit Chinese fonts (Adobe-GB1-2
+        character set).  This increases the size of the binary (mostly
+        with decoding tables).  The default is no Chinese font support.
+
     --enable-no-text-select
         With this option, xpdf will not copy text.  (This is only
         useful on closed systems where the user can't get at the PDF
         file directly.)
+
+    --enable-opi
+        Enables support for generation of OPI (Open Prepress
+        Interface) comments with pdftops.
 
     --with-gzip
         Use gzip instead of uncompress.
@@ -80,6 +96,9 @@ different systems.
 
 The old Makefile.config and Makefiles are no longer provided or
 supported.
+
+If you want to run a quick test, there is a tiny PDF file included
+with xpdf, as misc/hello.pdf .
 
 
 *************
@@ -100,11 +119,15 @@ supported.
    50
   -----
 
-* Type '@vms_make' in the top-level directory.  If you have the Xpm
-  library and you want xpdf's color icon, type '@vms_make xpm'
-  instead.
+* Read the instructions at the top of vms_make.com.
+
+* Type '@vms_make' in the top-level directory.  You'll probably want
+  to use some of the options described in the file.
 
 * The executables will be left in '[.xpdf]'.
+
+If you want to run a quick test, there is a tiny PDF file included
+with xpdf, as misc/hello.pdf .
 
 
 **************
@@ -119,20 +142,36 @@ XFree86.  The configure script has not been tested on OS/2, however.
 ***  Win32  ***
 ***************
 
-The non-X programs (pdftops, pdftotext, pdfinfo, and pdfimages) have
-been tested with both DJGPP (the Delorie port of gcc) and cygwin
-(Cygnus port of gcc and other Unix tools).  You'll need to rename
-'makefile.w32' (in the top-level, goo, and xpdf directories) to
-'makefile' before running make.
+The non-X programs (pdftops, pdftotext, pdfinfo, and pdfimages) will
+compiled with both gcc (from cygwin), djgpp (the Delorie port of gcc)
+and Microsoft Visual C++.
 
-You can also compile these tools with Microsoft Visual C++:
+With cygwin, the build procedure is the same as for Unix:
 
-* Open a DOS window.
+  * Open a shell.
 
-* Type "cl". If you get the message "Bad command or file name", you
-  must run VCVARS32.BAT. (The location of this BAT file can be
-  determined with Explorer.)
+  * ./configure --with-gzip
 
-* Set the default directory to goo and type "microsof".
+  * make
 
-* Set the default directory to xpdf and type "microsof".
+  * make install
+
+With djgpp:
+
+  * Open a DOS window.
+
+  * ./djgppcfg
+
+  * make
+
+  * make install
+
+With the Microsoft tools:
+
+  * Open a DOS window.
+
+  * Type "cl".  If you get the message "Bad command or file name", you
+    must run VCVARS32.BAT. (The location of this BAT file can be
+    determined with Explorer.)
+
+  * Type "ms_make"

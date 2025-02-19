@@ -84,6 +84,7 @@ public:
   void setKeyCbk(LTKWindowKeyCbk cbk) { keyCbk = cbk; }
   void setPropChangeCbk(LTKWindowPropCbk cbk);
   void setLayoutCbk(LTKWindowLayoutCbk cbk) { layoutCbk = cbk; }
+  void setDecorated(GBool val) { decorated = val; }
   void setKeyWidget(LTKWidget *widget) { keyWidget = widget; }
   LTKWidget *getKeyWidget() { return keyWidget; }
   LTKWidget *getSelectionWidget() { return selectionWidget; }
@@ -155,6 +156,8 @@ protected:
   LTKWindowKeyCbk keyCbk;	// key press callback
   LTKWindowPropCbk propCbk;	// property change callback
   LTKWindowLayoutCbk layoutCbk;	// layout window callback
+
+  GBool decorated;		// should this window be decorated?
 
   LTKWidget *defaultWidget;	// default widget (activated by return key)
   LTKWidget *keyWidget;		// current keyboard input focus

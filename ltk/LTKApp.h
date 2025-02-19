@@ -53,7 +53,8 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKApp(char *appName1, XrmOptionDescRec *opts, int *argc, char *argv[]);
+  LTKApp(char *appName1, XrmOptionDescRec *opts,
+	 int *argc, char *argv[]);
 
   ~LTKApp();
 
@@ -73,7 +74,7 @@ public:
   unsigned long getColorResource(char *inst,
 				 char *def1, unsigned long def2,
 				 XColor *xcol);
-  XFontStruct *getFontResource(char *inst,  char *def);
+  XFontStruct *getFontResource(char *inst, char *def);
   void getGeometryResource(char *inst, int *x, int *y,
 			   Guint *width, Guint *height);
 

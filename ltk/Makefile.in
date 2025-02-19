@@ -14,7 +14,7 @@ VPATH = @srcdir@
 GOOSRCDIR = $(srcdir)/../goo
 GOOLIBDIR = ../goo
 
-CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOOSRCDIR) -I$(srcdir) @X_CFLAGS@
+CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOOSRCDIR) -I$(srcdir) @X_CFLAGS@ @Xpm_CFLAGS@
 
 LDFLAGS = @LDFLAGS@
 

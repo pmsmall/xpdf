@@ -61,7 +61,7 @@ set CC=gcc
 if not "%RANLIB%" == "ranlib" goto SmallEnv
 Rem Use a response file to avoid exceeding the 126-character limit
 rem echo --prefix='${DJDIR}' --datadir='${DJDIR}'/share --srcdir=%XSRC% > cfg.rf
-echo --prefix='${DJDIR}' --without-x > cfg.rf
+echo --prefix='${DJDIR}' --with-gzip --without-x > cfg.rf
 echo Configuring...
 sh ./configure i386-pc-msdos.djgppv2 @cfg.rf
 echo Done.

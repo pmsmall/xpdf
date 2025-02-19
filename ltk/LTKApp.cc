@@ -139,7 +139,7 @@ unsigned long LTKApp::getColorResource(char *inst,
 			     display, screenNum, def1, def2, xcol);
 }
 
-XFontStruct *LTKApp::getFontResource(char *inst,  char *def) {
+XFontStruct *LTKApp::getFontResource(char *inst, char *def) {
   return ltkGetFontResouce(resourceDB, appName, inst, display, screenNum, def);
 }
 

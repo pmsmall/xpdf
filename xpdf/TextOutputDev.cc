@@ -22,31 +22,65 @@
 #include "FontEncoding.h"
 #include "TextOutputDev.h"
 
+#ifdef MACOS
+// needed for setting type/creator of MacOS files
+#include "ICSupport.h"
+#endif
+
 #include "TextOutputFontInfo.h"
 
 //------------------------------------------------------------------------
 // Character substitutions
 //------------------------------------------------------------------------
 
-static char *isoLatin1Subst[] = {
-  "L",				// Lslash
-  "OE",				// OE
-  "S",				// Scaron
-  "Y",				// Ydieresis
-  "Z",				// Zcaron
-  "fi", "fl",			// ligatures
-  "ff", "ffi", "ffl",		// ligatures
-  "i",				// dotlessi
-  "l",				// lslash
-  "oe",				// oe
-  "s",				// scaron
-  "z",				// zcaron
-  "*",				// bullet
-  "...",			// ellipsis
-  "-", "-",			// emdash, hyphen
-  "\"", "\"",			// quotedblleft, quotedblright
-  "'",				// quotesingle
-  "TM"				// trademark
+static char *generalSubstNames[] = {
+  "zerooldstyle",
+  "oneoldstyle",
+  "twooldstyle",
+  "threeoldstyle",
+  "fouroldstyle",
+  "fiveoldstyle",
+  "sixoldstyle",
+  "sevenoldstyle",
+  "eightoldstyle",
+  "nineoldstyle",
+  "oldstylezero",
+  "oldstyleone",
+  "oldstyletwo",
+  "oldstylethree",
+  "oldstylefour",
+  "oldstylefive",
+  "oldstylesix",
+  "oldstyleseven",
+  "oldstyleeight",
+  "oldstylenine"
+};
+
+static FontEncoding generalSubstEncoding(generalSubstNames,
+					 sizeof(generalSubstNames) /
+					   sizeof(char *));
+
+static char *generalSubst[] = {
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine"
 };
 
 static char *ascii7Subst[] = {
@@ -93,6 +127,40 @@ static char *ascii7Subst[] = {
   "TM"				// trademark
 };
 
+static char *isoLatin1Subst[] = {
+  "L",				// Lslash
+  "OE",				// OE
+  "S",				// Scaron
+  "Y",				// Ydieresis
+  "Z",				// Zcaron
+  "fi", "fl",			// ligatures
+  "ff", "ffi", "ffl",		// ligatures
+  "i",				// dotlessi
+  "l",				// lslash
+  "oe",				// oe
+  "s",				// scaron
+  "z",				// zcaron
+  "*",				// bullet
+  "...",			// ellipsis
+  "-", "-",			// emdash, hyphen
+  "\"", "\"",			// quotedblleft, quotedblright
+  "'",				// quotesingle
+  "TM"				// trademark
+};
+
+static char *isoLatin2Subst[] = {
+  "fi", "fl",			// ligatures
+  "ff", "ffi", "ffl",		// ligatures
+  "*",				// bullet
+  "...",			// ellipsis
+  "-", "-",			// emdash, hyphen
+  "\"", "\"",			// quotedblleft, quotedblright
+  "'",				// quotesingle
+  "TM"				// trademark
+};
+
+static char **isoLatin5Subst = isoLatin1Subst;
+
 //------------------------------------------------------------------------
 // 16-bit fonts
 //------------------------------------------------------------------------
@@ -101,7 +169,7 @@ static char *ascii7Subst[] = {
 
 // CID 0 .. 96
 static Gushort japan12Map[96] = {
-  0x2120, 0x2120, 0x212a, 0x2149, 0x2174, 0x2170, 0x2173, 0x2175, // 00 .. 07
+  0x2121, 0x2121, 0x212a, 0x2149, 0x2174, 0x2170, 0x2173, 0x2175, // 00 .. 07
   0x2147, 0x214a, 0x214b, 0x2176, 0x215c, 0x2124, 0x213e, 0x2123, // 08 .. 0f
   0x213f, 0x2330, 0x2331, 0x2332, 0x2333, 0x2334, 0x2335, 0x2336, // 10 .. 17
   0x2337, 0x2338, 0x2339, 0x2127, 0x2128, 0x2163, 0x2161, 0x2164, // 18 .. 1f
@@ -186,7 +254,7 @@ TextString::~TextString() {
 
 void TextString::addChar(GfxState *state, double x, double y,
 			 double dx, double dy,
-			 Guchar c, GBool useASCII7) {
+			 Guchar c, TextOutputCharSet charSet) {
   char *charName, *sub;
   int c1;
   int i, j, n, m;
@@ -198,10 +266,23 @@ void TextString::addChar(GfxState *state, double x, double y,
   sub = NULL;
   n = 1;
   if ((charName = state->getFont()->getCharName(c))) {
-    if (useASCII7)
+    if ((c1 = generalSubstEncoding.getCharCode(charName)) >= 0) {
+      charName = generalSubst[c1];
+    }
+    switch (charSet) {
+    case textOutASCII7:
       c1 = ascii7Encoding.getCharCode(charName);
-    else
+      break;
+    case textOutLatin1:
       c1 = isoLatin1Encoding.getCharCode(charName);
+      break;
+    case textOutLatin2:
+      c1 = isoLatin2Encoding.getCharCode(charName);
+      break;
+    case textOutLatin5:
+      c1 = isoLatin5Encoding.getCharCode(charName);
+      break;
+    }
     if (c1 < 0) {
       m = strlen(charName);
       if (hexCodes && m == 3 &&
@@ -212,12 +293,14 @@ void TextString::addChar(GfxState *state, double x, double y,
       } else if (!hexCodes && m >= 2 && m <= 3 &&
 		 isdigit(charName[0]) && isdigit(charName[1])) {
 	c1 = atoi(charName);
-	if (c1 >= 256)
+	if (c1 >= 256) {
 	  c1 = -1;
+	}
       } else if (!hexCodes && m >= 3 && m <= 5 && isdigit(charName[1])) {
 	c1 = atoi(charName+1);
-	if (c1 >= 256)
+	if (c1 >= 256) {
 	  c1 = -1;
+	}
       }
       //~ this is a kludge -- is there a standard internal encoding
       //~ used by all/most Type 1 fonts?
@@ -225,26 +308,60 @@ void TextString::addChar(GfxState *state, double x, double y,
 	c1 = 45;
       else if (c1 == 266)	// emdash
 	c1 = 208;
-      if (useASCII7)
-	c1 = ascii7Encoding.getCharCode(isoLatin1Encoding.getCharName(c1));
+      if (c1 >= 0) {
+	charName = isoLatin1Encoding.getCharName(c1);
+	if (charName) {
+	  switch (charSet) {
+	  case textOutASCII7:
+	    c1 = ascii7Encoding.getCharCode(charName);
+	    break;
+	  case textOutLatin1:
+	    // no translation
+	    break;
+	  case textOutLatin2:
+	    c1 = isoLatin2Encoding.getCharCode(charName);
+	    break;
+	  case textOutLatin5:
+	    c1 = isoLatin5Encoding.getCharCode(charName);
+	    break;
+	  }
+	} else {
+	  c1 = -1;
+	}
+      }
     }
-    if (useASCII7) {
-      if (c1 >= 128) {
-	sub = ascii7Subst[c1 - 128];
-	n = strlen(sub);
-      }
-    } else {
-      if (c1 >= 256) {
-	sub = isoLatin1Subst[c1 - 256];
-	n = strlen(sub);
-      }
+    switch (charSet) {
+      case textOutASCII7:
+	if (c1 >= 128) {
+	  sub = ascii7Subst[c1 - 128];
+	  n = strlen(sub);
+	}
+	break;
+      case textOutLatin1:
+	if (c1 >= 256) {
+	  sub = isoLatin1Subst[c1 - 256];
+	  n = strlen(sub);
+	}
+	break;
+      case textOutLatin2:
+	if (c1 >= 256) {
+	  sub = isoLatin2Subst[c1 - 256];
+	  n = strlen(sub);
+	}
+	break;
+      case textOutLatin5:
+	if (c1 >= 256) {
+	  sub = isoLatin5Subst[c1 - 256];
+	  n = strlen(sub);
+	}
+	break;
     }
   } else {
     c1 = -1;
   }
   if (sub)
     text->append(sub);
-  else if (c1 >= 0)
+  else if (c1 >= ' ')
     text->append((char)c1);
   else
     text->append(' ');
@@ -371,15 +488,20 @@ void TextString::addChar16(GfxState *state, double x, double y,
     } else {
       c1 = 0;
     }
+#if 0 //~
+    if (c1 == 0) {
+      error(-1, "Unsupported Adobe-Japan1-2 character: %d", c);
+    }
+#endif
 #endif // JAPANESE_SUPPORT
+    break;
+
+  case font16AdobeGB12:
     break;
   }
 
   // append converted character to string
   if (c1 == 0) {
-#if 0 //~
-    error(-1, "Unsupported Adobe-Japan1-2 character: %d", c);
-#endif
     text->append(' ');
     n = 1;
   } else if (c1 > 0) {
@@ -412,13 +534,14 @@ void TextString::addChar16(GfxState *state, double x, double y,
 // TextPage
 //------------------------------------------------------------------------
 
-TextPage::TextPage(GBool useASCII7, GBool rawOrder) {
-  this->useASCII7 = useASCII7;
+TextPage::TextPage(TextOutputCharSet charSet, GBool rawOrder) {
+  this->charSet = charSet;
   this->rawOrder = rawOrder;
   curStr = NULL;
   yxStrings = NULL;
   xyStrings = NULL;
   yxCur1 = yxCur2 = NULL;
+  nest = 0;
 }
 
 TextPage::~TextPage() {
@@ -426,6 +549,13 @@ TextPage::~TextPage() {
 }
 
 void TextPage::beginString(GfxState *state, GString *s, GBool hexCodes) {
+  // This check is needed because Type 3 characters can contain
+  // text-drawing operations.
+  if (curStr) {
+    ++nest;
+    return;
+  }
+
   curStr = new TextString(state, hexCodes);
 }
 
@@ -447,7 +577,7 @@ void TextPage::addChar(GfxState *state, double x, double y,
     endString();
     beginString(state, NULL, hexCodes);
   }
-  curStr->addChar(state, x1, y1, w1, h1, c, useASCII7);
+  curStr->addChar(state, x1, y1, w1, h1, c, charSet);
 }
 
 void TextPage::addChar16(GfxState *state, double x, double y,
@@ -476,6 +606,11 @@ void TextPage::endString() {
   TextString *p1, *p2;
   double h, y1, y2;
 
+  if (nest > 0) {
+    --nest;
+    return;
+  }
+
   // throw away zero-length strings -- they don't have valid xMin/xMax
   // values, and they're useless anyway
   if (curStr->text->getLength() == 0) {
@@ -483,14 +618,6 @@ void TextPage::endString() {
     curStr = NULL;
     return;
   }
-
-#if 0 //~tmp
-  if (curStr->yMax - curStr->yMin > 20) {
-    delete curStr;
-    curStr = NULL;
-    return;
-  }
-#endif
 
   // insert string in y-major list
   h = curStr->yMax - curStr->yMin;
@@ -540,25 +667,18 @@ void TextPage::coalesce() {
   while (str1 && (str2 = str1->yxNext)) {
     space = str1->yMax - str1->yMin;
     d = str2->xMin - str1->xMax;
-#if 0 //~tmp
-    if (((rawOrder &&
-	  ((str2->yMin >= str1->yMin && str2->yMin <= str1->yMax) ||
-	   (str2->yMax >= str1->yMin && str2->yMax <= str1->yMax))) ||
-	 (!rawOrder && str2->yMin < str1->yMax)) &&
-	d > -0.1 * space && d < 0.2 * space) {
-#else
     if (((rawOrder &&
 	  ((str2->yMin >= str1->yMin && str2->yMin <= str1->yMax) ||
 	   (str2->yMax >= str1->yMin && str2->yMax <= str1->yMax))) ||
 	 (!rawOrder && str2->yMin < str1->yMax)) &&
 	d > -0.5 * space && d < space) {
-#endif
       n = str1->text->getLength();
       if (d > 0.1 * space)
 	str1->text->append(' ');
       str1->text->append(str2->text);
       str1->xRight = (double *)
-	grealloc(str1->xRight, str1->text->getLength() * sizeof(double));
+	grealloc(str1->xRight,
+		 ((str1->text->getLength() + 15) & ~15) * sizeof(double));
       if (d > 0.1 * space)
 	str1->xRight[n++] = str2->xMin;
       for (i = 0; i < str2->text->getLength(); ++i)
@@ -666,7 +786,11 @@ GString *TextPage::getText(double xMin, double yMin,
       }
       if (s->getLength() > 0) {
 	if (x0 < xPrev || str1->yMin > yPrev) {
+#ifdef MACOS
+	  s->append('\r');
+#else
 	  s->append('\n');
+#endif
 	  multiLine = gTrue;
 	} else {
 	  s->append("    ");
@@ -677,8 +801,13 @@ GString *TextPage::getText(double xMin, double yMin,
       yPrev = str1->yMax;
     }
   }
-  if (multiLine)
+  if (multiLine) {
+#ifdef MACOS
+    s->append('\r');
+#else
     s->append('\n');
+#endif
+  }
   return s;
 }
 
@@ -760,17 +889,10 @@ void TextPage::dump(FILE *f) {
       yMax = str1->yMax;
 
     // if we've hit the end of the line...
-#if 0 //~
-    if (!(str1->yxNext &&
-	  !(rawOrder && str1->yxNext->yMax < str1->yMin) &&
-	  str1->yxNext->yMin < str1->yMax &&
-	  str1->yxNext->xMin >= str1->xMax)) {
-#else
     if (!(str1->yxNext &&
 	  !(rawOrder && str1->yxNext->yMax < str1->yMin) &&
 	  str1->yxNext->yMin < 0.2*str1->yMin + 0.8*str1->yMax &&
 	  str1->yxNext->xMin >= str1->xMax)) {
-#endif
 
       // print a return
       fputc('\n', f);
@@ -825,7 +947,8 @@ void TextPage::clear() {
 // TextOutputDev
 //------------------------------------------------------------------------
 
-TextOutputDev::TextOutputDev(char *fileName, GBool useASCII7, GBool rawOrder) {
+TextOutputDev::TextOutputDev(char *fileName, TextOutputCharSet charSet,
+			     GBool rawOrder) {
   text = NULL;
   this->rawOrder = rawOrder;
   ok = gTrue;
@@ -847,14 +970,19 @@ TextOutputDev::TextOutputDev(char *fileName, GBool useASCII7, GBool rawOrder) {
   }
 
   // set up text object
-  text = new TextPage(useASCII7, rawOrder);
+  text = new TextPage(charSet, rawOrder);
 }
 
 TextOutputDev::~TextOutputDev() {
-  if (needClose)
+  if (needClose) {
+#ifdef MACOS
+    ICS_MapRefNumAndAssign((short)f->handle);
+#endif
     fclose(f);
-  if (text)
+  }
+  if (text) {
     delete text;
+  }
 }
 
 void TextOutputDev::startPage(int pageNum, GfxState *state) {

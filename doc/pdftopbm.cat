@@ -6,7 +6,7 @@ pdftopbm(1)                                           pdftopbm(1)
 
 NAME
        pdftopbm  -  Portable  Document  Format  (PDF) to Portable
-       Bitmap (PBM) converter (version 0.90)
+       Bitmap (PBM) converter (version 0.91)
 
 SYNOPSIS
        pdftopbm [options] PDF-file PBM-root
@@ -31,7 +31,12 @@ OPTIONS
               Specifies the resolution, in DPI.  The  default  is
               150 DPI.
 
+       -upw password
+              Specify the user password for the PDF file.
+
        -q     Don't print any messages or errors.
+
+       -v     Print copyright and version information.
 
        -h     Print usage information.  (-help is equivalent.)
 
@@ -43,7 +48,7 @@ BUGS
 
 AUTHOR
        The pdftopbm  software  and  documentation  are  copyright
-       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
        xpdf(1),   pdftops(1),  pdftotext(1),  pdfinfo(1),  pdfim-
@@ -56,11 +61,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-                           02 Aug 1999                          1
+                           14 Aug 2000                          1
 
 

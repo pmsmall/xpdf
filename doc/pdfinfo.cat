@@ -6,7 +6,7 @@ pdfinfo(1)                                             pdfinfo(1)
 
 NAME
        pdfinfo - Portable Document Format (PDF) document informa-
-       tion extractor (version 0.90)
+       tion extractor (version 0.91)
 
 SYNOPSIS
        pdfinfo [options] [PDF-file]
@@ -32,8 +32,14 @@ DESCRIPTION
               page count
               encrypted flag (yes/no)
               print and copy permissions (if encrypted)
+              linearized (yes/no)
 
 OPTIONS
+       -upw password
+              Specify the user password for the PDF file.
+
+       -v     Print copyright and version information.
+
        -h     Print usage information.  (-help is equivalent.)
 
 BUGS
@@ -41,7 +47,7 @@ BUGS
 
 AUTHOR
        The  pdfinfo  software  and  documentation  are  copyright
-       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
        xpdf(1),  pdftops(1),  pdftotext(1),  pdftopbm(1),  pdfim-
@@ -55,12 +61,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-                           02 Aug 1999                          1
+                           14 Aug 2000                          1
 
 

@@ -13,6 +13,7 @@ exec_prefix = @exec_prefix@
 srcdir = @srcdir@
 
 INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 
 EXE = @EXE@
@@ -49,14 +50,14 @@ pdfimages:
 
 dummy:
 
-install:
+install: dummy
 	-mkdir -p @bindir@
-@X@	$(INSTALL) xpdf/xpdf$(EXE) @bindir@/xpdf$(EXE)
-	$(INSTALL) xpdf/pdftops$(EXE) @bindir@/pdftops$(EXE)
-	$(INSTALL) xpdf/pdftotext$(EXE) @bindir@/pdftotext$(EXE)
-	$(INSTALL) xpdf/pdfinfo$(EXE) @bindir@/pdfinfo$(EXE)
-@X@	$(INSTALL) xpdf/pdftopbm$(EXE) @bindir@/pdftopbm$(EXE)
-	$(INSTALL) xpdf/pdfimages$(EXE) @bindir@/pdfimages$(EXE)
+@X@	$(INSTALL_PROGRAM) xpdf/xpdf$(EXE) @bindir@/xpdf$(EXE)
+	$(INSTALL_PROGRAM) xpdf/pdftops$(EXE) @bindir@/pdftops$(EXE)
+	$(INSTALL_PROGRAM) xpdf/pdftotext$(EXE) @bindir@/pdftotext$(EXE)
+	$(INSTALL_PROGRAM) xpdf/pdfinfo$(EXE) @bindir@/pdfinfo$(EXE)
+@X@	$(INSTALL_PROGRAM) xpdf/pdftopbm$(EXE) @bindir@/pdftopbm$(EXE)
+	$(INSTALL_PROGRAM) xpdf/pdfimages$(EXE) @bindir@/pdfimages$(EXE)
 	-mkdir -p @mandir@/man1
 @X@	$(INSTALL_DATA) $(srcdir)/doc/xpdf.1 @mandir@/man1/xpdf.1
 	$(INSTALL_DATA) $(srcdir)/doc/pdftops.1 @mandir@/man1/pdftops.1

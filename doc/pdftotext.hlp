@@ -26,6 +26,16 @@
               Convert  the text to 7-bit ASCII; the default is to
               use the 8-bit ISO Latin-1 character set.
 
+       -latin2
+              Convert the text to the Latin-2 (ISO-8859-2)  char-
+              acter  set.   (This will only be useful if the font
+              encodings are specified correctly in the PDF file.)
+
+       -latin5
+              Convert  the text to the Latin-5 (ISO-8859-9) char-
+              acter set.  (This will only be useful if  the  font
+              encodings are specified correctly in the PDF file.)
+
        -eucjp Convert Japanese text to EUC-JP.  This is currently
               the only option for converting Japanese text -- the
               only effect is to switch to 7-bit  ASCII  for  non-
@@ -39,7 +49,12 @@
               more sophisticated when pdftotext is  rewritten  to
               use a smarter text placement algorithm.
 
+       -upw password
+              Specify the user password for the PDF file.
+
        -q     Don't print any messages or errors.
+
+       -v     Print copyright and version information.
 
        -h     Print usage information.  (-help is equivalent.)
 
@@ -52,7 +67,7 @@
 2 AUTHOR
 
        The  pdftotext  software  and  documentation are copyright
-       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 

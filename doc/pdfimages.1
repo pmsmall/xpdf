@@ -1,8 +1,8 @@
 .\" Copyright 1998 Derek B. Noonburg
-.TH pdfimages 1 "02 Aug 1999"
+.TH pdfimages 1 "14 Aug 2000"
 .SH NAME
 pdfimages \- Portable Document Format (PDF) image extractor
-(version 0.90)
+(version 0.91)
 .SH SYNOPSIS
 .B pdfimages
 [options]
@@ -35,8 +35,14 @@ Normally, all images are written as PBM (for monochrome images) or PPM
 format are saved as JPEG files.  All non-DCT images are saved in
 PBM/PPM format as usual.
 .TP
+.BI \-upw " password"
+Specify the user password for the PDF file.
+.TP
 .B \-q
 Don't print any messages or errors.
+.TP
+.B \-v
+Print copyright and version information.
 .TP
 .B \-h
 Print usage information.
@@ -47,7 +53,7 @@ With the -j option, the PDF image streams are copied directly to the
 output files.  DCT images in PDF files may use some non-standard JPEG
 features, so the resulting .jpg files may not be too useful.
 .SH AUTHOR
-The pdfimages software and documentation are copyright 1996-1999 Derek
+The pdfimages software and documentation are copyright 1996-2000 Derek
 B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR xpdf (1),

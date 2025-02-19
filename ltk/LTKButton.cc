@@ -19,7 +19,7 @@
 #include "LTKButton.h"
 #include "LTKBorder.h"
 
-LTKButton::LTKButton(char *name1, int widgetNum1, char *label1,
+LTKButton::LTKButton(char *name1, int widgetNum1, const char *label1,
 		     LTKButtonAction action1, LTKBoolValCbk pressCbk1):
     LTKWidget(name1, widgetNum1) {
   label = new GString(label1);

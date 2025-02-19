@@ -25,10 +25,15 @@
 #include "Error.h"
 #include "config.h"
 
-GBool printCommands = gFalse;
+static char userPassword[33] = "";
+static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
 
 static ArgDesc argDesc[] = {
+  {"-upw",    argString,   userPassword,   sizeof(userPassword),
+   "user password (for encrypted files)"},
+  {"-v",      argFlag,     &printVersion,  0,
+   "print copyright and version info"},
   {"-h",      argFlag,     &printHelp,     0,
    "print usage information"},
   {"-help",   argFlag,     &printHelp,     0,
@@ -39,16 +44,19 @@ static ArgDesc argDesc[] = {
 int main(int argc, char *argv[]) {
   PDFDoc *doc;
   GString *fileName;
+  GString *userPW;
   Object info, obj;
   char *s;
   GBool ok;
 
   // parse args
   ok = parseArgs(argDesc, &argc, argv);
-  if (!ok || argc != 2 || printHelp) {
+  if (!ok || argc != 2 || printVersion || printHelp) {
     fprintf(stderr, "pdfinfo version %s\n", xpdfVersion);
     fprintf(stderr, "%s\n", xpdfCopyright);
-    printUsage("pdfinfo", "<PDF-file>", argDesc);
+    if (!printVersion) {
+      printUsage("pdfinfo", "<PDF-file>", argDesc);
+    }
     exit(1);
   }
   fileName = new GString(argv[1]);
@@ -61,9 +69,18 @@ int main(int argc, char *argv[]) {
 
   // open PDF file
   xref = NULL;
-  doc = new PDFDoc(fileName);
-  if (!doc->isOk())
+  if (userPassword[0]) {
+    userPW = new GString(userPassword);
+  } else {
+    userPW = NULL;
+  }
+  doc = new PDFDoc(fileName, userPW);
+  if (userPW) {
+    delete userPW;
+  }
+  if (!doc->isOk()) {
     exit(1);
+  }
 
   // print doc info
   doc->getDocInfo(&info);
@@ -115,6 +132,9 @@ int main(int argc, char *argv[]) {
   } else {
     printf("no\n");
   }
+
+  // print linearization info
+  printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
 
   // clean up
   delete doc;

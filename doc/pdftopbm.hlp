@@ -26,7 +26,12 @@
               Specifies  the  resolution, in DPI.  The default is
               150 DPI.
 
+       -upw password
+              Specify the user password for the PDF file.
+
        -q     Don't print any messages or errors.
+
+       -v     Print copyright and version information.
 
        -h     Print usage information.  (-help is equivalent.)
 
@@ -40,7 +45,7 @@
 2 AUTHOR
 
        The  pdftopbm  software  and  documentation  are copyright
-       1996-1999 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 

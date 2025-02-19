@@ -10,9 +10,15 @@ OPTIONS="$OPTIONS -DA4_PAPER")
 AC_ARG_ENABLE(japanese,
 [  --enable-japanese       enable Japanese font support],
 OPTIONS="$OPTIONS -DJAPANESE_SUPPORT")
+AC_ARG_ENABLE(chinese,
+[  --enable-chinese        enable Chinese font support],
+OPTIONS="$OPTIONS -DCHINESE_SUPPORT")
 AC_ARG_ENABLE(no-text-select,
 [  --enable-no-text-select do not allow text selection],
 OPTIONS="$OPTIONS -DNO_TEXT_SELECT")
+AC_ARG_ENABLE(opi,
+[  --enable-opi            include support for OPI comments],
+OPTIONS="$OPTIONS -DOPI_SUPPORT")
 AC_ARG_WITH(gzip,
 [  --with-gzip             use gzip instead of uncompress],
 OPTIONS="$OPTIONS -DUSE_GZIP")
@@ -70,23 +76,46 @@ dnl ##### Checks for header files.
 AC_PATH_XTRA
 AC_HEADER_DIRENT
 
-dnl ##### Look for header that defines fd_set.
-AC_MSG_CHECKING([fd_set and sys/select.h or sys/bsdtypes.h])
-AC_TRY_COMPILE([#include <sys/types.h>],
-  [fd_set fds;], xpdf_ok=yes, xpdf_ok=no)
+dnl ##### Switch over to C++.  This will make the checks below a little
+dnl ##### bit stricter (requiring function prototypes in include files).
+dnl ##### (99% of xpdf is written in C++.)
+AC_LANG_CPLUSPLUS
+
+dnl ##### Check for extra libraries needed by X.  (LynxOS needs this.)
+AC_CHECK_FUNC(gethostbyname)
+if test $ac_cv_func_gethostbyname = no; then
+  AC_CHECK_LIB(bsd, gethostbyname, X_EXTRA_LIBS="$X_EXTRA_LIBS -lbsd")
+fi
+
+dnl ##### Look for header that defines select() and fd_set.
+AC_MSG_CHECKING([select() and fd_set in sys/select.h and sys/bsdtypes.h])
+AC_TRY_COMPILE([#include <stdlib.h>
+#include <stddef.h>
+#include <unistd.h>
+#include <sys/types.h>],
+  [fd_set fds;
+select(0, NULL, NULL, NULL, NULL);], xpdf_ok=yes, xpdf_ok=no)
 if test $xpdf_ok = yes; then
   AC_MSG_RESULT([not needed])
 else
-  AC_TRY_COMPILE([#include <sys/types.h>
+  AC_TRY_COMPILE([#include <stdlib.h>
+#include <stddef.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/select.h>],
-    [fd_set fds;], xpdf_ok=yes, xpdf_ok=no)
+    [fd_set fds;
+select(0, NULL, NULL, NULL, NULL);], xpdf_ok=yes, xpdf_ok=no)
   if test $xpdf_ok = yes; then
     AC_DEFINE(HAVE_SYS_SELECT_H)
     AC_MSG_RESULT([need sys/select.h])
   else
-    AC_TRY_COMPILE([#include <sys/types.h>
+    AC_TRY_COMPILE([#include <stdlib.h>
+#include <stddef.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/bsdtypes.h>],
-      [fd_set fds;], xpdf_ok=yes, xpdf_ok=no)
+      [fd_set fds;
+select(0, NULL, NULL, NULL, NULL);], xpdf_ok=yes, xpdf_ok=no)
     if test $xpdf_ok = yes; then
       AC_DEFINE(HAVE_SYS_BSDTYPES_H)
       AC_MSG_RESULT([need sys/bsdtypes.h])
@@ -139,14 +168,25 @@ fi
 
 dnl ##### Checks for library functions.
 AC_CHECK_FUNCS(popen)
+dnl # This should use 'AC_CHECK_FUNCS(mkstemp)' but that fails if
+dnl # the mkstemp exists in the library but isn't declared in the
+dnl # include file (e.g., in cygwin 1.1.2).
+AC_CACHE_CHECK([for mkstemp],
+xpdf_cv_func_mkstemp,
+[AC_TRY_COMPILE([#include <stdlib.h>],
+[mkstemp("foo");],
+xpdf_cv_func_mkstemp=yes, xpdf_cv_func_mkstemp=no)])
+if test "$xpdf_cv_func_mkstemp" = yes; then
+  AC_DEFINE(HAVE_MKSTEMP)
+fi
 
 dnl ##### Check select argument type: on HP-UX before version 10, select
 dnl ##### takes (int *) instead of (fd_set *).
-AC_LANG_CPLUSPLUS
 AC_CACHE_CHECK([whether select takes fd_set arguments],
 xpdf_cv_func_select_arg,
 [AC_TRY_COMPILE([#include <sys/types.h>
 #include <sys/time.h>
+#include <unistd.h>
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif],
@@ -156,6 +196,8 @@ xpdf_cv_func_select_arg=yes, xpdf_cv_func_select_arg=no)])
 if test "$xpdf_cv_func_select_arg" != yes; then
   AC_DEFINE(SELECT_TAKES_INT)
 fi
+
+dnl ##### Back to C for the library tests.
 AC_LANG_C
 
 dnl ##### Check for libXpm.
@@ -174,12 +216,15 @@ if test -z "$no_x"; then
                 $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
   AC_SUBST(t1_LIBS)
   AC_SUBST(t1_CFLAGS)
-  smr_CHECK_LIB(t1x, t1x, [Type 1 font rasterizer], 
-                T1_SetX11Params, t1libx.h,
-                $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS $t1_LIBS -lm,
-                $X_CFLAGS $t1_CFLAGS)
-  AC_SUBST(t1x_LIBS)
-  AC_SUBST(t1x_CFLAGS)
+fi
+
+dnl ##### Check for FreeType.
+if test -z "$no_x"; then
+  smr_CHECK_LIB(freetype, ttf, [FreeType font rasterizer],
+                TT_Init_FreeType, freetype/freetype.h,
+                $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+  AC_SUBST(freetype_LIBS)
+  AC_SUBST(freetype_CFLAGS)
 fi
 
 dnl ##### Disable X-specific stuff in top-level Makefile.

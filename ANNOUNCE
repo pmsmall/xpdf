@@ -1,4 +1,4 @@
-Subject: ANNOUNCE: xpdf 0.90 - a PDF viewer for X
+Subject: ANNOUNCE: xpdf 0.91 - a PDF viewer for X
 
 
 I've just released a new version of xpdf, my Portable Document Format
@@ -8,18 +8,18 @@ Xpdf runs under the X Window System on Unix, VMS, and OS/2.  The non-X
 components of the package (pdftops, pdftotext, etc.) also run on Win32
 systems.
 
-*** NEW -- Anti-aliased fonts!
-*** This release uses t1lib to render embedded Type 1/1C fonts (and
-*** the base 14 fonts).
+Noticeable changes:
 
-Other noticeable changes:
-
-* Added "backward" and "forward" buttons.
-* Added fit-page and fit-page-width zoom factors.
-* Type 1C fonts are converted to Type 1 and embedded in PostScript.
-* Support vertical Japanese text.
-* Added Japanese text support (EUC-JP) to pdftotext.
-* Initial support for PDF 1.3.
+* Added TrueType font rendering, using FreeType.
+* Support for (some) Chinese fonts.
+* Decryption code is included with the main distribution (now that the
+  US export regulations are a little bit less irrational).
+* Added (very basic) support for generating PostScript with Japanese
+  fonts.
+* Added support for generating EPS files (pdftops -eps).
+* Much-improved image filtering in xpdf.
+* Implemented a basic full-screen (presentation) mode (xpdf
+  -fullscreen).
 
 See the `CHANGES' file for a complete list.
 
@@ -36,16 +36,3 @@ Source and Linux binaries are on sunsite.unc.edu, currently in
 the incoming directory, but they will be moved to:
 
     ftp://sunsite.unc.edu/pub/Linux/apps/graphics/viewers/X
-
-The following will be available soon --
-
-    RPM packages for RedHat 5.x Linux systems:
-        ftp://contrib.redhat.com/
-
-    Decryption patches:
-        ftp://ftp.sci.usq.edu.au/pub/linux/xpdf/
-
-    Decryption-enabled Linux binaries:
-        ftp://ftp.replay.com/pub/replay/linux/redhat/
-
-- Derek
