@@ -15,8 +15,8 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <LTKWindow.h>
-#include <LTKBox.h>
+#include "LTKWindow.h"
+#include "LTKBox.h"
 
 LTKBox::LTKBox(char *name1, int cols1, int rows1,
 	       int left1, int right1, int top1, int bottom1,

@@ -1,0 +1,47 @@
+! Generated automatically by mantohlp
+1 pdfinfo
+
+       pdfinfo - Portable Document Format (PDF) document informa-
+       tion
+
+       pdfinfo [options] [PDF-file]
+
+       Pdftoinfo prints the contents  of  the  'Info'  dictionary
+       (plus some other useful information) from a Portable Docu-
+       ment Format (PDF) file.
+
+       The 'Info' dictionary contains the following values:
+
+              title
+              subject
+              keywords
+              author
+              creator
+              producer
+              creation date
+              modification date
+
+       In addition, the following information is printed:
+
+              page count
+              encrypted flag (yes or no)
+
+2 OPTIONS
+
+       -h     Print usage information.  (-help is equivalent.)
+
+2 BUGS
+
+       No known bugs.
+
+2 AUTHOR
+
+       The  pdfinfo  software  and  documentation  are  copyright
+       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+
+2 SEE_ALSO
+
+       xpdf(1),  pdftops(1),  pdftotext(1),  pdftopbm(1),  pdfim-
+       ages(1)
+       http://www.foolabs.com/xpdf/
+

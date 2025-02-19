@@ -15,15 +15,15 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <GString.h>
-#include <gfile.h>
-#include <LTKBox.h>
-#include <LTKLabel.h>
-#include <LTKList.h>
-#include <LTKScrollbar.h>
-#include <LTKTextIn.h>
-#include <LTKEmpty.h>
-#include <LTKFileReq.h>
+#include "GString.h"
+#include "gfile.h"
+#include "LTKBox.h"
+#include "LTKLabel.h"
+#include "LTKList.h"
+#include "LTKScrollbar.h"
+#include "LTKTextIn.h"
+#include "LTKEmpty.h"
+#include "LTKFileReq.h"
 
 #define dirLabelLen 50
 

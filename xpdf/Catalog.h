@@ -16,7 +16,7 @@
 class Object;
 class Page;
 class PageAttrs;
-class Ref;
+struct Ref;
 class LinkDest;
 
 //------------------------------------------------------------------------

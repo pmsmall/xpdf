@@ -16,11 +16,11 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
-#include <gtypes.h>
-#include <GString.h>
-#include <LTKWindow.h>
-#include <LTKTextIn.h>
-#include <LTKBorder.h>
+#include "gtypes.h"
+#include "GString.h"
+#include "LTKWindow.h"
+#include "LTKTextIn.h"
+#include "LTKBorder.h"
 
 #define horizBorder 2
 #define vertBorder  2

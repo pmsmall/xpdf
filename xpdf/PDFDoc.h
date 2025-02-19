@@ -44,13 +44,12 @@ public:
   Catalog *getCatalog() { return catalog; }
 
   // Get page parameters.
-  int getPageXMin(int page) { return catalog->getPage(page)->getX1(); }
-  int getPageYMin(int page) { return catalog->getPage(page)->getY1(); }
-  int getPageXMax(int page) { return catalog->getPage(page)->getX2(); }
-  int getPageYMax(int page) { return catalog->getPage(page)->getY2(); }
-  int getPageWidth(int page) { return catalog->getPage(page)->getWidth(); }
-  int getPageHeight(int page) { return catalog->getPage(page)->getHeight(); }
-  int getPageRotate(int page) { return catalog->getPage(page)->getRotate(); }
+  double getPageWidth(int page)
+    { return catalog->getPage(page)->getWidth(); }
+  double getPageHeight(int page)
+    { return catalog->getPage(page)->getHeight(); }
+  int getPageRotate(int page)
+    { return catalog->getPage(page)->getRotate(); }
 
   // Get number of pages.
   int getNumPages() { return catalog->getNumPages(); }
@@ -79,9 +78,15 @@ public:
   LinkDest *findDest(GString *name)
     { return catalog->findDest(name); }
 
+  // Is the file encrypted?
+  GBool isEncrypted() { return xref->isEncrypted(); }
+
   // Are printing and copying allowed?  If not, print an error message.
   GBool okToPrint() { return xref->okToPrint(); }
   GBool okToCopy() { return xref->okToCopy(); }
+
+  // Return the document's Info dictionary (if any).
+  Object *getDocInfo(Object *obj) { return xref->getDocInfo(obj); }
 
   // Save this file with another name.
   GBool saveAs(GString *name);

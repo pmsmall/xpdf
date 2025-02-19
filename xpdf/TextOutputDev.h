@@ -14,7 +14,7 @@
 #endif
 
 #include <stdio.h>
-#include <gtypes.h>
+#include "gtypes.h"
 #include "OutputDev.h"
 
 class GfxState;
@@ -29,7 +29,7 @@ class TextString {
 public:
 
   // Constructor.
-  TextString(GfxState *state);
+  TextString(GfxState *state, GBool hexCodes1);
 
   // Destructor.
   ~TextString();
@@ -48,8 +48,8 @@ private:
   double *xRight;		// right-hand x coord of each char
   TextString *yxNext;		// next string in y-major order
   TextString *xyNext;		// next string in x-major order
+  GBool hexCodes;		// subsetted font with hex char codes
 
-  friend class TextBlock;
   friend class TextPage;
 };
 
@@ -67,7 +67,7 @@ public:
   ~TextPage();
 
   // Begin a new string.
-  void beginString(GfxState *state, GString *s);
+  void beginString(GfxState *state, GString *s, GBool hex1);
 
   // Add a character to the current string.
   void addChar(GfxState *state, double x, double y,
@@ -79,11 +79,11 @@ public:
   // Coalesce strings that look like parts of the same line.
   void coalesce();
 
-  // Find a string.  If <top> is true, starts looking at <xMin>,<yMin>;
-  // otherwise starts looking at top of page.  If <bottom> is true,
-  // stops looking at <xMax>,<yMax>; otherwise stops looking at bottom
-  // of page.  If found, sets the text bounding rectange and returns
-  // true; otherwise returns false.
+  // Find a string.  If <top> is true, starts looking at top of page;
+  // otherwise starts looking at <xMin>,<yMin>.  If <bottom> is true,
+  // stops looking at bottom of page; otherwise stops looking at
+  // <xMax>,<yMax>.  If found, sets the text bounding rectange and
+  // returns true; otherwise returns false.
   GBool findText(char *s, GBool top, GBool bottom,
 		 double *xMin, double *yMin,
 		 double *xMax, double *yMax);
@@ -144,6 +144,9 @@ public:
   // End a page.
   virtual void endPage();
 
+  //----- update text state
+  virtual void updateFont(GfxState *state);
+
   //----- text drawing
   virtual void beginString(GfxState *state, GString *s);
   virtual void endString(GfxState *state);
@@ -152,11 +155,11 @@ public:
 
   //----- special access
 
-  // Find a string.  If <top> is true, starts looking at <xMin>,<yMin>;
-  // otherwise starts looking at top of page.  If <bottom> is true,
-  // stops looking at <xMax>,<yMax>; otherwise stops looking at bottom
-  // of page.  If found, sets the text bounding rectange and returns
-  // true; otherwise returns false.
+  // Find a string.  If <top> is true, starts looking at top of page;
+  // otherwise starts looking at <xMin>,<yMin>.  If <bottom> is true,
+  // stops looking at bottom of page; otherwise stops looking at
+  // <xMax>,<yMax>.  If found, sets the text bounding rectange and
+  // returns true; otherwise returns false.
   GBool findText(char *s, GBool top, GBool bottom,
 		 double *xMin, double *yMin,
 		 double *xMax, double *yMax);
@@ -166,6 +169,7 @@ private:
   FILE *f;			// text file
   GBool needClose;		// need to close the file?
   TextPage *text;		// text for the current page
+  GBool hexCodes;		// subsetted font with hex char codes
   GBool ok;			// set up ok?
 };
 

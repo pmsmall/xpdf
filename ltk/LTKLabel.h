@@ -15,8 +15,8 @@
 
 #include <stddef.h>
 #include <X11/Xlib.h>
-#include <GString.h>
-#include <LTKWidget.h>
+#include "GString.h"
+#include "LTKWidget.h"
 
 //------------------------------------------------------------------------
 // label size constraint

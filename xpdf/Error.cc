@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdarg.h>
-#include <gtypes.h>
+#include "gtypes.h"
 #include "Params.h"
 #include "Error.h"
 
@@ -28,7 +28,7 @@ void errorInit() {
     errFile = stderr;
 }
 
-void error(int pos, char *msg, ...) {
+void CDECL error(int pos, char *msg, ...) {
   va_list args;
 
   if (printCommands)

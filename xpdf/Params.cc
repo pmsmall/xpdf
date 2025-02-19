@@ -10,10 +10,10 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include <gtypes.h>
-#include <gmem.h>
-#include <GString.h>
-#include <gfile.h>
+#include "gtypes.h"
+#include "gmem.h"
+#include "GString.h"
+#include "gfile.h"
 #include "Params.h"
 
 char **fontPath = NULL;

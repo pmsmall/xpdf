@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include <parseargs.h>
-#include <GString.h>
-#include <gmem.h>
+#include "parseargs.h"
+#include "GString.h"
+#include "gmem.h"
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"

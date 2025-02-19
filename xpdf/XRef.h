@@ -14,7 +14,7 @@
 #endif
 
 #include <stdio.h>
-#include <gtypes.h>
+#include "gtypes.h"
 #include "Object.h"
 
 class Dict;
@@ -42,6 +42,9 @@ public:
   // Is xref table valid?
   GBool isOk() { return ok; }
 
+  // Is the file encrypted?
+  GBool isEncrypted() { return gFalse; }
+
   // Are printing and copying allowed?  If not, print an error message.
   GBool okToPrint();
   GBool okToCopy();
@@ -51,6 +54,9 @@ public:
 
   // Fetch an indirect reference.
   Object *fetch(int num, int gen, Object *obj);
+
+  // Return the document's Info dictionary (if any).
+  Object *getDocInfo(Object *obj);
 
 private:
 

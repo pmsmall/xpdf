@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include <parseargs.h>
-#include <GString.h>
-#include <gmem.h>
+#include "parseargs.h"
+#include "GString.h"
+#include "gmem.h"
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -29,6 +29,7 @@
 static int firstPage = 1;
 static int lastPage = 0;
 static GBool noEmbedFonts = gFalse;
+static GBool doForm = gFalse;
 GBool printCommands = gFalse;
 static GBool printHelp = gFalse;
 
@@ -37,10 +38,16 @@ static ArgDesc argDesc[] = {
    "first page to print"},
   {"-l",      argInt,      &lastPage,      0,
    "last page to print"},
-  {"-level1",   argFlag,        &psOutLevel1,   0,
+  {"-paperw", argInt,      &paperWidth,    0,
+   "paper width, in points"},
+  {"-paperh", argInt,      &paperHeight,   0,
+   "paper height, in points"},
+  {"-level1", argFlag,     &psOutLevel1,   0,
    "generate Level 1 PostScript"},
   {"-noemb",  argFlag,     &noEmbedFonts,  0,
    "don't embed Type 1 fonts"},
+  {"-form",   argFlag,     &doForm,        0,
+   "generate a PostScript form"},
   {"-h",      argFlag,     &printHelp,     0,
    "print usage information"},
   {"-help",   argFlag,     &printHelp,     0,
@@ -62,6 +69,10 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "pdftops version %s\n", xpdfVersion);
     fprintf(stderr, "%s\n", xpdfCopyright);
     printUsage("pdftops", "<PDF-file> [<PS-file>]", argDesc);
+    exit(1);
+  }
+  if (doForm && psOutLevel1) {
+    fprintf(stderr, "Error: forms are only available with Level 2 output.\n");
     exit(1);
   }
   fileName = new GString(argv[1]);
@@ -96,11 +107,13 @@ int main(int argc, char *argv[]) {
     firstPage = 1;
   if (lastPage < 1 || lastPage > doc->getNumPages())
     lastPage = doc->getNumPages();
+  if (doForm)
+    lastPage = firstPage;
 
   // write PostScript file
   if (doc->okToPrint()) {
     psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
-			    firstPage, lastPage, !noEmbedFonts);
+			    firstPage, lastPage, !noEmbedFonts, doForm);
     if (psOut->isOk())
       doc->displayPages(psOut, firstPage, lastPage, 72, 0);
     delete psOut;

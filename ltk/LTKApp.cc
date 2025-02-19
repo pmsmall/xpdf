@@ -13,8 +13,6 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/time.h>
 #ifdef HAVE_STRINGS_H
 // needed by AIX for bzero() declaration for FD_ZERO
 #include <strings.h>
@@ -24,21 +22,42 @@
 #include <bstring.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
+// needed by some systems for fd_set
 #include <sys/select.h>
+#endif
+#ifdef HAVE_SYS_BSDTYPES_H
+// needed by some systems for fd_set
+#include <sys/bsdtypes.h>
 #endif
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
-#include <gtypes.h>
-#include <LTKApp.h>
-#include <LTKResources.h>
-#include <LTKWindow.h>
-#include <LTKMenu.h>
-#include <LTKMisc.h>
-#include <LTKWidget.h>
+#include "gtypes.h"
+#include "LTKApp.h"
+#include "LTKResources.h"
+#include "LTKWindow.h"
+#include "LTKMenu.h"
+#include "LTKMisc.h"
+#include "LTKWidget.h"
 
-#if defined(VMS) && defined(__DECCXX) && (_VMS_VER < 70000000)
+#ifdef XlibSpecificationRelease
+#if XlibSpecificationRelease < 5
+typedef char *XPointer;
+#endif
+#else
+typedef char *XPointer;
+#endif
+
+#ifdef VMS
+extern "C" int XMultiplexInput(int num_displays,
+			       Display *displays[],
+			       unsigned long ef_mask,
+			       unsigned long timeout,
+			       unsigned long options,
+			       long *retval_pointer);
+#if defined(__DECCXX) && (_VMS_VER < 70000000)
 extern "C" int gettimeofday (struct timeval *__tp, void *__tzp);
+#endif
 #endif
 
 //------------------------------------------------------------------------
@@ -77,7 +96,8 @@ LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
   ltkGetCmdLineResources(&cmdLineDB, opts, numOpts, appName, argc, argv);
   displayName = ltkGetStringResource(cmdLineDB, appName, "display", "");
   if (!(display = XOpenDisplay(displayName->getCString()))) {
-    ltkError("Cannot connect to X server %s\n", XDisplayName(NULL));
+    ltkError("Cannot connect to X server %s\n",
+	     XDisplayName(displayName->getCString()));
     exit(1);
   }
   delete displayName;
@@ -430,9 +450,9 @@ void LTKApp::doEvent(GBool wait) {
 			       &typeRet, &formatRet, &length, &left,
 			       &bufPtr) != Success)
 	  break;
-	str->append((char *)bufPtr, length);
-	XFree(bufPtr);
-	i += length;
+	str->append((char *)bufPtr, (int)length);
+	XFree((XPointer)bufPtr);
+	i += (int)length;
       } while (left > 0);
       win->getPasteWidget()->paste(str);
       delete str;

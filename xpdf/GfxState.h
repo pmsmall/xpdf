@@ -13,9 +13,10 @@
 #pragma interface
 #endif
 
-#include <gtypes.h>
+#include "gtypes.h"
 
 class Object;
+class Function;
 class GfxFont;
 
 //------------------------------------------------------------------------
@@ -81,10 +82,10 @@ public:
   // Get number of components in colors of this colorspace.
   int getNumColorComps() { return numComps; }
 
-  // Return 1 if colorspace is indexed.
+  // Return true if colorspace is indexed.
   GBool isIndexed() { return indexed; }
 
-  // Get lookup table (only for indexed colrospaces).
+  // Get lookup table (only for indexed colorspaces).
   int getIndexHigh() { return indexHigh; }
   Guchar *getLookupVal(int i) { return lookup[i]; }
 
@@ -93,6 +94,7 @@ public:
 
 private:
 
+  Function *sepFunc;		// separation tint transform function
   GfxColorMode mode;		// color mode
   GBool indexed;		// set for indexed colorspaces
   int numComps;			// number of components in colors
@@ -103,6 +105,43 @@ private:
 
   GfxColorSpace(GfxColorSpace *colorSpace);
   void setMode(Object *colorSpace);
+};
+
+//------------------------------------------------------------------------
+// Function
+//------------------------------------------------------------------------
+
+class Function {
+public:
+
+  // Create a PDF function object.
+  Function(Object *funcObj);
+
+  ~Function();
+  
+  Function *copy() { return new Function(this); }
+
+  GBool isOk() { return ok; }
+
+  // Return size of input and output tuples.
+  int getInputSize() { return m; }
+  int getOutputSize() { return n; }
+
+  // Transform an input tuple into an output tuple.
+  void transform(double *in, double *out);
+
+private:
+
+  Function(Function *func);
+
+  int m, n;
+  double domain[1][2];
+  double range[4][2];
+  int sampleSize[1];
+  double encode[1][2];
+  double decode[4][2];
+  double *samples;
+  GBool ok;
 };
 
 //------------------------------------------------------------------------
@@ -125,7 +164,7 @@ public:
   GfxColorSpace *getColorSpace() { return colorSpace; }
 
   // Get stream decoding info.
-  int getNumPixelComps() { return colorSpace->getNumPixelComps(); }
+  int getNumPixelComps() { return numComps; }
   int getBits() { return bits; }
 
   // Get decode table.
@@ -139,10 +178,10 @@ private:
 
   GfxColorSpace *colorSpace;	// the image colorspace
   int bits;			// bits per component
-  int maxPixel;			// max pixel value
-  int decodeComps;		// number of components in decode array
-  GBool simpleDecode;		// set if decode range is 0-1
-  GBool indexDecode;		// set if decode range is 0 - 2^n-1
+  int numComps;			// number of components in a pixel
+  GBool indexed;		// set for indexed color space
+  GfxColorMode mode;		// color mode
+  double (*lookup)[4];		// lookup table
   double decodeLow[4];		// minimum values for each component
   double decodeRange[4];	// max - min value for each component
   GBool ok;
@@ -258,8 +297,8 @@ public:
   // Construct a default GfxState, for a device with resolution <dpi>,
   // page box (<x1>,<y1>)-(<x2>,<y2>), page rotation <rotate>, and
   // coordinate system specified by <upsideDown>.
-  GfxState(int dpi, int px1a, int py1a, int px2a, int py2a, int rotate,
-	   GBool upsideDown);
+  GfxState(int dpi, double px1a, double py1a, double px2a, double py2a,
+	   int rotate, GBool upsideDown);
 
   // Destructor.
   ~GfxState();
@@ -269,12 +308,12 @@ public:
 
   // Accessors.
   double *getCTM() { return ctm; }
-  int getX1() { return px1; }
-  int getY1() { return py1; }
-  int getX2() { return px2; }
-  int getY2() { return py2; }
-  int getPageWidth() { return pageWidth; }
-  int getPageHeight() { return pageHeight; }
+  double getX1() { return px1; }
+  double getY1() { return py1; }
+  double getX2() { return px2; }
+  double getY2() { return py2; }
+  double getPageWidth() { return pageWidth; }
+  double getPageHeight() { return pageHeight; }
   GfxColor *getFillColor() { return &fillColor; }
   GfxColor *getStrokeColor() { return &strokeColor; }
   double getLineWidth() { return lineWidth; }
@@ -394,8 +433,8 @@ public:
 private:
 
   double ctm[6];		// coord transform matrix
-  int px1, py1, px2, py2;	// page corners (user coords)
-  int pageWidth, pageHeight;	// page size (pixels)
+  double px1, py1, px2, py2;	// page corners (user coords)
+  double pageWidth, pageHeight;	// page size (pixels)
 
   GfxColorSpace *fillColorSpace;   // fill color space
   GfxColorSpace *strokeColorSpace; // stroke color space

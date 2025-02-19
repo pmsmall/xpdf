@@ -15,9 +15,9 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <LTKWindow.h>
-#include <LTKButton.h>
-#include <LTKBorder.h>
+#include "LTKWindow.h"
+#include "LTKButton.h"
+#include "LTKBorder.h"
 
 LTKButton::LTKButton(char *name1, int widgetNum1, char *label1,
 		     LTKButtonAction action1, LTKBoolValCbk pressCbk1):

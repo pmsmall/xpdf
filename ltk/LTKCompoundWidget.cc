@@ -17,10 +17,10 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <LTKApp.h>
-#include <LTKWindow.h>
-#include <LTKBox.h>
-#include <LTKCompoundWidget.h>
+#include "LTKApp.h"
+#include "LTKWindow.h"
+#include "LTKBox.h"
+#include "LTKCompoundWidget.h"
 
 //------------------------------------------------------------------------
 // LTKCompoundWidget

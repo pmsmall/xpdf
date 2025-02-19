@@ -16,12 +16,12 @@
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
-#include <gtypes.h>
-#include <GString.h>
-#include <gfile.h>
-#include <LTKConfig.h>
-#include <LTKMisc.h>
-#include <LTKResources.h>
+#include "gtypes.h"
+#include "GString.h"
+#include "gfile.h"
+#include "LTKConfig.h"
+#include "LTKMisc.h"
+#include "LTKResources.h"
 
 void ltkGetCmdLineResources(XrmDatabase *cmdLineDB, XrmOptionDescRec *opts,
 			    int numOpts, GString *appName,

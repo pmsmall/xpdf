@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include <GString.h>
+#include "GString.h"
 #include "config.h"
 #include "Page.h"
 #include "Catalog.h"
@@ -51,12 +51,12 @@ PDFDoc::PDFDoc(GString *fileName1) {
     return;
   }
 #else
-  if (!(file = fopen(fileName->getCString(), FOPEN_READ_BIN))) {
+  if (!(file = fopen(fileName->getCString(), "rb"))) {
     fileName2 = fileName->copy();
     fileName2->lowerCase();
-    if (!(file = fopen(fileName2->getCString(), FOPEN_READ_BIN))) {
+    if (!(file = fopen(fileName2->getCString(), "rb"))) {
       fileName2->upperCase();
-      if (!(file = fopen(fileName2->getCString(), FOPEN_READ_BIN))) {
+      if (!(file = fopen(fileName2->getCString(), "rb"))) {
 	error(-1, "Couldn't open file '%s'", fileName->getCString());
 	delete fileName2;
 	return;
@@ -149,7 +149,7 @@ GBool PDFDoc::saveAs(GString *name) {
   char buf[4096];
   int n;
 
-  if (!(f = fopen(name->getCString(), FOPEN_WRITE_BIN))) {
+  if (!(f = fopen(name->getCString(), "wb"))) {
     error(-1, "Couldn't open file '%s'", name->getCString());
     return gFalse;
   }

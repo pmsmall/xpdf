@@ -287,7 +287,6 @@ Object *Lexer::getObj(Object *obj) {
     while ((c = lookChar()) != EOF && !(c < 128 && endOfNameChars[c])) {
       getChar();
       if (c == '#') {
-	c = 0;
 	c2 = lookChar();
 	if (c2 >= '0' && c2 <= '9')
 	  c = c2 - '0';

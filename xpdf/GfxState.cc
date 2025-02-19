@@ -13,7 +13,8 @@
 #include <stddef.h>
 #include <math.h>
 #include <string.h> // for memcpy()
-#include <gmem.h>
+#include "gmem.h"
+#include "Error.h"
 #include "Object.h"
 #include "GfxState.h"
 
@@ -35,6 +36,7 @@ void GfxColor::setCMYK(double c, double m, double y, double k) {
 //------------------------------------------------------------------------
 
 GfxColorSpace::GfxColorSpace(Object *colorSpace) {
+  Object csObj;
   Object obj, obj2;
   char *s;
   int x;
@@ -43,18 +45,36 @@ GfxColorSpace::GfxColorSpace(Object *colorSpace) {
   ok = gTrue;
   lookup = NULL;
 
+  // check for Separation colorspace
+  colorSpace->copy(&csObj);
+  sepFunc = NULL;
+  if (colorSpace->isArray()) {
+    colorSpace->arrayGet(0, &obj);
+    if (obj.isName("Separation")) {
+      csObj.free();
+      colorSpace->arrayGet(2, &csObj);
+      sepFunc = new Function(colorSpace->arrayGet(3, &obj2));
+      obj2.free();
+      if (!sepFunc->isOk()) {
+	delete sepFunc;
+	sepFunc = NULL;
+      }
+    }
+    obj.free();
+  }
+
   // get mode
   indexed = gFalse;
-  if (colorSpace->isName()) {
-    setMode(colorSpace);
-  } else if (colorSpace->isArray()) {
-    colorSpace->arrayGet(0, &obj);
+  if (csObj.isName()) {
+    setMode(&csObj);
+  } else if (csObj.isArray()) {
+    csObj.arrayGet(0, &obj);
     if (obj.isName("Indexed") || obj.isName("I")) {
       indexed = gTrue;
-      setMode(colorSpace->arrayGet(1, &obj2));
+      setMode(csObj.arrayGet(1, &obj2));
       obj2.free();
     } else {
-      setMode(colorSpace);
+      setMode(&csObj);
     }
     obj.free();
   } else {
@@ -65,13 +85,13 @@ GfxColorSpace::GfxColorSpace(Object *colorSpace) {
 
   // get lookup table for indexed colorspace
   if (indexed) {
-    colorSpace->arrayGet(2, &obj);
+    csObj.arrayGet(2, &obj);
     if (!obj.isInt())
       goto err2;
     indexHigh = obj.getInt();
     obj.free();
     lookup = (Guchar (*)[4])gmalloc((indexHigh + 1) * 4 * sizeof(Guchar));
-    colorSpace->arrayGet(3, &obj);
+    csObj.arrayGet(3, &obj);
     if (obj.isStream()) {
       obj.streamReset();
       for (i = 0; i <= indexHigh; ++i) {
@@ -92,15 +112,18 @@ GfxColorSpace::GfxColorSpace(Object *colorSpace) {
     obj.free();
   }
 
+  csObj.free();
   return;
 
  err2:
   obj.free();
  err1:
+  csObj.free();
   ok = gFalse;
 }
 
 GfxColorSpace::GfxColorSpace(GfxColorMode mode1) {
+  sepFunc = NULL;
   mode = mode1;
   indexed = gFalse;
   switch (mode) {
@@ -113,12 +136,18 @@ GfxColorSpace::GfxColorSpace(GfxColorMode mode1) {
 }
 
 GfxColorSpace::~GfxColorSpace() {
+  if (sepFunc)
+    delete sepFunc;
   gfree(lookup);
 }
 
 GfxColorSpace::GfxColorSpace(GfxColorSpace *colorSpace) {
   int size;
 
+  if (colorSpace->sepFunc)
+    sepFunc = colorSpace->sepFunc->copy();
+  else
+    sepFunc = NULL;
   mode = colorSpace->mode;
   indexed = colorSpace->indexed;
   numComps = colorSpace->numComps;
@@ -166,10 +195,19 @@ void GfxColorSpace::setMode(Object *colorSpace) {
 }
 
 void GfxColorSpace::getColor(double x[4], GfxColor *color) {
+  double y[4];
   Guchar *p;
 
+  if (sepFunc) {
+    sepFunc->transform(x, y);
+  } else {
+    y[0] = x[0];
+    y[1] = x[1];
+    y[2] = x[2];
+    y[3] = x[3];
+  }
   if (indexed) {
-    p = lookup[(int)(x[0] + 0.5)];
+    p = lookup[(int)(y[0] + 0.5)];
     switch (mode) {
     case colorGray:
       color->setGray(p[0] / 255.0);
@@ -184,15 +222,289 @@ void GfxColorSpace::getColor(double x[4], GfxColor *color) {
   } else {
     switch (mode) {
     case colorGray:
-      color->setGray(x[0]);
+      color->setGray(y[0]);
       break;
     case colorCMYK:
-      color->setCMYK(x[0], x[1], x[2], x[3]);
+      color->setCMYK(y[0], y[1], y[2], y[3]);
       break;
     case colorRGB:
-      color->setRGB(x[0], x[1], x[2]);
+      color->setRGB(y[0], y[1], y[2]);
       break;
     }
+  }
+}
+
+//------------------------------------------------------------------------
+// Function
+//------------------------------------------------------------------------
+
+Function::Function(Object *funcObj) {
+  Stream *str;
+  Dict *dict;
+  int nSamples, sampleBits;
+  double sampleMul;
+  Object obj1, obj2;
+  Guint buf, bitMask;
+  int bits;
+  int s;
+  int i;
+
+  ok = gFalse;
+  samples = NULL;
+
+  if (!funcObj->isStream()) {
+    error(-1, "Expected function dictionary");
+    goto err3;
+  }
+  str = funcObj->getStream();
+  dict = str->getDict();
+
+  //----- FunctionType
+  if (!dict->lookup("FunctionType", &obj1)->isInt() ||
+      obj1.getInt() != 0) {
+    error(-1, "Unknown function type");
+    goto err2;
+  }
+  obj1.free();
+
+  //----- Domain
+  if (!dict->lookup("Domain", &obj1)->isArray()) {
+    error(-1, "Function is missing domain");
+    goto err2;
+  }
+  m = obj1.arrayGetLength() / 2;
+  if (m > 4) {
+    error(-1, "Functions with more than 1 input are unsupported");
+    goto err2;
+  }
+  for (i = 0; i < m; ++i) {
+    obj1.arrayGet(2*i, &obj2);
+    if (!obj2.isNum()) {
+      error(-1, "Illegal value in function domain array");
+      goto err1;
+    }
+    domain[i][0] = obj2.getNum();
+    obj2.free();
+    obj1.arrayGet(2*i+1, &obj2);
+    if (!obj2.isNum()) {
+      error(-1, "Illegal value in function domain array");
+      goto err1;
+    }
+    domain[i][1] = obj2.getNum();
+    obj2.free();
+  }
+  obj1.free();
+
+  //----- Range
+  if (!dict->lookup("Range", &obj1)->isArray()) {
+    error(-1, "Function is missing range");
+    goto err2;
+  }
+  n = obj1.arrayGetLength() / 2;
+  if (n > 4) {
+    error(-1, "Functions with more than 4 outputs are unsupported");
+    goto err2;
+  }
+  for (i = 0; i < n; ++i) {
+    obj1.arrayGet(2*i, &obj2);
+    if (!obj2.isNum()) {
+      error(-1, "Illegal value in function range array");
+      goto err1;
+    }
+    range[i][0] = obj2.getNum();
+    obj2.free();
+    obj1.arrayGet(2*i+1, &obj2);
+    if (!obj2.isNum()) {
+      error(-1, "Illegal value in function range array");
+      goto err1;
+    }
+    range[i][1] = obj2.getNum();
+    obj2.free();
+  }
+  obj1.free();
+
+  //----- Size
+  if (!dict->lookup("Size", &obj1)->isArray() ||
+      obj1.arrayGetLength() != m) {
+    error(-1, "Function has missing or invalid size array");
+    goto err2;
+  }
+  for (i = 0; i < m; ++i) {
+    obj1.arrayGet(i, &obj2);
+    if (!obj2.isInt()) {
+      error(-1, "Illegal value in function size array");
+      goto err1;
+    }
+    sampleSize[i] = obj2.getInt();
+    obj2.free();
+  }
+  obj1.free();
+
+  //----- BitsPerSample
+  if (!dict->lookup("BitsPerSample", &obj1)->isInt()) {
+    error(-1, "Function has missing or invalid BitsPerSample");
+    goto err2;
+  }
+  sampleBits = obj1.getInt();
+  sampleMul = 1.0 / (double)((1 << sampleBits) - 1);
+  obj1.free();
+
+  //----- Encode
+  if (dict->lookup("Encode", &obj1)->isArray() &&
+      obj1.arrayGetLength() == 2*m) {
+    for (i = 0; i < m; ++i) {
+      obj1.arrayGet(2*i, &obj2);
+      if (!obj2.isNum()) {
+	error(-1, "Illegal value in function encode array");
+	goto err1;
+      }
+      encode[i][0] = obj2.getNum();
+      obj2.free();
+      obj1.arrayGet(2*i+1, &obj2);
+      if (!obj2.isNum()) {
+	error(-1, "Illegal value in function encode array");
+	goto err1;
+      }
+      encode[i][1] = obj2.getNum();
+      obj2.free();
+    }
+  } else {
+    for (i = 0; i < m; ++i) {
+      encode[i][0] = 0;
+      encode[i][1] = sampleSize[i] - 1;
+    }
+  }
+  obj1.free();
+
+  //----- Decode
+  if (dict->lookup("Decode", &obj1)->isArray() &&
+      obj1.arrayGetLength() == 2*n) {
+    for (i = 0; i < n; ++i) {
+      obj1.arrayGet(2*i, &obj2);
+      if (!obj2.isNum()) {
+	error(-1, "Illegal value in function decode array");
+	goto err1;
+      }
+      decode[i][0] = obj2.getNum();
+      obj2.free();
+      obj1.arrayGet(2*i+1, &obj2);
+      if (!obj2.isNum()) {
+	error(-1, "Illegal value in function decode array");
+	goto err1;
+      }
+      decode[i][1] = obj2.getNum();
+      obj2.free();
+    }
+  } else {
+    for (i = 0; i < n; ++i) {
+      decode[i][0] = range[i][0];
+      decode[i][1] = range[i][1];
+    }
+  }
+  obj1.free();
+
+  //----- samples
+  nSamples = n;
+  for (i = 0; i < m; ++i)
+    nSamples *= sampleSize[i];
+  samples = (double *)gmalloc(nSamples * sizeof(double));
+  buf = 0;
+  bits = 0;
+  bitMask = (1 << sampleBits) - 1;
+  str->reset();
+  for (i = 0; i < nSamples; ++i) {
+    if (sampleBits == 8) {
+      s = str->getChar();
+    } else if (sampleBits == 16) {
+      s = str->getChar();
+      s = (s << 8) + str->getChar();
+    } else if (sampleBits == 32) {
+      s = str->getChar();
+      s = (s << 8) + str->getChar();
+      s = (s << 8) + str->getChar();
+      s = (s << 8) + str->getChar();
+    } else {
+      while (bits < sampleBits) {
+	buf = (buf << 8) | (str->getChar() & 0xff);
+	bits += 8;
+      }
+      s = (buf >> (bits - sampleBits)) & bitMask;
+      bits -= sampleBits;
+    }
+    samples[i] = (double)s * sampleMul;
+  }
+
+  ok = gTrue;
+  return;
+
+ err1:
+  obj2.free();
+ err2:
+  obj1.free();
+ err3:
+  return;
+}
+
+Function::Function(Function *func) {
+  int nSamples, i;
+
+  m = func->m;
+  n = func->n;
+  memcpy(domain, func->domain, sizeof(domain));
+  memcpy(range, func->range, sizeof(range));
+  memcpy(sampleSize, func->sampleSize, sizeof(sampleSize));
+  memcpy(encode, func->encode, sizeof(encode));
+  memcpy(decode, func->decode, sizeof(decode));
+
+  nSamples = n;
+  for (i = 0; i < m; ++i)
+    nSamples *= sampleSize[i];
+  samples = (double *)gmalloc(nSamples * sizeof(double));
+  memcpy(samples, func->samples, nSamples * sizeof(double));
+
+  ok = gTrue;
+}
+
+Function::~Function() {
+  if (samples)
+    gfree(samples);
+}
+
+void Function::transform(double *in, double *out) {
+  double e[4];
+  double s;
+  double x0, x1;
+  int e0, e1;
+  double efrac;
+  int i;
+
+  // map input values into sample array
+  for (i = 0; i < m; ++i) {
+    e[i] = ((in[i] - domain[i][0]) / (domain[i][1] - domain[i][0])) *
+           (encode[i][1] - encode[i][0]) + encode[i][0];
+    if (e[i] < 0)
+      e[i] = 0;
+    else if (e[i] > sampleSize[i] - 1)
+      e[i] = sampleSize[i] - 1;
+  }
+
+  for (i = 0; i < n; ++i) {
+
+    // m-linear interpolation
+    // (only m=1 is currently supported)
+    e0 = (int)floor(e[0]);
+    e1 = (int)ceil(e[0]);
+    efrac = e[0] - e0;
+    x0 = samples[e0 * n + i];
+    x1 = samples[e1 * n + i];
+    s = (1 - efrac) * x0 + efrac * x1;
+
+    // map output values to range
+    out[i] = s * (decode[i][1] - decode[i][0]) + decode[i][0];
+    if (out[i] < range[i][0])
+      out[i] = range[i][0];
+    else if (out[i] > range[i][1])
+      out[i] = range[i][1];
   }
 }
 
@@ -202,8 +514,11 @@ void GfxColorSpace::getColor(double x[4], GfxColor *color) {
 
 GfxImageColorMap::GfxImageColorMap(int bits1, Object *decode,
 				   GfxColorSpace *colorSpace1) {
+  GfxColor color;
+  double x[4];
+  int maxPixel;
   Object obj;
-  int i;
+  int i, j;
 
   ok = gTrue;
 
@@ -211,31 +526,29 @@ GfxImageColorMap::GfxImageColorMap(int bits1, Object *decode,
   bits = bits1;
   maxPixel = (1 << bits) - 1;
   colorSpace = colorSpace1;
+  mode = colorSpace->getMode();
 
   // get decode map
   if (decode->isNull()) {
     if (colorSpace->isIndexed()) {
-      simpleDecode = gFalse;
-      indexDecode = gTrue;
-      decodeComps = 1;
+      indexed = gTrue;
+      numComps = 1;
       decodeLow[0] = 0;
-      decodeRange[0] = (1 << bits1) - 1;
+      decodeRange[0] = maxPixel;
     } else {
-      simpleDecode = gTrue;
-      indexDecode = gFalse;
-      decodeComps = colorSpace->getNumPixelComps();
-      for (i = 0; i < decodeComps; ++i) {
+      indexed = gFalse;
+      numComps = colorSpace->getNumPixelComps();
+      for (i = 0; i < numComps; ++i) {
 	decodeLow[i] = 0;
 	decodeRange[i] = 1;
       }
     }
   } else if (decode->isArray()) {
-    decodeComps = decode->arrayGetLength() / 2;
-    if (decodeComps != colorSpace->getNumPixelComps())
+    numComps = decode->arrayGetLength() / 2;
+    if (numComps != colorSpace->getNumPixelComps())
       goto err1;
-    simpleDecode = gTrue;
-    indexDecode = gFalse;
-    for (i = 0; i < decodeComps; ++i) {
+    indexed = colorSpace->isIndexed();
+    for (i = 0; i < numComps; ++i) {
       decode->arrayGet(2*i, &obj);
       if (!obj.isNum())
 	goto err2;
@@ -246,16 +559,25 @@ GfxImageColorMap::GfxImageColorMap(int bits1, Object *decode,
 	goto err2;
       decodeRange[i] = obj.getNum() - decodeLow[i];
       obj.free();
-      if (decodeLow[i] != 0 || decodeRange[i] != 1)
-	simpleDecode = gFalse;
-    }
-    if (colorSpace->isIndexed() &&
-	decodeLow[0] == 0 && decodeRange[0] == (1 << bits) - 1) {
-      simpleDecode = gFalse;
-      indexDecode = gTrue;
     }
   } else {
     goto err1;
+  }
+
+  // construct lookup table
+  lookup = (double (*)[4])gmalloc((maxPixel + 1) * 4 * sizeof(double));
+  if (indexed) {
+    for (i = 0; i <= maxPixel; ++i) {
+      x[0] = (double)i;
+      colorSpace->getColor(x, &color);
+      lookup[i][0] = color.getR();
+      lookup[i][1] = color.getG();
+      lookup[i][2] = color.getB();
+    }
+  } else {
+    for (i = 0; i <= maxPixel; ++i)
+      for (j = 0; j < numComps; ++j)
+	lookup[i][j] = decodeLow[j] + (i * decodeRange[j]) / maxPixel;
   }
 
   return;
@@ -268,22 +590,29 @@ GfxImageColorMap::GfxImageColorMap(int bits1, Object *decode,
 
 GfxImageColorMap::~GfxImageColorMap() {
   delete colorSpace;
+  gfree(lookup);
 }
 
 void GfxImageColorMap::getColor(Guchar x[4], GfxColor *color) {
-  double y[4];
-  int i;
+  double *p;
 
-  if (simpleDecode) {
-    for (i = 0; i < decodeComps; ++i)
-      y[i] = (double)x[i] / maxPixel;
-  } else if (indexDecode) {
-    y[0] = (double)x[0];
+  if (indexed) {
+    p = lookup[x[0]];
+    color->setRGB(p[0], p[1], p[2]);
   } else {
-    for (i = 0; i < decodeComps; ++i)
-      y[i] = decodeLow[i] + (x[i] * decodeRange[i]) / maxPixel;
+    switch (mode) {
+    case colorGray:
+      color->setGray(lookup[x[0]][0]);
+      break;
+    case colorCMYK:
+      color->setCMYK(lookup[x[0]][0], lookup[x[1]][1],
+		     lookup[x[2]][2], lookup[x[3]][3]);
+      break;
+    case colorRGB:
+      color->setRGB(lookup[x[0]][0], lookup[x[1]][1], lookup[x[2]][2]);
+      break;
+    }
   }
-  colorSpace->getColor(y, color);
 }
 
 //------------------------------------------------------------------------
@@ -421,8 +750,8 @@ void GfxPath::curveTo(double x1, double y1, double x2, double y2,
 // GfxState
 //------------------------------------------------------------------------
 
-GfxState::GfxState(int dpi, int px1a, int py1a, int px2a, int py2a, int rotate,
-		   GBool upsideDown) {
+GfxState::GfxState(int dpi, double px1a, double py1a, double px2a, double py2a,
+		   int rotate, GBool upsideDown) {
   double k;
 
   px1 = px1a;

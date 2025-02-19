@@ -17,9 +17,9 @@
 
 #include <stddef.h>
 #include <X11/Xlib.h>
-#include <gtypes.h>
-#include <GString.h>
-#include <LTKWindow.h>
+#include "gtypes.h"
+#include "GString.h"
+#include "LTKWindow.h"
 
 //------------------------------------------------------------------------
 // callback types

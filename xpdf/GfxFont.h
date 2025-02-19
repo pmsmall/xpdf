@@ -13,8 +13,8 @@
 #pragma interface
 #endif
 
-#include <gtypes.h>
-#include <GString.h>
+#include "gtypes.h"
+#include "GString.h"
 #include "Object.h"
 
 class Dict;
@@ -58,6 +58,46 @@ private:
 };
 
 //------------------------------------------------------------------------
+// GfxFontCharSet16
+//------------------------------------------------------------------------
+
+enum GfxFontCharSet16 {
+  font16AdobeJapan12			// Adobe-Japan1-2
+};
+
+//------------------------------------------------------------------------
+// GfxFontEncoding16
+//------------------------------------------------------------------------
+
+struct GfxFontEncoding16 {
+  Guchar codeLen[256];		// length of codes, in bytes, indexed by
+				//   first byte of code
+  Gushort map1[256];		// one-byte code mapping:
+				//   map1[code] --> 16-bit char selector
+  Gushort *map2;		// two-byte code mapping
+				//   map2[2*i]   --> first code in range
+				//   map2[2*i+1] --> 16-bit char selector
+				//                   for map2[2*i]
+  int map2Len;			// length of map2 array (divided by 2)
+};
+
+//------------------------------------------------------------------------
+// GfxFontWidths16
+//------------------------------------------------------------------------
+
+struct GfxFontWidthExcep {
+  int first;			// chars <first>..<last> have
+  int last;			//   width <width>
+  double width;
+};
+
+struct GfxFontWidths16 {
+  double defWidth;		// default char width
+  GfxFontWidthExcep *exceps;	// exceptions
+  int numExceps;		// number of valid entries in exceps
+};
+
+//------------------------------------------------------------------------
 // GfxFont
 //------------------------------------------------------------------------
 
@@ -71,7 +111,8 @@ enum GfxFontType {
   fontUnknownType,
   fontType1,
   fontType3,
-  fontTrueType
+  fontTrueType,
+  fontType0
 };
 
 class GfxFont {
@@ -98,6 +139,9 @@ public:
   // Get font type.
   GfxFontType getType() { return type; }
 
+  // Does this font use 16-bit characters?
+  GBool is16Bit() { return is16; }
+
   // Get embedded font ID, i.e., a ref for the font file stream.
   // Returns false if there is no embedded font.
   GBool getEmbeddedFontID(Ref *embID)
@@ -120,15 +164,21 @@ public:
   GBool isItalic() { return flags & fontItalic; }
   GBool isBold() { return flags & fontBold; }
 
-  // Get width of a character.
+  // Get width of a character or string.
   double getWidth(Guchar c) { return widths[c]; }
   double getWidth(GString *s);
+  double getWidth16(int c);
+  double getWidth16(GString *s);
 
   // Return the character name associated with <code>.
   char *getCharName(int code) { return encoding->getCharName(code); }
 
   // Return the code associated with <name>.
   int getCharCode(char *charName) { return encoding->getCharCode(charName); }
+
+  // Return the 16-bit character set and encoding.
+  GfxFontCharSet16 getCharSet16() { return enc16.charSet; }
+  GfxFontEncoding16 *getEncoding16() { return enc16.enc; }
 
   // Return the font matrix.
   double *getFontMatrix() { return fontMat; }
@@ -141,19 +191,29 @@ private:
   void getType1Encoding(Stream *str);
   void makeWidths(Dict *fontDict, GfxFontEncoding *builtinEncoding,
 		  Gushort *builtinWidths);
-  GBool getTrueTypeWidths();
+  void getType0EncAndWidths(Dict *fontDict);
 
   GString *tag;			// PDF font tag
   Ref id;			// reference (used as unique ID)
   GString *name;		// font name
   int flags;			// font descriptor flags
   GfxFontType type;		// type of font
+  GBool is16;			// set if font uses 16-bit chars
   GString *embFontName;		// name of embedded font
   Ref embFontID;		// ref to embedded font file stream
   GString *extFontFile;		// external font file name
   double fontMat[6];		// font matrix
-  double widths[256];		// width of each char
-  GfxFontEncoding *encoding;	// font encoding
+  union {
+    GfxFontEncoding *encoding;	// 8-bit font encoding
+    struct {
+      GfxFontCharSet16 charSet;	// 16-bit character set
+      GfxFontEncoding16 *enc;	// 16-bit encoding (CMap)
+    } enc16;
+  };
+  union {
+    double widths[256];		// width of each char for 8-bit font
+    GfxFontWidths16 widths16;	// char widths for 16-bit font
+  };
 };
 
 //------------------------------------------------------------------------

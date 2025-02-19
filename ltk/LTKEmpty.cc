@@ -15,8 +15,8 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <LTKWindow.h>
-#include <LTKEmpty.h>
+#include "LTKWindow.h"
+#include "LTKEmpty.h"
 
 LTKEmpty::LTKEmpty():
     LTKWidget(NULL, 0) {

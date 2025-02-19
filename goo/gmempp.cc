@@ -8,7 +8,7 @@
 //
 //========================================================================
 
-#include <gmem.h>
+#include "gmem.h"
 
 #ifdef DEBUG_MEM
 void *operator new(long size) {

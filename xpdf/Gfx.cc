@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
-#include <gmem.h>
+#include "gmem.h"
 #include "Object.h"
 #include "Array.h"
 #include "Dict.h"
@@ -189,30 +189,34 @@ Operator Gfx::opTab[] = {
 //------------------------------------------------------------------------
 
 Gfx::Gfx(OutputDev *out1, int pageNum, Dict *resDict,
-	 int dpi, int x1, int y1, int x2, int y2, GBool crop,
-	 int cropX1, int cropY1, int cropX2, int cropY2, int rotate) {
+	 int dpi, double x1, double y1, double x2, double y2, GBool crop,
+	 double cropX1, double cropY1, double cropX2, double cropY2,
+	 int rotate) {
   Object obj1;
 
+  // start the resource stack
+  res = new GfxResources(NULL);
+
   // build font dictionary
-  fonts = NULL;
+  res->fonts = NULL;
   if (resDict) {
     resDict->lookup("Font", &obj1);
     if (obj1.isDict())
-      fonts = new GfxFontDict(obj1.getDict());
+      res->fonts = new GfxFontDict(obj1.getDict());
     obj1.free();
   }
 
   // get XObject dictionary
   if (resDict)
-    resDict->lookup("XObject", &xObjDict);
+    resDict->lookup("XObject", &res->xObjDict);
   else
-    xObjDict.initNull();
+    res->xObjDict.initNull();
 
   // get colorspace dictionary
   if (resDict)
-    resDict->lookup("ColorSpace", &colorSpaceDict);
+    resDict->lookup("ColorSpace", &res->colorSpaceDict);
   else
-    colorSpaceDict.initNull();
+    res->colorSpaceDict.initNull();
 
   // initialize
   out = out1;
@@ -237,17 +241,27 @@ Gfx::Gfx(OutputDev *out1, int pageNum, Dict *resDict,
 }
 
 Gfx::~Gfx() {
+  GfxResources *resPtr;
+
   while (state->hasSaves()) {
     state = state->restore();
     out->restoreState(state);
   }
   out->endPage();
+  while (res) {
+    resPtr = res->next;
+    delete res;
+    res = resPtr;
+  }
+  if (state)
+    delete state;
+}
+
+GfxResources::~GfxResources() {
   if (fonts)
     delete fonts;
   xObjDict.free();
   colorSpaceDict.free();
-  if (state)
-    delete state;
 }
 
 void Gfx::display(Object *obj) {
@@ -431,6 +445,47 @@ int Gfx::getPos() {
   return parser->getPos();
 }
 
+GfxFont *Gfx::lookupFont(char *name) {
+  GfxFont *font;
+  GfxResources *resPtr;
+
+  for (resPtr = res; resPtr; resPtr = resPtr->next) {
+    if (resPtr->fonts) {
+      if ((font = resPtr->fonts->lookup(name)))
+	return font;
+    }
+  }
+  error(getPos(), "unknown font tag '%s'", name);
+  return NULL;
+}
+
+GBool Gfx::lookupXObject(char *name, Object *obj) {
+  GfxResources *resPtr;
+
+  for (resPtr = res; resPtr; resPtr = resPtr->next) {
+    if (resPtr->xObjDict.isDict()) {
+      if (!resPtr->xObjDict.dictLookup(name, obj)->isNull())
+	return gTrue;
+      obj->free();
+    }
+  }
+  error(getPos(), "XObject '%s' is unknown", name);
+  return gFalse;
+}
+
+void Gfx::lookupColorSpace(char *name, Object *obj) {
+  GfxResources *resPtr;
+
+  for (resPtr = res; resPtr; resPtr = resPtr->next) {
+    if (resPtr->colorSpaceDict.isDict()) {
+      if (!resPtr->colorSpaceDict.dictLookup(name, obj)->isNull())
+	return;
+      obj->free();
+    }
+  }
+  obj->initNull();
+}
+
 //------------------------------------------------------------------------
 // graphics state operators
 //------------------------------------------------------------------------
@@ -552,7 +607,7 @@ void Gfx::opSetFillColorSpace(Object args[], int numArgs) {
   GfxColorSpace *colorSpace;
   double x[4];
 
-  colorSpaceDict.dictLookup(args[0].getName(), &obj);
+  lookupColorSpace(args[0].getName(), &obj);
   if (obj.isNull())
     colorSpace = new GfxColorSpace(&args[0]);
   else
@@ -574,7 +629,7 @@ void Gfx::opSetStrokeColorSpace(Object args[], int numArgs) {
   GfxColorSpace *colorSpace;
   double x[4];
 
-  colorSpaceDict.dictLookup(args[0].getName(), &obj);
+  lookupColorSpace(args[0].getName(), &obj);
   if (obj.isNull())
     colorSpace = new GfxColorSpace(&args[0]);
   else
@@ -739,7 +794,7 @@ void Gfx::opEndPath(Object args[], int numArgs) {
 
 void Gfx::opStroke(Object args[], int numArgs) {
   if (!state->isCurPt()) {
-    error(getPos(), "No path in stroke");
+    //error(getPos(), "No path in stroke");
     return;
   }
   if (state->isPath())
@@ -749,7 +804,7 @@ void Gfx::opStroke(Object args[], int numArgs) {
 
 void Gfx::opCloseStroke(Object args[], int numArgs) {
   if (!state->isCurPt()) {
-    error(getPos(), "No path in closepath/stroke");
+    //error(getPos(), "No path in closepath/stroke");
     return;
   }
   if (state->isPath()) {
@@ -761,7 +816,7 @@ void Gfx::opCloseStroke(Object args[], int numArgs) {
 
 void Gfx::opFill(Object args[], int numArgs) {
   if (!state->isCurPt()) {
-    error(getPos(), "No path in fill");
+    //error(getPos(), "No path in fill");
     return;
   }
   if (state->isPath())
@@ -771,7 +826,7 @@ void Gfx::opFill(Object args[], int numArgs) {
 
 void Gfx::opEOFill(Object args[], int numArgs) {
   if (!state->isCurPt()) {
-    error(getPos(), "No path in eofill");
+    //error(getPos(), "No path in eofill");
     return;
   }
   if (state->isPath())
@@ -781,7 +836,7 @@ void Gfx::opEOFill(Object args[], int numArgs) {
 
 void Gfx::opFillStroke(Object args[], int numArgs) {
   if (!state->isCurPt()) {
-    error(getPos(), "No path in fill/stroke");
+    //error(getPos(), "No path in fill/stroke");
     return;
   }
   if (state->isPath()) {
@@ -793,7 +848,7 @@ void Gfx::opFillStroke(Object args[], int numArgs) {
 
 void Gfx::opCloseFillStroke(Object args[], int numArgs) {
   if (!state->isCurPt()) {
-    error(getPos(), "No path in closepath/fill/stroke");
+    //error(getPos(), "No path in closepath/fill/stroke");
     return;
   }
   if (state->isPath()) {
@@ -806,7 +861,7 @@ void Gfx::opCloseFillStroke(Object args[], int numArgs) {
 
 void Gfx::opEOFillStroke(Object args[], int numArgs) {
   if (!state->isCurPt()) {
-    error(getPos(), "No path in eofill/stroke");
+    //error(getPos(), "No path in eofill/stroke");
     return;
   }
   if (state->isPath()) {
@@ -818,7 +873,7 @@ void Gfx::opEOFillStroke(Object args[], int numArgs) {
 
 void Gfx::opCloseEOFillStroke(Object args[], int numArgs) {
   if (!state->isCurPt()) {
-    error(getPos(), "No path in closepath/eofill/stroke");
+    //error(getPos(), "No path in closepath/eofill/stroke");
     return;
   }
   if (state->isPath()) {
@@ -879,14 +934,8 @@ void Gfx::opSetCharSpacing(Object args[], int numArgs) {
 void Gfx::opSetFont(Object args[], int numArgs) {
   GfxFont *font;
 
-  if (!fonts) {
-    error(getPos(), "setfont without font dictionary");
+  if (!(font = lookupFont(args[0].getName())))
     return;
-  }
-  if (!(font = fonts->lookup(args[0].getName()))) {
-    error(getPos(), "unknown font tag '%s'", args[0].getName());
-    return;
-  }
   if (printCommands) {
     printf("  font: '%s' %g\n",
 	   font->getName() ? font->getName()->getCString() : "???",
@@ -1032,40 +1081,115 @@ void Gfx::opShowSpaceText(Object args[], int numArgs) {
 }
 
 void Gfx::doShowText(GString *s) {
+  GfxFont *font;
+  GfxFontEncoding16 *enc;
   Guchar *p;
-  int n;
+  Guchar c8;
+  int c16;
+  GString *s16;
+  int m, n;
   double dx, dy, width, w, h;
 
   if (fontChanged) {
     out->updateFont(state);
     fontChanged = gFalse;
   }
-  if (out->useDrawChar()) {
-    out->beginString(state, s);
+  font = state->getFont();
+
+  //----- 16-bit font
+  if (font->is16Bit()) {
+    enc = font->getEncoding16();
+    if (out->useDrawChar()) {
+      out->beginString(state, s);
+      s16 = NULL;
+    } else {
+      s16 = new GString("  ");
+    }
     state->textTransformDelta(0, state->getRise(), &dx, &dy);
-    for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
+    p = (Guchar *)s->getCString();
+    n = s->getLength();
+    while (n > 0) {
+      m = getNextChar16(enc, p, &c16);
       width = state->getFontSize() * state->getHorizScaling() *
-	      state->getFont()->getWidth(*p) +
+	      font->getWidth16(c16) +
 	      state->getCharSpace();
-      if (*p == ' ')
+      if (c16 == ' ')
 	width += state->getWordSpace();
       state->textTransformDelta(width, 0, &w, &h);
-      out->drawChar(state, state->getCurX() + dx, state->getCurY() + dy,
-		    w, h, *p);
+      if (out->useDrawChar()) {
+	out->drawChar16(state, state->getCurX() + dx, state->getCurY() + dy,
+			w, h, c16);
+      } else {
+	s16->setChar(0, (char)(c16 >> 8));
+	s16->setChar(1, (char)c16);
+	out->drawString16(state, s16);
+      }
+      state->textShift(width);
+      n -= m;
+      p += m;
+    }
+    if (out->useDrawChar())
+      out->endString(state);
+    else
+      delete s16;
+
+  //----- 8-bit font
+  } else {
+    if (out->useDrawChar()) {
+      out->beginString(state, s);
+      state->textTransformDelta(0, state->getRise(), &dx, &dy);
+      for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
+	c8 = *p;
+	width = state->getFontSize() * state->getHorizScaling() *
+	        font->getWidth(c8) +
+	        state->getCharSpace();
+	if (c8 == ' ')
+	  width += state->getWordSpace();
+	state->textTransformDelta(width, 0, &w, &h);
+	out->drawChar(state, state->getCurX() + dx, state->getCurY() + dy,
+		      w, h, c8);
+	state->textShift(width);
+      }
+      out->endString(state);
+    } else {
+      out->drawString(state, s);
+      width = state->getFontSize() * state->getHorizScaling() *
+	      font->getWidth(s) +
+	      s->getLength() * state->getCharSpace();
+      for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
+	if (*p == ' ')
+	  width += state->getWordSpace();
+      }
       state->textShift(width);
     }
-    out->endString(state);
-  } else {
-    out->drawString(state, s);
-    width = state->getFontSize() * state->getHorizScaling() *
-            state->getFont()->getWidth(s) +
-            s->getLength() * state->getCharSpace();
-    for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
-      if (*p == ' ')
-	width += state->getWordSpace();
-    }
-    state->textShift(width);
   }
+}
+
+int Gfx::getNextChar16(GfxFontEncoding16 *enc, Guchar *p, int *c16) {
+  int n;
+  int code;
+  int a, b, m;
+
+  n = enc->codeLen[*p];
+  if (n == 1) {
+    *c16 = enc->map1[*p];
+  } else {
+    code = (p[0] << 8) + p[1];
+    a = 0;
+    b = enc->map2Len;
+    // invariant: map2[2*a] <= code < map2[2*b]
+    while (b - a > 1) {
+      m = (a + b) / 2;
+      if (enc->map2[2*m] <= code)
+	a = m;
+      else if (enc->map2[2*m] > code)
+	b = m;
+      else
+	break;
+    }
+    *c16 = enc->map2[2*a+1] + (code - enc->map2[2*a]);
+  }
+  return n;
 }
 
 //------------------------------------------------------------------------
@@ -1075,14 +1199,10 @@ void Gfx::doShowText(GString *s) {
 void Gfx::opXObject(Object args[], int numArgs) {
   Object obj1, obj2;
 
-  if (!xObjDict.isDict()) {
-    error(getPos(), "No XObject dictionary in 'Do' operator");
+  if (!lookupXObject(args[0].getName(), &obj1))
     return;
-  }
-  xObjDict.dictLookup(args[0].getName(), &obj1);
   if (!obj1.isStream("XObject")) {
-    error(getPos(), "XObject '%s' is unknown or wrong type",
-	  args[0].getName());
+    error(getPos(), "XObject '%s' is wrong type", args[0].getName());
     obj1.free();
     return;
   }
@@ -1158,6 +1278,7 @@ void Gfx::doImage(Stream *str, GBool inlineImg) {
 
   // display a mask
   if (mask) {
+
     // check for inverted mask
     if (bits != 1)
       goto err1;
@@ -1181,14 +1302,15 @@ void Gfx::doImage(Stream *str, GBool inlineImg) {
     out->drawImageMask(state, str, width, height, invert, inlineImg);
 
   } else {
+
     // get color space and color map
     dict->lookup("ColorSpace", &obj1);
     if (obj1.isNull()) {
       obj1.free();
       dict->lookup("CS", &obj1);
     }
-    if (obj1.isName() && !colorSpaceDict.isNull()) {
-      colorSpaceDict.dictLookup(obj1.getName(), &obj2);
+    if (obj1.isName()) {
+      lookupColorSpace(obj1.getName(), &obj2);
       if (!obj2.isNull()) {
 	obj1.free();
 	obj1 = obj2;
@@ -1229,10 +1351,12 @@ void Gfx::doImage(Stream *str, GBool inlineImg) {
 
 void Gfx::doForm(Object *str) {
   Parser *oldParser;
+  GfxResources *resPtr;
   Dict *dict;
+  Dict *resDict;
   Object matrixObj, bboxObj;
   double m[6];
-  Object obj1;
+  Object obj1, obj2;
   int i;
 
   // get stream dict
@@ -1260,6 +1384,21 @@ void Gfx::doForm(Object *str) {
     bboxObj.free();
     error(getPos(), "Bad form bounding box");
     return;
+  }
+
+  // push new resources on stack
+  dict->lookup("Resources", &obj1);
+  if (obj1.isDict()) {
+    resDict = obj1.getDict();
+    res = new GfxResources(res);
+    res->fonts = NULL;
+    resDict->lookup("Font", &obj2);
+    if (obj2.isDict())
+      res->fonts = new GfxFontDict(obj2.getDict());
+    obj2.free();
+    resDict->lookup("XObject", &res->xObjDict);
+    resDict->lookup("ColorSpace", &res->colorSpaceDict);
+    obj1.free();
   }
 
   // save current graphics state
@@ -1306,6 +1445,11 @@ void Gfx::doForm(Object *str) {
   state = state->restore();
   out->restoreState(state);
 
+  // pop resource stack
+  resPtr = res->next;
+  delete res;
+  res = resPtr;
+
   return;
 }
 
@@ -1346,7 +1490,7 @@ Stream *Gfx::buildImageStream() {
   parser->getObj(&obj);
   while (!obj.isCmd("ID") && !obj.isEOF()) {
     if (!obj.isName()) {
-      error(getPos(), "Dictionary key must be a name object");
+      error(getPos(), "Inline image dictionary key must be a name object");
       obj.free();
       parser->getObj(&obj);
     } else {

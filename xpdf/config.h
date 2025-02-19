@@ -14,7 +14,7 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion "0.7a"
+#define xpdfVersion "0.80"
 
 // supported PDF version
 #define pdfVersion "1.2"
@@ -23,14 +23,13 @@
 // copyright notice
 #define xpdfCopyright "Copyright \251 1996-1998 Derek B. Noonburg"
 
-// paper size (in points) for PostScript output
-// (eventually this will be configurable from the print dialog)
+// default paper size (in points) for PostScript output
 #ifdef A4_PAPER
-#define paperWidth  595    // ISO A4 (210x297 mm)
-#define paperHeight 842
+#define defPaperWidth  595    // ISO A4 (210x297 mm)
+#define defPaperHeight 842
 #else
-#define paperWidth  612    // American letter (8.5x11")
-#define paperHeight 792
+#define defPaperWidth  612    // American letter (8.5x11")
+#define defPaperHeight 792
 #endif
 
 // config file name
@@ -49,18 +48,6 @@
 
 // number of fonts to cache
 #define fontCacheSize 16
-
-//------------------------------------------------------------------------
-// fopen modes for binary files
-//------------------------------------------------------------------------
-
-#ifdef __WIN32__
-#define FOPEN_READ_BIN "rb"
-#define FOPEN_WRITE_BIN "wb"
-#else
-#define FOPEN_READ_BIN "r"
-#define FOPEN_WRITE_BIN "w"
-#endif
 
 //------------------------------------------------------------------------
 // uncompress program
@@ -89,5 +76,18 @@
 #  endif // USE_GZIP
 
 #endif // HAVE_POPEN
+
+//------------------------------------------------------------------------
+// Win32 stuff
+//------------------------------------------------------------------------
+
+#ifdef WIN32
+#ifdef CDECL
+#undef CDECL
+#endif
+#define CDECL __cdecl
+#else
+#define CDECL
+#endif
 
 #endif

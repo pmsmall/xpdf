@@ -20,8 +20,6 @@
 #include "OutputDev.h"
 
 class GString;
-class LTKApp;
-class LTKWindow;
 class GfxColor;
 class GfxFont;
 class GfxSubpath;
@@ -89,12 +87,16 @@ public:
   // Reverse map a character.
   Guchar revMapChar(Gushort c) { return revMap[c]; }
 
+  // Does this font use hex char codes?
+  GBool isHex() { return hex; }
+
 private:
 
   Ref id;
   double mat11, mat12, mat21, mat22;
   Display *display;
   XFontStruct *xFont;
+  GBool hex;			// subsetted font with hex char codes
   Gushort map[256];
   Guchar revMap[256];
 };
@@ -143,7 +145,8 @@ class XOutputDev: public OutputDev {
 public:
 
   // Constructor.
-  XOutputDev(LTKWindow *win1);
+  XOutputDev(Display *display1, Pixmap pixmap1, Guint depth1,
+	     Colormap colormap, unsigned long paperColor);
 
   // Destructor.
   virtual ~XOutputDev();
@@ -164,9 +167,6 @@ public:
 
   // End a page.
   virtual void endPage();
-
-  // Dump page contents to display.
-  virtual void dump();
 
   //----- link borders
   virtual void drawLinkBorder(double x1, double y1, double x2, double y2,
@@ -206,6 +206,8 @@ public:
   virtual void endString(GfxState *state);
   virtual void drawChar(GfxState *state, double x, double y,
 			double dx, double dy, Guchar c);
+  virtual void drawChar16(GfxState *state, double x, double y,
+			  double dx, double dy, int c);
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Stream *str,
@@ -228,13 +230,19 @@ public:
   // Get the text which is inside the specified rectangle.
   GString *getText(int xMin, int yMin, int xMax, int yMax);
 
+protected:
+
+  // Update pixmap ID after a page change.
+  void setPixmap(Pixmap pixmap1, int pixmapW1, int pixmapH1)
+    { pixmap = pixmap1; pixmapW = pixmapW1; pixmapH = pixmapH1; }
+
 private:
 
-  LTKWindow *win;		// window
-  LTKScrollingCanvas *canvas;	// drawing canvas
   Display *display;		// X display pointer
   int screenNum;		// X screen number
   Pixmap pixmap;		// pixmap to draw into
+  int pixmapW, pixmapH;		// size of pixmap
+  Guint depth;			// pixmap depth
   int flatness;			// line flatness
   GC paperGC;			// GC for background
   GC strokeGC;			// GC with stroke color

@@ -15,8 +15,8 @@
 
 #include <stddef.h>
 #include <X11/Xlib.h>
-#include <gtypes.h>
-#include <LTKCompoundWidget.h>
+#include "gtypes.h"
+#include "LTKCompoundWidget.h"
 
 class LTKButtonDialogWidget;
 

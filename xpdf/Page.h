@@ -35,23 +35,23 @@ public:
   ~PageAttrs();
 
   // Accessors.
-  int getX1() { return x1; }
-  int getY1() { return y1; }
-  int getX2() { return x2; }
-  int getY2() { return y2; }
+  double getX1() { return x1; }
+  double getY1() { return y1; }
+  double getX2() { return x2; }
+  double getY2() { return y2; }
   GBool isCropped() { return cropX2 > cropX1; }
-  int getCropX1() { return cropX1; }
-  int getCropY1() { return cropY1; }
-  int getCropX2() { return cropX2; }
-  int getCropY2() { return cropY2; }
+  double getCropX1() { return cropX1; }
+  double getCropY1() { return cropY1; }
+  double getCropX2() { return cropX2; }
+  double getCropY2() { return cropY2; }
   int getRotate() { return rotate; }
   Dict *getResourceDict()
     { return resources.isDict() ? resources.getDict() : (Dict *)NULL; }
 
 private:
 
-  int x1, y1, x2, y2;
-  int cropX1, cropY1, cropX2, cropY2;
+  double x1, y1, x2, y2;
+  double cropX1, cropY1, cropX2, cropY2;
   int rotate;
   Object resources;
 };
@@ -73,24 +73,27 @@ public:
   GBool isOk() { return ok; }
 
   // Get page parameters.
-  int getX1() { return attrs->getX1(); }
-  int getY1() { return attrs->getY1(); }
-  int getX2() { return attrs->getX2(); }
-  int getY2() { return attrs->getY2(); }
+  double getX1() { return attrs->getX1(); }
+  double getY1() { return attrs->getY1(); }
+  double getX2() { return attrs->getX2(); }
+  double getY2() { return attrs->getY2(); }
   GBool isCropped() { return attrs->isCropped(); }
-  int getCropX1() { return attrs->getCropX1(); }
-  int getCropY1() { return attrs->getCropY1(); }
-  int getCropX2() { return attrs->getCropX2(); }
-  int getCropY2() { return attrs->getCropY2(); }
-  int getWidth() { return attrs->getX2() - attrs->getX1(); }
-  int getHeight() { return attrs->getY2() - attrs->getY1(); }
+  double getCropX1() { return attrs->getCropX1(); }
+  double getCropY1() { return attrs->getCropY1(); }
+  double getCropX2() { return attrs->getCropX2(); }
+  double getCropY2() { return attrs->getCropY2(); }
+  double getWidth() { return attrs->getX2() - attrs->getX1(); }
+  double getHeight() { return attrs->getY2() - attrs->getY1(); }
   int getRotate() { return attrs->getRotate(); }
 
-  // Get font dictionary.
-  Object *getFontDict(Object *obj);
+  // Get resource
+  Dict *getResourceDict() { return attrs->getResourceDict(); }
 
   // Get annotations array.
   Object *getAnnots(Object *obj) { return annots.fetch(obj); }
+
+  // Get contents.
+  Object *getContents(Object *obj) { return contents.fetch(obj); }
 
   // Display a page.
   void display(OutputDev *out, int dpi, int rotate);

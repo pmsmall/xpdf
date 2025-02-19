@@ -1,0 +1,68 @@
+# Generated automatically from Makefile.in by configure.
+#========================================================================
+#
+# Main xpdf Makefile.
+#
+# Copyright 1996 Derek B. Noonburg
+#
+#========================================================================
+
+prefix = /usr/local
+exec_prefix = ${prefix}
+srcdir = .
+
+INSTALL = /usr/bin/install -c
+INSTALL_DATA = ${INSTALL} -m 644
+
+EXE = 
+
+all:
+	cd goo; $(MAKE)
+	cd ..\ltk; $(MAKE)
+	cd ..\xpdf; $(MAKE) all
+
+xpdf: dummy
+	cd goo; $(MAKE)
+	cd ..\ltk; $(MAKE)
+	cd ..\xpdf; $(MAKE) xpdf$(EXE)
+
+pdftops: dummy
+	cd goo; $(MAKE)
+	cd ..\xpdf; $(MAKE) pdftops$(EXE)
+
+pdftotext: dummy
+	cd goo; $(MAKE)
+	cd ..\xpdf; $(MAKE) pdftotext$(EXE)
+
+dummy:
+
+install:
+	mkdir -p ${exec_prefix}/bin
+	$(INSTALL) xpdf/xpdf$(EXE) ${exec_prefix}/bin/xpdf$(EXE)
+	$(INSTALL) xpdf/pdftops$(EXE) ${exec_prefix}/bin/pdftops$(EXE)
+	$(INSTALL) xpdf/pdftotext$(EXE) ${exec_prefix}/bin/pdftotext$(EXE)
+	$(INSTALL) xpdf/pdfinfo$(EXE) ${exec_prefix}/bin/pdfinfo$(EXE)
+	$(INSTALL) xpdf/pdftopbm$(EXE) ${exec_prefix}/bin/pdftopbm$(EXE)
+	$(INSTALL) xpdf/pdfimages$(EXE) ${exec_prefix}/bin/pdfimages$(EXE)
+	mkdir -p ${prefix}/man/man1
+	$(INSTALL_DATA) $(srcdir)/doc/xpdf.1 ${prefix}/man/man1/xpdf.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdftops.1 ${prefix}/man/man1/pdftops.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdftotext.1 ${prefix}/man/man1/pdftotext.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdfinfo.1 ${prefix}/man/man1/pdfinfo.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdftopbm.1 ${prefix}/man/man1/pdftopbm.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdfimages.1 ${prefix}/man/man1/pdfimages.1
+
+clean:
+	cd goo; $(MAKE) clean
+#	cd ..\ltk; $(MAKE) clean
+	cd ..\xpdf; $(MAKE) clean
+
+#distclean: clean
+#	rm -f config.log config.status config.cache
+#	rm -f Makefile goo/Makefile ltk/Makefile xpdf/Makefile
+#	rm -f goo/Makefile.dep ltk/Makefile.dep xpdf/Makefile.dep
+
+#depend:
+#	cd goo; touch Makefile.dep; $(MAKE) depend
+#	cd ..\ltk; touch Makefile.dep; $(MAKE) depend
+#	cd ..\xpdf; touch Makefile.dep; $(MAKE) depend

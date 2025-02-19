@@ -6,13 +6,6 @@ $! Copyright 1996 Derek B. Noonburg
 $!
 $!========================================================================
 $!
-$! for VAX with gcc
-$!! CCOMP = "GCC /NOCASE /DEFINE=VMS /INCLUDE=([],[-.GOO])"
-$!! CXXCOMP = "GCC /PLUSPLUS /NOCASE /DEFINE=VMS /INCLUDE=([],[-.GOO])"
-$!
-$! for Alpha with DEC compilers
-$ CCOMP = "CC /DECC /PREFIX=ALL /DEFINE=(VMS,NO_XPM) /INCLUDE=([],[-.GOO])"
-$ CXXCOMP = "CXX /PREFIX=ALL /DEFINE=(VMS,NO_XPM) /INCLUDE=([],[-.GOO])"
 $!
 $ LTK_OBJS = "LTKApp.obj,LTKBorder.obj,LTKBox.obj,LTKButton.obj," + -
              "LTKButtonDialog.obj,LTKCanvas.obj,LTKCompoundWidget.obj," + -
@@ -45,4 +38,4 @@ $!
 $ lib/cre libltk.olb
 $ lib libltk 'LTK_OBJS
 $ CXXCOMP LTKbuild.cc
-$ link lTKbuild,libltk.olb/lib,[-.goo]libgoo.olb/lib
+$ link lTKbuild,libltk.olb/lib,[-.goo]libgoo.olb/lib,[-]xpdf.opt/opt

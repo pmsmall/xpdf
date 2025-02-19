@@ -13,12 +13,12 @@
 #include <X11/X.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
-#include <gtypes.h>
-#include <GString.h>
-#include <parseargs.h>
-#include <gfile.h>
-#include <gmem.h>
-#include <LTKAll.h>
+#include "gtypes.h"
+#include "GString.h"
+#include "parseargs.h"
+#include "gfile.h"
+#include "gmem.h"
+#include "LTKAll.h"
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -29,11 +29,20 @@
 #include "Link.h"
 #include "PDFDoc.h"
 #include "XOutputDev.h"
+#include "LTKOutputDev.h"
 #include "PSOutputDev.h"
 #include "TextOutputDev.h"
 #include "Params.h"
 #include "Error.h"
 #include "config.h"
+
+#ifdef XlibSpecificationRelease
+#if XlibSpecificationRelease < 5
+typedef char *XPointer;
+#endif
+#else
+typedef char *XPointer;
+#endif
 
 // hack around old X includes which are missing these symbols
 #ifndef XK_Page_Up
@@ -162,8 +171,12 @@ static XrmOptionDescRec opts[] = {
   {"-fn",            ".font",          XrmoptionSepArg,  NULL},
   {"-cmap",          ".installCmap",   XrmoptionNoArg,   (XPointer)"on"},
   {"-rgb",           ".rgbCubeSize",   XrmoptionSepArg,  NULL},
+  {"-papercolor",    ".paperColor",    XrmoptionSepArg,  NULL},
   {"-z",             ".initialZoom",   XrmoptionSepArg,  NULL},
   {"-ps",            ".psFile",        XrmoptionSepArg,  NULL},
+  {"-paperw",        ".psPaperWidth",  XrmoptionSepArg,  NULL},
+  {"-paperh",        ".psPaperHeight", XrmoptionSepArg,  NULL},
+  {"-level1",        ".psLevel1",      XrmoptionNoArg,   (XPointer)"false"},
   {NULL}
 };
 
@@ -174,33 +187,39 @@ static GBool doRemoteRaise = gFalse;
 static GBool doRemoteQuit = gFalse;
 
 static ArgDesc argDesc[] = {
-  {"-err",      argFlag,        &errorsToTTY,   0,
+  {"-err",        argFlag,        &errorsToTTY,   0,
    "send error messages to /dev/tty instead of stderr"},
-  {"-z",        argIntDummy,    NULL,           0,
+  {"-z",          argIntDummy,    NULL,           0,
    "initial zoom level (-5..5)"},
-  {"-g",        argStringDummy, NULL,           0,
+  {"-g",          argStringDummy, NULL,           0,
    "initial window geometry"},
-  {"-geometry", argStringDummy, NULL,           0,
+  {"-geometry",   argStringDummy, NULL,           0,
    "initial window geometry"},
-  {"-remote",   argString,      remoteName + 5, sizeof(remoteName) - 5,
+  {"-remote",     argString,      remoteName + 5, sizeof(remoteName) - 5,
    "start/contact xpdf remote server with specified name"},
-  {"-raise",    argFlag,        &doRemoteRaise, 0,
+  {"-raise",      argFlag,        &doRemoteRaise, 0,
    "raise xpdf remote server window (with -remote only)"},
-  {"-quit",     argFlag,        &doRemoteQuit,  0,
+  {"-quit",       argFlag,        &doRemoteQuit,  0,
    "kill xpdf remote server (with -remote only)"},
-  {"-cmap",     argFlagDummy,   NULL,           0,
+  {"-cmap",       argFlagDummy,   NULL,           0,
    "install a private colormap"},
-  {"-rgb",      argIntDummy,    NULL,           0,
+  {"-rgb",        argIntDummy,    NULL,           0,
    "biggest RGB cube to allocate (default is 5)"},
-  {"-ps",       argStringDummy, NULL,           0,
+  {"-papercolor", argStringDummy, NULL,           0,
+   "color of paper background"},
+  {"-ps",         argStringDummy, NULL,           0,
    "default PostScript file/command name"},
-  {"-level1",   argFlag,        &psOutLevel1,   0,
+  {"-paperw",     argIntDummy,    NULL,           0,
+   "paper width, in points"},
+  {"-paperh",     argIntDummy,    NULL,           0,
+   "paper height, in points"},
+  {"-level1",     argFlagDummy,   NULL,           0,
    "generate Level 1 PostScript"},
-  {"-cmd",      argFlag,        &printCommands, 0,
+  {"-cmd",        argFlag,        &printCommands, 0,
    "print commands as they're executed"},
-  {"-h",        argFlag,        &printHelp,     0,
+  {"-h",          argFlag,        &printHelp,     0,
    "print usage information"},
-  {"-help",     argFlag,        &printHelp,     0,
+  {"-help",       argFlag,        &printHelp,     0,
    "print usage information"},
   {NULL}
 };
@@ -221,7 +240,7 @@ static int zoomDPI[maxZoom - minZoom + 1] = {
 
 static PDFDoc *doc;
 
-static XOutputDev *out;
+static LTKOutputDev *out;
 
 static int page;
 static int zoom;
@@ -271,6 +290,7 @@ int main(int argc, char *argv[]) {
   LTKMenu *menu;
   GString *name;
   GString *title;
+  unsigned long paperColor;
   int pg;
   int x, y;
   Guint width, height;
@@ -290,6 +310,7 @@ int main(int argc, char *argv[]) {
   ret = 0;
 
   // parse args
+  paperWidth = paperHeight = -1;
   ok = parseArgs(argDesc, &argc, argv);
 
   // init error file
@@ -389,27 +410,35 @@ int main(int argc, char *argv[]) {
   vScrollbar->setRepeatPeriod(0);
 
   // get X resources
+  paperWidth = app->getIntResource("psPaperWidth", defPaperWidth);
+  paperHeight = app->getIntResource("psPaperHeight", defPaperHeight);
   psOutLevel1 = app->getBoolResource("psLevel1", gFalse);
+  urlCommand = app->getStringResource("urlCommand", NULL);
   installCmap = app->getBoolResource("installCmap", gFalse);
   if (installCmap)
     win->setInstallCmap(gTrue);
   rgbCubeSize = app->getIntResource("rgbCubeSize", defaultRGBCube);
+  paperColor = app->getColorResource("paperColor", "white",
+				     WhitePixel(display, app->getScreenNum()),
+				     NULL);
   zoom = app->getIntResource("initialZoom", defZoom);
   if (zoom < minZoom)
     zoom = minZoom;
   else if (zoom > maxZoom)
     zoom = maxZoom;
+
+  // get geometry
   x = -1;
   y = -1;
   if (!doc) {
     width = 612;
     height = 792;
   } else if (doc->getPageRotate(pg) == 90 || doc->getPageRotate(pg) == 270) {
-    width = doc->getPageHeight(pg);
-    height = doc->getPageWidth(pg);
+    width = (int)(doc->getPageHeight(pg) + 0.5);
+    height = (int)(doc->getPageWidth(pg) + 0.5);
   } else {
-    width = doc->getPageWidth(pg);
-    height = doc->getPageHeight(pg);
+    width = (int)(doc->getPageWidth(pg) + 0.5);
+    height = (int)(doc->getPageHeight(pg) + 0.5);
   }
   width = (width * zoomDPI[zoom - minZoom]) / 72 + 28;
   if (width > (Guint)app->getDisplayWidth() - 100)
@@ -418,9 +447,6 @@ int main(int argc, char *argv[]) {
   if (height > (Guint)app->getDisplayHeight() - 100)
     height = app->getDisplayHeight() - 100;
   app->getGeometryResource("geometry", &x, &y, &width, &height);
-
-  // get misc resources
-  urlCommand = app->getStringResource("urlCommand", NULL);
 
   // finish setting up window
   sprintf(s, "of %d", doc ? doc->getNumPages() : 0);
@@ -453,7 +479,7 @@ int main(int argc, char *argv[]) {
   }
 
   // create output device
-  out = new XOutputDev(win);
+  out = new LTKOutputDev(win, paperColor);
 
   // display first page
   displayPage(pg, zoom, 0);
@@ -1256,7 +1282,7 @@ static void propChangeCbk(LTKWindow *win1, Atom atom) {
     if (!(p = strchr(p, ' ')))
       return;
     newFileName = new GString(p + 1);
-    XFree(cmd);
+    XFree((XPointer)cmd);
     if (!doc || newFileName->cmp(doc->getFileName())) {
       if (!loadFile(newFileName))
 	return;
@@ -1277,7 +1303,7 @@ static void propChangeCbk(LTKWindow *win1, Atom atom) {
 //------------------------------------------------------------------------
 
 static void setSelection(int newXMin, int newYMin, int newXMax, int newYMax) {
-  int x, y;
+  int x, y, w, h;
   GBool needRedraw, needScroll;
   GBool moveLeft, moveRight, moveTop, moveBottom;
 
@@ -1340,29 +1366,39 @@ static void setSelection(int newXMin, int newYMin, int newXMax, int newYMax) {
 
   // scroll canvas if necessary
   needScroll = gFalse;
+  w = canvas->getWidth();
+  h = canvas->getHeight();
   x = hScrollbar->getPos();
-  if (moveLeft &&
-      (selectXMin < x || selectXMin >= x + canvas->getWidth())) {
+  y = vScrollbar->getPos();
+  if (moveLeft && selectXMin < x) {
     x = selectXMin;
     needScroll = gTrue;
-  } else if (moveRight &&
-	     (selectXMax < x || selectXMax >= x + canvas->getWidth())) {
-    x = selectXMax - canvas->getWidth();
+  } else if (moveRight && selectXMax >= x + w) {
+    x = selectXMax - w;
+    needScroll = gTrue;
+  } else if (moveLeft && selectXMin >= x + w) {
+    x = selectXMin - w;
+    needScroll = gTrue;
+  } else if (moveRight && selectXMax < x) {
+    x = selectXMax;
     needScroll = gTrue;
   }
-  y = vScrollbar->getPos();
-  if (moveTop &&
-      (selectYMin < y || selectYMin >= y + canvas->getHeight())) {
+  if (moveTop && selectYMin < y) {
     y = selectYMin;
     needScroll = gTrue;
-  } else if (moveBottom &&
-	     (selectYMax < y || selectYMax >= y + canvas->getHeight())) {
-    y = selectYMax - canvas->getHeight();
+  } else if (moveBottom && selectYMax >= y + h) {
+    y = selectYMax - h;
+    needScroll = gTrue;
+  } else if (moveTop && selectYMin >= y + h) {
+    y = selectYMin - h;
+    needScroll = gTrue;
+  } else if (moveBottom && selectYMax < y) {
+    y = selectYMax;
     needScroll = gTrue;
   }
   if (needScroll) {
-    hScrollbar->setPos(x, canvas->getWidth());
-    vScrollbar->setPos(y, canvas->getHeight());
+    hScrollbar->setPos(x, w);
+    vScrollbar->setPos(y, h);
     canvas->scroll(x, y);
   }
 }
@@ -1519,7 +1555,7 @@ static void psButtonCbk(LTKWidget *button, int n, GBool on) {
     win->setBusyCursor(gTrue);
     if (doc->okToPrint()) {
       psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
-			      psFirstPage, psLastPage, gTrue);
+			      psFirstPage, psLastPage, gTrue, gFalse);
       if (psOut->isOk()) {
 	doc->displayPages(psOut, psFirstPage, psLastPage,
 			  zoomDPI[zoom - minZoom], rotate);

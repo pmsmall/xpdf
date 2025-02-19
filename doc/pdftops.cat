@@ -1,0 +1,132 @@
+
+
+
+pdftops(1)                                             pdftops(1)
+
+
+NAME
+       pdftops  -  Portable  Document  Format (PDF) to PostScript
+       converter (version 0.80)
+
+SYNOPSIS
+       pdftops [options] [PDF-file [PS-file]]
+
+DESCRIPTION
+       Pdftops converts Portable Document Format (PDF)  files  to
+       PostScript so they can be printed.
+
+       Pdftops  reads  the  PDF  file,  PDF-file,  and  writes  a
+       PostScript file, PS-file.  If PS-file  is  not  specified,
+       pdftops  converts file.pdf to file.ps.  If PS-file is '-',
+       the PostScript is sent to stdout.
+
+OPTIONS
+       -f number
+              Specifies the first page to print.
+
+       -l number
+              Specifies the last page to print.
+
+       -paperw size
+              Set the paper width, in points.
+
+       -paperh size
+              Set the paper height, in points.
+
+       -level1
+              Generate  Level  1   PostScript.    The   resulting
+              PostScript  files  will be significantly larger (if
+              they contain images), but will  print  on  Level  1
+              printers.   This  also converts all images to black
+              and white.  The default  behavior  is  to  generate
+              Level  2  PostScript.   In particular, Level 2 sup-
+              ports color images and image compression.
+
+       -noemb By default, any Type 1 fonts which are embedded  in
+              the  PDF  file are copied into the PostScript file.
+              This option causes pdftops to substitute base fonts
+              instead.   Embedded  fonts  make  PostScript  files
+              larger, but may be necessary for readable output.
+
+       -form  Generate a PostScript form which can be imported by
+              software  that understands forms.  Only one page is
+              converted  (since  forms  cannot  contain  multiple
+              pages)  and  the -l option is ignored.  The -level1
+              option cannot be used with -form.
+
+       -h     Print usage information.  (-help is equivalent.)
+
+BUGS
+       This is a beta release of pdftops, and there are  still  a
+
+
+
+                           27 Nov 1998                          1
+
+
+
+
+
+pdftops(1)                                             pdftops(1)
+
+
+       bunch of PDF features which I have yet to implement.
+
+AUTHOR
+       The  pdftops  software  and  documentation  are  copyright
+       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+
+SEE ALSO
+       xpdf(1),  pdftotext(1),  pdfinfo(1),  pdftopbm(1),  pdfim-
+       ages(1)
+       http://www.foolabs.com/xpdf/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           27 Nov 1998                          2
+
+

@@ -212,4 +212,3 @@ DIR *dirp;
    cfree (dirp->dd_buf);
    cfree (dirp);
 }
-

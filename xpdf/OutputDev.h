@@ -13,7 +13,7 @@
 #pragma interface
 #endif
 
-#include <gtypes.h>
+#include "gtypes.h"
 
 class GString;
 class GfxState;
@@ -109,7 +109,10 @@ public:
   virtual void endString(GfxState *state) {}
   virtual void drawChar(GfxState *state, double x, double y,
 			double dx, double dy, Guchar c) {}
+  virtual void drawChar16(GfxState *state, double x, double y,
+			  double dx, double dy, int c) {}
   virtual void drawString(GfxState *state, GString *s) {}
+  virtual void drawString16(GfxState *state, GString *s) {}
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Stream *str,

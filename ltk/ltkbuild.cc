@@ -9,7 +9,7 @@
 //
 //========================================================================
 
-#define VERSION "0.7a"
+#define VERSION "0.80"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,9 +17,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
-#include <gtypes.h>
-#include <gmem.h>
-#include <GString.h>
+#include "gtypes.h"
+#include "gmem.h"
+#include "GString.h"
 
 enum ArgKind {
   argVal,			// arg with value

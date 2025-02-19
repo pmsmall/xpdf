@@ -1,7 +1,7 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH xpdf 1 "22 Feb 1998"
+.TH xpdf 1 "27 Nov 1998"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 0.7a)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 0.80)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -74,10 +74,24 @@ default is 5 (for a 5x5x5 cube); set to a smaller number to conserve
 color table entries.  This is ignored with private colormaps and on
 TrueColor visuals.
 .TP
+.BI \-papercolor " color"
+Set the "paper color", i.e., the background of the page display.  This
+will not work too well with PDF files that do things like filling in
+white behind the text.
+.RB [ xpdf.paperColor ]
+.TP
 .BI \-ps " PS-file"
 Set the default file name for PostScript output.  This can also be of
 the form \'|command' to pipe the PostScript through a command.
 .RB [ xpdf.psFile ]
+.TP
+.BI \-paperw " size"
+Set the paper width, in points.
+.RB [ xpdf.psPaperWidth ]
+.TP
+.BI \-paperh " size"
+Set the paper height, in points.
+.RB [ xpdf.psPaperHeight ]
 .TP
 .B \-level1
 Generate Level 1 PostScript.  The resulting PostScript files will be
@@ -354,9 +368,12 @@ At this point, the biggest problem is that embedded fonts are not
 handled properly.
 .SH AUTHOR
 The xpdf software and documentation are copyright 1996-1998 Derek
-B. Noonburg (derekn@aimnet.com).
+B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR pdftops (1),
-.BR pdftotext (1)
+.BR pdftotext (1),
+.BR pdfinfo (1),
+.BR pdftopbm (1),
+.BR pdfimages (1)
 .br
-.B http://www.aimnet.com/~derekn/xpdf/
+.B http://www.foolabs.com/xpdf/

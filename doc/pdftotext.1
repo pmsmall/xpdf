@@ -1,8 +1,8 @@
 .\" Copyright 1997 Derek B. Noonburg
-.TH pdftotext 1 "22 Feb 1998"
+.TH pdftotext 1 "27 Nov 1998"
 .SH NAME
 pdftotext \- Portable Document Format (PDF) to text converter
-(version 0.7a)
+(version 0.80)
 .SH SYNOPSIS
 .B pdftotext
 [options]
@@ -27,10 +27,10 @@ If
 is \'-', the text is sent to stdout.
 .SH OPTIONS
 .TP
-.BI \-f number
+.BI \-f " number"
 Specifies the first page to convert.
 .TP
-.BI \-l number
+.BI \-l " number"
 Specifies the last page to convert.
 .TP
 .B \-ascii7
@@ -46,9 +46,12 @@ This is a beta release of pdftotext, and there are still a bunch of
 PDF features which I have yet to implement.
 .SH AUTHOR
 The pdftotext software and documentation are copyright 1996-1998
-Derek B. Noonburg (derekn@aimnet.com).
+Derek B. Noonburg (derekn@foolabs.com).
 .SH "SEE ALSO"
 .BR xpdf (1),
-.BR pdftops (1)
+.BR pdftops (1),
+.BR pdfinfo (1),
+.BR pdftopbm (1),
+.BR pdfimages (1)
 .br
-.B http://www.aimnet.com/~derekn/xpdf/
+.B http://www.foolabs.com/xpdf/

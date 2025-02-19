@@ -6,8 +6,11 @@
 #
 #========================================================================
 
-CFLAGS = @CFLAGS@ @DEFS@ @OPTIONS@ -I.
-CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I.
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+CFLAGS = @CFLAGS@ @DEFS@ @OPTIONS@ -I$(srcdir)
+CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(srcdir)
 
 CC = @CC@
 CXX = @CXX@
@@ -15,6 +18,24 @@ AR = @AR@
 RANLIB = @RANLIB@
 
 LIBPREFIX = @LIBPREFIX@
+
+#------------------------------------------------------------------------
+
+.SUFFIXES: .cc
+
+.cc.o:
+	$(CXX) $(CXXFLAGS) -c $<
+
+#------------------------------------------------------------------------
+
+CXX_SRC = \
+	$(srcdir)/GString.cc \
+	$(srcdir)/gmempp.cc \
+	$(srcdir)/gfile.cc
+
+C_SRC = \
+	$(srcdir)/gmem.c \
+	$(srcdir)/parseargs.c
 
 #------------------------------------------------------------------------
 
@@ -31,16 +52,18 @@ $(LIBPREFIX)Goo.a: $(GOO_OBJS)
 
 clean:
 	rm -f $(GOO_OBJS) $(LIBPREFIX)Goo.a
-	rm -f Makefile.bak
 
 #------------------------------------------------------------------------
 
-depend:
-	$(CXX) $(CXXFLAGS) -M $(GOO_CXX_OBJS:.o=.cc) |\
-	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
-	  grep -v '^ \\$$' >Makefile.dep
-	$(CC) $(CFLAGS) -M $(GOO_C_OBJS:.o=.c) |\
-	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
-	  grep -v '^ \\$$' >>Makefile.dep
+distdepend:
+	cp Makefile.in Makefile.in.bak
+	sed '/^#----- dependences -----/q' Makefile.in.bak >Makefile.in
+	$(CXX) $(CXXFLAGS) -MM $(CXX_SRC) >>Makefile.in
+	$(CC) $(CFLAGS) -MM $(C_SRC) >>Makefile.in
 
-include Makefile.dep
+#----- dependences -----
+GString.o: ./GString.cc GString.h
+gmempp.o: ./gmempp.cc gmem.h
+gfile.o: ./gfile.cc GString.h gfile.h gtypes.h
+gmem.o: ./gmem.c gmem.h
+parseargs.o: ./parseargs.c parseargs.h gtypes.h

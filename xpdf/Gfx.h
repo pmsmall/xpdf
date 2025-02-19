@@ -13,7 +13,7 @@
 #pragma interface
 #endif
 
-#include <gtypes.h>
+#include "gtypes.h"
 
 class GString;
 class Array;
@@ -22,6 +22,8 @@ class Parser;
 class Dict;
 class OutputDev;
 class GfxFontDict;
+class GfxFont;
+struct GfxFontEncoding16;
 class GfxState;
 class Gfx;
 
@@ -56,13 +58,26 @@ struct Operator {
   void (Gfx::*func)(Object args[], int numArgs);
 };
 
+class GfxResources {
+public:
+
+  GfxResources(GfxResources *next1) { next = next1; }
+  ~GfxResources();
+
+  GfxFontDict *fonts;
+  Object xObjDict;
+  Object colorSpaceDict;
+  GfxResources *next;
+};
+
 class Gfx {
 public:
 
   // Constructor for regular output.
   Gfx(OutputDev *out1, int pageNum, Dict *resDict,
-      int dpi, int x1, int y1, int x2, int y2, GBool crop,
-      int cropX1, int cropY1, int cropX2, int cropY2, int rotate);
+      int dpi, double x1, double y1, double x2, double y2, GBool crop,
+      double cropX1, double cropY1, double cropX2, double cropY2,
+      int rotate);
 
   // Destructor.
   ~Gfx();
@@ -73,9 +88,7 @@ public:
 private:
 
   OutputDev *out;		// output device
-  GfxFontDict *fonts;		// font dictionary
-  Object xObjDict;		// XObject dictionary
-  Object colorSpaceDict;	// color space dictionary
+  GfxResources *res;		// resource stack
 
   GfxState *state;		// current graphics state
   GBool fontChanged;		// set if font or text matrix has changed
@@ -91,6 +104,9 @@ private:
   Operator *findOp(char *name);
   GBool checkArg(Object *arg, TchkType type);
   int getPos();
+  GfxFont *lookupFont(char *name);
+  GBool lookupXObject(char *name, Object *obj);
+  void lookupColorSpace(char *name, Object *obj);
 
   // graphics state operators
   void opSave(Object args[], int numArgs);
@@ -168,6 +184,7 @@ private:
   void opMoveSetShowText(Object args[], int numArgs);
   void opShowSpaceText(Object args[], int numArgs);
   void doShowText(GString *s);
+  int getNextChar16(GfxFontEncoding16 *enc, Guchar *p, int *c16);
 
   // XObject operators
   void opXObject(Object args[], int numArgs);

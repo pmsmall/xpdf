@@ -1,15 +1,14 @@
 xpdf
 ====
-and: pdftops, pdftotext
 
-version 0.7a (beta)
-98-feb-22
+version 0.80
+98-nov-27
 
-The xpdf, pdftops, and pdftotext software and documentation are
+The xpdf software and documentation are
 copyright 1996-1998 Derek B. Noonburg.
 
-Email: derekn@aimnet.com
-WWW: http://www.aimnet.com/~derekn/xpdf/
+Email: derekn@foolabs.com
+WWW: http://www.foolabs.com/xpdf/
 
 The PDF data structures, operators, and specification are
 copyright 1995 Adobe Systems Inc.
@@ -21,11 +20,39 @@ What is xpdf?
 Xpdf is a viewer for Portable Document Format (PDF) files.  (These are
 also sometimes also called 'Acrobat' files, from the name of Adobe's
 PDF software.)  Xpdf runs under the X Window System on UNIX, VMS, and
-OS/2.
+OS/2.  The non-X components of the package (pdftops, pdftotext, etc.)
+also run on Win32 systems.
 
 Xpdf is designed to be small and efficient.  It does not use the Motif
 or Xt libraries.  It uses standard X fonts.  Xpdf is quite usable on a
 486-66 PC running Linux.
+
+
+Distribution
+------------
+
+Xpdf is licensed under the GNU General Public License (GPL), version
+2.  In my opinion, the GPL is a convoluted, confusing, ambiguous mess.
+But it's also pervasive, and I'm sick of arguing.  And even if it is
+confusing, the basic idea is good.
+
+In order to cut down on the confusion a little bit, here are some
+informal clarifications:
+
+- I don't mind if you redistribute xpdf in source and/or binary form,
+  as long as you include all of the documentation: README, man pages
+  (or help files), and COPYING.  (Note that the README file contains a
+  pointer to a web page with the source code.)
+
+- Selling a CD-ROM that contains xpdf is fine with me, as long as it
+  includes the documentation.  I wouldn't mind receiving a sample
+  copy, but it's not necessary.
+
+- If you make useful changes to xpdf, please make the source code
+  available -- post it on a web site, email it to me, whatever.
+
+If you're interested in commercial licensing, please contact me by
+email: derekn@foolabs.com .
 
 
 Compatibility
@@ -35,9 +62,13 @@ Xpdf is developed and tested on a Linux 2.0 x86 system.
 
 In addition, it has been compiled by others on Solaris, AIX, HP-UX,
 SCO UnixWare, Digital Unix, Irix, and numerous other Unix
-implementations, as well as VMS, and OS/2.  It should work on pretty
+implementations, as well as VMS and OS/2.  It should work on pretty
 much any system which runs X11 and has Unix-like libraries.  You'll
 need ANSI C++ and C compilers to compile it.
+
+The non-X components of xpdf (pdftops, pdftotext, pdfinfo, pdfimages)
+can also be compiled on Win32 systems.  See the xpdf web page for
+details.
 
 If you compiled xpdf for a system not listed on the web page, please
 let me know.  If you're willing to make your binary available by ftp
@@ -57,11 +88,11 @@ Getting xpdf
 
 The latest version is available from:
 
-  http://www.aimnet.com/~derekn/xpdf/
+  http://www.foolabs.com/xpdf/
 
 or:
 
-  ftp://ftp.aimnet.com/pub/users/derekn/xpdf/
+  ftp://ftp.foolabs.com/pub/xpdf/
 
 Source code and several precompiled executables are available.
 
@@ -87,9 +118,16 @@ To generate a plain text file, run pdftotext:
 
   pdftotext file.pdf
 
+There are three additional utilities (which are fully described in
+their man pages):
+
+  pdfinfo -- dumps a PDF file's Info dictionary (plus some other
+             useful information)
+  pdftopbm -- converts a PDF file to a series of PBM-format bitmaps
+  pdfimages -- extracts the images from a PDF file
+
 Command line options and many other details are described in the man
-pages (xpdf.1, pdftops.1, and pdftotext.1) and the VMS help files
-(xpdf.hlp, pdftops.hlp, and pdftotext.hlp).
+pages (xpdf.1, etc.) and the VMS help files (xpdf.hlp, etc.).
 
 
 Fonts
@@ -125,6 +163,12 @@ lots of fonts, but they look much nicer.
 
 Some X servers also support font rotation.  Xpdf will use this feature
 if available.
+
+For Japanese support, you will need a Japanese font of the form:
+
+    -*-fixed-medium-r-normal-*-NN-*-*-*-*-*-jisx0208.1983-0
+
+and an X server that can handle 16-bit fonts.
 
 
 The Unisys LZW Patent
@@ -173,9 +217,18 @@ it's been tested with are listed on the xpdf web page.
   The configure script accepts the following options (in addition to
   the usual things accepted by autoconf configure scripts):
 
+    --prefix=PREFIX
+        Changes the directory where xpdf is installed.  The default is
+        /usr/local.
+
     --enable-a4-paper
-        Switches the paper size for PostScript output (xpdf and
-        pdftops) to A4.  The default is Letter size.
+        Switches the default paper size for PostScript output (xpdf
+        and pdftops) to A4.  The default is Letter size.
+
+    --enable-japanese
+        Enables support for 16-bit Japanese fonts.  This increases the
+        size of the binary (mostly with decoding tables).  The default
+        is no Japanese font support.
 
     --enable-no-text-select
         With this option, xpdf will not copy text.  (This is only
@@ -188,32 +241,19 @@ it's been tested with are listed on the xpdf web page.
 * Type 'make'.  This should build the executables:
 
     xpdf/xpdf
-    pdftops/pdftops
-    pdftotext/pdftotext
-
-  You can also do 'make xpdf', etc., to compile just one of the
-  executables.
+    xpdf/pdftops
+    xpdf/pdftotext
+    xpdf/pdfinfo
+    xpdf/pdftopbm
+    xpdf/pdfimages
 
 * If desired, type 'make install' to install the binaries and man
   pages.
 
-If the configure script doesn't work for some reason, the old
-Makefile.config and Makefiles are included (as Makefile.config.old,
-Makefile.old, and */Makefile.old).  But please let me
-(derekn@aimnet.com) know what went wrong, as I don't intend to support
-Makefile.config anymore.
-
-*** To compile xpdf for OS/2:
-
-Xpdf is known to run under OS/2 with the EMX runtime environment and
-XFree86.  The configure script has not been tested on OS/2, however.
+The old Makefile.config and Makefiles are no longer provided or
+supported.
 
 *** To compile xpdf for VMS:
-
-* There are two sets of scripts: vmscomp.com (for gcc on VAX) and
-  vmsdecccomp.com (for DEC C on Alpha).  There are four of each: in
-  the top-level directory, [.goo], [.ltk], and [.xpdf].  You may need
-  to edit these scripts as appropriate for your system.
 
 * The 'stddef.h' include file which comes with older versions of gcc
   may be missing a definition for wchar_t.  In this case, add the
@@ -229,41 +269,29 @@ XFree86.  The configure script has not been tested on OS/2, however.
    50
   -----
 
-* Type '@vmscomp' or '@vmsdecccomp' in the top-level directory.
+* Type '@vms_make' in the top-level directory.  If you have the Xpm
+  library and you want xpdf's color icon, type '@vms_make xpm'
+  instead.
 
-* The executables will be left in '[.xpdf]xpdf' and '[.xpdf]pdftops'.
+* The executables will be left in '[.xpdf]'.
 
+*** To compile xpdf for OS/2:
 
-Distribution
-------------
+Xpdf is known to run under OS/2 with the EMX runtime environment and
+XFree86.  The configure script has not been tested on OS/2, however.
 
-Xpdf may be distributed under the following conditions:
+*** To compile pdftops and pdftotext for Win32:
 
-1. This file ('README') is included, unmodified, in the distribution.
-
-2. The distribution includes:
-   a. all of the xpdf source code and documentation, unmodified; OR
-   b. one or more xpdf executables, compiled from the unmodified
-      source code, plus the associated documentation (UNIX man pages
-      or VMS help files); OR
-   c. both of the above.
-
-If you distribute xpdf, I would appreciate receiving a pointer (ftp
-site, BBS phone number, etc.) or a copy (disk, CD-ROM, etc.).
-
-Modified versions of xpdf or applications using some or all of the
-xpdf code (i.e., 'derivative works' under copyright law) may not be
-distributed without explicit permission.
+This has been tested with the Delorie port of gcc.  You'll need to
+rename 'makefile.w32' (in the top-level, goo, and xpdf directories) to
+'makefile' before running make.
 
 
 Bugs
 ----
 
-This is a beta release of xpdf, and there are still a bunch of PDF
-features which I have yet to implement.
-
-At this point, the biggest problem is that embedded fonts are not
-handled correctly.
+At this point, the biggest problem with xpdf is that embedded fonts
+are generally not handled very well.
 
 If you find a bug in xpdf, i.e., if it prints an error message,
 crashes, or incorrectly displays a document, and you don't see that
@@ -277,12 +305,14 @@ Acknowledgments
 Thanks to:
 
 * Patrick Voigt for help with the remote server code.
-* Patrick Moreau for the VMS port.
+* Patrick Moreau and Martin P.J. Zinser for the VMS port.
 * David Boldt and Rick Rodgers for sample man pages.
 * Brendan Miller for the icon idea.
 * Olly Betts for help testing pdftotext.
 * Peter Ganten for the OS/2 port.
 * Michael Richmond for the Win32 port of pdftops and pdftotext.
+* Frank M. Siegert for improvements in the PostScript code.
+* Leo Smiers for the decryption patches.
 
 
 References
@@ -294,28 +324,40 @@ Addison-Wesley, 1993, ISBN 0-201-62628-4.
 
 Adobe Systems Inc., _Portable Document Format Reference Manual_,
 Version 1.2.  November 12, 1996.
-[Updated manual for PDF 1.2.  Also includes the encryption spec.
-Available on the WWW as
-http://www.adobe.com/supportservice/devrelations/PDFS/TN/PDFSPEC.PDF .]
+http://www.adobe.com/supportservice/devrelations/PDFS/TN/PDFSPEC.PDF
+[Updated manual for PDF 1.2.  Also includes the encryption spec.]
 
 Adobe Systems Inc., _PostScript Language Reference Manual_, 2nd ed.
 Addison-Wesley, 1990, ISBN 0-201-18127-4.
 [The official PostScript manual.]
 
+Adobe Systems, Inc., _Adobe CMap and CIDFont Files Specification_,
+Adobe Developer Support Technical Specification #5014.  1995.
+http://www.adobe.com/supportservice/devrelations/PDFS/TN/5014.CIDFont_Spec.pdf
+[CMap file format needed for Japanese font support.]
+
+Adobe Systems, Inc., _Adobe-Japan1-2 Character Collection for
+CID-Keyed Fonts_ (Bitmap Character Image Version), Adobe Developer
+Support Technical Note #5078-b.  1994. 
+http://www.adobe.com/supportservice/devrelations/PDFS/TN/5078b.pdf
+[The complete Adobe Japanese character set.]
+
 Adobe Systems Inc., _Supporting the DCT Filters in PostScript Level
 2_, Adobe Developer Support Technical Note #5116.  1992.
+http://www.adobe.com/supportservice/devrelations/PDFS/TN/5116.PS2_DCT.PDF
 [Description of the DCTDecode filter parameters.]
 
 Anonymous, RC4 source code.
-[This is the algorithm used to encrypt PDF files.  Available on
-various ftp sites, e.g., ftp://ftp.ox.ac.uk/pub/crypto/misc/rc4.tar.gz
-or ftp://idea.sec.dsi.unimi.it/pub/crypt/code/rc4.tar.gz .]
+ftp://ftp.ox.ac.uk/pub/crypto/misc/rc4.tar.gz
+ftp://idea.sec.dsi.unimi.it/pub/crypt/code/rc4.tar.gz
+[This is the algorithm used to encrypt PDF files.]
 
 CCITT, _Blue Book_, Volume VII Fascicle 3: "Terminal Equipment and
 Protocols for Telematic Services", Recommendations T.4 and T.6.
-[The official Group 3 and 4 fax standards.  These are available on the
-net (but misformatted) as
-ftp://ftp.uu.net/doc/standards/ccitt/1988/7_3_01.ps and 7_3_02.ps .]
+ftp://ftp.uu.net/doc/standards/ccitt/1988/7_3_01.ps
+ftp://ftp.uu.net/doc/standards/ccitt/1988/7_3_02.ps
+[The official Group 3 and 4 fax standards.  The online copies are
+unfortunately misformatted.]
 
 L. Peter Deutsch, "ZLIB Compressed Data Format Specification version
 3.3".  RFC 1950.
@@ -328,9 +370,9 @@ streams.]
 
 Jim Flowers, "X Logical Font Description Conventions", Version 1.5, X
 Consortium Standard, X Version 11, Release 6.1.
+ftp://ftp.x.org/pub/R6.1/xc/doc/hardcopy/XLFD/xlfd.PS.Z
 [The official specification of X font descriptors, including font
-transformation matrices.  Available on the net as
-ftp://ftp.x.org/pub/R6.1/xc/doc/hardcopy/XLFD/xlfd.PS.Z .]
+transformation matrices.]
 
 Foley, van Dam, Feiner, and Hughes, _Computer Graphics: Principles and
 Practice_, 2nd ed.  Addison-Wesley, 1990, ISBN 0-201-12110-7.
@@ -349,12 +391,16 @@ R. Rivest, "The MD5 Message-Digest Algorithm".  RFC 1321.
 [MD5 is used in PDF document encryption.]
 
 Gregory K. Wallace, "The JPEG Still Picture Compression Standard".
-[Good description of the JPEG standard.  Available on the net as
-ftp://ftp.uu.net/graphics/jpeg/wallace.ps.gz .  Also published in
-CACM, April 1991, and submitted to IEEE Transactions on Consumer
-Electronics.]
+ftp://ftp.uu.net/graphics/jpeg/wallace.ps.gz
+[Good description of the JPEG standard.  Also published in CACM, April
+1991, and submitted to IEEE Transactions on Consumer Electronics.]
+
+W3C Recommendation, "PNG (Portable Network Graphics) Specification
+Version 1.0".
+http://www.w3.org/Graphics/PNG/
+[Defines the PNG image predictor.]
 
 "ISO 8859-2 (Latin 2) Resources".
+http://sizif.mf.uni-lj.si/linux/cee/iso8859-2.html
 [This is a web page with all sorts of useful Latin-2 character set and
-font information:
-http://sizif.mf.uni-lj.si/linux/cee/iso8859-2.html .]
+font information.]

@@ -1,0 +1,68 @@
+.\" Copyright 1998 Derek B. Noonburg
+.TH pdfinfo 1 "27 Nov 1998"
+.SH NAME
+pdfinfo \- Portable Document Format (PDF) document information
+extractor (version 0.80)
+.SH SYNOPSIS
+.B pdfinfo
+[options]
+.RI [ PDF-file ]
+.SH DESCRIPTION
+.B Pdftoinfo
+prints the contents of the \'Info' dictionary (plus some other useful
+information) from a Portable Document Format (PDF) file.
+.PP
+The \'Info' dictionary contains the following values:
+.PP
+.RS
+title
+.RE
+.RS
+subject
+.RE
+.RS
+keywords
+.RE
+.RS
+author
+.RE
+.RS
+creator
+.RE
+.RS
+producer
+.RE
+.RS
+creation date
+.RE
+.RS
+modification date
+.RE
+.PP
+In addition, the following information is printed:
+.PP
+.RS
+page count
+.RE
+.RS
+encrypted flag (yes or no)
+.RE
+.SH OPTIONS
+.TP
+.B \-h
+Print usage information.
+.RB ( \-help
+is equivalent.)
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+The pdfinfo software and documentation are copyright 1996-1998 Derek
+B. Noonburg (derekn@foolabs.com).
+.SH "SEE ALSO"
+.BR xpdf (1),
+.BR pdftops (1),
+.BR pdftotext (1),
+.BR pdftopbm (1),
+.BR pdfimages (1)
+.br
+.B http://www.foolabs.com/xpdf/

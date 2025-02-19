@@ -12,14 +12,14 @@
 
 #include <stdlib.h>
 #include <stddef.h>
-#include <LTKApp.h>
-#include <LTKLabel.h>
-#include <LTKButton.h>
-#include <LTKEmpty.h>
-#include <LTKBox.h>
-#include <LTKWindow.h>
-#include <LTKBorder.h>
-#include <LTKButtonDialog.h>
+#include "LTKApp.h"
+#include "LTKLabel.h"
+#include "LTKButton.h"
+#include "LTKEmpty.h"
+#include "LTKBox.h"
+#include "LTKWindow.h"
+#include "LTKBorder.h"
+#include "LTKButtonDialog.h"
 
 //------------------------------------------------------------------------
 // LTKButtonDialog

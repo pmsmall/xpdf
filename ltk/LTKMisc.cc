@@ -14,9 +14,9 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdarg.h>
-#include <LTKMisc.h>
-#include <LTKWindow.h>
-#include <LTKWidget.h>
+#include "LTKMisc.h"
+#include "LTKWindow.h"
+#include "LTKWidget.h"
 
 void ltkError(char *msg, ...) {
   va_list args;

@@ -16,7 +16,9 @@
 #include "Dict.h"
 #include "XRef.h"
 #include "OutputDev.h"
+#ifndef PDF_PARSER_ONLY
 #include "Gfx.h"
+#endif
 #include "Error.h"
 
 #include "Params.h"
@@ -28,6 +30,7 @@
 
 PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
   Object obj1, obj2;
+  double w, h;
 
   // get old/default values
   if (attrs) {
@@ -57,20 +60,20 @@ PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
   dict->lookup("MediaBox", &obj1);
   if (obj1.isArray() && obj1.arrayGetLength() == 4) {
     obj1.arrayGet(0, &obj2);
-    if (obj2.isInt())
-      x1 = obj2.getInt();
+    if (obj2.isNum())
+      x1 = obj2.getNum();
     obj2.free();
     obj1.arrayGet(1, &obj2);
-    if (obj2.isInt())
-      y1 = obj2.getInt();
+    if (obj2.isNum())
+      y1 = obj2.getNum();
     obj2.free();
     obj1.arrayGet(2, &obj2);
-    if (obj2.isInt())
-      x2 = obj2.getInt();
+    if (obj2.isNum())
+      x2 = obj2.getNum();
     obj2.free();
     obj1.arrayGet(3, &obj2);
-    if (obj2.isInt())
-      y2 = obj2.getInt();
+    if (obj2.isNum())
+      y2 = obj2.getNum();
     obj2.free();
   }
   obj1.free();
@@ -79,21 +82,33 @@ PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
   dict->lookup("CropBox", &obj1);
   if (obj1.isArray() && obj1.arrayGetLength() == 4) {
     obj1.arrayGet(0, &obj2);
-    if (obj2.isInt())
-      cropX1 = obj2.getInt();
+    if (obj2.isNum())
+      cropX1 = obj2.getNum();
     obj2.free();
     obj1.arrayGet(1, &obj2);
-    if (obj2.isInt())
-      cropY1 = obj2.getInt();
+    if (obj2.isNum())
+      cropY1 = obj2.getNum();
     obj2.free();
     obj1.arrayGet(2, &obj2);
-    if (obj2.isInt())
-      cropX2 = obj2.getInt();
+    if (obj2.isNum())
+      cropX2 = obj2.getNum();
     obj2.free();
     obj1.arrayGet(3, &obj2);
-    if (obj2.isInt())
-      cropY2 = obj2.getInt();
+    if (obj2.isNum())
+      cropY2 = obj2.getNum();
     obj2.free();
+
+    // if the MediaBox is excessively larger than the CropBox,
+    // just use the CropBox
+    w = 0.25 * (cropX2 - cropX1);
+    h = 0.25 * (cropY2 - cropY1);
+    if (cropX1 - x1 > w || x2 - cropX2 > w ||
+	cropY1 - y1 > h || y2 - cropY2 > h) {
+      x1 = cropX1;
+      x2 = cropX2;
+      y1 = cropY1;
+      y2 = cropY2;
+    }
   } else {
     cropX1 = cropX2 = cropY1 = cropY2 = 0;
   }
@@ -168,25 +183,16 @@ Page::~Page() {
   contents.free();
 }
 
-Object *Page::getFontDict(Object *obj) {
-  Dict *resDict;
-
-  if ((resDict = attrs->getResourceDict()))
-    resDict->lookup("Font", obj);
-  else
-    obj->initNull();
-  return obj;
-}
-
 void Page::display(OutputDev *out, int dpi, int rotate) {
+#ifndef PDF_PARSER_ONLY
   Gfx *gfx;
   Object obj;
 
   if (printCommands) {
-    printf("***** MediaBox = ll:%d,%d ur:%d,%d\n",
+    printf("***** MediaBox = ll:%g,%g ur:%g,%g\n",
 	   getX1(), getY1(), getX2(), getY2());
     if (isCropped()) {
-      printf("***** CropBox = ll:%d,%d ur:%d,%d\n",
+      printf("***** CropBox = ll:%g,%g ur:%g,%g\n",
 	     getCropX1(), getCropY1(), getCropX2(), getCropY2());
     }
     printf("***** Rotate = %d\n", attrs->getRotate());
@@ -204,4 +210,5 @@ void Page::display(OutputDev *out, int dpi, int rotate) {
     gfx->display(&obj);
   obj.free();
   delete gfx;
+#endif
 }

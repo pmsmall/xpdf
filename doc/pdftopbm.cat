@@ -1,0 +1,66 @@
+
+
+
+pdftopbm(1)                                           pdftopbm(1)
+
+
+NAME
+       pdftopbm  -  Portable  Document  Format  (PDF) to Portable
+       Bitmap (PBM) converter (version 0.80)
+
+SYNOPSIS
+       pdftopbm [options] PDF-file PBM-root
+
+DESCRIPTION
+       Pdftopbm converts Portable Document Format (PDF) files  to
+       black-and-white  image files in Portable Bitmap (PBM) for-
+       mat.
+
+       Pdftopbm reads the PDF file, PDF-file, and writes one  PBM
+       file  for  each page, PBM-root-nnnnnn.pbm, where nnnnnn is
+       the page number.
+
+OPTIONS
+       -f number
+              Specifies the first page to convert.
+
+       -l number
+              Specifies the last page to convert.
+
+       -r number
+              Specifies the resolution, in DPI.  The  default  is
+              150 DPI.
+
+       -h     Print usage information.  (-help is equivalent.)
+
+BUGS
+       Pdftopbm  uses  X to do the rendering, so it is limited by
+       the capabilities and performance of the X server.  In par-
+       ticular,  high-resolution  output requires lots of memory.
+       Also, non-scalable fonts will not look great.
+
+AUTHOR
+       The pdftopbm  software  and  documentation  are  copyright
+       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+
+SEE ALSO
+       xpdf(1),   pdftops(1),  pdftotext(1),  pdfinfo(1),  pdfim-
+       ages(1)
+       http://www.foolabs.com/xpdf/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           27 Nov 1998                          1
+
+

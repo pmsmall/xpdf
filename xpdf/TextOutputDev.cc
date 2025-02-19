@@ -11,10 +11,11 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <ctype.h>
-#include <GString.h>
-#include <gmem.h>
+#include "GString.h"
+#include "gmem.h"
 #include "config.h"
 #include "Error.h"
 #include "GfxState.h"
@@ -96,7 +97,7 @@ static char *ascii7Subst[] = {
 // TextString
 //------------------------------------------------------------------------
 
-TextString::TextString(GfxState *state) {
+TextString::TextString(GfxState *state, GBool hexCodes1) {
   double x, y, h;
 
   state->transform(state->getCurX(), state->getCurY(), &x, &y);
@@ -109,6 +110,7 @@ TextString::TextString(GfxState *state) {
   xRight = NULL;
   yxNext = NULL;
   xyNext = NULL;
+  hexCodes = hexCodes1;
 }
 
 TextString::~TextString() {
@@ -121,7 +123,7 @@ void TextString::addChar(GfxState *state, double x, double y,
 			 Guchar c, GBool useASCII7) {
   char *charName, *sub;
   int c1;
-  int i, j, n;
+  int i, j, n, m;
 
   // get current index
   i = text->getLength();
@@ -130,14 +132,42 @@ void TextString::addChar(GfxState *state, double x, double y,
   sub = NULL;
   n = 1;
   if ((charName = state->getFont()->getCharName(c))) {
-    if (useASCII7) {
+    if (useASCII7)
       c1 = ascii7Encoding.getCharCode(charName);
+    else
+      c1 = isoLatin1Encoding.getCharCode(charName);
+    if (c1 < 0) {
+      m = strlen(charName);
+      if (hexCodes && m == 3 &&
+	  (charName[0] == 'B' || charName[0] == 'C' ||
+	   charName[0] == 'G') &&
+	  isxdigit(charName[1]) && isxdigit(charName[2])) {
+	sscanf(charName+1, "%x", &c1);
+      } else if (!hexCodes && m >= 2 && m <= 3 &&
+		 isdigit(charName[0]) && isdigit(charName[1])) {
+	c1 = atoi(charName);
+	if (c1 >= 256)
+	  c1 = -1;
+      } else if (!hexCodes && m >= 3 && m <= 5 && isdigit(charName[1])) {
+	c1 = atoi(charName+1);
+	if (c1 >= 256)
+	  c1 = -1;
+      }
+      //~ this is a kludge -- is there a standard internal encoding
+      //~ used by all/most Type 1 fonts?
+      if (c1 == 262)		// hyphen
+	c1 = 45;
+      else if (c1 == 266)	// emdash
+	c1 = 208;
+      if (useASCII7)
+	c1 = ascii7Encoding.getCharCode(isoLatin1Encoding.getCharName(c1));
+    }
+    if (useASCII7) {
       if (c1 >= 128) {
 	sub = ascii7Subst[c1 - 128];
 	n = strlen(sub);
       }
     } else {
-      c1 = isoLatin1Encoding.getCharCode(charName);
       if (c1 >= 256) {
 	sub = isoLatin1Subst[c1 - 256];
 	n = strlen(sub);
@@ -178,8 +208,8 @@ TextPage::~TextPage() {
   clear();
 }
 
-void TextPage::beginString(GfxState *state, GString *s) {
-  curStr = new TextString(state);
+void TextPage::beginString(GfxState *state, GString *s, GBool hexCodes) {
+  curStr = new TextString(state, hexCodes);
 }
 
 void TextPage::addChar(GfxState *state, double x, double y,
@@ -451,8 +481,14 @@ void TextPage::dump(FILE *f) {
       yMax = str1->yMax;
 
     // if we've hit the end of the line...
+#if 0 //~
     if (!(str1->yxNext && str1->yxNext->yMin < str1->yMax &&
 	  str1->yxNext->xMin >= str1->xMax)) {
+#else
+    if (!(str1->yxNext &&
+	  str1->yxNext->yMin < 0.2*str1->yMin + 0.8*str1->yMax &&
+	  str1->yxNext->xMin >= str1->xMax)) {
+#endif
 
       // print a return
       fputc('\n', f);
@@ -547,8 +583,33 @@ void TextOutputDev::endPage() {
   }
 }
 
+void TextOutputDev::updateFont(GfxState *state) {
+  GfxFont *font;
+  char *charName;
+  int c;
+
+  // look for hex char codes in subsetted font
+  hexCodes = gFalse;
+  if ((font = state->getFont())) {
+    for (c = 0; c < 256; ++c) {
+      if ((charName = font->getCharName(c))) {
+	if ((charName[0] == 'B' || charName[0] == 'C' ||
+	     charName[0] == 'G') &&
+	    strlen(charName) == 3 &&
+	    ((charName[1] >= 'a' && charName[1] <= 'f') ||
+	     (charName[1] >= 'A' && charName[1] <= 'F') ||
+	     (charName[2] >= 'a' && charName[2] <= 'f') ||
+	     (charName[2] >= 'A' && charName[2] <= 'F'))) {
+	  hexCodes = gTrue;
+	  break;
+	}
+      }
+    }
+  }
+}
+
 void TextOutputDev::beginString(GfxState *state, GString *s) {
-  text->beginString(state, s);
+  text->beginString(state, s, hexCodes);
 }
 
 void TextOutputDev::endString(GfxState *state) {

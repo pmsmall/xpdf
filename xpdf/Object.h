@@ -15,9 +15,9 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <gtypes.h>
-#include <gmem.h>
-#include <GString.h>
+#include "gtypes.h"
+#include "gmem.h"
+#include "GString.h"
 
 class Array;
 class Dict;
@@ -92,6 +92,8 @@ public:
     { initObj(objNull); return this; }
   Object *initArray();
   Object *initDict();
+  Object *initDict(Dict *dict1)
+    { initObj(objDict); dict = dict1; return this; }
   Object *initStream(Stream *stream1);
   Object *initRef(int num1, int gen1)
     { initObj(objRef); ref.num = num1; ref.gen = gen1; return this; }

@@ -15,15 +15,15 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <gmem.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/cursorfont.h>
-#include <LTKConfig.h>
-#include <LTKApp.h>
-#include <LTKWindow.h>
-#include <LTKBorder.h>
-#include <LTKMenu.h>
+#include "gmem.h"
+#include "LTKConfig.h"
+#include "LTKApp.h"
+#include "LTKWindow.h"
+#include "LTKBorder.h"
+#include "LTKMenu.h"
 
 #ifdef XlibSpecificationRelease
 #if XlibSpecificationRelease < 5

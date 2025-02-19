@@ -17,9 +17,9 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <LTKApp.h>
-#include <LTKWindow.h>
-#include <LTKWidget.h>
+#include "LTKApp.h"
+#include "LTKWindow.h"
+#include "LTKWidget.h"
 
 LTKWidget::LTKWidget(char *name1, int widgetNum1) {
   name = name1;

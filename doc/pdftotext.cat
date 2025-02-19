@@ -1,0 +1,66 @@
+
+
+
+pdftotext(1)                                         pdftotext(1)
+
+
+NAME
+       pdftotext  -  Portable  Document Format (PDF) to text con-
+       verter (version 0.80)
+
+SYNOPSIS
+       pdftotext [options] [PDF-file [text-file]]
+
+DESCRIPTION
+       Pdftotext converts Portable Document Format (PDF) files to
+       plain text.
+
+       Pdftotext  reads the PDF file, PDF-file, and writes a text
+       file, text-file.  If text-file is not specified, pdftotext
+       converts  file.pdf  to file.txt.  If text-file is '-', the
+       text is sent to stdout.
+
+OPTIONS
+       -f number
+              Specifies the first page to convert.
+
+       -l number
+              Specifies the last page to convert.
+
+       -ascii7
+              Convert the text to 7-bit ASCII; the default is  to
+              use the 8-bit ISO Latin-1 character set.
+
+       -h     Print usage information.  (-help is equivalent.)
+
+BUGS
+       This is a beta release of pdftotext, and there are still a
+       bunch of PDF features which I have yet to implement.
+
+AUTHOR
+       The pdftotext software  and  documentation  are  copyright
+       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+
+SEE ALSO
+       xpdf(1), pdftops(1), pdfinfo(1), pdftopbm(1), pdfimages(1)
+       http://www.foolabs.com/xpdf/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           27 Nov 1998                          1
+
+

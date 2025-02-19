@@ -15,7 +15,7 @@
  *	compatibilty and is not guaranteed to be correct.
  */
 
-#if (__DECC_VER < 50200000) || (__VMS_VER < 70000000)
+#if (__VMS_VER < 70000000)
 int gettimeofday(tv, tz)
 struct timeval  *tv;
 struct timezone *tz;

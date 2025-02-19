@@ -8,21 +8,24 @@
 //
 //========================================================================
 
-#include <stdlib.h>
-#include <stddef.h>
-#include <unistd.h>
-#include <sys/types.h>
+#ifdef WIN32
+extern "C" {
+#include <sys/stat.h>
+#include <kpathsea/win32lib.h>
+}
+#else // !WIN32
 #include <sys/stat.h>
 #include <limits.h>
 #include <string.h>
 #ifndef VMS
 #include <pwd.h>
 #endif
+#endif // WIN32
 #if defined(VMS) && (__DECCXX_VER < 50200000)
 #include <unixlib.h>
 #endif
-#include <GString.h>
-#include <gfile.h>
+#include "GString.h"
+#include "gfile.h"
 
 // Some systems don't define this, so just make it something reasonably
 // large.
@@ -37,8 +40,8 @@ GString *getHomeDir() {
   //---------- VMS ----------
   return new GString("SYS$LOGIN:");
 
-#elif defined(__EMX__)
-  //---------- OS/2+EMX ----------
+#elif defined(__EMX__) || defined(WIN32)
+  //---------- OS/2+EMX and Win32 ----------
   char *s;
   GString *ret;
 
@@ -73,8 +76,10 @@ GString *getHomeDir() {
 GString *getCurrentDir() {
   char buf[PATH_MAX+1];
 
-#ifdef __EMX__
+#if defined(__EMX__)
   if (!_getcwd2(buf, sizeof(buf)))
+#elif defined(WIN32)
+  if (!GetCurrentDirectory(sizeof(buf), buf))
 #else
   if (!getcwd(buf, sizeof(buf)))
 #endif
@@ -83,7 +88,7 @@ GString *getCurrentDir() {
 }
 
 GString *appendToPath(GString *path, char *fileName) {
-#ifdef VMS
+#if defined(VMS)
   //---------- VMS ----------
   //~ this should handle everything necessary for file
   //~ requesters, but it's certainly not complete
@@ -121,6 +126,21 @@ GString *appendToPath(GString *path, char *fileName) {
       path->clear();
     path->append(fileName);
   }
+  return path;
+
+#elif defined(WIN32)
+  //---------- Win32 ----------
+  GString *tmp;
+  char buf[256];
+  char *fp;
+
+  tmp = new GString(path);
+  tmp->append('/');
+  tmp->append(fileName);
+  GetFullPathName(tmp->getCString(), sizeof(buf), buf, &fp);
+  delete tmp;
+  path->clear();
+  path->append(buf);
   return path;
 
 #else
@@ -196,8 +216,8 @@ GString *grabPath(char *fileName) {
     return new GString(fileName, p + 1 - fileName);
   return new GString();
 
-#elif defined(__EMX__)
-  //---------- OS/2+EMX ----------
+#elif defined(__EMX__) || defined(WIN32)
+  //---------- OS/2+EMX and Win32 ----------
   char *p;
 
   if ((p = strrchr(fileName, '/')))
@@ -224,8 +244,8 @@ GBool isAbsolutePath(char *path) {
   return strchr(path, ':') ||
 	 (path[0] == '[' && path[1] != '.' && path[1] != '-');
 
-#elif defined(__EMX__)
-  //---------- OS/2+EMX ----------
+#elif defined(__EMX__) || defined(WIN32)
+  //---------- OS/2+EMX and Win32 ----------
   return path[0] == '/' || path[0] == '\\' || path[1] == ':';
 
 #else
@@ -252,6 +272,20 @@ GString *makePathAbsolute(GString *path) {
       }
     }
   }
+  return path;
+
+#elif WIN32
+  //---------- Win32 ----------
+  char buf[_MAX_PATH];
+  char *fp;
+
+  buf[0] = '\0';
+  if (!GetFullPathName(path->getCString(), _MAX_PATH, buf, &fp)) {
+    path->clear();
+    return path;
+  }
+  path->clear();
+  path->append(buf);
   return path;
 
 #else
@@ -305,6 +339,9 @@ GString *makePathAbsolute(GString *path) {
 GDirEntry::GDirEntry(char *dirPath, char *name1, GBool doStat) {
 #ifdef VMS
   char *p;
+#elif WIN32
+  int fa;
+  GString *s;
 #else
   struct stat st;
   GString *s;
@@ -320,8 +357,13 @@ GDirEntry::GDirEntry(char *dirPath, char *name1, GBool doStat) {
 #else
     s = new GString(dirPath);
     appendToPath(s, name1);
+#ifdef WIN32
+    fa = GetFileAttributes(s->getCString());
+    dir = (fa != 0xFFFFFFFF && (fa & FILE_ATTRIBUTE_DIRECTORY));
+#else
     if (stat(s->getCString(), &st) == 0)
       dir = S_ISDIR(st.st_mode);
+#endif
     delete s;
 #endif
   }
@@ -334,7 +376,16 @@ GDirEntry::~GDirEntry() {
 GDir::GDir(char *name, GBool doStat1) {
   path = new GString(name);
   doStat = doStat1;
+#ifdef WIN32
+  GString *tmp;
+
+  tmp = path->copy();
+  tmp->append("/*.*");
+  hnd = FindFirstFile(tmp->getCString(), &ffd);
+  delete tmp;
+#else
   dir = opendir(name);
+#endif
 #ifdef VMS
   needParent = strchr(name, '[') != NULL;
 #endif
@@ -342,8 +393,15 @@ GDir::GDir(char *name, GBool doStat1) {
 
 GDir::~GDir() {
   delete path;
+#ifdef WIN32
+  if (hnd) {
+    FindClose(hnd);
+    hnd = NULL;
+  }
+#else
   if (dir)
     closedir(dir);
+#endif
 }
 
 GDirEntry *GDir::getNextEntry() {
@@ -351,6 +409,13 @@ GDirEntry *GDir::getNextEntry() {
   GDirEntry *e;
 
   e = NULL;
+#ifdef WIN32
+  e = new GDirEntry(path->getCString(), ffd.cFileName, doStat);
+  if (hnd  && !FindNextFile(hnd, &ffd)) {
+    FindClose(hnd);
+    hnd = NULL;
+  }
+#else
   if (dir) {
 #ifdef VMS
     if (needParent) {
@@ -367,12 +432,23 @@ GDirEntry *GDir::getNextEntry() {
     if (ent)
       e = new GDirEntry(path->getCString(), ent->d_name, doStat);
   }
+#endif
   return e;
 }
 
 void GDir::rewind() {
+#ifdef WIN32
+  GString *tmp;
+
+  if (hnd)
+    FindClose(hnd);
+  tmp = path->copy();
+  tmp->append("/*.*");
+  hnd = FindFirstFile(tmp->getCString(), &ffd);
+#else
   if (dir)
     rewinddir(dir);
+#endif
 #ifdef VMS
   needParent = strchr(path->getCString(), '[') != NULL;
 #endif

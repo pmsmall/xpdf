@@ -13,10 +13,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <gmem.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <LTKList.h>
+#include "gmem.h"
+#include "LTKList.h"
 
 #define horizBorder 4
 #define vertBorder  2

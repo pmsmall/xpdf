@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include <gmem.h>
+#include "gmem.h"
 
 #ifdef DEBUG_MEM
 typedef struct _GMemHdr {

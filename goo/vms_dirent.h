@@ -11,7 +11,24 @@
 extern "C" {
 #endif
 
+/* Make sure we don't get the V7 RTL dirent functions. These are broken. */
+
+#ifndef __CRTL_VER
+#   define __CRTL_VER __VMS_VER
+#endif
+#if __CRTL_VER >= 70000000
+#include <dirent.h>
+#endif
+
 #include <types.h>
+
+#define opendir   goo_opendir
+#define readdir   goo_readdir
+#define closedir  goo_closedir
+#define seekdir   goo_seekdir
+#define telldir   goo_telldir
+#define rewinddir goo_rewindir
+#define DIR       GOO_DIR
 
 #ifndef	_POSIX_SOURCE
 #define	d_ino	d_fileno	/* compatability */
@@ -32,6 +49,8 @@ typedef	struct __dirdesc {
 	char	*dd_buf;	/* directory data buffer */
 } DIR;
 
+#include "vms_sys_dirent.h"
+
 extern	DIR *opendir(char *dirname);
 extern	struct dirent *readdir(DIR *dirp);
 extern	void closedir(DIR *dirp);
@@ -44,7 +63,5 @@ extern	void rewinddir(DIR *dirp);
 #ifdef __cplusplus
 }
 #endif
-
-#include "vms_sys_dirent.h"
 
 #endif	/* !__dirent_h */

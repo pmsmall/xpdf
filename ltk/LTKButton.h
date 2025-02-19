@@ -15,9 +15,9 @@
 
 #include <stddef.h>
 #include <X11/Xlib.h>
-#include <gtypes.h>
-#include <GString.h>
-#include <LTKWidget.h>
+#include "gtypes.h"
+#include "GString.h"
+#include "LTKWidget.h"
 
 //------------------------------------------------------------------------
 // button action type

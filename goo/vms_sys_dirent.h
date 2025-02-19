@@ -19,6 +19,8 @@
 extern "C" {
 #endif
 
+#define dirent GOO_dirent
+
 struct	dirent {
 	long		d_off;		/* offset of next disk dir entry */
 	unsigned long	d_fileno;	/* file number of entry */

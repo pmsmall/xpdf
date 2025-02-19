@@ -28,6 +28,10 @@ class GfxFont;
 // Generate Level 1 PostScript?
 extern GBool psOutLevel1;
 
+// Paper size.
+extern int paperWidth;
+extern int paperHeight;
+
 //------------------------------------------------------------------------
 // PSOutputDev
 //------------------------------------------------------------------------
@@ -43,7 +47,8 @@ public:
 
   // Open a PostScript output file, and write the prolog.
   PSOutputDev(char *fileName, Catalog *catalog,
-	      int firstPage, int lastPage, GBool embedType11);
+	      int firstPage, int lastPage,
+	      GBool embedType11, GBool doForm1);
 
   // Destructor -- writes the trailer and closes the file.
   virtual ~PSOutputDev();
@@ -117,6 +122,7 @@ public:
 
 private:
 
+  void setupFonts(Dict *resDict);
   void setupFont(GfxFont *font);
   void setupEmbeddedFont(Ref *id);
   void setupEmbeddedFont(char *fileName);
@@ -131,6 +137,7 @@ private:
   void writePSString(GString *s);
 
   GBool embedType1;		// embed Type 1 fonts?
+  GBool doForm;			// generate a form?
 
   FILE *f;			// PostScript file
   PSFileType fileType;		// file / pipe / stdout

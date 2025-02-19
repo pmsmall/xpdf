@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 #include <X11/Xlib.h>
-#include <LTKWidget.h>
+#include "LTKWidget.h"
 
 //------------------------------------------------------------------------
 // LTKEmpty

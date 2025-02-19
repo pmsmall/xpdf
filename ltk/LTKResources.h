@@ -17,7 +17,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
-#include <GString.h>
+#include "GString.h"
 
 extern void ltkGetCmdLineResources(XrmDatabase *cmdLineDB,
 				   XrmOptionDescRec *opts,

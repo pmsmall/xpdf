@@ -15,9 +15,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <GString.h>
-#include <gmem.h>
-#include <gfile.h>
+#include "GString.h"
+#include "gmem.h"
+#include "gfile.h"
 #include "config.h"
 #include "Object.h"
 #include "Array.h"
@@ -27,6 +27,13 @@
 #include "GfxFont.h"
 
 #include "FontInfo.h"
+#if JAPANESE_SUPPORT
+#include "CMapInfo.h"
+#endif
+
+//------------------------------------------------------------------------
+
+static int CDECL cmpWidthExcep(const void *w1, const void *w2);
 
 //------------------------------------------------------------------------
 
@@ -197,7 +204,10 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
     type = fontType3;
   else if (obj1.isName("TrueType"))
     type = fontTrueType;
+  else if (obj1.isName("Type0"))
+    type = fontType0;
   obj1.free();
+  is16 = gFalse;
 
   // get info from font descriptor
   // for flags: assume Times-Roman (or TimesNewRoman), but
@@ -281,13 +291,29 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
   obj1.free();
 
   // get encoding and character widths
-  if (builtinFont) {
+  if (type == fontType0) {
+    getType0EncAndWidths(fontDict);
+  } else if (builtinFont) {
     makeEncoding(fontDict, builtinFont->encoding);
     makeWidths(fontDict, builtinFont->encoding, builtinFont->widths);
   } else {
     makeEncoding(fontDict, NULL);
     makeWidths(fontDict, NULL, NULL);
   }
+}
+
+GfxFont::~GfxFont() {
+  delete tag;
+  if (name)
+    delete name;
+  if (!is16 && encoding)
+    delete encoding;
+  if (embFontName)
+    delete embFontName;
+  if (extFontFile)
+    delete extFontFile;
+  if (is16)
+    gfree(widths16.exceps);
 }
 
 double GfxFont::getWidth(GString *s) {
@@ -300,12 +326,46 @@ double GfxFont::getWidth(GString *s) {
   return w;
 }
 
+double GfxFont::getWidth16(int c) {
+  double w;
+  int a, b, m;
+
+  w = widths16.defWidth;
+  a = -1;
+  b = widths16.numExceps;
+  // invariant: widths16.exceps[a].last < c < widths16.exceps[b].first
+  while (b - a > 1) {
+    m = (a + b) / 2;
+    if (widths16.exceps[m].last < c) {
+      a = m;
+    } else if (c < widths16.exceps[m].first) {
+      b = m;
+    } else {
+      w = widths16.exceps[m].width;
+      break;
+    }
+  }
+  return w;
+}
+
+double GfxFont::getWidth16(GString *s) {
+  double w;
+  int c;
+  int i;
+
+  w = 0;
+  for (i = 0; i < s->getLength(); i += 2) {
+    c = (s->getChar(i) << 8) + s->getChar(i+1);
+    w += getWidth16(c);
+  }
+  return w;
+}
+
 void GfxFont::makeEncoding(Dict *fontDict, GfxFontEncoding *builtinEncoding) {
   GfxFontEncoding *baseEnc;
   Object obj1, obj2, obj3;
   char *charName;
-  GBool hex;
-  int code, n, i;
+  int code, i;
 
   // start with empty encoding
   encoding = new GfxFontEncoding();
@@ -347,45 +407,10 @@ void GfxFont::makeEncoding(Dict *fontDict, GfxFontEncoding *builtinEncoding) {
   obj1.free();
 
   // merge base encoding and differences;
-  // try to fix decimal or hex character names for font subsets
-  hex = gFalse;
   for (code = 0; code < 256; ++code) {
-    if ((charName = encoding->getCharName(code))) {
-      if ((charName[0] == 'C' || charName[0] == 'G') &&
-	  strlen(charName) == 3 &&
-	  ((charName[1] >= 'a' && charName[1] <= 'f') ||
-	   (charName[1] >= 'A' && charName[1] <= 'F') ||
-	   (charName[2] >= 'a' && charName[2] <= 'f') ||
-	   (charName[2] >= 'A' && charName[2] <= 'F'))) {
-	hex = gTrue;
-	break;
-      }
-    }
-  }
-  for (code = 0; code < 256; ++code) {
-    if ((charName = encoding->getCharName(code))) {
-      n = strlen(charName);
-      i = -1;
-      if (hex && n == 3 && (charName[0] == 'C' || charName[0] == 'G') &&
-	  isxdigit(charName[1]) && isxdigit(charName[2]))
-	sscanf(charName+1, "%x", &i);
-      else if (!hex && n >= 2 && n <= 3 &&
-	       isdigit(charName[0]) && isdigit(charName[1]))
-	i = atoi(charName);
-      else if (!hex && n >= 3 && n <= 5 && isdigit(charName[1]))
-	i = atoi(charName+1);
-      if (i >= 0 && i < winAnsiEncodingSize) {
-	//~ this is a kludge -- is there a standard internal encoding
-	//~ used by all/most Type 1 fonts?
-	if (i == 262)		// hyphen
-	  i = 45;
-	else if (i == 266)	// emdash
-	  i = 208;
-	if ((charName = winAnsiEncoding.getCharName(i)))
-	  encoding->addChar(code, copyString(charName));
-      }
-    } else if ((charName = baseEnc->getCharName(code))) {
-      encoding->addChar(code, copyString(charName));
+    if (!encoding->getCharName(code)) {
+      if ((charName = baseEnc->getCharName(code)))
+	encoding->addChar(code, copyString(charName));
     }
   }
 }
@@ -413,6 +438,7 @@ GfxFontEncoding *GfxFont::makeEncoding1(Object obj, Dict *fontDict,
 
   // check font type
   } else {
+
     // Type 1 font: try to get encoding from font file
     if (type == fontType1) {
 
@@ -424,15 +450,15 @@ GfxFontEncoding *GfxFont::makeEncoding1(Object obj, Dict *fontDict,
       if (name) {
 	for (path = fontPath; *path; ++path) {
 	  extFontFile = appendToPath(new GString(*path), name->getCString());
-	  f = fopen(extFontFile->getCString(), FOPEN_READ_BIN);
+	  f = fopen(extFontFile->getCString(), "rb");
 	  if (!f) {
 	    extFontFile->append(".pfb");
-	    f = fopen(extFontFile->getCString(), FOPEN_READ_BIN);
+	    f = fopen(extFontFile->getCString(), "rb");
 	  }
 	  if (!f) {
 	    extFontFile->del(extFontFile->getLength() - 4, 4);
 	    extFontFile->append(".pfa");
-	    f = fopen(extFontFile->getCString(), FOPEN_READ_BIN);
+	    f = fopen(extFontFile->getCString(), "rb");
 	  }
 	  if (f) {
 	    obj1.initNull();
@@ -559,7 +585,8 @@ void GfxFont::makeWidths(Dict *fontDict, GfxFontEncoding *builtinEncoding,
     } else {
 
       // couldn't find widths -- use defaults 
-#if 0 //~ certain PDF generators apparently don't include widths
+#if 0
+      //~ certain PDF generators apparently don't include widths
       //~ for Arial and TimesNewRoman -- and this error message
       //~ is a nuisance
       error(-1, "No character widths resource for non-builtin font");
@@ -586,16 +613,168 @@ void GfxFont::makeWidths(Dict *fontDict, GfxFontEncoding *builtinEncoding,
   }
 }
 
-GfxFont::~GfxFont() {
-  delete tag;
-  if (name)
-    delete name;
-  if (encoding)
-    delete encoding;
-  if (embFontName)
-    delete embFontName;
-  if (extFontFile)
-    delete extFontFile;
+void GfxFont::getType0EncAndWidths(Dict *fontDict) {
+  Object obj1, obj2, obj3, obj4, obj5, obj6;
+  int excepsSize;
+  int i, j, k, n;
+
+  fontDict->lookup("DescendantFonts", &obj1);
+  if (!obj1.isArray() || obj1.arrayGetLength() != 1) {
+    error(-1, "Bad DescendantFonts entry for Type 0 font");
+    goto err1;
+  }
+  obj1.arrayGet(0, &obj2);
+  if (!obj2.isDict("Font")) {
+    error(-1, "Bad descendant font of Type 0 font");
+    goto err2;
+  }
+
+  obj2.dictLookup("CIDSystemInfo", &obj3);
+  if (!obj3.isDict()) {
+    error(-1, "Bad CIDSystemInfo in Type 0 font descendant");
+    goto err3;
+  }
+  obj3.dictLookup("Registry", &obj4);
+  obj3.dictLookup("Ordering", &obj5);
+  if (obj4.isString() && obj5.isString()) {
+    if (obj4.getString()->cmp("Adobe") == 0 &&
+	obj5.getString()->cmp("Japan1") == 0) {
+#if JAPANESE_SUPPORT
+      is16 = gTrue;
+      enc16.charSet = font16AdobeJapan12;
+#else
+      error(-1, "Xpdf was compiled without Japanese font support");
+      goto err4;
+#endif
+    } else {
+      error(-1, "Uknown Type 0 character set: %s-%s",
+	    obj4.getString()->getCString(), obj5.getString()->getCString());
+      goto err4;
+    }
+  } else {
+    error(-1, "Unknown Type 0 character set");
+    goto err4;
+  }
+  obj5.free();
+  obj4.free();
+  obj3.free();
+
+  obj2.dictLookup("DW", &obj3);
+  if (obj3.isInt())
+    widths16.defWidth = obj3.getInt() * 0.001;
+  else
+    widths16.defWidth = 1.0;
+  obj3.free();
+
+  widths16.exceps = NULL;
+  widths16.numExceps = 0;
+  obj2.dictLookup("W", &obj3);
+  if (obj3.isArray()) {
+    excepsSize = 0;
+    k = 0;
+    i = 0;
+    while (i+1 < obj3.arrayGetLength()) {
+      obj3.arrayGet(i, &obj4);
+      obj3.arrayGet(i+1, &obj5);
+      if (obj4.isInt() && obj5.isInt()) {
+	obj3.arrayGet(i+2, &obj6);
+	if (!obj6.isNum()) {
+	  error(-1, "Bad widths array in Type 0 font");
+	  obj6.free();
+	  obj5.free();
+	  obj4.free();
+	  break;
+	}
+	if (k == excepsSize) {
+	  excepsSize += 16;
+	  widths16.exceps = (GfxFontWidthExcep *)
+	                grealloc(widths16.exceps,
+				 excepsSize * sizeof(GfxFontWidthExcep));
+	}
+	widths16.exceps[k].first = obj4.getInt();
+	widths16.exceps[k].last = obj5.getInt();
+	widths16.exceps[k].width = obj6.getNum() * 0.001;
+	obj6.free();
+	++k;
+	i += 3;
+      } else if (obj4.isInt() && obj5.isArray()) {
+	if (k + obj5.arrayGetLength() >= excepsSize) {
+	  excepsSize = (k + obj5.arrayGetLength() + 15) & ~15;
+	  widths16.exceps = (GfxFontWidthExcep *)
+	                grealloc(widths16.exceps,
+				 excepsSize * sizeof(GfxFontWidthExcep));
+	}
+	n = obj4.getInt();
+	for (j = 0; j < obj5.arrayGetLength(); ++j) {
+	  obj5.arrayGet(j, &obj6);
+	  if (!obj6.isNum()) {
+	    error(-1, "Bad widths array in Type 0 font");
+	    obj6.free();
+	    break;
+	  }
+	  widths16.exceps[k].first = widths16.exceps[k].last = n++;
+	  widths16.exceps[k].width = obj6.getNum() * 0.001;
+	  obj6.free();
+	  ++k;
+	}
+	i += 2;
+      } else {
+	error(-1, "Bad widths array in Type 0 font");
+	obj6.free();
+	obj5.free();
+	obj4.free();
+	break;
+      }
+      obj5.free();
+      obj4.free();
+    }
+    widths16.numExceps = k;
+    if (k > 0)
+      qsort(widths16.exceps, k, sizeof(GfxFontWidthExcep), &cmpWidthExcep);
+  }
+  obj3.free();
+
+  obj2.free();
+  obj1.free();
+
+  fontDict->lookup("Encoding", &obj1);
+  if (!obj1.isName()) {
+    error(-1, "Bad encoding for Type 0 font");
+    goto err1;
+  }
+#if JAPANESE_SUPPORT
+  if (enc16.charSet == font16AdobeJapan12) {
+    for (i = 0; gfxFontEnc16Tab[i].name; ++i) {
+      if (!strcmp(obj1.getName(), gfxFontEnc16Tab[i].name))
+	break;
+    }
+    if (!gfxFontEnc16Tab[i].name) {
+      error(-1, "Unknown encoding '%s' for Adobe-Japan1-2 font",
+	    obj1.getName());
+      goto err1;
+    }
+    enc16.enc = gfxFontEnc16Tab[i].enc;
+  }
+#endif
+  obj1.free();
+
+  return;
+
+ err4:
+  obj5.free();
+  obj4.free();
+ err3:
+  obj3.free();
+ err2:
+  obj2.free();
+ err1:
+  obj1.free();
+  makeEncoding(fontDict, NULL);
+  makeWidths(fontDict, NULL, NULL);
+}
+
+static int CDECL cmpWidthExcep(const void *w1, const void *w2) {
+  return ((GfxFontWidthExcep *)w1)->first - ((GfxFontWidthExcep *)w2)->first;
 }
 
 //------------------------------------------------------------------------

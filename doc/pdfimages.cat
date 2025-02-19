@@ -1,0 +1,66 @@
+
+
+
+pdfimages(1)                                         pdfimages(1)
+
+
+NAME
+       pdfimages - Portable Document Format (PDF) image extractor
+       (version 0.80)
+
+SYNOPSIS
+       pdfimages [options] PDF-file image-root
+
+DESCRIPTION
+       Pdfimages saves images from  a  Portable  Document  Format
+       (PDF)  file  as  Portable  Pixmap  (PPM),  Portable Bitmap
+       (PBM), or JPEG files.
+
+       Pdfimages reads the PDF file, scans  one  or  more  pages,
+       PDF-file,  and  writes one PPM, PBM, or JPEG file for each
+       image, image-root-nnn.xxx, where nnn is the  image  number
+       and xxx is the image type (.ppm, .pbm, .jpg).
+
+OPTIONS
+       -f number
+              Specifies the first page to scan.
+
+       -l number
+              Specifies the last page to scan.
+
+       -j     Normally,  all  images  are  written  as  PBM  (for
+              monochrome  images)  or  PPM  (for   non-monochrome
+              images)  files.   With  this  option, images in DCT
+              format are saved as JPEG files.  All non-DCT images
+              are saved in PBM/PPM format as usual.
+
+       -h     Print usage information.  (-help is equivalent.)
+
+BUGS
+       With  the  -j  option,  the  PDF  image streams are copied
+       directly to the output files.  DCT images in PDF files may
+       use some non-standard JPEG features, so the resulting .jpg
+       files may not be too useful.
+
+AUTHOR
+       The pdfimages software  and  documentation  are  copyright
+       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
+
+SEE ALSO
+       xpdf(1), pdftops(1), pdftotext(1), pdfinfo(1), pdftopbm(1)
+       http://www.foolabs.com/xpdf/
+
+
+
+
+
+
+
+
+
+
+
+
+                           27 Nov 1998                          1
+
+

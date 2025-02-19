@@ -13,9 +13,9 @@
 #pragma interface
 #endif
 
-#include <gtypes.h>
-#include <GString.h>
-#include <LTKWidget.h>
+#include "gtypes.h"
+#include "GString.h"
+#include "LTKWidget.h"
 
 //------------------------------------------------------------------------
 // LTKTextIn

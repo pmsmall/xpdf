@@ -14,11 +14,15 @@
 #endif
 
 #include <stddef.h>
+#include <sys/types.h>
 #include <sys/time.h>
+#if defined(VMS) && defined(__DECCXX) && (__DECCXX_VER  < 50200000)
+#include "vms_unix_time.h"
+#endif
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
-#include <gtypes.h>
-#include <GString.h>
+#include "gtypes.h"
+#include "GString.h"
 
 class LTKApp;
 class LTKWindow;

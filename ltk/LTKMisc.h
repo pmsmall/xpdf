@@ -13,7 +13,7 @@
 #pragma interface
 #endif
 
-#include <GString.h>
+#include "GString.h"
 
 extern void ltkError(char *msg, ...);
 

@@ -2,7 +2,7 @@
 1 xpdf
 
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 0.7a)
+       (version 0.80)
 
        xpdf [options] [PDF-file [page]]
 
@@ -62,25 +62,38 @@
               entries.   This  is  ignored with private colormaps
               and on TrueColor visuals.
 
+       -papercolor color
+              Set the "paper color", i.e., the background of  the
+              page display.  This will not work too well with PDF
+              files that do things like filling in  white  behind
+              the text.  [xpdf.paperColor]
+
        -ps PS-file
-              Set the default file name  for  PostScript  output.
+              Set  the  default  file name for PostScript output.
               This can also be of the form '|command' to pipe the
               PostScript through a command.  [xpdf.psFile]
 
+       -paperw size
+              Set  the  paper  width,  in points.  [xpdf.psPaper-
+              Width]
+
+       -paperh size
+              Set the paper height,  in  points.   [xpdf.psPaper-
+              Height]
+
        -level1
-              Generate  Level  1   PostScript.    The   resulting
-              PostScript  files  will be significantly larger (if
-              they contain images), but will  print  on  Level  1
-              printers.   This  also converts all images to black
+              Generate   Level   1   PostScript.   The  resulting
+              PostScript files will be significantly  larger  (if
+              they  contain  images),  but  will print on Level 1
+              printers.  This also converts all images  to  black
               and white.  [xpdf.psLevel1]
 
-       -cmd   Print commands  as  they're  executed  (useful  for
+       -cmd   Print  commands  as  they're  executed  (useful for
               debugging).
 
        -h     Print usage information.  (-help is equivalent.)
 
-       Several  other  standard X options and resources will work
-
+       Several other standard X options and resources  will  work
        as expected:
 
        -display display
@@ -95,15 +108,15 @@
        -font font
               (-fn is equivalent.)  [xpdf.font]
 
-       The color and font options only affect the user  interface
+       The  color and font options only affect the user interface
        elements, not the PDF display (the 'paper').
 
-       The  following X resources do not have command line option
+       The following X resources do not have command line  option
        equivalents:
 
        xpdf.urlCommand
-              Set the command executed when you click  on  a  URL
-              link.   See  the  WEB  BROWSERS  section  below for
+              Set  the  command  executed when you click on a URL
+              link.  See  the  WEB  BROWSERS  section  below  for
               details.
 
 2 CONTROLS
@@ -315,10 +328,11 @@
 2 AUTHOR
 
        The   xpdf   software   and  documentation  are  copyright
-       1996-1998 Derek B. Noonburg (derekn@aimnet.com).
+       1996-1998 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 
-       pdftops(1), pdftotext(1)
-       http://www.aimnet.com/~derekn/xpdf/
+       pdftops(1),  pdftotext(1), pdfinfo(1), pdftopbm(1), pdfim-
+       ages(1)
+       http://www.foolabs.com/xpdf/
 

@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <parseargs.h>
+#include "parseargs.h"
 
 static ArgDesc *findArg(ArgDesc *args, char *arg);
 static GBool grabArg(ArgDesc *arg, int i, int *argc, char *argv[]);
@@ -41,6 +41,7 @@ GBool parseArgs(ArgDesc *args, int *argc, char *argv[]) {
 
 void printUsage(char *program, char *otherArgs, ArgDesc *args) {
   ArgDesc *arg;
+  char *typ;
   int w, w1;
 
   w = 0;
@@ -49,34 +50,37 @@ void printUsage(char *program, char *otherArgs, ArgDesc *args) {
       w = w1;
   }
 
-  fprintf(stderr, "Usage: %s", program);
-  for (arg = args; arg->arg; ++arg) {
-    switch (arg->kind) {
-    case argFlag:
-    case argFlagDummy:
-      fprintf(stderr, " [%s]", arg->arg);
-      break;
-    case argInt:
-    case argIntDummy:
-      fprintf(stderr, " [%s <int>]", arg->arg);
-      break;
-    case argFP:
-    case argFPDummy:
-      fprintf(stderr, " [%s <fp>]", arg->arg);
-      break;
-    case argString:
-    case argStringDummy:
-      fprintf(stderr, " [%s <string>]", arg->arg);
-      break;
-    }
-  }
+  fprintf(stderr, "Usage: %s [options]", program);
   if (otherArgs)
     fprintf(stderr, " %s", otherArgs);
   fprintf(stderr, "\n");
 
   for (arg = args; arg->arg; ++arg) {
+    fprintf(stderr, "  %s", arg->arg);
+    w1 = 9 + w - strlen(arg->arg);
+    switch (arg->kind) {
+    case argInt:
+    case argIntDummy:
+      typ = " <int>";
+      break;
+    case argFP:
+    case argFPDummy:
+      typ = " <fp>";
+      break;
+    case argString:
+    case argStringDummy:
+      typ = " <string>";
+      break;
+    case argFlag:
+    case argFlagDummy:
+    default:
+      typ = "";
+      break;
+    }
+    fprintf(stderr, "%-*s", w1, typ);
     if (arg->usage)
-      fprintf(stderr, "  %-*s: %s\n", w, arg->arg, arg->usage);
+      fprintf(stderr, ": %s", arg->usage);
+    fprintf(stderr, "\n");
   }
 }
 

@@ -46,13 +46,16 @@ public:
   void skipChar() { getChar(); }
 
   // Get stream.
-  Stream *getStream() { return curStr.getStream(); }
+  Stream *getStream()
+    { return curStr.isNone() ? (Stream *)NULL : curStr.getStream(); }
 
   // Get current position in file.
-  int getPos() { return curStr.isNone() ? -1 : curStr.streamGetPos(); }
+  int getPos()
+    { return curStr.isNone() ? -1 : curStr.streamGetPos(); }
 
   // Set position in file.
-  void setPos(int pos) { curStr.streamSetPos(pos); }
+  void setPos(int pos)
+    { if (!curStr.isNone()) curStr.streamSetPos(pos); }
 
 private:
 

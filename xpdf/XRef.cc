@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <ctype.h>
-#include <gmem.h>
+#include "gmem.h"
 #include "Object.h"
 #include "Stream.h"
 #include "Lexer.h"
@@ -436,4 +436,8 @@ Object *XRef::fetch(int num, int gen, Object *obj) {
     obj->initNull();
   }
   return obj;
+}
+
+Object *XRef::getDocInfo(Object *obj) {
+  return trailerDict.dictLookup("Info", obj);
 }

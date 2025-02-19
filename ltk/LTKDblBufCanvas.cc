@@ -15,8 +15,8 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <LTKWindow.h>
-#include <LTKDblBufCanvas.h>
+#include "LTKWindow.h"
+#include "LTKDblBufCanvas.h"
 
 LTKDblBufCanvas::LTKDblBufCanvas(char *name1, int widgetNum1,
 				 int minWidth1, int minHeight1):

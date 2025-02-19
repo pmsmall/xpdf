@@ -361,3 +361,88 @@ Added a hack which allows better font substitution for some Type 3
   fonts.  Also allow character names of the form /nn and /nnn.
 Added <strings.h> and <bstring.h> to LTKApp.cc (needed by AIX and IRIX
   for bzero() declaration for FD_ZERO).
+
+0.80 (98-nov-27)
+----------------
+Support for some Japanese fonts (Type 0 fonts using the Adobe-Japan1-2
+  character collection, horizontal only).
+Added pdfinfo application.
+Added pdftopbm application.
+Added pdfimages application.
+Added -papercolor option and .paperColor resource.
+Fixed divide-by-zero problem in XOutputDev Type 3 font matrix kludge.
+Font subset char names can be 'Bxx' as well as 'Cxx' and 'Gxx'.
+Fixed bug in color space conversion in DCTStream filter (YCC->RGB was
+  correct, YCCK->CMYK was broken).
+Added XRef::getDocInfo() and PDFDoc::getDocInfo() to support pdfinfo.
+Optimized GfxImageColorMap.
+Lexer::getStream(), getPos(), and setPos() check for null stream.
+Decryption code now does strings as well as streams.
+ASCII85 decoder rounds short tuples up instead of down.
+CropBox and MediaBox can be non-integers.
+PostScript output:
+  - Use a rectangle operator.
+  - Call setpagedevice with page size.
+  - Insert %%PageOrientation comments.
+  - Add paper size flags (-paperw and -paperh) to xpdf and pdftops.
+  - If HAVE_POPEN is not defined, and user tries to print to '|...',
+    the PSOutputDev destructor tried to write to the PS file.
+  - Added support for forms (pdftops -form).
+Removed error messages for empty paths in stroke, fill, etc. operators.
+Don't allow flatnesses less than 1 in XOutputDev (this speeds up
+  rendering a little bit when there are lots of tiny curves).
+Moved the font subset character name guessing from GfxFont to
+  XOutputDev and TextOutputDev - now these files print correctly.
+Cast argument to XFree() to XPointer; add XPointer definition where
+  necessary (portability fixes).
+Various minor VMS fixes.
+Changes to configure script and Makefiles:
+  - Print a warning if X is missing.
+  - Use C++ when checking select() argument type (HP-UX).
+  - Use 0 instead of NULL when checking select().
+  - Default to gcc instead of c++.
+  - Get rid of AC_C_INLINE -- this is meant for C, not C++.
+  - Changed -USE_GZIP to -DUSE_GZIP.
+  - Added ability to compile ouside of the source tree.
+  - Added .cc.o rule to {goo,ltk,xpdf}/Makefile.in.
+  - Added @LIBS@ to XLIBS in xpdf/Makefile.in.
+  - In top-level Makefile.in: added '-' to clean commands; added
+    distclean rule.
+  - Create install directories.
+  - Use INSTALL_DATA (instead of INSTALL) for man pages.
+  - Changed xpdf-ltk.h rule to avoid leaving an empty file when
+    ltkbuild fails.
+  - Change things so that by default, ltkbuild is not built and
+    xpdf-ltk.h is not rebuilt.
+  - Use AM_PROG_CC_STDC to add compiler flags for ANSI C.
+  - Modify autoconf's builtin macros to check for xlC.
+  - Use Steve Robbins' smr_CHECK_LIB to test for pixmap library (Xpm)
+    -- this should fix the problems on systems that have the library
+    but not the include file.
+  - Added better test for sys/select.h, sys/bsdtypes.h, strings.h,
+    bstring.h.
+  - New VMS make scripts from Martin P.J. Zinser.
+  - Moved dependences into Makefile.in -- this gets rid of problems
+    with 'cc -MM' (which is gcc-specific) and 'include Makefile.dep'
+    (which isn't supported by all make implementations).  Also changed
+    all non-system include files to '#include "..."' (from '<...>').
+Tweaked the TextOutputDev heuristics slightly.
+Modify Gfx to use a stack of resources -- this is necessary for Form
+  XObjects, which can define their own local resources; also modified
+  PSOutputDev to dump fonts used by forms.
+Look for excessively large MediaBox (compared to CropBox) and shrink
+  it to CropBox.
+Minor fix to scrolling when dragging a selection.
+Various patches for pdftex and Win32 support.
+Deal with Separation colorspaces by using their alternate colorspace
+  entry.
+Added PBMOutputDev for pdftopbm application.
+Added ImageOutputDev for pdfimages application.
+Separated XOutputDev into LTKOutputDev + XOutputDev.
+Added support for 1-D and mixed 1-D/2-D (Group 3) decoding to
+  CCITTDecode filter.
+Added resetImage(), getImagePixel(), and skipImageLine() to Stream
+  class; used these in XOutputDev, PSOutputDev, and ImageOutputDev.
+Implemented predictor for LZW and Flate filters.
+In pdfImM1 in PSOutputDev prolog: div should be idiv.
+Changed output from printUsage() function in parseargs to look nicer.

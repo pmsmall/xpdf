@@ -11,8 +11,8 @@
 #endif
 
 #include <stddef.h>
-#include <gtypes.h>
-#include <LTKBorder.h>
+#include "gtypes.h"
+#include "LTKBorder.h"
 
 Gulong ltkGetBrightColor(Display *display, int screenNum,
 			 XColor *bg, Gulong def) {

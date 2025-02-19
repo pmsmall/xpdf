@@ -6,10 +6,14 @@
 #
 #========================================================================
 
-INSTALL = @INSTALL@
-
 prefix = @prefix@
 exec_prefix = @exec_prefix@
+srcdir = @srcdir@
+
+INSTALL = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+
+EXE = @EXE@
 
 all:
 	cd goo; $(MAKE)
@@ -29,16 +33,35 @@ pdftotext: dummy
 	cd goo; $(MAKE)
 	cd xpdf; $(MAKE) pdftotext$(EXE)
 
+dummy:
+
 install:
-	$(INSTALL) xpdf/xpdf$(EXE) @bindir@
-	$(INSTALL) xpdf/pdftops$(EXE) @bindir@
-	$(INSTALL) xpdf/pdftotext$(EXE) @bindir@
-	$(INSTALL) xpdf.1 @mandir@/man1
-	$(INSTALL) pdftops.1 @mandir@/man1
-	$(INSTALL) pdftotext.1 @mandir@/man1
+	mkdir -p @bindir@
+	$(INSTALL) xpdf/xpdf$(EXE) @bindir@/xpdf$(EXE)
+	$(INSTALL) xpdf/pdftops$(EXE) @bindir@/pdftops$(EXE)
+	$(INSTALL) xpdf/pdftotext$(EXE) @bindir@/pdftotext$(EXE)
+	$(INSTALL) xpdf/pdfinfo$(EXE) @bindir@/pdfinfo$(EXE)
+	$(INSTALL) xpdf/pdftopbm$(EXE) @bindir@/pdftopbm$(EXE)
+	$(INSTALL) xpdf/pdfimages$(EXE) @bindir@/pdfimages$(EXE)
+	mkdir -p @mandir@/man1
+	$(INSTALL_DATA) $(srcdir)/doc/xpdf.1 @mandir@/man1/xpdf.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdftops.1 @mandir@/man1/pdftops.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdftotext.1 @mandir@/man1/pdftotext.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdfinfo.1 @mandir@/man1/pdfinfo.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdftopbm.1 @mandir@/man1/pdftopbm.1
+	$(INSTALL_DATA) $(srcdir)/doc/pdfimages.1 @mandir@/man1/pdfimages.1
 
 clean:
-	cd goo; $(MAKE) clean
-	cd ltk; $(MAKE) clean
-	cd xpdf; $(MAKE) clean
-dummy:
+	-cd goo; $(MAKE) clean
+	-cd ltk; $(MAKE) clean
+	-cd xpdf; $(MAKE) clean
+
+distclean: clean
+	rm -f config.log config.status config.cache
+	rm -f Makefile goo/Makefile ltk/Makefile xpdf/Makefile
+	rm -f goo/Makefile.in.bak ltk/Makefile.in.bak xpdf/Makefile.in.bak
+
+distdepend:
+	cd goo; $(MAKE) distdepend
+	cd ltk; $(MAKE) distdepend
+	cd xpdf; $(MAKE) distdepend

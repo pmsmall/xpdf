@@ -15,8 +15,8 @@
 
 #include <stddef.h>
 #include <X11/Xlib.h>
-#include <gtypes.h>
-#include <GString.h>
+#include "gtypes.h"
+#include "GString.h"
 
 class LTKApp;
 class LTKWidget;

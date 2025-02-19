@@ -16,7 +16,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <ctype.h>
-#include <GString.h>
+#include "GString.h"
 
 static inline int size(int len) {
   int delta;

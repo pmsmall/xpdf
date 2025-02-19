@@ -11,13 +11,13 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
-#include <gmem.h>
-#include <GString.h>
-#include <LTKWindow.h>
-#include <LTKScrollingCanvas.h>
+#include "gmem.h"
+#include "GString.h"
 #include "Object.h"
 #include "Stream.h"
 #include "GfxState.h"
@@ -28,6 +28,14 @@
 #include "XOutputDev.h"
 
 #include "XOutputFontInfo.h"
+
+#ifdef XlibSpecificationRelease
+#if XlibSpecificationRelease < 5
+typedef char *XPointer;
+#endif
+#else
+typedef char *XPointer;
+#endif
 
 //------------------------------------------------------------------------
 // Constants and macros
@@ -134,6 +142,74 @@ static FontSubst fontSubst[16] = {
 };
 
 //------------------------------------------------------------------------
+// 16-bit fonts
+//------------------------------------------------------------------------
+
+#if JAPANESE_SUPPORT
+
+static char *japan12Font = "-*-fixed-medium-r-normal-*-%s-*-*-*-*-*-jisx0208.1983-0";
+
+// CID 0 .. 96
+static Gushort japan12Map[96] = {
+  0x2120, 0x2120, 0x212a, 0x2149, 0x2174, 0x2170, 0x2173, 0x2175, // 00 .. 07
+  0x2147, 0x214a, 0x214b, 0x2176, 0x215c, 0x2124, 0x213e, 0x2123, // 08 .. 0f
+  0x213f, 0x2330, 0x2331, 0x2332, 0x2333, 0x2334, 0x2335, 0x2336, // 10 .. 17
+  0x2337, 0x2338, 0x2339, 0x2127, 0x2128, 0x2163, 0x2161, 0x2164, // 18 .. 1f
+  0x2129, 0x2177, 0x2341, 0x2342, 0x2343, 0x2344, 0x2345, 0x2346, // 20 .. 27
+  0x2347, 0x2348, 0x2349, 0x234a, 0x234b, 0x234c, 0x234d, 0x234e, // 28 .. 2f
+  0x234f, 0x2350, 0x2351, 0x2352, 0x2353, 0x2354, 0x2355, 0x2356, // 30 .. 37
+  0x2357, 0x2358, 0x2359, 0x235a, 0x214e, 0x216f, 0x214f, 0x2130, // 38 .. 3f
+  0x2132, 0x2146, 0x2361, 0x2362, 0x2363, 0x2364, 0x2365, 0x2366, // 40 .. 47
+  0x2367, 0x2368, 0x2369, 0x236a, 0x236b, 0x236c, 0x236d, 0x236e, // 48 .. 4f
+  0x236f, 0x2370, 0x2371, 0x2372, 0x2373, 0x2374, 0x2375, 0x2376, // 50 .. 57
+  0x2377, 0x2378, 0x2379, 0x237a, 0x2150, 0x2143, 0x2151, 0x2141  // 58 .. 5f
+};
+
+// CID 325 .. 421
+static Gushort japan12KanaMap1[97] = {
+  0x2131, 0x2121, 0x2123, 0x2156, 0x2157, 0x2122, 0x2126, 0x2572,
+  0x2521, 0x2523, 0x2525, 0x2527, 0x2529, 0x2563, 0x2565, 0x2567,
+  0x2543, 0x213c, 0x2522, 0x2524, 0x2526, 0x2528, 0x252a, 0x252b,
+  0x252d, 0x252f, 0x2531, 0x2533, 0x2535, 0x2537, 0x2539, 0x253b,
+  0x253d, 0x253f, 0x2541, 0x2544, 0x2546, 0x2548, 0x254a, 0x254b,
+  0x254c, 0x254d, 0x254e, 0x254f, 0x2552, 0x2555, 0x2558, 0x255b,
+  0x255e, 0x255f, 0x2560, 0x2561, 0x2562, 0x2564, 0x2566, 0x2568,
+  0x2569, 0x256a, 0x256b, 0x256c, 0x256d, 0x256f, 0x2573, 0x212b,
+  0x212c, 0x212e, 0x2570, 0x2571, 0x256e, 0x2575, 0x2576, 0x2574,
+  0x252c, 0x252e, 0x2530, 0x2532, 0x2534, 0x2536, 0x2538, 0x253a,
+  0x253c, 0x253e, 0x2540, 0x2542, 0x2545, 0x2547, 0x2549, 0x2550,
+  0x2551, 0x2553, 0x2554, 0x2556, 0x2557, 0x2559, 0x255a, 0x255c,
+  0x255d
+};
+
+// CID 501 .. 598
+static Gushort japan12KanaMap2[98] = {
+  0x212d, 0x212f, 0x216d, 0x214c, 0x214d, 0x2152, 0x2153, 0x2154,
+  0x2155, 0x2158, 0x2159, 0x215a, 0x215b, 0x213d, 0x2121, 0x2472,
+  0x2421, 0x2423, 0x2425, 0x2427, 0x2429, 0x2463, 0x2465, 0x2467,
+  0x2443, 0x2422, 0x2424, 0x2426, 0x2428, 0x242a, 0x242b, 0x242d,
+  0x242f, 0x2431, 0x2433, 0x2435, 0x2437, 0x2439, 0x243b, 0x243d,
+  0x243f, 0x2441, 0x2444, 0x2446, 0x2448, 0x244a, 0x244b, 0x244c,
+  0x244d, 0x244e, 0x244f, 0x2452, 0x2455, 0x2458, 0x245b, 0x245e,
+  0x245f, 0x2460, 0x2461, 0x2462, 0x2464, 0x2466, 0x2468, 0x2469,
+  0x246a, 0x246b, 0x246c, 0x246d, 0x246f, 0x2473, 0x2470, 0x2471,
+  0x246e, 0x242c, 0x242e, 0x2430, 0x2432, 0x2434, 0x2436, 0x2438,
+  0x243a, 0x243c, 0x243e, 0x2440, 0x2442, 0x2445, 0x2447, 0x2449,
+  0x2450, 0x2451, 0x2453, 0x2454, 0x2456, 0x2457, 0x2459, 0x245a,
+  0x245c, 0x245d
+};
+
+static char *japan12Roman[10] = {
+  "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"
+};
+
+static char *japan12Abbrev1[6] = {
+  "mm", "cm", "km", "mg", "kg", "cc"
+};
+
+#endif
+
+//------------------------------------------------------------------------
 // Constructed characters
 //------------------------------------------------------------------------
 
@@ -216,6 +292,7 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
   double w1, w2, v;
   double *fm;
   char *charName;
+  int n;
 
   // init
   id = gfxFont->getID();
@@ -225,79 +302,167 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
   mat22 = m22;
   display = display1;
   xFont = NULL;
+  hex = gFalse;
 
   // construct X font name
-  pdfFont = gfxFont->getName();
-  if (pdfFont) {
-    for (p = userFontMap; p->pdfFont; ++p) {
-      if (!pdfFont->cmp(p->pdfFont))
-	break;
+  if (gfxFont->is16Bit()) {
+    fontNameFmt = fontSubst[0].xFont;
+    switch (gfxFont->getCharSet16()) {
+    case font16AdobeJapan12:
+#if JAPANESE_SUPPORT
+      fontNameFmt = japan12Font;
+#endif
+      break;
     }
-    if (!p->pdfFont) {
-      for (p = fontMap; p->pdfFont; ++p) {
+  } else {
+    pdfFont = gfxFont->getName();
+    if (pdfFont) {
+      for (p = userFontMap; p->pdfFont; ++p) {
 	if (!pdfFont->cmp(p->pdfFont))
 	  break;
       }
-    }
-  } else {
-    p = NULL;
-  }
-  if (p && p->pdfFont) {
-    fontNameFmt = p->xFont;
-    encoding = p->encoding;
-  } else {
-    encoding = &isoLatin1Encoding;
-//~ Some non-symbolic fonts are tagged as symbolic.
-//    if (gfxFont->isSymbolic()) {
-//      index = 12;
-//      encoding = symbolEncoding;
-//    } else
-    if (gfxFont->isFixedWidth()) {
-      index = 8;
-    } else if (gfxFont->isSerif()) {
-      index = 4;
+      if (!p->pdfFont) {
+	for (p = fontMap; p->pdfFont; ++p) {
+	  if (!pdfFont->cmp(p->pdfFont))
+	    break;
+	}
+      }
     } else {
-      index = 0;
+      p = NULL;
     }
-    if (gfxFont->isBold())
-      index += 2;
-    if (gfxFont->isItalic())
-      index += 1;
-    if ((code = gfxFont->getCharCode("m")) >= 0)
-      w1 = gfxFont->getWidth(code);
-    else
-      w1 = 0;
-    w2 = fontSubst[index].mWidth;
-    if (gfxFont->getType() == fontType3) {
-      // This is a hack which makes it possible to substitute for some
-      // Type 3 fonts.  The problem is that it's impossible to know what
-      // the base coordinate system used in the font is without actually
-      // rendering the font.  This code tries to guess by looking at the
-      // width of the character 'm' (which breaks if the font is a
-      // subset that doesn't contain 'm').
-      if (w1 > 1.1 * w2 || w1 < 0.9 * w2) {
-	w1 /= w2;
-	mat11 *= w1;
-	mat12 *= w1;
-	mat21 *= w1;
-	mat22 *= w1;
+    if (p && p->pdfFont) {
+      fontNameFmt = p->xFont;
+      encoding = p->encoding;
+    } else {
+      encoding = &isoLatin1Encoding;
+//~ Some non-symbolic fonts are tagged as symbolic.
+//      if (gfxFont->isSymbolic()) {
+//        index = 12;
+//        encoding = symbolEncoding;
+//      } else
+      if (gfxFont->isFixedWidth()) {
+	index = 8;
+      } else if (gfxFont->isSerif()) {
+	index = 4;
+      } else {
+	index = 0;
       }
-      fm = gfxFont->getFontMatrix();
-      v = (fm[0] == 0) ? 1 : (fm[3] / fm[0]);
-      mat12 *= v;
-      mat22 *= v;
-    } else if (!gfxFont->isSymbolic()) {
-      w1 = gfxFont->getWidth('m');
+      if (gfxFont->isBold())
+	index += 2;
+      if (gfxFont->isItalic())
+	index += 1;
+      if ((code = gfxFont->getCharCode("m")) >= 0)
+	w1 = gfxFont->getWidth(code);
+      else
+	w1 = 0;
       w2 = fontSubst[index].mWidth;
-      if (w1 > 0.01 && w1 < 0.9 * w2) {
-	w1 /= 0.9 * w2;
-	mat11 *= w1;
-	mat12 *= w1;
-	mat21 *= w1;
-	mat22 *= w1;
+      if (gfxFont->getType() == fontType3) {
+	// This is a hack which makes it possible to substitute for some
+	// Type 3 fonts.  The problem is that it's impossible to know what
+	// the base coordinate system used in the font is without actually
+	// rendering the font.  This code tries to guess by looking at the
+	// width of the character 'm' (which breaks if the font is a
+	// subset that doesn't contain 'm').
+	if (w1 > 0 && (w1 > 1.1 * w2 || w1 < 0.9 * w2)) {
+	  w1 /= w2;
+	  mat11 *= w1;
+	  mat12 *= w1;
+	  mat21 *= w1;
+	  mat22 *= w1;
+	}
+	fm = gfxFont->getFontMatrix();
+	v = (fm[0] == 0) ? 1 : (fm[3] / fm[0]);
+	mat12 *= v;
+	mat22 *= v;
+      } else if (!gfxFont->isSymbolic()) {
+	if (w1 > 0.01 && w1 < 0.9 * w2) {
+	  w1 /= w2;
+	  if (w1 < 0.8)
+	    w1 = 0.8;
+	  mat11 *= w1;
+	  mat12 *= w1;
+	  mat21 *= w1;
+	  mat22 *= w1;
+	}
+      }
+      fontNameFmt = fontSubst[index].xFont;
+    }
+
+    // Construct forward and reverse map.
+    // This tries to deal with font subset character names of the
+    // form 'Bxx', 'Cxx', 'Gxx', with decimal or hex numbering.
+    for (code = 0; code < 256; ++code)
+      revMap[code] = 0;
+    if (encoding) {
+      for (code = 0; code < 256; ++code) {
+	if ((charName = gfxFont->getCharName(code))) {
+	  if ((charName[0] == 'B' || charName[0] == 'C' ||
+	       charName[0] == 'G') &&
+	      strlen(charName) == 3 &&
+	      ((charName[1] >= 'a' && charName[1] <= 'f') ||
+	       (charName[1] >= 'A' && charName[1] <= 'F') ||
+	       (charName[2] >= 'a' && charName[2] <= 'f') ||
+	       (charName[2] >= 'A' && charName[2] <= 'F'))) {
+	    hex = gTrue;
+	    break;
+	  }
+	}
+      }
+      for (code = 0; code < 256; ++code) {
+	if ((charName = gfxFont->getCharName(code))) {
+	  if ((code2 = encoding->getCharCode(charName)) < 0) {
+	    n = strlen(charName);
+	    if (hex && n == 3 &&
+		(charName[0] == 'B' || charName[0] == 'C' ||
+		 charName[0] == 'G') &&
+		isxdigit(charName[1]) && isxdigit(charName[2])) {
+	      sscanf(charName+1, "%x", &code2);
+	    } else if (!hex && n >= 2 && n <= 3 &&
+		       isdigit(charName[0]) && isdigit(charName[1])) {
+	      code2 = atoi(charName);
+	      if (code2 >= 256)
+		code2 = -1;
+	    } else if (!hex && n >= 3 && n <= 5 && isdigit(charName[1])) {
+	      code2 = atoi(charName+1);
+	      if (code2 >= 256)
+		code2 = -1;
+	    }
+	    //~ this is a kludge -- is there a standard internal encoding
+	    //~ used by all/most Type 1 fonts?
+	    if (code2 == 262)		// hyphen
+	      code2 = 45;
+	    else if (code2 == 266)	// emdash
+	      code2 = 208;
+	  }
+	  if (code2 >= 0) {
+	    map[code] = (Gushort)code2;
+	    if (code2 < 256)
+	      revMap[code2] = (Guchar)code;
+	  } else {
+	    map[code] = 0;
+	  }
+	} else {
+	  map[code] = 0;
+	}
+      }
+    } else {
+      code2 = 0; // to make gcc happy
+      //~ this is a hack to get around the fact that X won't draw
+      //~ chars 0..31; this works when the fonts have duplicate encodings
+      //~ for those chars
+      for (code = 0; code < 32; ++code) {
+	if ((charName = gfxFont->getCharName(code)) &&
+	    (code2 = gfxFont->getCharCode(charName)) >= 0) {
+	  map[code] = (Gushort)code2;
+	  if (code2 < 256)
+	    revMap[code2] = (Guchar)code;
+	}
+      }
+      for (code = 32; code < 256; ++code) {
+	map[code] = (Gushort)code;
+	revMap[code] = (Guchar)code;
       }
     }
-    fontNameFmt = fontSubst[index].xFont;
   }
 
   // compute size, normalize matrix
@@ -346,43 +511,6 @@ XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
 	error(-1, "Failed to open font: '%s'", fontName);
 	return;
       }
-    }
-  }
-
-  // construct forward and reverse map
-  for (code = 0; code < 256; ++code)
-    revMap[code] = 0;
-  if (encoding) {
-    code2 = 0; // to make gcc happy
-    for (code = 0; code < 256; ++code) {
-      if ((charName = gfxFont->getCharName(code)) &&
-	  (code2 = encoding->getCharCode(charName)) >= 0) {
-	map[code] = (Gushort)code2;
-	if (code2 < 256)
-	  revMap[code2] = (Guchar)code;
-      } else {
-	map[code] = 0;
-//~ for font debugging
-//	error(-1, "font '%s', no char '%s'",
-//	      pdfFont->getCString(), charName);
-      }
-    }
-  } else {
-    code2 = 0; // to make gcc happy
-    //~ this is a hack to get around the fact that X won't draw
-    //~ chars 0..31; this works when the fonts have duplicate encodings
-    //~ for those chars
-    for (code = 0; code < 32; ++code) {
-      if ((charName = gfxFont->getCharName(code)) &&
-	  (code2 = gfxFont->getCharCode(charName)) >= 0) {
-	map[code] = (Gushort)code2;
-	if (code2 < 256)
-	  revMap[code2] = (Guchar)code;
-      }
-    }
-    for (code = 32; code < 256; ++code) {
-      map[code] = (Gushort)code;
-      revMap[code] = (Guchar)code;
     }
   }
 }
@@ -459,7 +587,8 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 // XOutputDev
 //------------------------------------------------------------------------
 
-XOutputDev::XOutputDev(LTKWindow *win1) {
+XOutputDev::XOutputDev(Display *display1, Pixmap pixmap1, Guint depth1,
+		       Colormap colormap, unsigned long paperColor) {
   XVisualInfo visualTempl;
   XVisualInfo *visualList;
   int nVisuals;
@@ -467,54 +596,54 @@ XOutputDev::XOutputDev(LTKWindow *win1) {
   XGCValues gcValues;
   XColor xcolor;
   XColor *xcolors;
-  Colormap colormap;
   int r, g, b, n, m, i;
   GBool ok;
 
-  // get pointer to X stuff
-  win = win1;
-  canvas = (LTKScrollingCanvas *)win->findWidget("canvas");
-  display = win->getDisplay();
-  screenNum = win->getScreenNum();
-  pixmap = canvas->getPixmap();
+  // get display/pixmap info
+  display = display1;
+  screenNum = DefaultScreen(display);
+  pixmap = pixmap1;
+  depth = depth1;
 
   // check for TrueColor visual
-  visualList = XGetVisualInfo(display, 0, &visualTempl, &nVisuals);
   trueColor = gFalse;
-  for (i = 0; i < nVisuals; ++i) {
-    if (visualList[i].visual == DefaultVisual(display, screenNum)) {
-      if (visualList[i].c_class == TrueColor) {
-	trueColor = gTrue;
-	mask = visualList[i].red_mask;
-	rShift = 0;
-	while (mask && !(mask & 1)) {
-	  ++rShift;
-	  mask >>= 1;
+  if (depth == 0) {
+    depth = DefaultDepth(display, screenNum);
+    visualList = XGetVisualInfo(display, 0, &visualTempl, &nVisuals);
+    for (i = 0; i < nVisuals; ++i) {
+      if (visualList[i].visual == DefaultVisual(display, screenNum)) {
+	if (visualList[i].c_class == TrueColor) {
+	  trueColor = gTrue;
+	  mask = visualList[i].red_mask;
+	  rShift = 0;
+	  while (mask && !(mask & 1)) {
+	    ++rShift;
+	    mask >>= 1;
+	  }
+	  rMul = (int)mask;
+	  mask = visualList[i].green_mask;
+	  gShift = 0;
+	  while (mask && !(mask & 1)) {
+	    ++gShift;
+	    mask >>= 1;
+	  }
+	  gMul = (int)mask;
+	  mask = visualList[i].blue_mask;
+	  bShift = 0;
+	  while (mask && !(mask & 1)) {
+	    ++bShift;
+	    mask >>= 1;
+	  }
+	  bMul = (int)mask;
 	}
-	rMul = (int)mask;
-	mask = visualList[i].green_mask;
-	gShift = 0;
-	while (mask && !(mask & 1)) {
-	  ++gShift;
-	  mask >>= 1;
-	}
-	gMul = (int)mask;
-	mask = visualList[i].blue_mask;
-	bShift = 0;
-	while (mask && !(mask & 1)) {
-	  ++bShift;
-	  mask >>= 1;
-	}
-	bMul = (int)mask;
+	break;
       }
-      break;
     }
+    XFree((XPointer)visualList);
   }
-  XFree(visualList);
 
   // allocate a color cube
   if (!trueColor) {
-    colormap = win->getColormap();
 
     // set colors in private colormap
     if (installCmap) {
@@ -595,7 +724,7 @@ XOutputDev::XOutputDev(LTKWindow *win1) {
   fillGC = XCreateGC(display, pixmap,
 		     GCForeground | GCBackground | GCLineWidth | GCLineStyle,
 		     &gcValues);
-  gcValues.foreground = gcValues.background;
+  gcValues.foreground = paperColor;
   paperGC = XCreateGC(display, pixmap,
 		      GCForeground | GCBackground | GCLineWidth | GCLineStyle,
 		      &gcValues);
@@ -648,10 +777,6 @@ void XOutputDev::startPage(int pageNum, GfxState *state) {
   XGCValues gcValues;
   XRectangle rect;
 
-  // set page size
-  canvas->resize(state->getPageWidth(), state->getPageHeight());
-  pixmap = canvas->getPixmap();
-
   // clear state stack
   while (save) {
     s = save;
@@ -683,8 +808,8 @@ void XOutputDev::startPage(int pageNum, GfxState *state) {
     XDestroyRegion(clipRegion);
   clipRegion = XCreateRegion();
   rect.x = rect.y = 0;
-  rect.width = canvas->getRealWidth();
-  rect.height = canvas->getRealHeight();
+  rect.width = pixmapW;
+  rect.height = pixmapH;
   XUnionRectWithRegion(&rect, clipRegion, clipRegion);
   XSetRegion(display, strokeGC, clipRegion);
   XSetRegion(display, fillGC, clipRegion);
@@ -694,9 +819,7 @@ void XOutputDev::startPage(int pageNum, GfxState *state) {
   font = NULL;
 
   // clear window
-  XFillRectangle(display, pixmap, paperGC,
-		 0, 0, canvas->getRealWidth(), canvas->getRealHeight());
-  canvas->redraw();
+  XFillRectangle(display, pixmap, paperGC, 0, 0, pixmapW, pixmapH);
 
   // clear text object
   text->clear();
@@ -704,10 +827,6 @@ void XOutputDev::startPage(int pageNum, GfxState *state) {
 
 void XOutputDev::endPage() {
   text->coalesce();
-}
-
-void XOutputDev::dump() {
-  canvas->redraw();
 }
 
 void XOutputDev::drawLinkBorder(double x1, double y1, double x2, double y2,
@@ -1182,6 +1301,8 @@ void XOutputDev::doCurve(XPoint **points, int *size, int *n,
   double flat;
 
   flat = (double)(flatness * flatness);
+  if (flat < 1)
+    flat = 1;
 
   // initial segment
   p1 = 0;
@@ -1268,7 +1389,7 @@ void XOutputDev::addPoint(XPoint **points, int *size, int *k, int x, int y) {
 }
 
 void XOutputDev::beginString(GfxState *state, GString *s) {
-  text->beginString(state, s);
+  text->beginString(state, s, font ? font->isHex() : gFalse);
 }
 
 void XOutputDev::endString(GfxState *state) {
@@ -1351,6 +1472,189 @@ void XOutputDev::drawChar(GfxState *state, double x, double y,
   }
 }
 
+void XOutputDev::drawChar16(GfxState *state, double x, double y,
+			    double dx, double dy, int c) {
+  int c1;
+  XChar2b c2[4];
+  double x1, y1;
+#if JAPANESE_SUPPORT
+  int t1, t2;
+  double x2;
+  char *p;
+  int n, i;
+#endif
+
+  if (!font)
+    return;
+
+  // check for invisible text -- this is used by Acrobat Capture
+  if ((state->getRender() & 3) == 3)
+    return;
+
+  state->transform(x, y, &x1, &y1);
+
+  c1 = 0;
+  switch (gfxFont->getCharSet16()) {
+
+  // convert Adobe-Japan1-2 to JIS X 0208-1983
+  case font16AdobeJapan12:
+#if JAPANESE_SUPPORT
+    if (c <= 96) {
+      c1 = japan12Map[c];
+    } else if (c <= 632) {
+      if (c <= 230)
+	c1 = 0;
+      else if (c <= 324)
+	c1 = japan12Map[c - 230];
+      else if (c <= 421)
+	c1 = japan12KanaMap1[c - 325];
+      else if (c <= 500)
+	c1 = 0;
+      else if (c <= 598)
+	c1 = japan12KanaMap2[c - 501];
+      else
+	c1 = 0;
+    } else if (c <= 1124) {
+      if (c <= 779) {
+	if (c <= 726)
+	  c1 = 0x2121 + (c - 633);
+	else if (c <= 740)
+	  c1 = 0x2221 + (c - 727);
+	else if (c <= 748)
+	  c1 = 0x223a + (c - 741);
+	else if (c <= 755)
+	  c1 = 0x224a + (c - 749);
+	else if (c <= 770)
+	  c1 = 0x225c + (c - 756);
+	else if (c <= 778)
+	  c1 = 0x2272 + (c - 771);
+	else
+	  c1 = 0x227e;
+      } else if (c <= 841) {
+	if (c <= 789)
+	  c1 = 0x2330 + (c - 780);
+	else if (c <= 815)
+	  c1 = 0x2341 + (c - 790);
+	else
+	  c1 = 0x2361 + (c - 816);
+      } else if (c <= 1010) {
+	if (c <= 924)
+	  c1 = 0x2421 + (c - 842);
+	else
+	  c1 = 0x2521 + (c - 925);
+      } else {
+	if (c <= 1034)
+	  c1 = 0x2621 + (c - 1011);
+	else if (c <= 1058)
+	  c1 = 0x2641 + (c - 1035);
+	else if (c <= 1091)
+	  c1 = 0x2721 + (c - 1059);
+	else
+	  c1 = 0x2751 + (c - 1092);
+      }
+    } else if (c <= 4089) {
+      t1 = (c - 1125) / 94;
+      t2 = (c - 1125) % 94;
+      c1 = 0x3021 + (t1 << 8) + t2;
+    } else if (c <= 7477) {
+      t1 = (c - 4090) / 94;
+      t2 = (c - 4090) % 94;
+      c1 = 0x5021 + (t1 << 8) + t2;
+    } else if (c <= 7554) {
+      c1 = 0;
+    } else if (c <= 7563) {	// circled Arabic numbers 1..9
+      c1 = 0x2331 + (c - 7555);
+      c2[0].byte1 = c1 >> 8;
+      c2[0].byte2 = c1 & 0xff;
+      XDrawString16(display, pixmap,
+		    (state->getRender() & 1) ? strokeGC : fillGC,
+		    xoutRound(x1), xoutRound(y1), c2, 1);
+      c1 = 0x227e;
+      c2[0].byte1 = c1 >> 8;
+      c2[0].byte2 = c1 & 0xff;
+      XDrawString16(display, pixmap,
+		    (state->getRender() & 1) ? strokeGC : fillGC,
+		    xoutRound(x1), xoutRound(y1), c2, 1);
+      c1 = -1;
+    } else if (c <= 7574) {	// circled Arabic numbers 10..20
+      n = c - 7564 + 10;
+      x2 = x1;
+      for (i = 0; i < 2; ++i) {
+	c1 = 0x2330 + (i == 0 ? (n / 10) : (n % 10));
+	c2[0].byte1 = c1 >> 8;
+	c2[0].byte2 = c1 & 0xff;
+	XDrawString16(display, pixmap,
+		      (state->getRender() & 1) ? strokeGC : fillGC,
+		      xoutRound(x2), xoutRound(y1), c2, 1);
+	x2 += 0.5 * state->getTransformedFontSize();
+      }
+      c1 = 0x227e;
+      c2[0].byte1 = c1 >> 8;
+      c2[0].byte2 = c1 & 0xff;
+      XDrawString16(display, pixmap,
+		    (state->getRender() & 1) ? strokeGC : fillGC,
+		    xoutRound(x1), xoutRound(y1), c2, 1);
+      c1 = -1;
+    } else if (c <= 7584) {	// Roman numbers I..X
+      p = japan12Roman[c - 7575];
+      n = strlen(p);
+      for (; *p; ++p) {
+	if (*p == 'I')
+	  c1 = 0x2349;
+	else if (*p == 'V')
+	  c1 = 0x2356;
+	else // 'X'
+	  c1 = 0x2358;
+	c2[0].byte1 = c1 >> 8;
+	c2[0].byte2 = c1 & 0xff;
+	XDrawString16(display, pixmap,
+		      (state->getRender() & 1) ? strokeGC : fillGC,
+		      xoutRound(x1), xoutRound(y1), c2, 1);
+	if (*p == 'I')
+	  x1 += 0.2 * state->getTransformedFontSize();
+	else
+	  x1 += 0.5 * state->getTransformedFontSize();
+      }
+      c1 = -1;
+    } else if (c <= 7632) {
+      if (c <= 7600) {
+	c1 = 0;
+      } else if (c <= 7606) {
+	p = japan12Abbrev1[c - 7601];
+	n = strlen(p);
+	for (; *p; ++p) {
+	  c1 = 0x2300 + *p;
+	  c2[0].byte1 = c1 >> 8;
+	  c2[0].byte2 = c1 & 0xff;
+	  XDrawString16(display, pixmap,
+			(state->getRender() & 1) ? strokeGC : fillGC,
+			xoutRound(x1), xoutRound(y1), c2, 1);
+	  x1 += 0.5 * state->getTransformedFontSize();
+	}
+	c1 = -1;
+      } else {
+	c1 = 0;
+      }
+    } else {
+      c1 = 0;
+    }
+#if 0 //~
+    if (c1 == 0)
+      error(-1, "Unsupported Adobe-Japan1-2 character: %d", c);
+#endif
+#endif // JAPANESE_SUPPORT
+    break;
+  }
+
+  if (c1 > 0) {
+    c2[0].byte1 = c1 >> 8;
+    c2[0].byte2 = c1 & 0xff;
+    XDrawString16(display, pixmap,
+		  (state->getRender() & 1) ? strokeGC : fillGC,
+		  xoutRound(x1), xoutRound(y1), c2, 1);
+  }
+}
+
 void XOutputDev::drawImageMask(GfxState *state, Stream *str,
 			       int width, int height, GBool invert,
 			       GBool inlineImg) {
@@ -1359,16 +1663,14 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   int w0, h0, w1, h1;		// size of image
   int x2, y2;
   int w2, h2;
-  Guint depth;
   double xt, yt, wt, ht;
   GBool rotate, xFlip, yFlip;
   int x, y;
   int ix, iy;
   int px1, px2, qx, dx;
   int py1, py2, qy, dy;
-  Guchar *pixLine;
+  Guchar pixBuf;
   Gulong color;
-  Gulong buf;
   int i, j;
 
   // get image position and size
@@ -1403,12 +1705,12 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   }
 
   // set up
-  str->reset();
   color = findColor(state->getFillColor());
 
   // check for tiny (zero width or height) images
   if (w0 == 0 || h0 == 0) {
     j = height * ((width + 7) / 8);
+    str->reset();
     for (i = 0; i < j; ++i)
       str->getChar();
     return;
@@ -1421,12 +1723,11 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   py2 = h1 - py1 * height;
 
   // allocate XImage
-  depth = DefaultDepth(display, screenNum);
   image = XCreateImage(display, DefaultVisual(display, screenNum),
 		       depth, ZPixmap, 0, NULL, w0, h0, 8, 0);
   image->data = (char *)gmalloc(h0 * image->bytes_per_line);
-  if (x0 + w0 > canvas->getRealWidth())
-    w2 = canvas->getRealWidth() - x0;
+  if (x0 + w0 > pixmapW)
+    w2 = pixmapW - x0;
   else
     w2 = w0;
   if (x0 < 0) {
@@ -1436,8 +1737,8 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   } else {
     x2 = 0;
   }
-  if (y0 + h0 > canvas->getRealHeight())
-    h2 = canvas->getRealHeight() - y0;
+  if (y0 + h0 > pixmapH)
+    h2 = pixmapH - y0;
   else
     h2 = h0;
   if (y0 < 0) {
@@ -1450,8 +1751,8 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   XGetSubImage(display, pixmap, x0, y0, w2, h2, (1 << depth) - 1, ZPixmap,
 	       image, x2, y2);
 
-  // allocate line buffer
-  pixLine = (Guchar *)gmalloc(((width + 7) & ~7) * sizeof(Guchar));
+  // initialize the image stream
+  str->resetImage(width, 1, 1);
 
   // first line (column)
   y = yFlip ? h1 - 1 : 0;
@@ -1467,34 +1768,15 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
       qy -= height;
     }
 
-    // first column (line)
-    x = xFlip ? w1 - 1 : 0;
-    qx = 0;
+    // drop a line (column)
+    if (dy == 0) {
+      str->skipImageLine();
 
-    // read a line (column)
-    for (j = 0; j < width; j += 8) {
-      buf = str->getChar();
-      if (invert)
-	buf = buf ^ 0xff;
-      pixLine[j+7] = buf & 1;
-      buf >>= 1;
-      pixLine[j+6] = buf & 1;
-      buf >>= 1;
-      pixLine[j+5] = buf & 1;
-      buf >>= 1;
-      pixLine[j+4] = buf & 1;
-      buf >>= 1;
-      pixLine[j+3] = buf & 1;
-      buf >>= 1;
-      pixLine[j+2] = buf & 1;
-      buf >>= 1;
-      pixLine[j+1] = buf & 1;
-      buf >>= 1;
-      pixLine[j] = buf & 1;
-    }
+    } else {
 
-    // draw line (column) in XImage
-    if (dy > 0) {
+      // first column (line)
+      x = xFlip ? w1 - 1 : 0;
+      qx = 0;
 
       // for each column (line)...
       for (j = 0; j < width; ++j) {
@@ -1506,8 +1788,13 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
 	  qx -= width;
 	}
 
+	// get image pixel
+	str->getImagePixel(&pixBuf);
+	if (invert)
+	  pixBuf ^= 1;
+
 	// draw image pixel
-	if (dx > 0 && pixLine[j] == 0) {
+	if (dx > 0 && pixBuf == 0) {
 	  if (dx == 1 && dy == 1) {
 	    if (rotate)
 	      XPutPixel(image, y, x, color);
@@ -1549,7 +1836,6 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   gfree(image->data);
   image->data = NULL;
   XDestroyImage(image);
-  gfree(pixLine);
 }
 
 inline Gulong XOutputDev::findColor(RGBColor *x, RGBColor *err) {
@@ -1598,7 +1884,6 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   XImage *image;
   int x0, y0;			// top left corner of image
   int w0, h0, w1, h1;		// size of image
-  Guint depth;
   double xt, yt, wt, ht;
   GBool rotate, xFlip, yFlip;
   GBool dither;
@@ -1606,16 +1891,14 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   int ix, iy;
   int px1, px2, qx, dx;
   int py1, py2, qy, dy;
-  Guchar *pixLine;
+  Guchar pixBuf[4];
   Gulong pixel;
-  Gulong buf, bitMask;
-  int bits;
   int nComps, nVals, nBits;
   double r1, g1, b1;
   GfxColor color;
   RGBColor color2, err;
   RGBColor *errRight, *errDown;
-  int i, j, k;
+  int i, j;
 
   // get image position and size
   state->transform(0, 0, &xt, &yt);
@@ -1649,7 +1932,6 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   }
 
   // set up
-  str->reset();
   nComps = colorMap->getNumPixelComps();
   nVals = width * nComps;
   nBits = colorMap->getBits();
@@ -1657,8 +1939,9 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
 
   // check for tiny (zero width or height) images
   if (w0 == 0 || h0 == 0) {
-    k = height * ((nVals * nBits + 7) / 8);
-    for (i = 0; i < k; ++i)
+    j = height * ((nVals * nBits + 7) / 8);
+    str->reset();
+    for (i = 0; i < j; ++i)
       str->getChar();
     return;
   }
@@ -1670,13 +1953,9 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   py2 = h1 - py1 * height;
 
   // allocate XImage
-  depth = DefaultDepth(display, screenNum);
   image = XCreateImage(display, DefaultVisual(display, screenNum),
 		       depth, ZPixmap, 0, NULL, w0, h0, 8, 0);
   image->data = (char *)gmalloc(h0 * image->bytes_per_line);
-
-  // allocate line buffer
-  pixLine = (Guchar *)gmalloc(((nVals + 7) & ~7) * sizeof(Guchar));
 
   // allocate error diffusion accumulators
   if (dither) {
@@ -1688,6 +1967,9 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
     errDown = NULL;
     errRight = NULL;
   }
+
+  // initialize the image stream
+  str->resetImage(width, nComps, nBits);
 
   // first line (column)
   y = yFlip ? h1 - 1 : 0;
@@ -1703,49 +1985,15 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
       qy -= height;
     }
 
-    // first column (line)
-    x = xFlip ? w1 - 1 : 0;
-    qx = 0;
+    // drop a line (column)
+    if (dy == 0) {
+      str->skipImageLine();
 
-    // read a line (column)
-    if (nBits == 1) {
-      for (j = 0; j < nVals; j += 8) {
-	buf = str->getChar();
-	pixLine[j+7] = buf & 1;
-	buf >>= 1;
-	pixLine[j+6] = buf & 1;
-	buf >>= 1;
-	pixLine[j+5] = buf & 1;
-	buf >>= 1;
-	pixLine[j+4] = buf & 1;
-	buf >>= 1;
-	pixLine[j+3] = buf & 1;
-	buf >>= 1;
-	pixLine[j+2] = buf & 1;
-	buf >>= 1;
-	pixLine[j+1] = buf & 1;
-	buf >>= 1;
-	pixLine[j] = buf & 1;
-      }
-    } else if (nBits == 8) {
-      for (j = 0; j < nVals; ++j)
-	pixLine[j] = str->getChar();
     } else {
-      bitMask = (1 << nBits) - 1;
-      buf = 0;
-      bits = 0;
-      for (j = 0; j < nVals; ++j) {
-	if (bits < nBits) {
-	  buf = (buf << 8) | (str->getChar() & 0xff);
-	  bits += 8;
-	}
-	pixLine[j] = (buf >> (bits - nBits)) & bitMask;
-	bits -= nBits;
-      }
-    }
 
-    // draw line (column) in XImage
-    if (dy > 0) {
+      // first column (line)
+      x = xFlip ? w1 - 1 : 0;
+      qx = 0;
 
       // clear error accumulator
       if (dither) {
@@ -1754,7 +2002,7 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
       }
 
       // for each column (line)...
-      for (j = 0, k = 0; j < width; ++j, k += nComps) {
+      for (j = 0; j < width; ++j) {
 
 	// horizontal (vertical) Bresenham
 	dx = px1;
@@ -1763,9 +2011,12 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
 	  qx -= width;
 	}
 
+	// get image pixel
+	str->getImagePixel(pixBuf);
+
 	// draw image pixel
 	if (dx > 0) {
-	  colorMap->getColor(&pixLine[k], &color);
+	  colorMap->getColor(pixBuf, &color);
 	  r1 = color.getR();
 	  g1 = color.getG();
 	  b1 = color.getB();
@@ -1866,7 +2117,6 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   gfree(image->data);
   image->data = NULL;
   XDestroyImage(image);
-  gfree(pixLine);
   gfree(errRight);
   gfree(errDown);
 }

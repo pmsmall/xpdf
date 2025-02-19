@@ -15,8 +15,8 @@
 #include <stddef.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <LTKWindow.h>
-#include <LTKScrollingCanvas.h>
+#include "LTKWindow.h"
+#include "LTKScrollingCanvas.h"
 
 LTKScrollingCanvas::LTKScrollingCanvas(char *name1, int widgetNum1,
 				       int realWidth1, int realHeight1,

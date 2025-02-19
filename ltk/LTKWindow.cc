@@ -18,16 +18,16 @@
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <X11/cursorfont.h>
-#ifdef HAVE_LIBXPM
-#include "X11/xpm.h"
+#ifdef HAVE_X11_XPM_H
+#include <X11/xpm.h>
 #endif
-#include <LTKConfig.h>
-#include <LTKApp.h>
-#include <LTKMenu.h>
-#include <LTKWindow.h>
-#include <LTKWidget.h>
-#include <LTKBox.h>
-#include <LTKBorder.h>
+#include "LTKConfig.h"
+#include "LTKApp.h"
+#include "LTKMenu.h"
+#include "LTKWindow.h"
+#include "LTKWidget.h"
+#include "LTKBox.h"
+#include "LTKBorder.h"
 
 #ifdef XlibSpecificationRelease
 #if XlibSpecificationRelease < 5
@@ -280,7 +280,7 @@ void LTKWindow::layout(int x, int y, int width1, int height1) {
       wmHints->input = True;
       wmHints->initial_state = NormalState;
       wmHints->flags = InputHint | StateHint;
-#ifdef HAVE_LIBXPM
+#ifdef HAVE_X11_XPM_H
       if (iconData) {
 	if (XpmCreatePixmapFromData(display, xwin, iconData,
 				    &wmHints->icon_pixmap, NULL, NULL) ==
@@ -322,7 +322,7 @@ void LTKWindow::layoutDialog(LTKWindow *overWin1, int width1, int height1) {
     if (!XQueryTree(display, w2, &root, &w2, &children, &numChildren))
       break;
     if (numChildren > 0)
-      XFree((void *)children);
+      XFree((XPointer)children);
   } while (w2 != root);
 
   // center the dialog over <overWin>
