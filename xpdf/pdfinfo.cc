@@ -191,8 +191,8 @@ int main(int argc, char *argv[]) {
 
   // print page size
   for (pg = firstPage; pg <= lastPage; ++pg) {
-    w = doc->getPageWidth(pg);
-    h = doc->getPageHeight(pg);
+    w = doc->getPageMediaWidth(pg);
+    h = doc->getPageMediaHeight(pg);
     if (multiPage) {
       printf("Page %4d size: %g x %g pts", pg, w, h);
     } else {

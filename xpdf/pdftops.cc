@@ -51,6 +51,7 @@ static GBool noCrop = gFalse;
 static GBool expand = gFalse;
 static GBool noShrink = gFalse;
 static GBool noCenter = gFalse;
+static GBool pageCrop = gFalse;
 static GBool duplex = gFalse;
 static char ownerPassword[33] = "\001";
 static char userPassword[33] = "\001";
@@ -106,6 +107,8 @@ static ArgDesc argDesc[] = {
    "don't shrink pages larger than the paper size"},
   {"-nocenter",   argFlag,     &noCenter,       0,
    "don't center pages smaller than the paper size"},
+  {"-pagecrop",   argFlag,     &pageCrop,       0,
+   "treat the CropBox as the page size"},
   {"-duplex",     argFlag,     &duplex,         0,
    "enable duplex printing"},
   {"-opw",        argString,   ownerPassword,   sizeof(ownerPassword),
@@ -306,7 +309,7 @@ int main(int argc, char *argv[]) {
 			  doc->getCatalog(), firstPage, lastPage, mode);
   if (psOut->isOk()) {
     doc->displayPages(psOut, firstPage, lastPage, 72, 72,
-		      0, globalParams->getPSCrop(), gFalse);
+		      0, !pageCrop, globalParams->getPSCrop(), gFalse);
   } else {
     delete psOut;
     exitCode = 2;

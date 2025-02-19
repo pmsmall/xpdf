@@ -29,7 +29,6 @@ all:
 all-no-x:
 	cd goo; $(MAKE)
 	cd @UP_DIR@fofi; $(MAKE)
-	cd @UP_DIR@splash; $(MAKE)
 	cd @UP_DIR@xpdf; $(MAKE) all-no-x
 
 xpdf: dummy

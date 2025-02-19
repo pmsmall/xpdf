@@ -168,28 +168,32 @@
               corner  of the paper instead.  [config file: psCen-
               ter]
 
+       -pagecrop
+              Treat  the  CropBox  as  the  PDF  page  size.   By
+              default, the MediaBox is used as the page size.
+
        -duplex
-              Set the Duplex pagedevice entry in  the  PostScript
+              Set  the  Duplex pagedevice entry in the PostScript
               file.  This tells duplex-capable printers to enable
               duplexing.  [config file: psDuplex]
 
        -opw password
-              Specify the owner password for the PDF file.   Pro-
-              viding  this will bypass all security restrictions.
+              Specify  the owner password for the PDF file.  Pro-
+              viding this will bypass all security  restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
-       -q     Don't print any messages or errors.  [config  file:
+       -q     Don't  print any messages or errors.  [config file:
               errQuiet]
 
        -cfg config-file
-              Read  config-file in place of ~/.xpdfrc or the sys-
+              Read config-file in place of ~/.xpdfrc or the  sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print usage information.   (-help  and  --help  are
+       -h     Print  usage  information.   (-help  and --help are
               equivalent.)
 
                                                                ()
@@ -213,7 +217,7 @@
 2 AUTHOR
 
        The  pdftops  software  and  documentation  are  copyright
-       1996-2004 Glyph & Cog, LLC.
+       1996-2005 Glyph & Cog, LLC.
 
                                                                ()
 

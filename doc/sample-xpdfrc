@@ -22,29 +22,12 @@
 
 #----- display fonts
 
-# These map the Base-14 fonts to standard X server fonts.
-# These are default mappings, built into xpdf - they're shown here
-# purely as examples.
-
-#displayFontX	Courier			"-*-courier-medium-r-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Courier-Bold		"-*-courier-bold-r-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Courier-BoldOblique	"-*-courier-bold-o-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Courier-Oblique		"-*-courier-medium-o-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Helvetica		"-*-helvetica-medium-r-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Helvetica-Bold		"-*-helvetica-bold-r-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Helvetica-BoldOblique	"-*-helvetica-bold-o-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Helvetica-Oblique	"-*-helvetica-medium-o-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Symbol			"-*-symbol-medium-r-normal-*-%s-*-*-*-*-*-adobe-fontspecific"	Symbol
-#displayFontX	Times-Bold		"-*-times-bold-r-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Times-BoldItalic	"-*-times-bold-i-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Times-Italic		"-*-times-medium-i-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	Times-Roman		"-*-times-medium-r-normal-*-%s-*-*-*-*-*-iso8859-1"		Latin1
-#displayFontX	ZapfDingbats		"-*-zapfdingbats-medium-r-normal-*-%s-*-*-*-*-*-*-*"		ZapfDingbats
-
 # These map the Base-14 fonts to the Type 1 fonts that ship with
 # ghostscript.  You'll almost certainly want to use something like
 # this, but you'll need to adjust this to point to wherever
-# ghostscript is installed on your system.
+# ghostscript is installed on your system.  (But if the fonts are
+# installed in a "standard" location, xpdf will find them
+# automatically.)
 
 #displayFontT1 Times-Roman		/usr/local/share/ghostscript/fonts/n021003l.pfb
 #displayFontT1 Times-Italic		/usr/local/share/ghostscript/fonts/n021023l.pfb
@@ -96,12 +79,11 @@
 
 #----- misc settings
 
-# Set the anti-aliasing mode for t1lib and FreeType.  These can be low
-# or high (anti-aliasing), plain (no anti-aliasing), or none (disable
-# the rasterizer entirely).
+# Enable t1lib, FreeType, and anti-aliased text.
 
-#t1libControl		low
-#freetypeControl	low
+#enableT1lib		yes
+#enableFreeType		yes
+#antialias		yes
 
 # Set the command used to run a web browser when a URL hyperlink is
 # clicked.

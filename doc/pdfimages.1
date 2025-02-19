@@ -1,8 +1,8 @@
-.\" Copyright 1998-2004 Glyph & Cog, LLC
-.TH pdfimages 1 "22 January 2004"
+.\" Copyright 1998-2005 Glyph & Cog, LLC
+.TH pdfimages 1 "17 August 2005"
 .SH NAME
 pdfimages \- Portable Document Format (PDF) image extractor
-(version 3.00)
+(version 3.01)
 .SH SYNOPSIS
 .B pdfimages
 [options]
@@ -21,6 +21,10 @@ where
 is the image number and
 .I xxx
 is the image type (.ppm, .pbm, .jpg).
+.PP
+NB: pdfimages extracts the raw image data from the PDF file, without
+performing any additional transforms.  Any rotation, clipping,
+color inversion, etc. done by the PDF content stream is ignored.
 .SH CONFIGURATION FILE
 Pdfimages reads a configuration file at startup.  It first tries to
 find the user's private config file, ~/.xpdfrc.  If that doesn't
@@ -84,7 +88,7 @@ Error related to PDF permissions.
 99
 Other error.
 .SH AUTHOR
-The pdfimages software and documentation are copyright 1998-2004 Glyph
+The pdfimages software and documentation are copyright 1998-2005 Glyph
 & Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),

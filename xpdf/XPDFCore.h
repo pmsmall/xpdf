@@ -18,56 +18,26 @@
 #define Object XtObject
 #include <Xm/XmAll.h>
 #undef Object
-#include <aconf.h>
 #include "gtypes.h"
 #include "gfile.h" // for time_t
 #include "SplashTypes.h"
+#include "PDFCore.h"
 
 class GString;
-class GList;
 class BaseStream;
 class PDFDoc;
 class LinkAction;
-class LinkDest;
-class XSplashOutputDev;
 
 //------------------------------------------------------------------------
-// zoom factor
-//------------------------------------------------------------------------
 
-#define zoomPage  -1
-#define zoomWidth -2
-#define defZoom   125
-
-//------------------------------------------------------------------------
-// XPDFHistory
-//------------------------------------------------------------------------
-
-struct XPDFHistory {
-  GString *fileName;
-  int page;
-};
-
-#define xpdfHistorySize 50
-
-//------------------------------------------------------------------------
-// XPDFRegion
-//------------------------------------------------------------------------
-
-struct XPDFRegion {
-  int page;
-  double xMin, yMin, xMax, yMax;
-  SplashRGB8 color;
-  SplashRGB8 selectColor;
-  GBool selectable;
-};
+#define xMaxRGBCube 6		// max size of RGB color cube
 
 //------------------------------------------------------------------------
 // callbacks
 //------------------------------------------------------------------------
 
 typedef void (*XPDFUpdateCbk)(void *data, GString *fileName,
-				int pageNum, int numPages, char *linkLabel);
+			      int pageNum, int numPages, char *linkLabel);
 
 typedef void (*XPDFActionCbk)(void *data, char *action);
 
@@ -76,81 +46,61 @@ typedef void (*XPDFKeyPressCbk)(void *data, char *s, KeySym key,
 
 typedef void (*XPDFMouseCbk)(void *data, XEvent *event);
 
-typedef GString *(*XPDFReqPasswordCbk)(void *data, GBool again);
-
 //------------------------------------------------------------------------
 // XPDFCore
 //------------------------------------------------------------------------
 
-class XPDFCore {
+class XPDFCore: public PDFCore {
 public:
 
   // Create viewer core inside <parentWidgetA>.
   XPDFCore(Widget shellA, Widget parentWidgetA,
-	   SplashRGB8 paperColorA, GBool fullScreenA,
-	   GBool reverseVideo, GBool installCmap, int rgbCubeSize);
+	   SplashColorPtr paperColorA, Gulong paperPixelA,
+	   Gulong mattePixelA, GBool fullScreenA, GBool reverseVideoA,
+	   GBool installCmap, int rgbCubeSizeA);
 
   ~XPDFCore();
 
   //----- loadFile / displayPage / displayDest
 
   // Load a new file.  Returns pdfOk or error code.
-  int loadFile(GString *fileName, GString *ownerPassword = NULL,
-	       GString *userPassword = NULL);
+  virtual int loadFile(GString *fileName, GString *ownerPassword = NULL,
+		       GString *userPassword = NULL);
 
   // Load a new file, via a Stream instead of a file name.  Returns
   // pdfOk or error code.
-  int loadFile(BaseStream *stream, GString *ownerPassword = NULL,
-	       GString *userPassword = NULL);
+  virtual int loadFile(BaseStream *stream, GString *ownerPassword = NULL,
+		       GString *userPassword = NULL);
 
   // Resize the window to fit page <pg> of the current document.
   void resizeToPage(int pg);
 
-  // Clear out the current document, if any.
-  void clear();
-
-  // Display (or redisplay) the specified page.  If <scrollToTop> is
-  // set, the window is vertically scrolled to the top; otherwise, no
-  // scrolling is done.  If <addToHist> is set, this page change is
-  // added to the history list.
-  void displayPage(int pageA, double zoomA, int rotateA,
-		   GBool scrollToTop, GBool addToHist);
-
-  // Display a link destination.
-  void displayDest(LinkDest *dest, double zoomA, int rotateA,
-		   GBool addToHist);
+  // Update the display, given the specified parameters.
+  virtual void update(int topPageA, int scrollXA, int scrollYA,
+		      double zoomA, int rotateA,
+		      GBool force, GBool addToHist);
 
   //----- page/position changes
 
-  void gotoNextPage(int inc, GBool top);
-  void gotoPrevPage(int dec, GBool top, GBool bottom);
-  void goForward();
-  void goBackward();
-  void scrollLeft(int nCols = 1);
-  void scrollRight(int nCols = 1);
-  void scrollUp(int nLines = 1);
-  void scrollDown(int nLines = 1);
-  void scrollPageUp();
-  void scrollPageDown();
-  void scrollTo(int x, int y);
+  virtual GBool gotoNextPage(int inc, GBool top);
+  virtual GBool gotoPrevPage(int dec, GBool top, GBool bottom);
+  virtual GBool goForward();
+  virtual GBool goBackward();
 
   //----- selection
 
-  void setSelection(int newXMin, int newYMin, int newXMax, int newYMax);
-  void moveSelection(int mx, int my);
   void copySelection();
-  GBool getSelection(int *xMin, int *yMin, int *xMax, int *yMax);
-  GString *extractText(int xMin, int yMin, int xMax, int yMax);
-  GString *extractText(int pageNum, int xMin, int yMin, int xMax, int yMax);
 
   //----- hyperlinks
 
   void doAction(LinkAction *action);
 
-
   //----- find
 
-  void find(char *s, GBool next = gFalse);
+  virtual GBool find(char *s, GBool caseSensitive,
+		     GBool next, GBool backward, GBool onePageOnly);
+  virtual GBool findU(Unicode *u, int len, GBool caseSensitive,
+		      GBool next, GBool backward, GBool onePageOnly);
 
   //----- simple modal dialogs
 
@@ -158,23 +108,15 @@ public:
   void doInfoDialog(char *title, GString *msg);
   void doErrorDialog(char *title, GString *msg);
 
+  //----- password dialog
+
+  GString *getPassword();
+
   //----- misc access
 
   Widget getWidget() { return scrolledWin; }
   Widget getDrawAreaWidget() { return drawArea; }
-  PDFDoc *getDoc() { return doc; }
-  XSplashOutputDev *getOutputDev() { return out; }
-  int getPageNum() { return page; }
-  double getZoom() { return zoom; }
-  double getZoomDPI() { return dpi; }
-  int getRotate() { return rotate; }
-  GBool canGoBack() { return historyBLen > 1; }
-  GBool canGoForward() { return historyFLen > 0; }
-  int getScrollX() { return scrollX; }
-  int getScrollY() { return scrollY; }
-  int getDrawAreaWidth() { return drawAreaWidth; }
-  int getDrawAreaHeight() { return drawAreaHeight; }
-  void setBusyCursor(GBool busy);
+  virtual void setBusyCursor(GBool busy);
   Cursor getBusyCursor() { return busyCursor; }
   void takeFocus();
   void enableHyperlinks(GBool on) { hyperlinksEnabled = on; }
@@ -187,13 +129,13 @@ public:
     { keyPressCbk = cbk; keyPressCbkData = data; }
   void setMouseCbk(XPDFMouseCbk cbk, void *data)
     { mouseCbk = cbk; mouseCbkData = data; }
-  void setReqPasswordCbk(XPDFReqPasswordCbk cbk, void *data)
-    { reqPasswordCbk = cbk; reqPasswordCbkData = data; }
 
 private:
 
+  virtual GBool checkForNewFile();
+
   //----- hyperlinks
-  GBool doLink(int mx, int my);
+  GBool doLink(int pg, int x, int y);
   void runCommand(GString *cmdFmt, GString *arg);
   GString *mungeURL(GString *url);
 
@@ -203,8 +145,8 @@ private:
 				     XtPointer *value, unsigned long *length,
 				     int *format);
 
-
   //----- GUI code
+  void setupX(GBool installCmap, int rgbCubeSizeA);
   void initWindow();
   static void hScrollChangeCbk(Widget widget, XtPointer ptr,
 			       XtPointer callData);
@@ -216,11 +158,14 @@ private:
 			     XtPointer callData);
   static void resizeCbk(Widget widget, XtPointer ptr, XtPointer callData);
   static void redrawCbk(Widget widget, XtPointer ptr, XtPointer callData);
-  static void outputDevRedrawCbk(void *data);
   static void inputCbk(Widget widget, XtPointer ptr, XtPointer callData);
   void keyPress(char *s, KeySym key, Guint modifiers);
-  void redrawRectangle(int x, int y, int w, int h);
-  void updateScrollBars();
+  virtual PDFCoreTile *newTile(int xDestA, int yDestA);
+  virtual void updateTileData(PDFCoreTile *tileA,
+			      int xSrc, int ySrc, int width, int height);
+  virtual void redrawRect(PDFCoreTile *tileA, int xSrc, int ySrc,
+			  int xDest, int yDest, int width, int height);
+  virtual void updateScrollbars();
   void setCursor(Cursor cursor);
   GBool doDialog(int type, GBool hasCancel,
 		 char *title, GString *msg);
@@ -228,14 +173,31 @@ private:
 			  XtPointer callData);
   static void dialogCancelCbk(Widget widget, XtPointer ptr,
 			      XtPointer callData);
+  void initPasswordDialog();
+  static void passwordTextVerifyCbk(Widget widget, XtPointer ptr,
+				    XtPointer callData);
+  static void passwordOkCbk(Widget widget, XtPointer ptr,
+			    XtPointer callData);
+  static void passwordCancelCbk(Widget widget, XtPointer ptr,
+				XtPointer callData);
 
-  SplashRGB8 paperColor;
+  Gulong paperPixel;
+  Gulong mattePixel;
+  //~unimp: move fullScreen into PDFCore?
   GBool fullScreen;
 
   Display *display;
   int screenNum;
   Visual *visual;
   Colormap colormap;
+  Guint depth;                  // visual depth
+  GBool trueColor;              // set if using a TrueColor visual
+  int rDiv, gDiv, bDiv;         // RGB right shifts (for TrueColor)
+  int rShift, gShift, bShift;   // RGB left shifts (for TrueColor)
+  int rgbCubeSize;              // size of color cube (for non-TrueColor)
+  Gulong                        // color cube (for non-TrueColor)
+    colors[xMaxRGBCube * xMaxRGBCube * xMaxRGBCube];
+
   Widget shell;			// top-level shell containing the widget
   Widget parentWidget;		// parent widget (not created by XPDFCore)
   Widget scrolledWin;
@@ -247,15 +209,6 @@ private:
   Cursor currentCursor;
   GC drawAreaGC;		// GC for blitting into drawArea
 
-  int drawAreaWidth, drawAreaHeight;
-  int scrollX, scrollY;		// current upper-left corner
-
-  int selectXMin, selectYMin,	// coordinates of current selection:
-      selectXMax, selectYMax;	//   (xMin==xMax || yMin==yMax) means there
-				//   is no selection
-  GBool dragging;		// set while selection is being dragged
-  GBool lastDragLeft;		// last dragged selection edge was left/right
-  GBool lastDragTop;		// last dragged selection edge was top/bottom
   static GString *currentSelection;  // selected text
   static XPDFCore *currentSelectionOwner;
   static Atom targetsAtom;
@@ -263,23 +216,9 @@ private:
   GBool panning;
   int panMX, panMY;
 
-  XPDFHistory			// page history queue
-    history[xpdfHistorySize];
-  int historyCur;               // currently displayed page
-  int historyBLen;              // number of valid entries backward from
-                                //   current entry
-  int historyFLen;              // number of valid entries forward from
-                                //   current entry
-
-  PDFDoc *doc;			// current PDF file
-  int page;			// current page number
-  double zoom;			// current zoom level, in percent of 72 dpi
-  double dpi;			// current zoom level, in DPI
-  int rotate;			// current page rotation
   time_t modTime;		// last modification time of PDF file
 
   LinkAction *linkAction;	// mouse cursor is over this link
-
 
   XPDFUpdateCbk updateCbk;
   void *updateCbkData;
@@ -289,15 +228,15 @@ private:
   void *keyPressCbkData;
   XPDFMouseCbk mouseCbk;
   void *mouseCbkData;
-  XPDFReqPasswordCbk reqPasswordCbk;
-  void *reqPasswordCbkData;
 
   GBool hyperlinksEnabled;
   GBool selectEnabled;
 
-  XSplashOutputDev *out;
-
   int dialogDone;
+
+  Widget passwordDialog;
+  Widget passwordText;
+  GString *password;
 };
 
 #endif

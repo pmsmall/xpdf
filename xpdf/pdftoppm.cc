@@ -158,14 +158,20 @@ int main(int argc, char *argv[]) {
     lastPage = doc->getNumPages();
 
   // write PPM files
-  paperColor.rgb8 = splashMakeRGB8(255, 255, 255);
-  splashOut = new SplashOutputDev(mono ? splashModeMono1 :
-				    gray ? splashModeMono8 :
-				             splashModeRGB8,
-				  gFalse, paperColor);
+  if (mono) {
+    paperColor[0] = 1;
+    splashOut = new SplashOutputDev(splashModeMono1, 1, gFalse, paperColor);
+  } else if (gray) {
+    paperColor[0] = 0xff;
+    splashOut = new SplashOutputDev(splashModeMono8, 1, gFalse, paperColor);
+  } else {
+    paperColor[0] = paperColor[1] = paperColor[2] = 0xff;
+    splashOut = new SplashOutputDev(splashModeRGB8, 1, gFalse, paperColor);
+  }
   splashOut->startDoc(doc->getXRef());
   for (pg = firstPage; pg <= lastPage; ++pg) {
-    doc->displayPage(splashOut, pg, resolution, resolution, 0, gTrue, gFalse);
+    doc->displayPage(splashOut, pg, resolution, resolution, 0,
+		     gFalse, gTrue, gFalse);
     sprintf(ppmFile, "%.*s-%06d.%s",
 	    (int)sizeof(ppmFile) - 32, ppmRoot, pg,
 	    mono ? "pbm" : gray ? "pgm" : "ppm");

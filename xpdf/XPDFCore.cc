@@ -21,12 +21,15 @@
 #include "Error.h"
 #include "GlobalParams.h"
 #include "PDFDoc.h"
+#include "Link.h"
 #include "ErrorCodes.h"
 #include "GfxState.h"
+#include "CoreOutputDev.h"
 #include "PSOutputDev.h"
 #include "TextOutputDev.h"
+#include "SplashBitmap.h"
 #include "SplashPattern.h"
-#include "XSplashOutputDev.h"
+#include "XPDFApp.h"
 #include "XPDFCore.h"
 
 // these macro defns conflict with xpdf's Object class
@@ -87,26 +90,46 @@
 
 //------------------------------------------------------------------------
 
-#define highlightNone     0
-#define highlightNormal   1
-#define highlightSelected 2
-
-//------------------------------------------------------------------------
-
 GString *XPDFCore::currentSelection = NULL;
 XPDFCore *XPDFCore::currentSelectionOwner = NULL;
 Atom XPDFCore::targetsAtom;
+
+//------------------------------------------------------------------------
+// XPDFCoreTile
+//------------------------------------------------------------------------
+
+class XPDFCoreTile: public PDFCoreTile {
+public:
+  XPDFCoreTile(int xDestA, int yDestA);
+  virtual ~XPDFCoreTile();
+  XImage *image;
+};
+
+XPDFCoreTile::XPDFCoreTile(int xDestA, int yDestA):
+  PDFCoreTile(xDestA, yDestA)
+{
+  image = NULL;
+}
+
+XPDFCoreTile::~XPDFCoreTile() {
+  if (image) {
+    gfree(image->data);
+    image->data = NULL;
+    XDestroyImage(image);
+  }
+}
 
 //------------------------------------------------------------------------
 // XPDFCore
 //------------------------------------------------------------------------
 
 XPDFCore::XPDFCore(Widget shellA, Widget parentWidgetA,
-		   SplashRGB8 paperColorA, GBool fullScreenA,
-		   GBool reverseVideo, GBool installCmap, int rgbCubeSize) {
+		   SplashColorPtr paperColorA, Gulong paperPixelA,
+		   Gulong mattePixelA, GBool fullScreenA, GBool reverseVideoA,
+		   GBool installCmap, int rgbCubeSizeA):
+  PDFCore(splashModeRGB8, 4, reverseVideoA, paperColorA)
+{
   GString *initialZoom;
-  SplashColor paperColor2;
-  int i;
 
   shell = shellA;
   parentWidget = parentWidgetA;
@@ -114,24 +137,17 @@ XPDFCore::XPDFCore(Widget shellA, Widget parentWidgetA,
   screenNum = XScreenNumberOfScreen(XtScreen(parentWidget));
   targetsAtom = XInternAtom(display, "TARGETS", False);
 
-  paperColor = paperColorA;
+  paperPixel = paperPixelA;
+  mattePixel = mattePixelA;
   fullScreen = fullScreenA;
 
-  // for some reason, querying XmNvisual doesn't work (even if done
-  // after the window is mapped)
-  visual = DefaultVisual(display, screenNum);
-  XtVaGetValues(shell, XmNcolormap, &colormap, NULL);
+  setupX(installCmap, rgbCubeSizeA);
 
   scrolledWin = NULL;
   hScrollBar = NULL;
   vScrollBar = NULL;
   drawAreaFrame = NULL;
   drawArea = NULL;
-  out = NULL;
-
-  doc = NULL;
-  page = 0;
-  rotate = 0;
 
   // get the initial zoom value
   initialZoom = globalParams->getInitialZoom();
@@ -147,29 +163,14 @@ XPDFCore::XPDFCore(Widget shellA, Widget parentWidgetA,
   }
   delete initialZoom;
 
-  scrollX = 0;
-  scrollY = 0;
   linkAction = NULL;
-  selectXMin = selectXMax = 0;
-  selectYMin = selectYMax = 0;
-  dragging = gFalse;
-  lastDragLeft = lastDragTop = gTrue;
 
   panning = gFalse;
-
 
   updateCbk = NULL;
   actionCbk = NULL;
   keyPressCbk = NULL;
   mouseCbk = NULL;
-  reqPasswordCbk = NULL;
-
-  // no history yet
-  historyCur = xpdfHistorySize - 1;
-  historyBLen = historyFLen = 0;
-  for (i = 0; i < xpdfHistorySize; ++i) {
-    history[i].fileName = NULL;
-  }
 
   // optional features default to on
   hyperlinksEnabled = gTrue;
@@ -177,34 +178,14 @@ XPDFCore::XPDFCore(Widget shellA, Widget parentWidgetA,
 
   // do X-specific initialization and create the widgets
   initWindow();
-
-  // create the OutputDev
-  paperColor2.rgb8 = paperColor;
-  out = new XSplashOutputDev(display, screenNum, visual, colormap,
-			     reverseVideo, paperColor2,
-			     installCmap, rgbCubeSize, gTrue,
-			     &outputDevRedrawCbk, this);
-  out->startDoc(NULL);
+  initPasswordDialog();
 }
 
 XPDFCore::~XPDFCore() {
-  int i;
-
-  if (out) {
-    delete out;
-  }
-  if (doc) {
-    delete doc;
-  }
   if (currentSelectionOwner == this && currentSelection) {
     delete currentSelection;
     currentSelection = NULL;
     currentSelectionOwner = NULL;
-  }
-  for (i = 0; i < xpdfHistorySize; ++i) {
-    if (history[i].fileName) {
-      delete history[i].fileName;
-    }
   }
   if (drawAreaGC) {
     XFreeGC(display, drawAreaGC);
@@ -229,138 +210,38 @@ XPDFCore::~XPDFCore() {
 
 int XPDFCore::loadFile(GString *fileName, GString *ownerPassword,
 		       GString *userPassword) {
-  PDFDoc *newDoc;
-  GString *password;
-  GBool again;
   int err;
 
-  // busy cursor
-  setCursor(busyCursor);
+  err = PDFCore::loadFile(fileName, ownerPassword, userPassword);
+  if (err == errNone) {
+    // save the modification time
+    modTime = getModTime(doc->getFileName()->getCString());
 
-  // open the PDF file
-  newDoc = new PDFDoc(fileName->copy(), ownerPassword, userPassword);
-  if (!newDoc->isOk()) {
-    err = newDoc->getErrorCode();
-    delete newDoc;
-    if (err != errEncrypted || !reqPasswordCbk) {
-      setCursor(None);
-      return err;
-    }
-
-    // try requesting a password
-    again = ownerPassword != NULL || userPassword != NULL;
-    while (1) {
-      if (!(password = (*reqPasswordCbk)(reqPasswordCbkData, again))) {
-	setCursor(None);
-	return errEncrypted;
-      }
-      newDoc = new PDFDoc(fileName->copy(), password, password);
-      if (newDoc->isOk()) {
-	break;
-      }
-      err = newDoc->getErrorCode();
-      delete newDoc;
-      if (err != errEncrypted) {
-	setCursor(None);
-	return err;
-      }
-      again = gTrue;
+    // update the parent window
+    if (updateCbk) {
+      (*updateCbk)(updateCbkData, doc->getFileName(), -1,
+		   doc->getNumPages(), NULL);
     }
   }
-
-  // replace old document
-  if (doc) {
-    delete doc;
-  }
-  doc = newDoc;
-  if (out) {
-    out->startDoc(doc->getXRef());
-  }
-
-  // nothing displayed yet
-  page = -99;
-
-  // save the modification time
-  modTime = getModTime(doc->getFileName()->getCString());
-
-  // update the parent window
-  if (updateCbk) {
-    (*updateCbk)(updateCbkData, doc->getFileName(), -1,
-		 doc->getNumPages(), NULL);
-  }
-
-  // back to regular cursor
-  setCursor(None);
-
-  return errNone;
+  return err;
 }
 
 int XPDFCore::loadFile(BaseStream *stream, GString *ownerPassword,
 		       GString *userPassword) {
-  PDFDoc *newDoc;
-  GString *password;
-  GBool again;
   int err;
 
-  // busy cursor
-  setCursor(busyCursor);
+  err = PDFCore::loadFile(stream, ownerPassword, userPassword);
+  if (err == errNone) {
+    // no file
+    modTime = 0;
 
-  // open the PDF file
-  newDoc = new PDFDoc(stream, ownerPassword, userPassword);
-  if (!newDoc->isOk()) {
-    err = newDoc->getErrorCode();
-    delete newDoc;
-    if (err != errEncrypted || !reqPasswordCbk) {
-      setCursor(None);
-      return err;
-    }
-
-    // try requesting a password
-    again = ownerPassword != NULL || userPassword != NULL;
-    while (1) {
-      if (!(password = (*reqPasswordCbk)(reqPasswordCbkData, again))) {
-	setCursor(None);
-	return errEncrypted;
-      }
-      newDoc = new PDFDoc(stream, password, password);
-      if (newDoc->isOk()) {
-	break;
-      }
-      err = newDoc->getErrorCode();
-      delete newDoc;
-      if (err != errEncrypted) {
-	setCursor(None);
-	return err;
-      }
-      again = gTrue;
+    // update the parent window
+    if (updateCbk) {
+      (*updateCbk)(updateCbkData, doc->getFileName(), -1,
+		   doc->getNumPages(), NULL);
     }
   }
-
-  // replace old document
-  if (doc) {
-    delete doc;
-  }
-  doc = newDoc;
-  if (out) {
-    out->startDoc(doc->getXRef());
-  }
-
-  // nothing displayed yet
-  page = -99;
-
-  // save the modification time
-  modTime = getModTime(doc->getFileName()->getCString());
-
-  // update the parent window
-  if (updateCbk) {
-    (*updateCbk)(updateCbkData, doc->getFileName(), -1,
-		 doc->getNumPages(), NULL);
-  }
-
-  // back to regular cursor
-  setCursor(None);
-
-  return errNone;
+  return err;
 }
 
 void XPDFCore::resizeToPage(int pg) {
@@ -380,11 +261,11 @@ void XPDFCore::resizeToPage(int pg) {
       height1 = 792;
     } else if (doc->getPageRotate(pg) == 90 ||
 	       doc->getPageRotate(pg) == 270) {
-      width1 = doc->getPageHeight(pg);
-      height1 = doc->getPageWidth(pg);
+      width1 = doc->getPageCropHeight(pg);
+      height1 = doc->getPageCropWidth(pg);
     } else {
-      width1 = doc->getPageWidth(pg);
-      height1 = doc->getPageHeight(pg);
+      width1 = doc->getPageCropWidth(pg);
+      height1 = doc->getPageCropHeight(pg);
     }
     if (zoom == zoomPage || zoom == zoomWidth) {
       width = (Dimension)(width1 * 0.01 * defZoom + 0.5);
@@ -393,11 +274,14 @@ void XPDFCore::resizeToPage(int pg) {
       width = (Dimension)(width1 * 0.01 * zoom + 0.5);
       height = (Dimension)(height1 * 0.01 * zoom + 0.5);
     }
+    if (continuousMode) {
+      height += continuousModePageSpacing;
+    }
     if (width > displayW - 100) {
       width = displayW - 100;
     }
-    if (height > displayH - 150) {
-      height = displayH - 150;
+    if (height > displayH - 100) {
+      height = displayH - 100;
     }
   }
 
@@ -412,524 +296,74 @@ void XPDFCore::resizeToPage(int pg) {
   }
 }
 
-void XPDFCore::clear() {
-  if (!doc) {
-    return;
-  }
+void XPDFCore::update(int topPageA, int scrollXA, int scrollYA,
+		      double zoomA, int rotateA,
+		      GBool force, GBool addToHist) {
+  int oldPage;
 
-  // no document
-  delete doc;
-  doc = NULL;
-  out->clear();
-
-  // no page displayed
-  page = -99;
-
-  // redraw
-  scrollX = scrollY = 0;
-  updateScrollBars();
-  redrawRectangle(scrollX, scrollY, drawAreaWidth, drawAreaHeight);
-}
-
-void XPDFCore::displayPage(int pageA, double zoomA, int rotateA,
-			   GBool scrollToTop, GBool addToHist) {
-  double hDPI, vDPI;
-  int rot;
-  XPDFHistory *h;
-  GBool newZoom;
-  time_t newModTime;
-  int oldScrollX, oldScrollY;
-
-  // update the zoom and rotate values
-  newZoom = zoomA != zoom;
-  zoom = zoomA;
-  rotate = rotateA;
-
-  // check for document and valid page number
-  if (!doc || pageA <= 0 || pageA > doc->getNumPages()) {
-    return;
-  }
-
-  // busy cursor
-  setCursor(busyCursor);
-
-
-  // check for changes to the file
-  newModTime = getModTime(doc->getFileName()->getCString());
-  if (newModTime != modTime) {
-    if (loadFile(doc->getFileName()) == errNone) {
-      if (pageA > doc->getNumPages()) {
-	pageA = doc->getNumPages();
-      }
-    }
-    modTime = newModTime;
-  }
-
-  // new page number
-  page = pageA;
-
-  // scroll to top
-  if (scrollToTop) {
-    scrollY = 0;
-  }
-
-  // if zoom level changed, scroll to the top-left corner
-  if (newZoom) {
-    scrollX = scrollY = 0;
-  }
-
-  // initialize mouse-related stuff
+  oldPage = topPage;
+  PDFCore::update(topPageA, scrollXA, scrollYA, zoomA, rotateA,
+		  force, addToHist);
   linkAction = NULL;
-  selectXMin = selectXMax = 0;
-  selectYMin = selectYMax = 0;
-  dragging = gFalse;
-  lastDragLeft = lastDragTop = gTrue;
-
-  // draw the page
-  rot = rotate + doc->getPageRotate(page);
-  if (rot >= 360) {
-    rot -= 360;
-  } else if (rotate < 0) {
-    rot += 360;
+  if (doc && topPage != oldPage) {
+    if (updateCbk) {
+      (*updateCbk)(updateCbkData, NULL, topPage, -1, "");
+    }
   }
-  if (zoom == zoomPage) {
-    if (rot == 90 || rot == 270) {
-      hDPI = (drawAreaWidth / doc->getPageHeight(page)) * 72;
-      vDPI = (drawAreaHeight / doc->getPageWidth(page)) * 72;
-    } else {
-      hDPI = (drawAreaWidth / doc->getPageWidth(page)) * 72;
-      vDPI = (drawAreaHeight / doc->getPageHeight(page)) * 72;
-    }
-    dpi = (hDPI < vDPI) ? hDPI : vDPI;
-  } else if (zoom == zoomWidth) {
-    if (rot == 90 || rot == 270) {
-      dpi = (drawAreaWidth / doc->getPageHeight(page)) * 72;
-    } else {
-      dpi = (drawAreaWidth / doc->getPageWidth(page)) * 72;
-    }
-  } else {
-    dpi = 0.01 * zoom * 72;
-  }
-  doc->displayPage(out, page, dpi, dpi, rotate, gTrue, gTrue);
-  oldScrollX = scrollX;
-  oldScrollY = scrollY;
-  updateScrollBars();
-  if (scrollX != oldScrollX || scrollY != oldScrollY) {
-    redrawRectangle(scrollX, scrollY, drawAreaWidth, drawAreaHeight);
-  }
-
-
-  // add to history
-  if (addToHist) {
-    if (++historyCur == xpdfHistorySize) {
-      historyCur = 0;
-    }
-    h = &history[historyCur];
-    if (h->fileName) {
-      delete h->fileName;
-    }
-    if (doc->getFileName()) {
-      h->fileName = doc->getFileName()->copy();
-    } else {
-      h->fileName = NULL;
-    }
-    h->page = page;
-    if (historyBLen < xpdfHistorySize) {
-      ++historyBLen;
-    }
-    historyFLen = 0;
-  }
-
-  // update the parent window
-  if (updateCbk) {
-    (*updateCbk)(updateCbkData, NULL, page, -1, "");
-  }
-
-  // back to regular cursor
-  setCursor(None);
 }
 
-void XPDFCore::displayDest(LinkDest *dest, double zoomA, int rotateA,
-			   GBool addToHist) {
-  Ref pageRef;
-  int pg;
-  int dx, dy;
+GBool XPDFCore::checkForNewFile() {
+  time_t newModTime;
 
-  if (dest->isPageRef()) {
-    pageRef = dest->getPageRef();
-    pg = doc->findPage(pageRef.num, pageRef.gen);
-  } else {
-    pg = dest->getPageNum();
-  }
-  if (pg <= 0 || pg > doc->getNumPages()) {
-    pg = 1;
-  }
-  if (pg != page) {
-    displayPage(pg, zoomA, rotateA, gTrue, addToHist);
-  }
-
-  if (fullScreen) {
-    return;
-  }
-  switch (dest->getKind()) {
-  case destXYZ:
-    out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
-    if (dest->getChangeLeft() || dest->getChangeTop()) {
-      scrollTo(dest->getChangeLeft() ? dx : scrollX,
-	       dest->getChangeTop() ? dy : scrollY);
+  if (doc->getFileName()) {
+    newModTime = getModTime(doc->getFileName()->getCString());
+    if (newModTime != modTime) {
+      modTime = newModTime;
+      return gTrue;
     }
-    //~ what is the zoom parameter?
-    break;
-  case destFit:
-  case destFitB:
-    //~ do fit
-    scrollTo(0, 0);
-    break;
-  case destFitH:
-  case destFitBH:
-    //~ do fit
-    out->cvtUserToDev(0, dest->getTop(), &dx, &dy);
-    scrollTo(0, dy);
-    break;
-  case destFitV:
-  case destFitBV:
-    //~ do fit
-    out->cvtUserToDev(dest->getLeft(), 0, &dx, &dy);
-    scrollTo(dx, 0);
-    break;
-  case destFitR:
-    //~ do fit
-    out->cvtUserToDev(dest->getLeft(), dest->getTop(), &dx, &dy);
-    scrollTo(dx, dy);
-    break;
   }
+  return gFalse;
 }
 
 //------------------------------------------------------------------------
 // page/position changes
 //------------------------------------------------------------------------
 
-void XPDFCore::gotoNextPage(int inc, GBool top) {
-  int pg;
-
-  if (!doc || doc->getNumPages() == 0) {
-    return;
-  }
-  if (page < doc->getNumPages()) {
-    if ((pg = page + inc) > doc->getNumPages()) {
-      pg = doc->getNumPages();
-    }
-    displayPage(pg, zoom, rotate, top, gTrue);
-  } else {
+GBool XPDFCore::gotoNextPage(int inc, GBool top) {
+  if (!PDFCore::gotoNextPage(inc, top)) {
     XBell(display, 0);
+    return gFalse;
   }
+  return gTrue;
 }
 
-void XPDFCore::gotoPrevPage(int dec, GBool top, GBool bottom) {
-  int pg;
-
-  if (!doc || doc->getNumPages() == 0) {
-    return;
-  }
-  if (page > 1) {
-    if (!fullScreen && bottom) {
-      scrollY = out->getBitmapHeight() - drawAreaHeight;
-      if (scrollY < 0) {
-	scrollY = 0;
-      }
-      // displayPage will call updateScrollBars()
-    }
-    if ((pg = page - dec) < 1) {
-      pg = 1;
-    }
-    displayPage(pg, zoom, rotate, top, gTrue);
-  } else {
+GBool XPDFCore::gotoPrevPage(int dec, GBool top, GBool bottom) {
+  if (!PDFCore::gotoPrevPage(dec, top, !fullScreen && bottom)) {
     XBell(display, 0);
+    return gFalse;
   }
+  return gTrue;
 }
 
-void XPDFCore::goForward() {
-  if (historyFLen == 0) {
+GBool XPDFCore::goForward() {
+  if (!PDFCore::goForward()) {
     XBell(display, 0);
-    return;
+    return gFalse;
   }
-  if (++historyCur == xpdfHistorySize) {
-    historyCur = 0;
-  }
-  --historyFLen;
-  ++historyBLen;
-  if (!doc || history[historyCur].fileName->cmp(doc->getFileName()) != 0) {
-    if (loadFile(history[historyCur].fileName) != errNone) {
-      XBell(display, 0);
-      return;
-    }
-  }
-  displayPage(history[historyCur].page, zoom, rotate, gFalse, gFalse);
+  return gTrue;
 }
 
-void XPDFCore::goBackward() {
-  if (historyBLen <= 1) {
+GBool XPDFCore::goBackward() {
+  if (!PDFCore::goBackward()) {
     XBell(display, 0);
-    return;
+    return gFalse;
   }
-  if (--historyCur < 0) {
-    historyCur = xpdfHistorySize - 1;
-  }
-  --historyBLen;
-  ++historyFLen;
-  if (!doc || history[historyCur].fileName->cmp(doc->getFileName()) != 0) {
-    if (loadFile(history[historyCur].fileName) != errNone) {
-      XBell(display, 0);
-      return;
-    }
-  }
-  displayPage(history[historyCur].page, zoom, rotate, gFalse, gFalse);
-}
-
-void XPDFCore::scrollLeft(int nCols) {
-  scrollTo(scrollX - nCols * 16, scrollY);
-}
-
-void XPDFCore::scrollRight(int nCols) {
-  scrollTo(scrollX + nCols * 16, scrollY);
-}
-
-void XPDFCore::scrollUp(int nLines) {
-  scrollTo(scrollX, scrollY - nLines * 16);
-}
-
-void XPDFCore::scrollDown(int nLines) {
-  scrollTo(scrollX, scrollY + nLines * 16);
-}
-
-void XPDFCore::scrollPageUp() {
-  if (scrollY == 0) {
-    gotoPrevPage(1, gFalse, gTrue);
-  } else {
-    scrollTo(scrollX, scrollY - drawAreaHeight);
-  }
-}
-
-void XPDFCore::scrollPageDown() {
-  if (scrollY >= out->getBitmapHeight() - drawAreaHeight) {
-    gotoNextPage(1, gTrue);
-  } else {
-    scrollTo(scrollX, scrollY + drawAreaHeight);
-  }
-}
-
-void XPDFCore::scrollTo(int x, int y) {
-  GBool needRedraw;
-  int maxPos, pos;
-
-  needRedraw = gFalse;
-
-  maxPos = out ? out->getBitmapWidth() : 1;
-  if (maxPos < drawAreaWidth) {
-    maxPos = drawAreaWidth;
-  }
-  if (x < 0) {
-    pos = 0;
-  } else if (x > maxPos - drawAreaWidth) {
-    pos = maxPos - drawAreaWidth;
-  } else {
-    pos = x;
-  }
-  if (scrollX != pos) {
-    scrollX = pos;
-    XmScrollBarSetValues(hScrollBar, scrollX, drawAreaWidth, 16,
-			 drawAreaWidth, False);
-    needRedraw = gTrue;
-  }
-
-  maxPos = out ? out->getBitmapHeight() : 1;
-  if (maxPos < drawAreaHeight) {
-    maxPos = drawAreaHeight;
-  }
-  if (y < 0) {
-    pos = 0;
-  } else if (y > maxPos - drawAreaHeight) {
-    pos = maxPos - drawAreaHeight;
-  } else {
-    pos = y;
-  }
-  if (scrollY != pos) {
-    scrollY = pos;
-    XmScrollBarSetValues(vScrollBar, scrollY, drawAreaHeight, 16,
-			 drawAreaHeight, False);
-    needRedraw = gTrue;
-  }
-
-  if (needRedraw) {
-    redrawRectangle(scrollX, scrollY, drawAreaWidth, drawAreaHeight);
-  }
+  return gTrue;
 }
 
 //------------------------------------------------------------------------
 // selection
 //------------------------------------------------------------------------
-
-void XPDFCore::setSelection(int newXMin, int newYMin,
-			    int newXMax, int newYMax) {
-  int x, y;
-  GBool needRedraw, needScroll;
-  GBool moveLeft, moveRight, moveTop, moveBottom;
-  SplashColor xorColor;
-
-
-  // erase old selection on off-screen bitmap
-  needRedraw = gFalse;
-  if (selectXMin < selectXMax && selectYMin < selectYMax) {
-    xorColor.rgb8 = splashMakeRGB8(0xff, 0xff, 0xff);
-    out->xorRectangle(selectXMin, selectYMin, selectXMax, selectYMax,
-		      new SplashSolidColor(xorColor));
-    needRedraw = gTrue;
-  }
-
-  // draw new selection on off-screen bitmap
-  if (newXMin < newXMax && newYMin < newYMax) {
-    xorColor.rgb8 = splashMakeRGB8(0xff, 0xff, 0xff);
-    out->xorRectangle(newXMin, newYMin, newXMax, newYMax,
-		      new SplashSolidColor(xorColor));
-    needRedraw = gTrue;
-  }
-
-  // check which edges moved
-  moveLeft = newXMin != selectXMin;
-  moveTop = newYMin != selectYMin;
-  moveRight = newXMax != selectXMax;
-  moveBottom = newYMax != selectYMax;
-
-  // redraw currently visible part of bitmap
-  if (needRedraw) {
-    if (moveLeft) {
-      redrawRectangle((newXMin < selectXMin) ? newXMin : selectXMin,
-		      (newYMin < selectYMin) ? newYMin : selectYMin,
-		      (newXMin > selectXMin) ? newXMin : selectXMin,
-		      (newYMax > selectYMax) ? newYMax : selectYMax);
-    }
-    if (moveRight) {
-      redrawRectangle((newXMax < selectXMax) ? newXMax : selectXMax,
-		      (newYMin < selectYMin) ? newYMin : selectYMin,
-		      (newXMax > selectXMax) ? newXMax : selectXMax,
-		      (newYMax > selectYMax) ? newYMax : selectYMax);
-    }
-    if (moveTop) {
-      redrawRectangle((newXMin < selectXMin) ? newXMin : selectXMin,
-		      (newYMin < selectYMin) ? newYMin : selectYMin,
-		      (newXMax > selectXMax) ? newXMax : selectXMax,
-		      (newYMin > selectYMin) ? newYMin : selectYMin);
-    }
-    if (moveBottom) {
-      redrawRectangle((newXMin < selectXMin) ? newXMin : selectXMin,
-		      (newYMax < selectYMax) ? newYMax : selectYMax,
-		      (newXMax > selectXMax) ? newXMax : selectXMax,
-		      (newYMax > selectYMax) ? newYMax : selectYMax);
-    }
-  }
-
-  // switch to new selection coords
-  selectXMin = newXMin;
-  selectXMax = newXMax;
-  selectYMin = newYMin;
-  selectYMax = newYMax;
-
-  // scroll if necessary
-  if (fullScreen) {
-    return;
-  }
-  needScroll = gFalse;
-  x = scrollX;
-  y = scrollY;
-  if (moveLeft && selectXMin < x) {
-    x = selectXMin;
-    needScroll = gTrue;
-  } else if (moveRight && selectXMax >= x + drawAreaWidth) {
-    x = selectXMax - drawAreaWidth;
-    needScroll = gTrue;
-  } else if (moveLeft && selectXMin >= x + drawAreaWidth) {
-    x = selectXMin - drawAreaWidth;
-    needScroll = gTrue;
-  } else if (moveRight && selectXMax < x) {
-    x = selectXMax;
-    needScroll = gTrue;
-  }
-  if (moveTop && selectYMin < y) {
-    y = selectYMin;
-    needScroll = gTrue;
-  } else if (moveBottom && selectYMax >= y + drawAreaHeight) {
-    y = selectYMax - drawAreaHeight;
-    needScroll = gTrue;
-  } else if (moveTop && selectYMin >= y + drawAreaHeight) {
-    y = selectYMin - drawAreaHeight;
-    needScroll = gTrue;
-  } else if (moveBottom && selectYMax < y) {
-    y = selectYMax;
-    needScroll = gTrue;
-  }
-  if (needScroll) {
-    scrollTo(x, y);
-  }
-}
-
-void XPDFCore::moveSelection(int mx, int my) {
-  int xMin, yMin, xMax, yMax;
-
-  // clip mouse coords
-  if (mx < 0) {
-    mx = 0;
-  } else if (mx >= out->getBitmapWidth()) {
-    mx = out->getBitmapWidth() - 1;
-  }
-  if (my < 0) {
-    my = 0;
-  } else if (my >= out->getBitmapHeight()) {
-    my = out->getBitmapHeight() - 1;
-  }
-
-  // move appropriate edges of selection
-  if (lastDragLeft) {
-    if (mx < selectXMax) {
-      xMin = mx;
-      xMax = selectXMax;
-    } else {
-      xMin = selectXMax;
-      xMax = mx;
-      lastDragLeft = gFalse;
-    }
-  } else {
-    if (mx > selectXMin) {
-      xMin = selectXMin;
-      xMax = mx;
-    } else {
-      xMin = mx;
-      xMax = selectXMin;
-      lastDragLeft = gTrue;
-    }
-  }
-  if (lastDragTop) {
-    if (my < selectYMax) {
-      yMin = my;
-      yMax = selectYMax;
-    } else {
-      yMin = selectYMax;
-      yMax = my;
-      lastDragTop = gFalse;
-    }
-  } else {
-    if (my > selectYMin) {
-      yMin = selectYMin;
-      yMax = my;
-    } else {
-      yMin = my;
-      yMax = selectYMin;
-      lastDragTop = gTrue;
-    }
-  }
-
-  // redraw the selection
-  setSelection(xMin, yMin, xMax, yMax);
-}
 
 // X's copy-and-paste mechanism is brain damaged.  Xt doesn't help
 // any, but doesn't make it too much worse, either.  Motif, on the
@@ -940,18 +374,22 @@ void XPDFCore::moveSelection(int mx, int my) {
 // global variables (currentSelection and currentSelectionOwner).
 
 void XPDFCore::copySelection() {
+  int pg;
+  double ulx, uly, lrx, lry;
+
   if (!doc->okToCopy()) {
     return;
   }
-  if (currentSelection) {
-    delete currentSelection;
+  if (getSelection(&pg, &ulx, &uly, &lrx, &lry)) {
+    //~ for multithreading: need a mutex here
+    if (currentSelection) {
+      delete currentSelection;
+    }
+    currentSelection = extractText(pg, ulx, uly, lrx, lry);
+    currentSelectionOwner = this;
+    XtOwnSelection(drawArea, XA_PRIMARY, XtLastTimestampProcessed(display),
+		   &convertSelectionCbk, NULL, NULL);
   }
-  //~ for multithreading: need a mutex here
-  currentSelection = out->getText(selectXMin, selectYMin,
-				  selectXMax, selectYMax);
-  currentSelectionOwner = this;
-  XtOwnSelection(drawArea, XA_PRIMARY, XtLastTimestampProcessed(display),
-		 &convertSelectionCbk, NULL, NULL);
 }
 
 Boolean XPDFCore::convertSelectionCbk(Widget widget, Atom *selection,
@@ -985,54 +423,17 @@ Boolean XPDFCore::convertSelectionCbk(Widget widget, Atom *selection,
   return False;
 }
 
-GBool XPDFCore::getSelection(int *xMin, int *yMin, int *xMax, int *yMax) {
-  if (selectXMin >= selectXMax || selectYMin >= selectYMax) {
-    return gFalse;
-  }
-  *xMin = selectXMin;
-  *yMin = selectYMin;
-  *xMax = selectXMax;
-  *yMax = selectYMax;
-  return gTrue;
-}
-
-GString *XPDFCore::extractText(int xMin, int yMin, int xMax, int yMax) {
-  if (!doc->okToCopy()) {
-    return NULL;
-  }
-  return out->getText(xMin, yMin, xMax, yMax);
-}
-
-GString *XPDFCore::extractText(int pageNum,
-			       int xMin, int yMin, int xMax, int yMax) {
-  TextOutputDev *textOut;
-  GString *s;
-
-  if (!doc->okToCopy()) {
-    return NULL;
-  }
-  textOut = new TextOutputDev(NULL, gTrue, gFalse, gFalse);
-  if (!textOut->isOk()) {
-    delete textOut;
-    return NULL;
-  }
-  doc->displayPage(textOut, pageNum, dpi, dpi, rotate, gTrue, gFalse);
-  s = textOut->getText(xMin, yMin, xMax, yMax);
-  delete textOut;
-  return s;
-}
-
 //------------------------------------------------------------------------
 // hyperlinks
 //------------------------------------------------------------------------
 
-GBool XPDFCore::doLink(int mx, int my) {
-  double x, y;
+GBool XPDFCore::doLink(int pg, int x, int y) {
   LinkAction *action;
+  double xu, yu;
 
   // look for a link
-  out->cvtDevToUser(mx, my, &x, &y);
-  if ((action = doc->findLink(x, y))) {
+  cvtDevToUser(pg, x, y, &xu, &yu);
+  if ((action = findLink(pg, xu, yu))) {
     doAction(action);
     return gTrue;
   }
@@ -1163,11 +564,11 @@ void XPDFCore::doAction(LinkAction *action) {
     } else if (!actionName->cmp("PrevPage")) {
       gotoPrevPage(1, gTrue, gFalse);
     } else if (!actionName->cmp("FirstPage")) {
-      if (page != 1) {
+      if (topPage != 1) {
 	displayPage(1, zoom, rotate, gTrue, gTrue);
       }
     } else if (!actionName->cmp("LastPage")) {
-      if (page != doc->getNumPages()) {
+      if (topPage != doc->getNumPages()) {
 	displayPage(doc->getNumPages(), zoom, rotate, gTrue, gTrue);
       }
     } else if (!actionName->cmp("GoBack")) {
@@ -1194,7 +595,8 @@ void XPDFCore::doAction(LinkAction *action) {
 			    ((LinkMovie *)action)->getAnnotRef()->gen,
 			    &movieAnnot);
     } else {
-      doc->getCatalog()->getPage(page)->getAnnots(&obj1);
+      //~ need to use the correct page num here
+      doc->getCatalog()->getPage(topPage)->getAnnots(&obj1);
       if (obj1.isArray()) {
 	for (i = 0; i < obj1.arrayGetLength(); ++i) {
 	  if (obj1.arrayGet(i, &movieAnnot)->isDict()) {
@@ -1289,109 +691,32 @@ GString *XPDFCore::mungeURL(GString *url) {
   return newURL;
 }
 
-
 //------------------------------------------------------------------------
 // find
 //------------------------------------------------------------------------
 
-void XPDFCore::find(char *s, GBool next) {
-  Unicode *u;
-  TextOutputDev *textOut;
-  int xMin, yMin, xMax, yMax;
-  double xMin1, yMin1, xMax1, yMax1;
-  int pg;
-  GBool startAtTop;
-  int len, i;
-
-  // check for zero-length string
-  if (!s[0]) {
+GBool XPDFCore::find(char *s, GBool caseSensitive,
+		     GBool next, GBool backward, GBool onePageOnly) {
+  if (!PDFCore::find(s, caseSensitive, next, backward, onePageOnly)) {
     XBell(display, 0);
-    return;
+    return gFalse;
   }
-
-  // set cursor to watch
-  setCursor(busyCursor);
-
-  // convert to Unicode
-#if 1 //~ should do something more intelligent here
-  len = strlen(s);
-  u = (Unicode *)gmalloc(len * sizeof(Unicode));
-  for (i = 0; i < len; ++i) {
-    u[i] = (Unicode)(s[i] & 0xff);
-  }
-#endif
-
-  // search current page starting at current selection or top of page
-  startAtTop = !next && !(selectXMin < selectXMax && selectYMin < selectYMax);
-  xMin = selectXMin + 1;
-  yMin = selectYMin + 1;
-  xMax = yMax = 0;
-  if (out->findText(u, len, startAtTop, gTrue, next, gFalse,
-		    &xMin, &yMin, &xMax, &yMax)) {
-    goto found;
-  }
-
-  // search following pages
-  textOut = new TextOutputDev(NULL, gTrue, gFalse, gFalse);
-  if (!textOut->isOk()) {
-    delete textOut;
-    goto done;
-  }
-  for (pg = page+1; pg <= doc->getNumPages(); ++pg) {
-    doc->displayPage(textOut, pg, 72, 72, 0, gTrue, gFalse);
-    if (textOut->findText(u, len, gTrue, gTrue, gFalse, gFalse,
-			  &xMin1, &yMin1, &xMax1, &yMax1)) {
-      goto foundPage;
-    }
-  }
-
-  // search previous pages
-  for (pg = 1; pg < page; ++pg) {
-    doc->displayPage(textOut, pg, 72, 72, 0, gTrue, gFalse);
-    if (textOut->findText(u, len, gTrue, gTrue, gFalse, gFalse,
-			  &xMin1, &yMin1, &xMax1, &yMax1)) {
-      goto foundPage;
-    }
-  }
-  delete textOut;
-
-  // search current page ending at current selection
-  if (!startAtTop) {
-    xMin = yMin = 0;
-    xMax = selectXMin;
-    yMax = selectYMin;
-    if (out->findText(u, len, gTrue, gFalse, gFalse, next,
-		      &xMin, &yMin, &xMax, &yMax)) {
-      goto found;
-    }
-  }
-
-  // not found
-  XBell(display, 0);
-  goto done;
-
-  // found on a different page
- foundPage:
-  delete textOut;
-  displayPage(pg, zoom, rotate, gTrue, gTrue);
-  if (!out->findText(u, len, gTrue, gTrue, gFalse, gFalse,
-		     &xMin, &yMin, &xMax, &yMax)) {
-    // this can happen if coalescing is bad
-    goto done;
-  }
-
-  // found: change the selection
- found:
-  setSelection(xMin, yMin, xMax, yMax);
 #ifndef NO_TEXT_SELECT
   copySelection();
 #endif
+  return gTrue;
+}
 
- done:
-  gfree(u);
-
-  // reset cursors to normal
-  setCursor(None);
+GBool XPDFCore::findU(Unicode *u, int len, GBool caseSensitive,
+		      GBool next, GBool backward, GBool onePageOnly) {
+  if (!PDFCore::findU(u, len, caseSensitive, next, backward, onePageOnly)) {
+    XBell(display, 0);
+    return gFalse;
+  }
+#ifndef NO_TEXT_SELECT
+  copySelection();
+#endif
+  return gTrue;
 }
 
 //------------------------------------------------------------------------
@@ -1409,6 +734,129 @@ void XPDFCore::takeFocus() {
 //------------------------------------------------------------------------
 // GUI code
 //------------------------------------------------------------------------
+
+void XPDFCore::setupX(GBool installCmap, int rgbCubeSizeA) {
+  XVisualInfo visualTempl;
+  XVisualInfo *visualList;
+  Gulong mask;
+  int nVisuals;
+  XColor xcolor;
+  XColor *xcolors;
+  int r, g, b, n, m;
+  GBool ok;
+
+  // for some reason, querying XmNvisual doesn't work (even if done
+  // after the window is mapped)
+  visual = DefaultVisual(display, screenNum);
+  XtVaGetValues(shell, XmNcolormap, &colormap, NULL);
+
+  // check for TrueColor visual
+  //~ this should scan the list, not just look at the first one
+  visualTempl.visualid = XVisualIDFromVisual(visual);
+  visualList = XGetVisualInfo(display, VisualIDMask,
+                              &visualTempl, &nVisuals);
+  if (nVisuals < 1) {
+    // this shouldn't happen
+    XFree((XPointer)visualList);
+    visualList = XGetVisualInfo(display, VisualNoMask, &visualTempl,
+                                &nVisuals);
+  }
+  depth = visualList->depth;
+  if (visualList->c_class == TrueColor) {
+    trueColor = gTrue;
+    for (mask = visualList->red_mask, rShift = 0;
+         mask && !(mask & 1);
+         mask >>= 1, ++rShift) ;
+    for (rDiv = 8; mask; mask >>= 1, --rDiv) ;
+    for (mask = visualList->green_mask, gShift = 0;
+         mask && !(mask & 1);
+         mask >>= 1, ++gShift) ;
+    for (gDiv = 8; mask; mask >>= 1, --gDiv) ;
+    for (mask = visualList->blue_mask, bShift = 0;
+         mask && !(mask & 1);
+         mask >>= 1, ++bShift) ;
+    for (bDiv = 8; mask; mask >>= 1, --bDiv) ;
+  } else {
+    trueColor = gFalse;
+  }
+  XFree((XPointer)visualList);
+
+  // allocate a color cube
+  if (!trueColor) {
+
+    // set colors in private colormap
+    if (installCmap) {
+      for (rgbCubeSize = xMaxRGBCube; rgbCubeSize >= 2; --rgbCubeSize) {
+        m = rgbCubeSize * rgbCubeSize * rgbCubeSize;
+        if (XAllocColorCells(display, colormap, False, NULL, 0, colors, m)) {
+          break;
+        }
+      }
+      if (rgbCubeSize >= 2) {
+        m = rgbCubeSize * rgbCubeSize * rgbCubeSize;
+        xcolors = (XColor *)gmallocn(m, sizeof(XColor));
+        n = 0;
+        for (r = 0; r < rgbCubeSize; ++r) {
+          for (g = 0; g < rgbCubeSize; ++g) {
+            for (b = 0; b < rgbCubeSize; ++b) {
+              xcolors[n].pixel = colors[n];
+              xcolors[n].red = (r * 65535) / (rgbCubeSize - 1);
+              xcolors[n].green = (g * 65535) / (rgbCubeSize - 1);
+              xcolors[n].blue = (b * 65535) / (rgbCubeSize - 1);
+              xcolors[n].flags = DoRed | DoGreen | DoBlue;
+              ++n;
+            }
+          }
+        }
+        XStoreColors(display, colormap, xcolors, m);
+        gfree(xcolors);
+      } else {
+        rgbCubeSize = 1;
+        colors[0] = BlackPixel(display, screenNum);
+        colors[1] = WhitePixel(display, screenNum);
+      }
+
+    // allocate colors in shared colormap
+    } else {
+      if (rgbCubeSize > xMaxRGBCube) {
+        rgbCubeSize = xMaxRGBCube;
+      }
+      ok = gFalse;
+      for (rgbCubeSize = rgbCubeSizeA; rgbCubeSize >= 2; --rgbCubeSize) {
+        ok = gTrue;
+        n = 0;
+        for (r = 0; r < rgbCubeSize && ok; ++r) {
+          for (g = 0; g < rgbCubeSize && ok; ++g) {
+            for (b = 0; b < rgbCubeSize && ok; ++b) {
+              if (n == 0) {
+                colors[n] = BlackPixel(display, screenNum);
+                ++n;
+              } else {
+                xcolor.red = (r * 65535) / (rgbCubeSize - 1);
+                xcolor.green = (g * 65535) / (rgbCubeSize - 1);
+                xcolor.blue = (b * 65535) / (rgbCubeSize - 1);
+                if (XAllocColor(display, colormap, &xcolor)) {
+                  colors[n++] = xcolor.pixel;
+                } else {
+                  ok = gFalse;
+                }
+              }
+            }
+          }
+        }
+        if (ok) {
+          break;
+        }
+        XFreeColors(display, colormap, &colors[1], n-1, 0);
+      }
+      if (!ok) {
+        rgbCubeSize = 1;
+        colors[0] = BlackPixel(display, screenNum);
+        colors[1] = WhitePixel(display, screenNum);
+      }
+    }
+  }
+}
 
 void XPDFCore::initWindow() {
   Arg args[20];
@@ -1525,10 +973,25 @@ void XPDFCore::vScrollDragCbk(Widget widget, XtPointer ptr,
 
 void XPDFCore::resizeCbk(Widget widget, XtPointer ptr, XtPointer callData) {
   XPDFCore *core = (XPDFCore *)ptr;
+  XEvent event;
+  Widget top;
   Arg args[2];
   int n;
   Dimension w, h;
-  int oldScrollX, oldScrollY;
+  int sx, sy;
+
+  // find the top-most widget which has an associated window, and look
+  // for a pending ConfigureNotify in the event queue -- if there is
+  // one, that means we're still resizing, and we want to skip the
+  // current event
+  for (top = core->parentWidget;
+       XtParent(top) && XtWindow(XtParent(top));
+       top = XtParent(top)) ;
+  if (XCheckTypedWindowEvent(core->display, XtWindow(top),
+			     ConfigureNotify, &event)) {
+    XPutBackEvent(core->display, &event);
+    return;
+  }
 
   n = 0;
   XtSetArg(args[n], XmNwidth, &w); ++n;
@@ -1536,19 +999,13 @@ void XPDFCore::resizeCbk(Widget widget, XtPointer ptr, XtPointer callData) {
   XtGetValues(core->drawArea, args, n);
   core->drawAreaWidth = (int)w;
   core->drawAreaHeight = (int)h;
-  if (core->page >= 0 &&
-      (core->zoom == zoomPage || core->zoom == zoomWidth)) {
-    core->displayPage(core->page, core->zoom, core->rotate,
-		      gFalse, gFalse);
+  if (core->zoom == zoomPage || core->zoom == zoomWidth) {
+    sx = sy = -1;
   } else {
-    oldScrollX = core->scrollX;
-    oldScrollY = core->scrollY;
-    core->updateScrollBars();
-    if (core->scrollX != oldScrollX || core->scrollY != oldScrollY) {
-      core->redrawRectangle(core->scrollX, core->scrollY,
-			    core->drawAreaWidth, core->drawAreaHeight);
-    }
+    sx = core->scrollX;
+    sy = core->scrollY;
   }
+  core->update(core->topPage, sx, sy, core->zoom, core->rotate, gTrue, gFalse);
 }
 
 void XPDFCore::redrawCbk(Widget widget, XtPointer ptr, XtPointer callData) {
@@ -1557,36 +1014,30 @@ void XPDFCore::redrawCbk(Widget widget, XtPointer ptr, XtPointer callData) {
   int x, y, w, h;
 
   if (data->reason == XmCR_EXPOSE) {
-    x = core->scrollX + data->event->xexpose.x;
-    y = core->scrollY + data->event->xexpose.y;
+    x = data->event->xexpose.x;
+    y = data->event->xexpose.y;
     w = data->event->xexpose.width;
     h = data->event->xexpose.height;
   } else {
-    x = core->scrollX;
-    y = core->scrollY;
+    x = 0;
+    y = 0;
     w = core->drawAreaWidth;
     h = core->drawAreaHeight;
   }
-  core->redrawRectangle(x, y, w, h);
-}
-
-void XPDFCore::outputDevRedrawCbk(void *data) {
-  XPDFCore *core = (XPDFCore *)data;
-
-  core->redrawRectangle(core->scrollX, core->scrollY,
-			core->drawAreaWidth, core->drawAreaHeight);
+  core->redrawWindow(x, y, w, h, gFalse);
 }
 
 void XPDFCore::inputCbk(Widget widget, XtPointer ptr, XtPointer callData) {
   XPDFCore *core = (XPDFCore *)ptr;
   XmDrawingAreaCallbackStruct *data = (XmDrawingAreaCallbackStruct *)callData;
   LinkAction *action;
-  int mx, my;
-  double x, y;
+  int pg, x, y;
+  double xu, yu;
   char *s;
   KeySym key;
   char buf[20];
   int n;
+  GBool ok;
 
   switch (data->event->type) {
   case ButtonPress:
@@ -1594,11 +1045,13 @@ void XPDFCore::inputCbk(Widget widget, XtPointer ptr, XtPointer callData) {
       core->takeFocus();
       if (core->doc && core->doc->getNumPages() > 0) {
 	if (core->selectEnabled) {
-	  mx = core->scrollX + data->event->xbutton.x;
-	  my = core->scrollY + data->event->xbutton.y;
-	  core->setSelection(mx, my, mx, my);
-	  core->setCursor(core->selectCursor);
-	  core->dragging = gTrue;
+	  if (core->cvtWindowToDev(data->event->xbutton.x,
+				   data->event->xbutton.y,
+				   &pg, &x, &y)) {
+	    core->setSelection(pg, x, y, x, y);
+	    core->setCursor(core->selectCursor);
+	    core->dragging = gTrue;
+	  }
 	}
       }
     } else if (data->event->xbutton.button == 2) {
@@ -1610,15 +1063,18 @@ void XPDFCore::inputCbk(Widget widget, XtPointer ptr, XtPointer callData) {
     } else if (data->event->xbutton.button == 4) { // mouse wheel up
       if (core->fullScreen) {
 	core->gotoPrevPage(1, gTrue, gFalse);
-      } else if (core->scrollY == 0) {
+      } else if (!core->continuousMode && core->scrollY == 0) {
 	core->gotoPrevPage(1, gFalse, gTrue);
       } else {
 	core->scrollUp(1);
       }
     } else if (data->event->xbutton.button == 5) { // mouse wheel down
-      if (core->fullScreen ||
-	  core->scrollY >=
-	    core->out->getBitmapHeight() - core->drawAreaHeight) {
+      if (core->fullScreen) {
+	core->gotoNextPage(1, gTrue);
+      } else if (!core->continuousMode &&
+		 core->scrollY >=
+		   ((PDFCorePage *)core->pages->get(0))->h
+		   - core->drawAreaHeight) {
 	core->gotoNextPage(1, gTrue);
       } else {
 	core->scrollDown(1);
@@ -1640,15 +1096,18 @@ void XPDFCore::inputCbk(Widget widget, XtPointer ptr, XtPointer callData) {
   case ButtonRelease:
     if (data->event->xbutton.button == 1) {
       if (core->doc && core->doc->getNumPages() > 0) {
-	mx = core->scrollX + data->event->xbutton.x;
-	my = core->scrollY + data->event->xbutton.y;
+	ok = core->cvtWindowToDev(data->event->xbutton.x,
+				  data->event->xbutton.y,
+				  &pg, &x, &y);
 	if (core->dragging) {
 	  core->dragging = gFalse;
 	  core->setCursor(None);
-	  core->moveSelection(mx, my);
+	  if (ok) {
+	    core->moveSelection(pg, x, y);
+	  }
 #ifndef NO_TEXT_SELECT
-	  if (core->selectXMin != core->selectXMax &&
-	      core->selectYMin != core->selectYMax) {
+	  if (core->selectULX != core->selectLRX &&
+	      core->selectULY != core->selectLRY) {
 	    if (core->doc->okToCopy()) {
 	      core->copySelection();
 	    } else {
@@ -1657,10 +1116,10 @@ void XPDFCore::inputCbk(Widget widget, XtPointer ptr, XtPointer callData) {
 	  }
 #endif
 	}
-	if (core->hyperlinksEnabled) {
-	  if (core->selectXMin == core->selectXMax ||
-	    core->selectYMin == core->selectYMax) {
-	    core->doLink(mx, my);
+	if (ok && core->hyperlinksEnabled) {
+	  if (core->selectULX == core->selectLRX ||
+	      core->selectULY == core->selectLRY) {
+	    core->doLink(pg, x, y);
 	  }
 	}
       }
@@ -1674,13 +1133,15 @@ void XPDFCore::inputCbk(Widget widget, XtPointer ptr, XtPointer callData) {
     break;
   case MotionNotify:
     if (core->doc && core->doc->getNumPages() > 0) {
-      mx = core->scrollX + data->event->xbutton.x;
-      my = core->scrollY + data->event->xbutton.y;
+      ok = core->cvtWindowToDev(data->event->xbutton.x, data->event->xbutton.y,
+				&pg, &x, &y);
       if (core->dragging) {
-	core->moveSelection(mx, my);
+	if (ok) {
+	  core->moveSelection(pg, x, y);
+	}
       } else if (core->hyperlinksEnabled) {
-	core->out->cvtDevToUser(mx, my, &x, &y);
-	if ((action = core->doc->findLink(x, y))) {
+	core->cvtDevToUser(pg, x, y, &xu, &yu);
+	if (ok && (action = core->findLink(pg, xu, yu))) {
 	  core->setCursor(core->linkCursor);
 	  if (action != core->linkAction) {
 	    core->linkAction = action;
@@ -1753,8 +1214,8 @@ void XPDFCore::keyPress(char *s, KeySym key, Guint modifiers) {
     if (modifiers & ControlMask) {
       displayPage(doc->getNumPages(), zoom, rotate, gTrue, gTrue);
     } else if (!fullScreen) {
-      scrollTo(out->getBitmapWidth() - drawAreaWidth,
-	       out->getBitmapHeight() - drawAreaHeight);
+      scrollTo(((PDFCorePage *)pages->get(0))->w - drawAreaWidth,
+	       ((PDFCorePage *)pages->get(0))->h - drawAreaHeight);
     }
     return;
   case XK_Page_Up:
@@ -1804,64 +1265,172 @@ void XPDFCore::keyPress(char *s, KeySym key, Guint modifiers) {
   }
 }
 
-void XPDFCore::redrawRectangle(int x, int y, int w, int h) {
-  XGCValues gcValues;
-  Window drawAreaWin;
+PDFCoreTile *XPDFCore::newTile(int xDestA, int yDestA) {
+  return new XPDFCoreTile(xDestA, yDestA);
+}
 
-  // clip to window
-  if (x < scrollX) {
-    w -= scrollX - x;
-    x = scrollX;
+void XPDFCore::updateTileData(PDFCoreTile *tileA,
+			      int xSrc, int ySrc, int width, int height) {
+  XPDFCoreTile *tile = (XPDFCoreTile *)tileA;
+  XImage *image;
+  SplashColorPtr dataPtr, p;
+  Gulong pixel;
+  int w, h, bw, x, y, r, g, b, gray;
+  int *errDownR, *errDownG, *errDownB;
+  int errRightR, errRightG, errRightB;
+  int errDownRightR, errDownRightG, errDownRightB;
+  int r0, g0, b0, re, ge, be;
+
+  if (!tile->image) {
+    w = tile->xMax - tile->xMin;
+    h = tile->yMax - tile->yMin;
+    image = XCreateImage(display, visual, depth, ZPixmap, 0, NULL, w, h, 8, 0);
+    image->data = (char *)gmalloc(h * image->bytes_per_line);
+    tile->image = image;
+  } else {
+    image = (XImage *)tile->image;
   }
-  if (x + w > scrollX + drawAreaWidth) {
-    w = scrollX + drawAreaWidth - x;
+
+  //~ optimize for known XImage formats
+  bw = tile->bitmap->getRowSize();
+  dataPtr = tile->bitmap->getDataPtr();
+
+  if (trueColor) {
+    for (y = 0; y < height; ++y) {
+      p = dataPtr + (ySrc + y) * bw + xSrc * 3;
+      for (x = 0; x < width; ++x) {
+	r = splashRGB8R(p) >> rDiv;
+	g = splashRGB8G(p) >> gDiv;
+	b = splashRGB8B(p) >> bDiv;
+	pixel = ((Gulong)r << rShift) +
+	        ((Gulong)g << gShift) +
+	        ((Gulong)b << bShift);
+	XPutPixel(image, xSrc + x, ySrc + y, pixel);
+	p += 3;
+      }
+    }
+  } else if (rgbCubeSize == 1) {
+    //~ this should really use splashModeMono, with non-clustered dithering
+    for (y = 0; y < height; ++y) {
+      p = dataPtr + (ySrc + y) * bw + xSrc * 3;
+      for (x = 0; x < width; ++x) {
+	gray = (int)(0.299 * splashRGB8R(p) +
+		     0.587 * splashRGB8G(p) +
+		     0.114 * splashRGB8B(p) + 0.5);
+	if (gray < 128) {
+	  pixel = colors[0];
+	} else {
+	  pixel = colors[1];
+	}
+	XPutPixel(image, xSrc + x, ySrc + y, pixel);
+	p += 3;
+      }
+    }
+  } else {
+    // do Floyd-Steinberg dithering on the whole bitmap
+    errDownR = (int *)gmallocn(width + 2, sizeof(int));
+    errDownG = (int *)gmallocn(width + 2, sizeof(int));
+    errDownB = (int *)gmallocn(width + 2, sizeof(int));
+    errRightR = errRightG = errRightB = 0;
+    errDownRightR = errDownRightG = errDownRightB = 0;
+    memset(errDownR, 0, (width + 2) * sizeof(int));
+    memset(errDownG, 0, (width + 2) * sizeof(int));
+    memset(errDownB, 0, (width + 2) * sizeof(int));
+    for (y = 0; y < height; ++y) {
+      p = dataPtr + (ySrc + y) * bw + xSrc * 3;
+      for (x = 0; x < width; ++x) {
+	r0 = splashRGB8R(p) + errRightR + errDownR[x+1];
+	g0 = splashRGB8G(p) + errRightG + errDownG[x+1];
+	b0 = splashRGB8B(p) + errRightB + errDownB[x+1];
+	// ">> 8" is an approximation for "/ 255"
+	if (r0 < 0) {
+	  r = 0;
+	} else if (r0 >= 255) {
+	  r = rgbCubeSize - 1;
+	} else {
+	  r = (r0 * (rgbCubeSize - 1)) >> 8;
+	}
+	if (g0 < 0) {
+	  g = 0;
+	} else if (g0 >= 255) {
+	  g = rgbCubeSize - 1;
+	} else {
+	  g = (g0 * (rgbCubeSize - 1)) >> 8;
+	}
+	if (b0 < 0) {
+	  b = 0;
+	} else if (b0 >= 255) {
+	  b = rgbCubeSize - 1;
+	} else {
+	  b = (b0 * (rgbCubeSize - 1)) >> 8;
+	}
+	re = r0 - ((r << 8) - r) / (rgbCubeSize - 1);
+	ge = g0 - ((g << 8) - g) / (rgbCubeSize - 1);
+	be = b0 - ((b << 8) - b) / (rgbCubeSize - 1);
+	errRightR = (re * 7) >> 4;
+	errRightG = (ge * 7) >> 4;
+	errRightB = (be * 7) >> 4;
+	errDownR[x] += (re * 3) >> 4;
+	errDownG[x] += (ge * 3) >> 4;
+	errDownB[x] += (be * 3) >> 4;
+	errDownR[x+1] = ((re * 5) >> 4) + errDownRightR;
+	errDownG[x+1] = ((ge * 5) >> 4) + errDownRightG;
+	errDownB[x+1] = ((be * 5) >> 4) + errDownRightB;
+	errDownRightR = re >> 4;
+	errDownRightG = ge >> 4;
+	errDownRightB = be >> 4;
+	pixel = colors[(r * rgbCubeSize + g) * rgbCubeSize + b];
+	XPutPixel(image, xSrc + x, ySrc + y, pixel);
+	p += 3;
+      }
+    }
+    gfree(errDownR);
+    gfree(errDownG);
+    gfree(errDownB);
   }
-  if (y < scrollY) {
-    h -= scrollY - y;
-    y = scrollY;
-  }
-  if (y + h > scrollY + drawAreaHeight) {
-    h = scrollY + drawAreaHeight - y;
-  }
+}
+
+void XPDFCore::redrawRect(PDFCoreTile *tileA, int xSrc, int ySrc,
+			  int xDest, int yDest, int width, int height) {
+  XPDFCoreTile *tile = (XPDFCoreTile *)tileA;
+  Window drawAreaWin;
+  XGCValues gcValues;
 
   // create a GC for the drawing area
   drawAreaWin = XtWindow(drawArea);
   if (!drawAreaGC) {
-    gcValues.foreground = paperColor;
+    gcValues.foreground = mattePixel;
     drawAreaGC = XCreateGC(display, drawAreaWin, GCForeground, &gcValues);
   }
 
-  // draw white background past the edges of the document
-  if (x + w > out->getBitmapWidth()) {
-    XFillRectangle(display, drawAreaWin, drawAreaGC,
-		   out->getBitmapWidth() - scrollX, y - scrollY,
-		   x + w - out->getBitmapWidth(), h);
-    w = out->getBitmapWidth() - x;
-  }
-  if (y + h > out->getBitmapHeight()) {
-    XFillRectangle(display, drawAreaWin, drawAreaGC,
-		   x - scrollX, out->getBitmapHeight() - scrollY,
-		   w, y + h - out->getBitmapHeight());
-    h = out->getBitmapHeight() - y;
-  }
+  // draw the document
+  if (tile) {
+    XPutImage(display, drawAreaWin, drawAreaGC, tile->image,
+	      xSrc, ySrc, xDest, yDest, width, height);
 
-  // redraw
-  if (w >= 0 && h >= 0) {
-    out->redraw(x, y, drawAreaWin, drawAreaGC, x - scrollX, y - scrollY, w, h);
+  // draw the background
+  } else {
+    XFillRectangle(display, drawAreaWin, drawAreaGC,
+		   xDest, yDest, width, height);
   }
 }
 
-void XPDFCore::updateScrollBars() {
+void XPDFCore::updateScrollbars() {
   Arg args[20];
   int n;
   int maxPos;
 
-  maxPos = out ? out->getBitmapWidth() : 1;
+  if (pages->getLength() > 0) {
+    if (continuousMode) {
+      maxPos = maxPageW;
+    } else {
+      maxPos = ((PDFCorePage *)pages->get(0))->w;
+    }
+  } else {
+    maxPos = 1;
+  }
   if (maxPos < drawAreaWidth) {
     maxPos = drawAreaWidth;
-  }
-  if (scrollX > maxPos - drawAreaWidth) {
-    scrollX = maxPos - drawAreaWidth;
   }
   n = 0;
   XtSetArg(args[n], XmNvalue, scrollX); ++n;
@@ -1871,12 +1440,17 @@ void XPDFCore::updateScrollBars() {
   XtSetArg(args[n], XmNpageIncrement, drawAreaWidth); ++n;
   XtSetValues(hScrollBar, args, n);
 
-  maxPos = out ? out->getBitmapHeight() : 1;
+  if (pages->getLength() > 0) {
+    if (continuousMode) {
+      maxPos = totalDocH;
+    } else {
+      maxPos = ((PDFCorePage *)pages->get(0))->h;
+    }
+  } else {
+    maxPos = 1;
+  }
   if (maxPos < drawAreaHeight) {
     maxPos = drawAreaHeight;
-  }
-  if (scrollY > maxPos - drawAreaHeight) {
-    scrollY = maxPos - drawAreaHeight;
   }
   n = 0;
   XtSetArg(args[n], XmNvalue, scrollY); ++n;
@@ -1993,4 +1567,158 @@ void XPDFCore::dialogCancelCbk(Widget widget, XtPointer ptr,
   XPDFCore *core = (XPDFCore *)ptr;
 
   core->dialogDone = -1;
+}
+
+//------------------------------------------------------------------------
+// password dialog
+//------------------------------------------------------------------------
+
+void XPDFCore::initPasswordDialog() {
+  Widget row, label, okBtn, cancelBtn;
+  Arg args[20];
+  int n;
+  XmString s;
+
+  //----- dialog
+  n = 0;
+  s = XmStringCreateLocalized(xpdfAppName ": Password");
+  XtSetArg(args[n], XmNdialogTitle, s); ++n;
+  XtSetArg(args[n], XmNdialogStyle, XmDIALOG_PRIMARY_APPLICATION_MODAL); ++n;
+  passwordDialog = XmCreateFormDialog(drawArea, "passwordDialog", args, n);
+  XmStringFree(s);
+
+  //----- message
+  n = 0;
+  XtSetArg(args[n], XmNtopAttachment, XmATTACH_FORM); ++n;
+  XtSetArg(args[n], XmNtopOffset, 4); ++n;
+  XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); ++n;
+  XtSetArg(args[n], XmNleftOffset, 4); ++n;
+  s = XmStringCreateLocalized("This document requires a password.");
+  XtSetArg(args[n], XmNlabelString, s); ++n;
+  label = XmCreateLabel(passwordDialog, "msg", args, n);
+  XmStringFree(s);
+  XtManageChild(label);
+
+  //----- label and password entry
+  n = 0;
+  XtSetArg(args[n], XmNtopAttachment, XmATTACH_WIDGET); ++n;
+  XtSetArg(args[n], XmNtopWidget, label); ++n;
+  XtSetArg(args[n], XmNtopOffset, 4); ++n;
+  XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); ++n;
+  XtSetArg(args[n], XmNleftOffset, 4); ++n;
+  XtSetArg(args[n], XmNrightAttachment, XmATTACH_FORM); ++n;
+  XtSetArg(args[n], XmNleftOffset, 4); ++n;
+  XtSetArg(args[n], XmNorientation, XmHORIZONTAL); ++n;
+  XtSetArg(args[n], XmNpacking, XmPACK_TIGHT); ++n;
+  row = XmCreateRowColumn(passwordDialog, "row", args, n);
+  XtManageChild(row);
+  n = 0;
+  s = XmStringCreateLocalized("Password: ");
+  XtSetArg(args[n], XmNlabelString, s); ++n;
+  label = XmCreateLabel(row, "label", args, n);
+  XmStringFree(s);
+  XtManageChild(label);
+  n = 0;
+  XtSetArg(args[n], XmNcolumns, 16); ++n;
+  passwordText = XmCreateTextField(row, "text", args, n);
+  XtManageChild(passwordText);
+  XtAddCallback(passwordText, XmNmodifyVerifyCallback,
+		&passwordTextVerifyCbk, this);
+
+  //----- "Ok" and "Cancel" buttons
+  n = 0;
+  XtSetArg(args[n], XmNtopAttachment, XmATTACH_WIDGET); ++n;
+  XtSetArg(args[n], XmNtopWidget, row); ++n;
+  XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); ++n;
+  XtSetArg(args[n], XmNleftOffset, 4); ++n;
+  XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM); ++n;
+  XtSetArg(args[n], XmNbottomOffset, 4); ++n;
+  XtSetArg(args[n], XmNnavigationType, XmEXCLUSIVE_TAB_GROUP); ++n;
+  okBtn = XmCreatePushButton(passwordDialog, "Ok", args, n);
+  XtManageChild(okBtn);
+  XtAddCallback(okBtn, XmNactivateCallback,
+		&passwordOkCbk, (XtPointer)this);
+  n = 0;
+  XtSetArg(args[n], XmNtopAttachment, XmATTACH_WIDGET); ++n;
+  XtSetArg(args[n], XmNtopWidget, row); ++n;
+  XtSetArg(args[n], XmNrightAttachment, XmATTACH_FORM); ++n;
+  XtSetArg(args[n], XmNrightOffset, 4); ++n;
+  XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM); ++n;
+  XtSetArg(args[n], XmNbottomOffset, 4); ++n;
+  XtSetArg(args[n], XmNnavigationType, XmEXCLUSIVE_TAB_GROUP); ++n;
+  cancelBtn = XmCreatePushButton(passwordDialog, "Cancel", args, n);
+  XtManageChild(cancelBtn);
+  XtAddCallback(cancelBtn, XmNactivateCallback,
+		&passwordCancelCbk, (XtPointer)this);
+  n = 0;
+  XtSetArg(args[n], XmNdefaultButton, okBtn); ++n;
+  XtSetArg(args[n], XmNcancelButton, cancelBtn); ++n;
+#if XmVersion > 1001
+  XtSetArg(args[n], XmNinitialFocus, passwordText); ++n;
+#endif
+  XtSetValues(passwordDialog, args, n);
+}
+
+void XPDFCore::passwordTextVerifyCbk(Widget widget, XtPointer ptr,
+				     XtPointer callData) {
+  XPDFCore *core = (XPDFCore *)ptr;
+  XmTextVerifyCallbackStruct *data =
+      (XmTextVerifyCallbackStruct *)callData;
+  int i, n;
+
+  i = (int)data->startPos;
+  n = (int)data->endPos - i;
+  if (i > core->password->getLength()) {
+    i = core->password->getLength();
+  }
+  if (i + n > core->password->getLength()) {
+    n = core->password->getLength() - i;
+  }
+  core->password->del(i, n);
+  core->password->insert(i, data->text->ptr, data->text->length);
+
+  for (i = 0; i < data->text->length; ++i) {
+    data->text->ptr[i] = '*';
+  }
+  data->doit = True;
+}
+
+void XPDFCore::passwordOkCbk(Widget widget, XtPointer ptr,
+			     XtPointer callData) {
+  XPDFCore *core = (XPDFCore *)ptr;
+
+  core->dialogDone = 1;
+}
+
+void XPDFCore::passwordCancelCbk(Widget widget, XtPointer ptr,
+				 XtPointer callData) {
+  XPDFCore *core = (XPDFCore *)ptr;
+
+  core->dialogDone = -1;
+}
+
+GString *XPDFCore::getPassword() {
+  XtAppContext appContext;
+  XEvent event;
+
+  // NB: set <password> before calling XmTextFieldSetString, because
+  // SetString will trigger a call to passwordTextVerifyCbk, which
+  // expects <password> to be valid
+  password = new GString();
+  XmTextFieldSetString(passwordText, "");
+  XtManageChild(passwordDialog);
+
+  appContext = XtWidgetToApplicationContext(passwordDialog);
+  dialogDone = 0;
+  do {
+    XtAppNextEvent(appContext, &event);
+    XtDispatchEvent(&event);
+  } while (!dialogDone);
+  XtUnmanageChild(passwordDialog);
+
+  if (dialogDone < 0) {
+    delete password;
+    return NULL;
+  }
+  return password;
 }

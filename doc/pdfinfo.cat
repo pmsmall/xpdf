@@ -4,7 +4,7 @@ pdfinfo(1)                                             pdfinfo(1)
 
 NAME
        pdfinfo - Portable Document Format (PDF) document informa-
-       tion extractor (version 3.00)
+       tion extractor (version 3.01)
 
 SYNOPSIS
        pdfinfo [options] [PDF-file]
@@ -107,7 +107,7 @@ EXIT CODES
 
 AUTHOR
        The  pdfinfo  software  and  documentation  are  copyright
-       1996-2004 Glyph & Cog, LLC.
+       1996-2005 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),     pdftops(1),     pdftotext(1),    pdffonts(1),
@@ -116,4 +116,4 @@ SEE ALSO
 
 
 
-                         22 January 2004               pdfinfo(1)
+                          17 August 2005               pdfinfo(1)

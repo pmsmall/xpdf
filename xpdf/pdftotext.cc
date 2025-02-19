@@ -217,9 +217,9 @@ int main(int argc, char *argv[]) {
       printInfoString(f, info.getDict(), "Producer",
 		      "<meta name=\"Producer\" content=\"", "\">\n", uMap);
       printInfoDate(f, info.getDict(), "CreationDate",
-		    "<meta name=\"CreationDate\" content=\"\">\n");
+		    "<meta name=\"CreationDate\" content=\"%s\">\n");
       printInfoDate(f, info.getDict(), "LastModifiedDate",
-		    "<meta name=\"ModDate\" content=\"\">\n");
+		    "<meta name=\"ModDate\" content=\"%s\">\n");
     }
     info.free();
     fputs("</head>\n", f);
@@ -234,7 +234,8 @@ int main(int argc, char *argv[]) {
   textOut = new TextOutputDev(textFileName->getCString(),
 			      physLayout, rawOrder, htmlMeta);
   if (textOut->isOk()) {
-    doc->displayPages(textOut, firstPage, lastPage, 72, 72, 0, gTrue, gFalse);
+    doc->displayPages(textOut, firstPage, lastPage, 72, 72, 0,
+		      gFalse, gTrue, gFalse);
   } else {
     delete textOut;
     exitCode = 2;

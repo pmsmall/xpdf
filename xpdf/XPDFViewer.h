@@ -73,9 +73,6 @@ private:
   void getPageAndDest(int pageA, GString *destName,
 		      int *pageOut, LinkDest **destOut);
 
-  //----- password dialog
-  static GString *reqPasswordCbk(void *data, GBool again);
-
   //----- actions
   static void actionCbk(void *data, char *action);
 
@@ -86,6 +83,7 @@ private:
 
   //----- GUI code: main window
   void initWindow();
+  void addToolTip(Widget widget, char *text);
   void mapWindow();
   void closeWindow();
   int getZoomIdx();
@@ -126,6 +124,8 @@ private:
 			XtPointer callData);
   static void saveAsCbk(Widget widget, XtPointer ptr,
 			XtPointer callData);
+  static void continuousModeToggleCbk(Widget widget, XtPointer ptr,
+				      XtPointer callData);
   static void rotateCCWCbk(Widget widget, XtPointer ptr,
 			   XtPointer callData);
   static void rotateCWCbk(Widget widget, XtPointer ptr,
@@ -152,7 +152,6 @@ private:
 
   //----- GUI code: "open" dialog
   void initOpenDialog();
-  void setOpenDialogDir(char *dir);
   void mapOpenDialog(GBool openInNewWindowA);
   static void openOkCbk(Widget widget, XtPointer ptr,
 			XtPointer callData);
@@ -161,13 +160,13 @@ private:
   void initFindDialog();
   static void findFindCbk(Widget widget, XtPointer ptr,
 			  XtPointer callData);
+  void mapFindDialog();
   void doFind(GBool next);
   static void findCloseCbk(Widget widget, XtPointer ptr,
 			   XtPointer callData);
 
   //----- GUI code: "save as" dialog
   void initSaveAsDialog();
-  void setSaveAsDialogDir(char *dir);
   void mapSaveAsDialog();
   static void saveAsOkCbk(Widget widget, XtPointer ptr,
 			  XtPointer callData);
@@ -181,16 +180,6 @@ private:
 				XtPointer callData);
   static void printPrintCbk(Widget widget, XtPointer ptr,
 			    XtPointer callData);
-
-  //----- GUI code: password dialog
-  void initPasswordDialog();
-  static void passwordTextVerifyCbk(Widget widget, XtPointer ptr,
-				    XtPointer callData);
-  static void passwordOkCbk(Widget widget, XtPointer ptr,
-			    XtPointer callData);
-  static void passwordCancelCbk(Widget widget, XtPointer ptr,
-				XtPointer callData);
-  void getPassword(GBool again);
 
   //----- Motif support
   XmFontList createFontList(char *xlfd);
@@ -241,6 +230,8 @@ private:
 
   Widget findDialog;
   Widget findText;
+  Widget findBackwardToggle;
+  Widget findCaseSensitiveToggle;
 
   Widget saveAsDialog;
 
@@ -251,12 +242,6 @@ private:
   Widget printFileText;
   Widget printFirstPage;
   Widget printLastPage;
-
-  Widget passwordDialog;
-  Widget passwordMsg;
-  Widget passwordText;
-  int passwordDone;
-  GString *password;
 };
 
 #endif

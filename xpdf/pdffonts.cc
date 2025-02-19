@@ -144,7 +144,8 @@ int main(int argc, char *argv[]) {
     if ((resDict = page->getResourceDict())) {
       scanFonts(resDict, doc);
     }
-    annots = new Annots(doc->getXRef(), page->getAnnots(&obj1));
+    annots = new Annots(doc->getXRef(), doc->getCatalog(),
+			page->getAnnots(&obj1));
     obj1.free();
     for (i = 0; i < annots->getNumAnnots(); ++i) {
       if (annots->getAnnot(i)->getAppearance(&obj1)->isStream()) {
@@ -286,7 +287,7 @@ static void scanFont(GfxFont *font, PDFDoc *doc) {
   // add this font to the list
   if (fontsLen == fontsSize) {
     fontsSize += 32;
-    fonts = (Ref *)grealloc(fonts, fontsSize * sizeof(Ref));
+    fonts = (Ref *)greallocn(fonts, fontsSize, sizeof(Ref));
   }
   fonts[fontsLen++] = *font->getID();
 }

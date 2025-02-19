@@ -857,6 +857,7 @@ Optional Features:
   --enable-opi            include support for OPI comments
   --enable-multithreaded  include support for multithreading
   --enable-wordlist       include support for building word lists
+  --enable-fixedpoint     use fixed point (instead of floating point) arithmetic
   --disable-largefile     omit support for large files
 
 Optional Packages:
@@ -1346,6 +1347,14 @@ if test "${enable_wordlist+set}" = set; then
   enableval="$enable_wordlist"
   cat >>confdefs.h <<\_ACEOF
 #define TEXTOUT_WORD_LIST 1
+_ACEOF
+
+fi;
+# Check whether --enable-fixedpoint or --disable-fixedpoint was given.
+if test "${enable_fixedpoint+set}" = set; then
+  enableval="$enable_fixedpoint"
+  cat >>confdefs.h <<\_ACEOF
+#define USE_FIXEDPOINT 1
 _ACEOF
 
 fi;
@@ -8200,9 +8209,6 @@ echo "$as_me: WARNING: requested Xm library not found!" >&2;}
 
 
 
-  if test "x$smr_have_Xm_library" != xyes; then
-    no_x="yes"
-  fi
 
 
 
@@ -8629,7 +8635,6 @@ fi
   fi
 fi
 
-if test -z "$no_x"; then
 
 
 
@@ -8905,7 +8910,7 @@ if test "${ac_cv_lib_t1_T1_InitLib+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lt1 $t1_CFLAGS $X_CFLAGS $t1_LIBS $X_LIBS $X_PRE_LIBS $X_EXTRA_LIBS -lX11 -lm $LIBS"
+LIBS="-lt1 $t1_CFLAGS $X_CFLAGS $t1_LIBS -lm $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 /* confdefs.h.  */
@@ -8990,7 +8995,6 @@ echo "$as_me: WARNING: requested t1 library not found!" >&2;}
 
 
 
-fi
 
 
 
@@ -9101,7 +9105,7 @@ echo "$as_me: error: argument must be a directory" >&2;}
   CPPFLAGS="$CPPFLAGS $freetype2_CFLAGS "
 
 
-for ac_header in freetype/freetype.h
+for ac_header in ft2build.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if eval "test \"\${$as_ac_Header+set}\" = set"; then
@@ -9350,370 +9354,13 @@ echo "$as_me: WARNING: requested freetype2 library not found!" >&2;}
 
 
 
-if test x"$freetype2_LIBS" = x; then
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Check whether --with-freetype2-library or --without-freetype2-library was given.
-if test "${with_freetype2_library+set}" = set; then
-  withval="$with_freetype2_library"
-  smr_cv_with_freetype2_library=$withval
-fi;
-
-      echo "$as_me:$LINENO: checking whether to use freetype2 library" >&5
-echo $ECHO_N "checking whether to use freetype2 library... $ECHO_C" >&6
-if test "${smr_cv_with_freetype2_library+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  smr_cv_with_freetype2_library=maybe
-fi
-echo "$as_me:$LINENO: result: $smr_cv_with_freetype2_library" >&5
-echo "${ECHO_T}$smr_cv_with_freetype2_library" >&6
-
-
-  case x"$smr_cv_with_freetype2_library" in
-      xyes | xmaybe)
-          freetype2_LIBS="-lfreetype"
-          with_freetype2=$smr_cv_with_freetype2_library
-          ;;
-      xno)
-          freetype2_LIBS=
-          with_freetype2=no
-          ;;
-      *)
-          if test -f "$smr_cv_with_freetype2_library"; then
-            freetype2_LIBS=$smr_cv_with_freetype2_library
-          elif test -d "$smr_cv_with_freetype2_library"; then
-            freetype2_LIBS="-L$smr_cv_with_freetype2_library -lfreetype"
-          else
-            { { echo "$as_me:$LINENO: error: argument must be boolean, file, or directory" >&5
-echo "$as_me: error: argument must be boolean, file, or directory" >&2;}
-   { (exit 1); exit 1; }; }
-          fi
-          with_freetype2=yes
-          ;;
-  esac
-
-
-
-
-
-
-
-  if test ! x"$with_freetype2" = xno; then
-
-    # If we got this far, then the user didn't explicitly ask not to use
-    # the library.
-
-
-
-
-
-
-
-
-# Check whether --with-freetype2-includes or --without-freetype2-includes was given.
-if test "${with_freetype2_includes+set}" = set; then
-  withval="$with_freetype2_includes"
-  smr_cv_with_freetype2_includes=$withval
-fi;
-
-      echo "$as_me:$LINENO: checking where to find the freetype2 header files" >&5
-echo $ECHO_N "checking where to find the freetype2 header files... $ECHO_C" >&6
-if test "${smr_cv_with_freetype2_includes+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  smr_cv_with_freetype2_includes=
-fi
-echo "$as_me:$LINENO: result: $smr_cv_with_freetype2_includes" >&5
-echo "${ECHO_T}$smr_cv_with_freetype2_includes" >&6
-
-  if test ! x"$smr_cv_with_freetype2_includes" = x; then
-    if test -d "$smr_cv_with_freetype2_includes"; then
-      freetype2_CFLAGS="-I$smr_cv_with_freetype2_includes"
-    else
-      { { echo "$as_me:$LINENO: error: argument must be a directory" >&5
-echo "$as_me: error: argument must be a directory" >&2;}
-   { (exit 1); exit 1; }; }
-    fi
-  else
-    freetype2_CFLAGS=
-  fi
-
-        smr_test_CPPFLAGS="${CPPFLAGS+set}"
-  smr_save_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $freetype2_CFLAGS "
-
-
-for ac_header in freetype.h
-do
-as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo "$as_me:$LINENO: checking for $ac_header" >&5
-echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-else
-  # Is the header compilable?
-echo "$as_me:$LINENO: checking $ac_header usability" >&5
-echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
+if test "x$smr_have_freetype2_library" = xyes; then
+  cat >>confdefs.h <<\_ACEOF
+#define HAVE_FREETYPE_FREETYPE_H 1
 _ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-$ac_includes_default
-#include <$ac_header>
-_ACEOF
-rm -f conftest.$ac_objext
-if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
-  (eval $ac_compile) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest.$ac_objext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_header_compiler=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_header_compiler=no
-fi
-rm -f conftest.$ac_objext conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
-echo "${ECHO_T}$ac_header_compiler" >&6
-
-# Is the header present?
-echo "$as_me:$LINENO: checking $ac_header presence" >&5
-echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-#include <$ac_header>
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  ac_header_preproc=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-  ac_header_preproc=no
-fi
-rm -f conftest.err conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
-echo "${ECHO_T}$ac_header_preproc" >&6
-
-# So?  What about this header?
-case $ac_header_compiler:$ac_header_preproc in
-  yes:no )
-    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
-echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
-echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
-    (
-      cat <<\_ASBOX
-## ------------------------------------ ##
-## Report this to bug-autoconf@gnu.org. ##
-## ------------------------------------ ##
-_ASBOX
-    ) |
-      sed "s/^/$as_me: WARNING:     /" >&2
-    ;;
-  no:yes )
-    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
-echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: check for missing prerequisite headers?" >&5
-echo "$as_me: WARNING: $ac_header: check for missing prerequisite headers?" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
-echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
-    (
-      cat <<\_ASBOX
-## ------------------------------------ ##
-## Report this to bug-autoconf@gnu.org. ##
-## ------------------------------------ ##
-_ASBOX
-    ) |
-      sed "s/^/$as_me: WARNING:     /" >&2
-    ;;
-esac
-echo "$as_me:$LINENO: checking for $ac_header" >&5
-echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  eval "$as_ac_Header=$ac_header_preproc"
-fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-
-fi
-if test `eval echo '${'$as_ac_Header'}'` = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
- smr_have_freetype2_header=yes
-else
-  smr_have_freetype2_header=no
-fi
-
-done
-
-
-  if test x"$smr_test_CPPFLAGS" = xset; then
-    CPPFLAGS=$smr_save_CPPFLAGS
-  else
-    unset CPPFLAGS
-  fi
-
-
-
-
-
-
-
-    # We need only look for the library if the header has been found
-    # (or no header is needed).
-    if test $smr_have_freetype2_header != no; then
-
-       echo "$as_me:$LINENO: checking for FT_Get_Name_Index in -lfreetype" >&5
-echo $ECHO_N "checking for FT_Get_Name_Index in -lfreetype... $ECHO_C" >&6
-if test "${ac_cv_lib_freetype_FT_Get_Name_Index+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lfreetype $freetype2_CFLAGS  $freetype2_LIBS -lm $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char FT_Get_Name_Index ();
-int
-main ()
-{
-FT_Get_Name_Index ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_freetype_FT_Get_Name_Index=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_freetype_FT_Get_Name_Index=no
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_freetype_FT_Get_Name_Index" >&5
-echo "${ECHO_T}$ac_cv_lib_freetype_FT_Get_Name_Index" >&6
-if test $ac_cv_lib_freetype_FT_Get_Name_Index = yes; then
-  smr_have_freetype2_library=yes
-else
-  smr_have_freetype2_library=no
-fi
-
-    fi
-
-    if test x"$smr_have_freetype2_library" = xyes; then
-      echo "$as_me:$LINENO: result: using freetype2 library" >&5
-echo "${ECHO_T}using freetype2 library" >&6
-    else
-      freetype2_LIBS=
-      freetype2_CFLAGS=
-
-      if test x"$with_freetype2" = xmaybe; then
-        echo "$as_me:$LINENO: result: not using freetype2 library" >&5
-echo "${ECHO_T}not using freetype2 library" >&6
-      else
-        { echo "$as_me:$LINENO: WARNING: requested freetype2 library not found!" >&5
-echo "$as_me: WARNING: requested freetype2 library not found!" >&2;}
-      fi
-    fi
-  fi
-
-
-
-
-
-
-
-
-
-
-
-fi
-
-
-if test "x$smr_have_freetype2_library" != xyes; then
-  no_x="yes"
 fi
 
 
@@ -10077,7 +9724,7 @@ echo "$as_me: WARNING: requested libpaper library not found!" >&2;}
 
 
 
-if test -n "$no_x"; then
+if test -n "$no_x" -o "x$smr_have_Xm_library" != xyes -o "x$smr_have_freetype2_library" != xyes; then
   X="#"
   XPDF_TARGET="all-no-x"
 else
@@ -11207,11 +10854,21 @@ if test "$no_create" != yes; then
 fi
 
 
-if test -n "$no_x"; then
-  { echo "$as_me:$LINENO: WARNING: Couldn't find X / Motif -- you will be able to compile
-        pdftops, pdftotext, pdfinfo, pdffonts, pdftoppm, and pdfimages,
-        but not xpdf" >&5
-echo "$as_me: WARNING: Couldn't find X / Motif -- you will be able to compile
-        pdftops, pdftotext, pdfinfo, pdffonts, pdftoppm, and pdfimages,
-        but not xpdf" >&2;}
+if test -n "$no_x" -o "x$smr_have_Xm_library" != xyes -o "x$smr_have_freetype2_library" != xyes; then
+  if test -n "$no_x"; then
+    { echo "$as_me:$LINENO: WARNING: Couldn't find X" >&5
+echo "$as_me: WARNING: Couldn't find X" >&2;};
+  fi
+  if test "x$smr_have_Xm_library" != xyes; then
+    { echo "$as_me:$LINENO: WARNING: Couldn't find Motif" >&5
+echo "$as_me: WARNING: Couldn't find Motif" >&2;};
+  fi
+  if test "x$smr_have_freetype2_library" != xyes; then
+    { echo "$as_me:$LINENO: WARNING: Couldn't find FreeType" >&5
+echo "$as_me: WARNING: Couldn't find FreeType" >&2;};
+  fi
+  { echo "$as_me:$LINENO: WARNING: -- You will be able to compile pdftops, pdftotext,
+        pdfinfo, pdffonts, and pdfimages, but not xpdf or pdftoppm" >&5
+echo "$as_me: WARNING: -- You will be able to compile pdftops, pdftotext,
+        pdfinfo, pdffonts, and pdfimages, but not xpdf or pdftoppm" >&2;}
 fi

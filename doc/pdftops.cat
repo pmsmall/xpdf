@@ -4,7 +4,7 @@ pdftops(1)                                             pdftops(1)
 
 NAME
        pdftops  -  Portable  Document  Format (PDF) to PostScript
-       converter (version 3.00)
+       converter (version 3.01)
 
 SYNOPSIS
        pdftops [options] [PDF-file [PS-file]]
@@ -166,28 +166,32 @@ OPTIONS
               corner of the paper instead.  [config file:  psCen-
               ter]
 
+       -pagecrop
+              Treat  the  CropBox  as  the  PDF  page  size.   By
+              default, the MediaBox is used as the page size.
+
        -duplex
-              Set  the  Duplex pagedevice entry in the PostScript
+              Set the Duplex pagedevice entry in  the  PostScript
               file.  This tells duplex-capable printers to enable
               duplexing.  [config file: psDuplex]
 
        -opw password
-              Specify  the owner password for the PDF file.  Pro-
-              viding this will bypass all security  restrictions.
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
 
-       -q     Don't  print any messages or errors.  [config file:
+       -q     Don't print any messages or errors.  [config  file:
               errQuiet]
 
        -cfg config-file
-              Read config-file in place of ~/.xpdfrc or the  sys-
+              Read  config-file in place of ~/.xpdfrc or the sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print  usage  information.   (-help  and --help are
+       -h     Print usage information.   (-help  and  --help  are
               equivalent.)
 
 EXIT CODES
@@ -205,13 +209,13 @@ EXIT CODES
 
 AUTHOR
        The  pdftops  software  and  documentation  are  copyright
-       1996-2004 Glyph & Cog, LLC.
+       1996-2005 Glyph & Cog, LLC.
 
 SEE ALSO
-       xpdf(1),     pdftotext(1),     pdfinfo(1),    pdffonts(1),
+       xpdf(1),    pdftotext(1),     pdfinfo(1),     pdffonts(1),
        pdftoppm(1), pdfimages(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
 
 
-                         22 January 2004               pdftops(1)
+                          17 August 2005               pdftops(1)

@@ -4,7 +4,7 @@ pdftoppm(1)                                           pdftoppm(1)
 
 NAME
        pdftoppm  -  Portable  Document  Format  (PDF) to Portable
-       Pixmap (PPM) converter (version 3.00)
+       Pixmap (PPM) converter (version 3.01)
 
 SYNOPSIS
        pdftoppm [options] PDF-file PPM-root
@@ -93,7 +93,7 @@ EXIT CODES
 
 AUTHOR
        The  pdftoppm  software  and  documentation  are copyright
-       1996-2004 Glyph & Cog, LLC.
+       1996-2005 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),  pdftops(1),   pdftotext(1),   pdfinfo(1),   pdf-
@@ -102,4 +102,4 @@ SEE ALSO
 
 
 
-                         22 January 2004              pdftoppm(1)
+                          17 August 2005              pdftoppm(1)

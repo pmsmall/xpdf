@@ -35,6 +35,11 @@
 #undef TEXTOUT_WORD_LIST
 
 /*
+ * Use fixed point (instead of floating point) arithmetic.
+ */
+#undef USE_FIXEDPOINT
+
+/*
  * Directory with the Xpdf app-defaults file.
  */
 #undef APPDEFDIR
@@ -86,5 +91,15 @@
  * This is defined if using libpaper.
  */
 #undef HAVE_PAPER_H
+
+/*
+ * Enable support for loading plugins.
+ */
+#undef ENABLE_PLUGINS
+
+/*
+ * Enable support for CMYK output.
+ */
+#undef SPLASH_CMYK
 
 #endif

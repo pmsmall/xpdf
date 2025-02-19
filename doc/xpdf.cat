@@ -4,7 +4,7 @@ xpdf(1)                                                   xpdf(1)
 
 NAME
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 3.00)
+       (version 3.01)
 
 SYNOPSIS
        xpdf [options] [PDF-file [page | +dest]]
@@ -26,84 +26,95 @@ DESCRIPTION
               xpdf file.pdf 18
 
        You  can  also give a named destination, prefixed with '+'
-       in place of the page number.
+       in place of the page number.  (This is  only  useful  with
+       PDF files that provide named destination targets.)
 
        You can also start xpdf without opening any files:
 
               xpdf
 
 CONFIGURATION FILE
-       Xpdf reads a configuration  file  at  startup.   It  first
-       tries  to  find the user's private config file, ~/.xpdfrc.
-       If that doesn't exist, it looks for a  system-wide  config
-       file,  typically  /usr/local/etc/xpdfrc (but this location
+       Xpdf  reads  a  configuration  file  at startup.  It first
+       tries to find the user's private config  file,  ~/.xpdfrc.
+       If  that  doesn't exist, it looks for a system-wide config
+       file, typically /usr/local/etc/xpdfrc (but  this  location
        can be changed when xpdf is built).  See the xpdfrc(5) man
        page for details.
 
 OPTIONS
-       Many  of  the following options can be set with configura-
-       tion file commands or X resources.  These  are  listed  in
-       square  brackets with the description of the corresponding
+       Many of the following options can be set  with  configura-
+       tion  file  commands  or X resources.  These are listed in
+       square brackets with the description of the  corresponding
        command line option.
 
        -g geometry
-              Set the initial  window  geometry.   (-geometry  is
+              Set  the  initial  window  geometry.  (-geometry is
               equivalent.)  [X resource: xpdf.geometry]
 
        -title title
-              Set  the  window title.  By default, the title will
+              Set the window title.  By default, the  title  will
               be "xpdf: foo.pdf".  [X resource: xpdf.title]
 
-       -cmap  Install a private colormap.   This  is  ignored  on
+       -cmap  Install  a  private  colormap.   This is ignored on
               TrueColor visuals.  [X resource: xpdf.installCmap]
 
        -rgb number
-              Set  the  size of largest RGB cube xpdf will try to
+              Set the size of largest RGB cube xpdf will  try  to
               allocate.  The default is 5 (for a 5x5x5 cube); set
-              to   a  smaller  number  to  conserve  color  table
-              entries.  This is ignored  with  private  colormaps
-              and    on    TrueColor   visuals.    [X   resource:
+              to  a  smaller  number  to  conserve  color   table
+              entries.   This  is  ignored with private colormaps
+              and   on   TrueColor   visuals.     [X    resource:
               xpdf.rgbCubeSize]
 
-       -rv    Set reverse video mode.  This reverses  the  colors
-              of  everything  except  images.   It may not always
-              produce great results for PDF files which do  weird
-              things  with  color.   This  also  causes the paper
-              color  to   default   to   black.    [X   resource:
+       -rv    Set  reverse  video mode.  This reverses the colors
+              of everything except images.   It  may  not  always
+              produce  great results for PDF files which do weird
+              things with color.   This  also  causes  the  paper
+              color   to   default   to   black.    [X  resource:
               xpdf.reverseVideo]
 
        -papercolor color
-              Set  the "paper color", i.e., the background of the
+              Set the "paper color", i.e., the background of  the
               page display.  This will not work too well with PDF
-              files  that  do things like filling in white behind
+              files that do things like filling in  white  behind
               the text.  [X resource: xpdf.paperColor]
 
+       -mattecolor color
+              Set the matte color, i.e., the color used for back-
+              ground outside the actual page area.  [X  resource:
+              xpdf.matteColor]
+
        -z zoom
-              Set the initial zoom factor.  A number specifies  a
-              zoom  percentage,  where  100  means 72 dpi.You may
-              also specify 'page', to fit the page to the  window
+              Set  the initial zoom factor.  A number specifies a
+              zoom percentage, where 100  means  72  dpi.You  may
+              also  specify 'page', to fit the page to the window
               size, or 'width', to fit the page width to the win-
-              dow  width.   [config  file:  initialZoom;   or   X
+              dow   width.    [config  file:  initialZoom;  or  X
               resource: xpdf.initialZoom]
+
+       -cont  Start in continuous view mode, i.e., with one  ver-
+              tical  scroll  bar for the whole document.  [config
+              file: continuousView]
 
        -t1lib yes | no
               Enable or disable t1lib (a Type 1 font rasterizer).
               This defaults to "yes".  [config file: enableT1lib]
 
        -freetype yes | no
-              Enable  or  disable  FreeType  (a TrueType / Type 1
+              Enable or disable FreeType (a  TrueType  /  Type  1
               font rasterizer).  This defaults to "yes".  [config
               file: enableFreeType]
 
        -aa yes | no
-              Enable   or   disable   font  anti-aliasing.   This
+              Enable  or  disable   font   anti-aliasing.    This
               defaults to "yes".  [config file: antialias]
 
        -ps PS-file
-              Set the default file name  for  PostScript  output.
-              This can also be of the form '|command' to pipe the
-              PostScript  through  a  command.    [config   file:
-              psFile]
+              Set  the  default  file  name for PostScript output
+              (i.e., the name which will appear in the print dia-
+              log).   This  can also be of the form '|command' to
+              pipe the PostScript  through  a  command.   [config
+              file: psFile]
 
        -paper size
               Set  the  paper  size  to one of "letter", "legal",
@@ -207,6 +218,10 @@ OPTIONS
               Enables the 'h', 'l', 'k' and 'j'  keys  for  left,
               right, up, and down scrolling.
 
+       xpdf.toolTipEnable
+              Enables  (if  set  to  true) or disables (if set to
+              false) the tool-tips on the toolbar buttons.
+
 CONTROLS
    On-screen controls, at the bottom of the xpdf window
        left/right arrow buttons
@@ -219,12 +234,12 @@ CONTROLS
               Move backward or forward along the history path.
 
        'Page' entry box
-              Move  to  a specific page number.  Click in the box
-              to activate it, type  the  page  number,  then  hit
+              Move to a specific page number.  Click in  the  box
+              to  activate  it,  type  the  page number, then hit
               return.
 
        zoom popup menu
-              Change  the zoom factor (see the description of the
+              Change the zoom factor (see the description of  the
               -z option above).
 
        binoculars button
@@ -232,16 +247,16 @@ CONTROLS
 
        print button
               Bring up a dialog for generating a PostScript file.
-              The  dialog  has  options  to  set  the pages to be
-              printed and the PostScript  file  name.   The  file
-              name  can  be  '-' for stdout or '|command' to pipe
+              The dialog has options  to  set  the  pages  to  be
+              printed  and  the  PostScript  file name.  The file
+              name can be '-' for stdout or  '|command'  to  pipe
               the PostScript through a command, e.g., '|lpr'.
 
        '?' button
               Bring up the 'about xpdf' window.
 
        link info
-              The space between the '?'  and  'Quit'  buttons  is
+              The  space  between  the  '?' and 'Quit' buttons is
               used to show the URL or external file name when the
               mouse is over a link.
 
@@ -250,22 +265,26 @@ CONTROLS
 
 
    Menu
-       Pressing the right mouse button will  post  a  popup  menu
+       Pressing  the  right  mouse  button will post a popup menu
        with the following commands:
 
        Open...
               Open a new PDF file via a file requester.
 
        Open in new window...
-              Create  a  new window and open a new PDF file via a
+              Create a new window and open a new PDF file  via  a
               file requester.
 
-       Reload Reload the current PDF file.  Note that  Xpdf  will
-              reload  the file automatically (on a page change or
+       Reload Reload  the  current PDF file.  Note that Xpdf will
+              reload the file automatically (on a page change  or
               redraw) if it has changed since it was last loaded.
 
        Save as...
               Save the current file via a file requester.
+
+       Continuous view
+              Toggles between single  page  and  continuous  view
+              modes.
 
        Rotate counterclockwise
               Rotate the page 90 degrees counterclockwise.
@@ -365,7 +384,7 @@ CONTROLS
 
        g      Activate  the page number text field ("goto page").
 
-       0      Set the zoom factor to zero (72 dpi).
+       0      Set the zoom factor to 125%.
 
        +      Zoom in (increment the zoom factor by 1).
 
@@ -445,7 +464,7 @@ EXIT CODES
 
 AUTHOR
        The   xpdf   software   and  documentation  are  copyright
-       1996-2004 Glyph & Cog, LLC.
+       1996-2005 Glyph & Cog, LLC.
 
 SEE ALSO
        pdftops(1),   pdftotext(1),    pdfinfo(1),    pdffonts(1),
@@ -454,4 +473,4 @@ SEE ALSO
 
 
 
-                         22 January 2004                  xpdf(1)
+                          17 August 2005                  xpdf(1)

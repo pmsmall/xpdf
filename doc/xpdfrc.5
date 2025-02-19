@@ -1,7 +1,7 @@
-.\" Copyright 2002-2004 Glyph & Cog, LLC
-.TH xpdfrc 5 "22 January 2004"
+.\" Copyright 2002-2005 Glyph & Cog, LLC
+.TH xpdfrc 5 "17 August 2005"
 .SH NAME
-xpdfrc \- configuration file for Xpdf tools (version 3.00)
+xpdfrc \- configuration file for Xpdf tools (version 3.01)
 .SH DESCRIPTION
 All of the Xpdf tools read a single configuration file.  If you have a
 .I .xpdfrc
@@ -27,7 +27,7 @@ to inserting the contents of
 .I config\-file
 directly into the parent config file in place of the
 .I include
-command.  Config files can be nested arbitrarily deep.
+command.  Config files can be nested arbitrarily deeply.
 .SH CHARACTER MAPPING
 .TP
 .BI nameToUnicode " map\-file"
@@ -197,7 +197,8 @@ Sets the paper size for PostScript output.  The
 .I width
 and
 .I height
-parameters give the paper size in PostScript points.
+parameters give the paper size in PostScript points (1 point = 1/72
+inch).
 .TP
 .BR psPaperSize " letter | legal | A4 | A3 | match"
 Sets the paper size for PostScript output to a standard size.  The
@@ -208,8 +209,9 @@ the paper size to match the size specified in the PDF file.
 .BR psImageableArea " llx lly urx ury"
 Sets the imageable area for PostScript output.  The four integers are
 the coordinates of the lower-left and upper-right corners of the
-imageable region, specified in points.  This defaults to the full
-paper size; the psPaperSize option will reset the imageable area
+imageable region, specified in points (with the origin being the
+lower-left corner of the paper).  This defaults to the full paper
+size; the psPaperSize option will reset the imageable area
 coordinates.
 .TP
 .BR psCrop " yes | no"
@@ -413,7 +415,6 @@ unicodeMap   JISX0208     /usr/local/share/xpdf/JISX0208.unicodeMap
 cMapDir      Adobe-Japan1 /usr/local/share/xpdf/cmap/Adobe-Japan1
 
 # use the Base-14 Type 1 fonts from ghostscript
-# (note that this overrides the displayFontX command above)
 displayFontT1 Times-Roman           /usr/local/share/ghostscript/fonts/n021003l.pfb
 displayFontT1 Times-Italic          /usr/local/share/ghostscript/fonts/n021023l.pfb
 displayFontT1 Times-Bold            /usr/local/share/ghostscript/fonts/n021004l.pfb
@@ -466,7 +467,7 @@ Depending on build options, it may be placed elsewhere.
 This is the user's configuration file.  If it exists, it will be read
 in place of the system-wide file.
 .SH AUTHOR
-The Xpdf software and documentation are copyright 1996-2004 Glyph &
+The Xpdf software and documentation are copyright 1996-2005 Glyph &
 Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),

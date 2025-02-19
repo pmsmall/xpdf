@@ -2,14 +2,14 @@
 1 xpdfrc
 2 NCLUDE_FILE
 
-       xpdfrc - configuration file for Xpdf tools (version 3.00)
+       xpdfrc - configuration file for Xpdf tools (version 3.01)
 
        include config-file
               Includes  the specified config file.  The effect of
               this is equivalent to  inserting  the  contents  of
               config-file directly into the parent config file in
               place of the include command.  Config files can  be
-              nested arbitrarily deep.
+              nested arbitrarily deeply.
 
                                                                ()
 
@@ -162,7 +162,7 @@
        psPaperSize width(pts) height(pts)
               Sets  the  paper  size  for PostScript output.  The
               width and height parameters give the paper size  in
-              PostScript points.
+              PostScript points (1 point = 1/72 inch).
 
        psPaperSize letter | legal | A4 | A3 | match
               Sets  the  paper  size  for  PostScript output to a
@@ -176,119 +176,120 @@
               Sets the imageable area for PostScript output.  The
               four integers are the coordinates of the lower-left
               and upper-right corners of  the  imageable  region,
-              specified  in  points.   This  defaults to the full
-              paper size; the psPaperSize option will  reset  the
-              imageable area coordinates.
+              specified  in  points  (with  the  origin being the
+              lower-left corner of the paper).  This defaults  to
+              the  full  paper  size; the psPaperSize option will
+              reset the imageable area coordinates.
 
        psCrop yes | no
-              If  set  to  "yes", PostScript output is cropped to
+              If set to "yes", PostScript output  is  cropped  to
               the CropBox specified in the PDF file; otherwise no
               cropping is done.  This defaults to "yes".
 
        psExpandSmaller yes | no
               If  set  to  "yes",  PDF  pages  smaller  than  the
-              PostScript imageable area are expanded to fill  the
-              imageable  area.  Otherwise, no scalling is done on
+              PostScript  imageable area are expanded to fill the
+              imageable area.  Otherwise, no scalling is done  on
               smaller pages.  This defaults to "no".
 
        psShrinkLarger yes | no
               If set to yes, PDF pages larger than the PostScript
-              imageable  area  are  shrunk  to  fit the imageable
-              area.  Otherwise, no  scaling  is  done  on  larger
+              imageable area are  shrunk  to  fit  the  imageable
+              area.   Otherwise,  no  scaling  is  done on larger
               pages.  This defaults to "yes".
 
        psCenter yes | no
-              If   set   to  yes,  PDF  pages  smaller  than  the
-              PostScript imageable area (after any  scaling)  are
-              centered  in  the  imageable area.  Otherwise, they
-              are aligned at the lower-left corner of the  image-
+              If  set  to  yes,  PDF  pages  smaller   than   the
+              PostScript  imageable  area (after any scaling) are
+              centered in the imageable  area.   Otherwise,  they
+              are  aligned at the lower-left corner of the image-
               able area.  This defaults to "yes".
 
        psDuplex yes | no
-              If  set to "yes", the generated PostScript will set
-              the "Duplex" pagedevice entry.  This tells  duplex-
-              capable   printers   to   enable  duplexing.   This
+              If set to "yes", the generated PostScript will  set
+              the  "Duplex" pagedevice entry.  This tells duplex-
+              capable  printers  to   enable   duplexing.    This
               defaults to "no".
 
        psLevel level1 | level1sep | level2 | level2sep | level3 |
        level3Sep
-              Sets  the  PostScript  level  to  generate.    This
+              Sets   the  PostScript  level  to  generate.   This
               defaults to "level2".
 
        psFont PDF-font-name PS-font-name
-              When  the PDF-font-name font is used in a PDF file,
+              When the PDF-font-name font is used in a PDF  file,
               it  will  be  translated  to  the  PostScript  font
-              PS-font-name,  which  is  assumed to be resident in
-              the   printer.    Typically,   PDF-font-name    and
-              PS-font-name  are  the  same.  By default, only the
+              PS-font-name, which is assumed to  be  resident  in
+              the    printer.    Typically,   PDF-font-name   and
+              PS-font-name are the same.  By  default,  only  the
               Base-14 fonts are assumed to be resident.
 
        psNamedFont16 PDF-font-name wMode PS-font-name encoding
               When the 16-bit font PDF-font-name is used in a PDF
-              file  with the wMode writing mode and is not embed-
-              ded, the PS-font-name font is substituted  for  it.
-              The  writing mode must be either 'H' for horizontal
-              or 'V' for  vertical.   The  PS-font-name  font  is
-              assumed  to  be  resident in the printer and to use
-              the  specified  encoding  (which  must  have   been
+              file with the wMode writing mode and is not  embed-
+              ded,  the  PS-font-name font is substituted for it.
+              The writing mode must be either 'H' for  horizontal
+              or  'V'  for  vertical.   The  PS-font-name font is
+              assumed to be resident in the printer  and  to  use
+              the   specified  encoding  (which  must  have  been
               defined with the unicodeMap command).
 
        psFont16 registry-ordering wMode PS-font-name encoding
-              When  a  16-bit  font  using  the registry-ordering
-              character collection and wMode writing mode is  not
-              embedded  and  does  not  match  any  of  the fonts
+              When a  16-bit  font  using  the  registry-ordering
+              character  collection and wMode writing mode is not
+              embedded and  does  not  match  any  of  the  fonts
               declared    in    psNamedFont16    commands,    the
               PS-font-name font is substituted for it.  The writ-
-              ing mode must be either 'H' for horizontal  or  'V'
-              for  vertical.  The PS-font-name font is assumed to
+              ing  mode  must be either 'H' for horizontal or 'V'
+              for vertical.  The PS-font-name font is assumed  to
               be resident in the printer and to use the specified
-              writing  mode  and  encoding  (which must have been
+              writing mode and encoding  (which  must  have  been
               defined with the unicodeMap command).
 
        psEmbedType1Fonts yes | no
-              If set to "no", prevents embedding of Type 1  fonts
+              If  set to "no", prevents embedding of Type 1 fonts
               in generated PostScript.  This defaults to "yes".
 
        psEmbedTrueTypeFonts yes | no
-              If  set  to  "no",  prevents  embedding of TrueType
-              fonts in generated PostScript.   This  defaults  to
+              If set to  "no",  prevents  embedding  of  TrueType
+              fonts  in  generated  PostScript.  This defaults to
               "yes".
 
        psEmbedCIDTrueTypeFonts yes | no
-              If  set to "no", prevents embedding of CID TrueType
-              fonts  in  generated  PostScript.   For   Level   3
-              PostScript,  this  generates  a CID font, for lower
+              If set to "no", prevents embedding of CID  TrueType
+              fonts   in   generated  PostScript.   For  Level  3
+              PostScript, this generates a CID  font,  for  lower
               levels it generates a non-CID composite font.
 
        psEmbedCIDPostScriptFonts yes | no
-              If  set  to  "no",  prevents   embedding   of   CID
+              If   set   to   "no",  prevents  embedding  of  CID
               PostScript  fonts  in  generated  PostScript.   For
-              Level 3 PostScript, this generates a CID font,  for
+              Level  3 PostScript, this generates a CID font, for
               lower levels it generates a non-CID composite font.
 
        psOPI yes | no
-              If set to "yes", generates PostScript OPI  comments
-              for  all  images  and forms which have OPI informa-
-              tion.  This option is only available  if  the  Xpdf
-              tools   were   compiled  with  OPI  support.   This
+              If  set to "yes", generates PostScript OPI comments
+              for all images and forms which  have  OPI  informa-
+              tion.   This  option  is only available if the Xpdf
+              tools  were  compiled  with  OPI   support.    This
               defaults to "no".
 
        psASCIIHex yes | no
-              If set to "yes", the ASCIIHexEncode filter will  be
-              used  instead  of  ASCII85Encode  for  binary data.
+              If  set to "yes", the ASCIIHexEncode filter will be
+              used instead  of  ASCII85Encode  for  binary  data.
               This defaults to "no".
 
        psFile file-or-command
-              Sets the default PostScript file or  print  command
-              for  xpdf.   Commands  start  with a '|' character;
-              anything else is a file.  If the file name or  com-
-              mand  contains  spaces  it  must  be  quoted.  This
-              defaults to unset, which tells xpdf to  generate  a
-              name   of   the  form  <file>.ps  for  a  PDF  file
+              Sets  the  default PostScript file or print command
+              for xpdf.  Commands start  with  a  '|'  character;
+              anything  else is a file.  If the file name or com-
+              mand contains  spaces  it  must  be  quoted.   This
+              defaults  to  unset, which tells xpdf to generate a
+              name  of  the  form  <file>.ps  for  a   PDF   file
               <file>.pdf.
 
        fontDir dir
-              See the description above,  in  the  DISPLAY  FONTS
+              See  the  description  above,  in the DISPLAY FONTS
               section.
 
                                                                ()
@@ -404,7 +405,6 @@
        cMapDir      Adobe-Japan1 /usr/local/share/xpdf/cmap/Adobe-Japan1
 
        # use the Base-14 Type 1 fonts from ghostscript
-       # (note that this overrides the displayFontX command above)
        displayFontT1 Times-Roman           /usr/local/share/ghostscript/fonts/n021003l.pfb
        displayFontT1 Times-Italic          /usr/local/share/ghostscript/fonts/n021023l.pfb
        displayFontT1 Times-Bold            /usr/local/share/ghostscript/fonts/n021004l.pfb
@@ -465,7 +465,7 @@
 2 AUTHOR
 
        The   Xpdf   software   and  documentation  are  copyright
-       1996-2004 Glyph & Cog, LLC.
+       1996-2005 Glyph & Cog, LLC.
 
                                                                ()
 

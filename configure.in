@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl Copyright 1998-2003 Glyph & Cog, LLC
+dnl Copyright 1998-2005 Glyph & Cog, LLC
 
 AC_PREREQ(2.57)
 
@@ -23,6 +23,9 @@ AC_DEFINE(MULTITHREADED))
 AC_ARG_ENABLE(wordlist,
 [  --enable-wordlist       include support for building word lists],
 AC_DEFINE(TEXTOUT_WORD_LIST))
+AC_ARG_ENABLE(fixedpoint,
+[  --enable-fixedpoint     use fixed point (instead of floating point) arithmetic],
+AC_DEFINE(USE_FIXEDPOINT))
 AC_ARG_WITH(appdef-dir,
 [  --with-appdef-dir       set app-defaults directory],
 AC_DEFINE_UNQUOTED(APPDEFDIR, "$with_appdef_dir"))
@@ -276,9 +279,6 @@ if test -z "$no_x"; then
                 $Xt_LIBS $X_LIBS $X_PRE_LIBS $Xp_LIBS $Xext_LIBS $X_EXTRA_LIBS -lX11, $X_CFLAGS)
   AC_SUBST(Xm_LIBS)
   AC_SUBST(Xm_CFLAGS)
-  if test "x$smr_have_Xm_library" != xyes; then
-    no_x="yes"
-  fi
   smr_CHECK_LIB(Sgm, Sgm, [SGI Motif library],
                 SgCreateHorzPanedWindow, Sgm/HPanedW.h,
                 $Xm_LIBS $Xt_LIBS $X_LIBS $X_PRE_LIBS $Xp_LIBS $Xext_LIBS $X_EXTRA_LIBS -lX11, $X_CFLAGS)
@@ -294,27 +294,21 @@ if test -z "$no_x"; then
 fi
 
 dnl ##### Check for t1lib.
-if test -z "$no_x"; then
-  smr_CHECK_LIB(t1, t1, [Type 1 font rasterizer], 
-                T1_InitLib, t1lib.h,
-                $X_LIBS $X_PRE_LIBS $X_EXTRA_LIBS -lX11 -lm, $X_CFLAGS)
-  AC_SUBST(t1_LIBS)
-  AC_SUBST(t1_CFLAGS)
-fi
+smr_CHECK_LIB(t1, t1, [Type 1 font rasterizer], 
+              T1_InitLib, t1lib.h,
+              -lm, $X_CFLAGS)
+AC_SUBST(t1_LIBS)
+AC_SUBST(t1_CFLAGS)
 
 dnl ##### Check for FreeType 2.x.
 dnl ##### (Note: FT_Get_Name_Index was added in FT 2.0.5, and is
 dnl ##### the reason that Xpdf requires 2.0.5+.)
 smr_CHECK_LIB(freetype2, freetype, [FreeType2 font rasterizer - version 2.0.5+],
-              FT_Get_Name_Index, freetype/freetype.h, -lm)
-if test x"$freetype2_LIBS" = x; then
-  smr_CHECK_LIB(freetype2, freetype, [FreeType2 font rasterizer - version 2.0.5+],
-                FT_Get_Name_Index, freetype.h, -lm)
-fi
+              FT_Get_Name_Index, ft2build.h, -lm)
 AC_SUBST(freetype2_LIBS)
 AC_SUBST(freetype2_CFLAGS)
-if test "x$smr_have_freetype2_library" != xyes; then
-  no_x="yes"
+if test "x$smr_have_freetype2_library" = xyes; then
+  AC_DEFINE(HAVE_FREETYPE_FREETYPE_H)
 fi
 
 dnl ##### Check for libpaper (Debian).
@@ -323,7 +317,7 @@ AC_SUBST(libpaper_LIBS)
 AC_SUBST(libpaper_CFLAGS)
 
 dnl ##### Disable X-specific stuff in top-level Makefile.
-if test -n "$no_x"; then
+if test -n "$no_x" -o "x$smr_have_Xm_library" != xyes -o "x$smr_have_freetype2_library" != xyes; then
   X="#"
   XPDF_TARGET="all-no-x"
 else
@@ -337,8 +331,16 @@ dnl ##### Write the makefiles.
 AC_OUTPUT(Makefile goo/Makefile fofi/Makefile splash/Makefile xpdf/Makefile)
 
 dnl ##### Warn user if X is missing.
-if test -n "$no_x"; then
-  AC_MSG_WARN([Couldn't find X / Motif -- you will be able to compile
-        pdftops, pdftotext, pdfinfo, pdffonts, pdftoppm, and pdfimages,
-        but not xpdf])
+if test -n "$no_x" -o "x$smr_have_Xm_library" != xyes -o "x$smr_have_freetype2_library" != xyes; then
+  if test -n "$no_x"; then
+    AC_MSG_WARN([Couldn't find X]);
+  fi
+  if test "x$smr_have_Xm_library" != xyes; then
+    AC_MSG_WARN([Couldn't find Motif]);
+  fi
+  if test "x$smr_have_freetype2_library" != xyes; then
+    AC_MSG_WARN([Couldn't find FreeType]);
+  fi
+  AC_MSG_WARN([-- You will be able to compile pdftops, pdftotext,
+        pdfinfo, pdffonts, and pdfimages, but not xpdf or pdftoppm])
 fi

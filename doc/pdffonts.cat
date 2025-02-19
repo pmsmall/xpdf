@@ -4,7 +4,7 @@ pdffonts(1)                                           pdffonts(1)
 
 NAME
        pdffonts  -  Portable  Document Format (PDF) font analyzer
-       (version 3.00)
+       (version 3.01)
 
 SYNOPSIS
        pdffonts [options] [PDF-file]
@@ -95,7 +95,7 @@ EXIT CODES
 
 AUTHOR
        The  pdffonts  software  and  documentation  are copyright
-       1996-2004 Glyph & Cog, LLC.
+       1996-2005 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),     pdftops(1),     pdftotext(1),     pdfinfo(1),
@@ -104,4 +104,4 @@ SEE ALSO
 
 
 
-                         22 January 2004              pdffonts(1)
+                          17 August 2005              pdffonts(1)

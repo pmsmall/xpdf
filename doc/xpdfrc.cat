@@ -3,7 +3,7 @@ xpdfrc(5)                                               xpdfrc(5)
 
 
 NAME
-       xpdfrc - configuration file for Xpdf tools (version 3.00)
+       xpdfrc - configuration file for Xpdf tools (version 3.01)
 
 DESCRIPTION
        All  of  the  Xpdf tools read a single configuration file.
@@ -29,7 +29,7 @@ INCLUDE FILES
               this  is  equivalent  to  inserting the contents of
               config-file directly into the parent config file in
               place  of the include command.  Config files can be
-              nested arbitrarily deep.
+              nested arbitrarily deeply.
 
 CHARACTER MAPPING
        nameToUnicode map-file
@@ -173,7 +173,7 @@ POSTSCRIPT CONTROL
        psPaperSize width(pts) height(pts)
               Sets  the  paper  size  for PostScript output.  The
               width and height parameters give the paper size  in
-              PostScript points.
+              PostScript points (1 point = 1/72 inch).
 
        psPaperSize letter | legal | A4 | A3 | match
               Sets  the  paper  size  for  PostScript output to a
@@ -187,211 +187,212 @@ POSTSCRIPT CONTROL
               Sets the imageable area for PostScript output.  The
               four integers are the coordinates of the lower-left
               and upper-right corners of  the  imageable  region,
-              specified  in  points.   This  defaults to the full
-              paper size; the psPaperSize option will  reset  the
-              imageable area coordinates.
+              specified  in  points  (with  the  origin being the
+              lower-left corner of the paper).  This defaults  to
+              the  full  paper  size; the psPaperSize option will
+              reset the imageable area coordinates.
 
        psCrop yes | no
-              If  set  to  "yes", PostScript output is cropped to
+              If set to "yes", PostScript output  is  cropped  to
               the CropBox specified in the PDF file; otherwise no
               cropping is done.  This defaults to "yes".
 
        psExpandSmaller yes | no
               If  set  to  "yes",  PDF  pages  smaller  than  the
-              PostScript imageable area are expanded to fill  the
-              imageable  area.  Otherwise, no scalling is done on
+              PostScript  imageable area are expanded to fill the
+              imageable area.  Otherwise, no scalling is done  on
               smaller pages.  This defaults to "no".
 
        psShrinkLarger yes | no
               If set to yes, PDF pages larger than the PostScript
-              imageable  area  are  shrunk  to  fit the imageable
-              area.  Otherwise, no  scaling  is  done  on  larger
+              imageable area are  shrunk  to  fit  the  imageable
+              area.   Otherwise,  no  scaling  is  done on larger
               pages.  This defaults to "yes".
 
        psCenter yes | no
-              If   set   to  yes,  PDF  pages  smaller  than  the
-              PostScript imageable area (after any  scaling)  are
-              centered  in  the  imageable area.  Otherwise, they
-              are aligned at the lower-left corner of the  image-
+              If  set  to  yes,  PDF  pages  smaller   than   the
+              PostScript  imageable  area (after any scaling) are
+              centered in the imageable  area.   Otherwise,  they
+              are  aligned at the lower-left corner of the image-
               able area.  This defaults to "yes".
 
        psDuplex yes | no
-              If  set to "yes", the generated PostScript will set
-              the "Duplex" pagedevice entry.  This tells  duplex-
-              capable   printers   to   enable  duplexing.   This
+              If set to "yes", the generated PostScript will  set
+              the  "Duplex" pagedevice entry.  This tells duplex-
+              capable  printers  to   enable   duplexing.    This
               defaults to "no".
 
        psLevel level1 | level1sep | level2 | level2sep | level3 |
        level3Sep
-              Sets  the  PostScript  level  to  generate.    This
+              Sets   the  PostScript  level  to  generate.   This
               defaults to "level2".
 
        psFont PDF-font-name PS-font-name
-              When  the PDF-font-name font is used in a PDF file,
+              When the PDF-font-name font is used in a PDF  file,
               it  will  be  translated  to  the  PostScript  font
-              PS-font-name,  which  is  assumed to be resident in
-              the   printer.    Typically,   PDF-font-name    and
-              PS-font-name  are  the  same.  By default, only the
+              PS-font-name, which is assumed to  be  resident  in
+              the    printer.    Typically,   PDF-font-name   and
+              PS-font-name are the same.  By  default,  only  the
               Base-14 fonts are assumed to be resident.
 
        psNamedFont16 PDF-font-name wMode PS-font-name encoding
               When the 16-bit font PDF-font-name is used in a PDF
-              file  with the wMode writing mode and is not embed-
-              ded, the PS-font-name font is substituted  for  it.
-              The  writing mode must be either 'H' for horizontal
-              or 'V' for  vertical.   The  PS-font-name  font  is
-              assumed  to  be  resident in the printer and to use
-              the  specified  encoding  (which  must  have   been
+              file with the wMode writing mode and is not  embed-
+              ded,  the  PS-font-name font is substituted for it.
+              The writing mode must be either 'H' for  horizontal
+              or  'V'  for  vertical.   The  PS-font-name font is
+              assumed to be resident in the printer  and  to  use
+              the   specified  encoding  (which  must  have  been
               defined with the unicodeMap command).
 
        psFont16 registry-ordering wMode PS-font-name encoding
-              When  a  16-bit  font  using  the registry-ordering
-              character collection and wMode writing mode is  not
-              embedded  and  does  not  match  any  of  the fonts
+              When a  16-bit  font  using  the  registry-ordering
+              character  collection and wMode writing mode is not
+              embedded and  does  not  match  any  of  the  fonts
               declared    in    psNamedFont16    commands,    the
               PS-font-name font is substituted for it.  The writ-
-              ing mode must be either 'H' for horizontal  or  'V'
-              for  vertical.  The PS-font-name font is assumed to
+              ing  mode  must be either 'H' for horizontal or 'V'
+              for vertical.  The PS-font-name font is assumed  to
               be resident in the printer and to use the specified
-              writing  mode  and  encoding  (which must have been
+              writing mode and encoding  (which  must  have  been
               defined with the unicodeMap command).
 
        psEmbedType1Fonts yes | no
-              If set to "no", prevents embedding of Type 1  fonts
+              If  set to "no", prevents embedding of Type 1 fonts
               in generated PostScript.  This defaults to "yes".
 
        psEmbedTrueTypeFonts yes | no
-              If  set  to  "no",  prevents  embedding of TrueType
-              fonts in generated PostScript.   This  defaults  to
+              If set to  "no",  prevents  embedding  of  TrueType
+              fonts  in  generated  PostScript.  This defaults to
               "yes".
 
        psEmbedCIDTrueTypeFonts yes | no
-              If  set to "no", prevents embedding of CID TrueType
-              fonts  in  generated  PostScript.   For   Level   3
-              PostScript,  this  generates  a CID font, for lower
+              If set to "no", prevents embedding of CID  TrueType
+              fonts   in   generated  PostScript.   For  Level  3
+              PostScript, this generates a CID  font,  for  lower
               levels it generates a non-CID composite font.
 
        psEmbedCIDPostScriptFonts yes | no
-              If  set  to  "no",  prevents   embedding   of   CID
+              If   set   to   "no",  prevents  embedding  of  CID
               PostScript  fonts  in  generated  PostScript.   For
-              Level 3 PostScript, this generates a CID font,  for
+              Level  3 PostScript, this generates a CID font, for
               lower levels it generates a non-CID composite font.
 
        psOPI yes | no
-              If set to "yes", generates PostScript OPI  comments
-              for  all  images  and forms which have OPI informa-
-              tion.  This option is only available  if  the  Xpdf
-              tools   were   compiled  with  OPI  support.   This
+              If  set to "yes", generates PostScript OPI comments
+              for all images and forms which  have  OPI  informa-
+              tion.   This  option  is only available if the Xpdf
+              tools  were  compiled  with  OPI   support.    This
               defaults to "no".
 
        psASCIIHex yes | no
-              If set to "yes", the ASCIIHexEncode filter will  be
-              used  instead  of  ASCII85Encode  for  binary data.
+              If  set to "yes", the ASCIIHexEncode filter will be
+              used instead  of  ASCII85Encode  for  binary  data.
               This defaults to "no".
 
        psFile file-or-command
-              Sets the default PostScript file or  print  command
-              for  xpdf.   Commands  start  with a '|' character;
-              anything else is a file.  If the file name or  com-
-              mand  contains  spaces  it  must  be  quoted.  This
-              defaults to unset, which tells xpdf to  generate  a
-              name   of   the  form  <file>.ps  for  a  PDF  file
+              Sets  the  default PostScript file or print command
+              for xpdf.  Commands start  with  a  '|'  character;
+              anything  else is a file.  If the file name or com-
+              mand contains  spaces  it  must  be  quoted.   This
+              defaults  to  unset, which tells xpdf to generate a
+              name  of  the  form  <file>.ps  for  a   PDF   file
               <file>.pdf.
 
        fontDir dir
-              See the description above,  in  the  DISPLAY  FONTS
+              See  the  description  above,  in the DISPLAY FONTS
               section.
 
 TEXT CONTROL
        textEncoding encoding-name
-              Sets  the  encoding  to use for text output.  (This
-              can be overridden with the  "-enc"  switch  on  the
-              command  line.)   The encoding-name must be defined
-              with the  unicodeMap  command  (see  above).   This
+              Sets the encoding to use for  text  output.   (This
+              can  be  overridden  with  the "-enc" switch on the
+              command line.)  The encoding-name must  be  defined
+              with  the  unicodeMap  command  (see  above).  This
               defaults to "Latin1".
 
        textEOL unix | dos | mac
-              Sets  the  end-of-line  convention  to use for text
+              Sets the end-of-line convention  to  use  for  text
               output.  The options are:
 
                   unix = LF
                   dos  = CR+LF
                   mac  = CR
 
-              (This can be overridden with the "-eol"  switch  on
-              the  command  line.)  The default value is based on
+              (This  can  be overridden with the "-eol" switch on
+              the command line.)  The default value is  based  on
               the OS where xpdf and pdftotext were built.
 
        textPageBreaks yes | no
-              If set to "yes", text extraction will  insert  page
-              breaks  (form feed characters) between pages.  This
+              If  set  to "yes", text extraction will insert page
+              breaks (form feed characters) between pages.   This
               defaults to "yes".
 
        textKeepTinyChars yes | no
-              If set to "yes",  text  extraction  will  keep  all
-              characters.   If  set to "no", text extraction will
-              discard tiny  (smaller  than  3  point)  characters
-              after  the first 50000 per page, avoiding extremely
+              If  set  to  "yes",  text  extraction will keep all
+              characters.  If set to "no", text  extraction  will
+              discard  tiny  (smaller  than  3  point) characters
+              after the first 50000 per page, avoiding  extremely
               slow run times for PDF files that use special fonts
-              to  do shading or cross-hatching.  This defaults to
+              to do shading or cross-hatching.  This defaults  to
               "no".
 
 MISCELLANEOUS SETTINGS
        initialZoom percentage | page | width
               Sets the initial zoom factor.  A number specifies a
-              zoom  percentage,  where 100 means 72 dpi.  You may
-              also specify 'page', to fit the page to the  window
+              zoom percentage, where 100 means 72 dpi.   You  may
+              also  specify 'page', to fit the page to the window
               size, or 'width', to fit the page width to the win-
               dow width.
 
        enableT1lib yes | no
-              Enables or disables use of t1lib  (a  Type  1  font
-              rasterizer).   This  is  only  relevant if the Xpdf
+              Enables  or  disables  use  of t1lib (a Type 1 font
+              rasterizer).  This is only  relevant  if  the  Xpdf
               tools    were    built    with    t1lib    support.
-              ("enableT1lib"   replaces  the  old  "t1libControl"
+              ("enableT1lib"  replaces  the  old   "t1libControl"
               option.)  This option defaults to "yes".
 
        enableFreeType yes | no
-              Enables or disables use of FreeType (a  TrueType  /
-              Type  1 font rasterizer).  This is only relevant if
-              the Xpdf tools were built  with  FreeType  support.
-              ("enableFreeType"  replaces  the  old "freetypeCon-
+              Enables  or  disables use of FreeType (a TrueType /
+              Type 1 font rasterizer).  This is only relevant  if
+              the  Xpdf  tools  were built with FreeType support.
+              ("enableFreeType" replaces  the  old  "freetypeCon-
               trol" option.)  This option defaults to "yes".
 
        antialias yes | no
-              Enables or disables font anti-aliasing in  the  PDF
+              Enables  or  disables font anti-aliasing in the PDF
               rasterizer.  This option affects all font rasteriz-
-              ers.  ("antialias" replaces the anti-aliasing  con-
-              trol   provided   by  the  old  "t1libControl"  and
+              ers.   ("antialias" replaces the anti-aliasing con-
+              trol  provided  by  the  old   "t1libControl"   and
               "freetypeControl" options.)  This default to "yes".
 
        urlCommand command
-              Sets  the  command executed when you click on a URL
-              link.  The string "%s" will be  replaced  with  the
+              Sets the command executed when you click on  a  URL
+              link.   The  string  "%s" will be replaced with the
               URL.  (See the example below.)  This has no default
               value.
 
        movieCommand command
               Sets the command executed when you click on a movie
-              annotation.   The string "%s" will be replaced with
+              annotation.  The string "%s" will be replaced  with
               the movie file name.  This has no default value.
 
        mapNumericCharNames yes | no
               If set to "yes", the Xpdf tools will attempt to map
-              various  numeric  character names sometimes used in
-              font subsets.  In some cases this leads  to  usable
-              text,  and  in other cases it leads to gibberish --
+              various numeric character names sometimes  used  in
+              font  subsets.   In some cases this leads to usable
+              text, and in other cases it leads to  gibberish  --
               there is no way for Xpdf to tell.  This defaults to
               "yes".
 
        printCommands yes | no
-              If  set  to  "yes", drawing commands are printed as
+              If set to "yes", drawing commands  are  printed  as
               they're  executed  (useful  for  debugging).   This
               defaults to "no".
 
        errQuiet yes | no
-              If  set  to  "yes",  this  suppresses all error and
-              warning messages from all of the Xpdf tools.   This
+              If set to "yes",  this  suppresses  all  error  and
+              warning  messages from all of the Xpdf tools.  This
               defaults to "no".
 
 EXAMPLES
@@ -406,7 +407,6 @@ EXAMPLES
        cMapDir      Adobe-Japan1 /usr/local/share/xpdf/cmap/Adobe-Japan1
 
        # use the Base-14 Type 1 fonts from ghostscript
-       # (note that this overrides the displayFontX command above)
        displayFontT1 Times-Roman           /usr/local/share/ghostscript/fonts/n021003l.pfb
        displayFontT1 Times-Italic          /usr/local/share/ghostscript/fonts/n021023l.pfb
        displayFontT1 Times-Bold            /usr/local/share/ghostscript/fonts/n021004l.pfb
@@ -451,18 +451,18 @@ EXAMPLES
 
 FILES
        /usr/local/etc/xpdfrc
-              This  is  the  default location for the system-wide
+              This is the default location  for  the  system-wide
               configuration file.  Depending on build options, it
               may be placed elsewhere.
 
        $HOME/.xpdfrc
-              This  is  the  user's  configuration  file.   If it
+              This is  the  user's  configuration  file.   If  it
               exists, it will be read in place of the system-wide
               file.
 
 AUTHOR
-       The   Xpdf   software   and  documentation  are  copyright
-       1996-2004 Glyph & Cog, LLC.
+       The  Xpdf  software  and   documentation   are   copyright
+       1996-2005 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),     pdftops(1),     pdftotext(1),     pdfinfo(1),
@@ -471,4 +471,4 @@ SEE ALSO
 
 
 
-                         22 January 2004                xpdfrc(5)
+                          17 August 2005                xpdfrc(5)

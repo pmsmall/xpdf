@@ -108,6 +108,9 @@ void FoFiType1::writeEncoded(char **newEncoding,
     for (line = getNextLine(line);
 	 line && strncmp(line, "readonly def", 12);
 	 line = getNextLine(line)) ;
+    if (line) {
+      line = getNextLine(line);
+    }
   }
   if (line) {
     (*outputFunc)(outputStream, line, ((char *)file + len) - line);
@@ -156,13 +159,13 @@ void FoFiType1::parse() {
       encoding = fofiType1StandardEncoding;
     } else if (!encoding &&
 	       !strncmp(line, "/Encoding 256 array", 19)) {
-      encoding = (char **)gmalloc(256 * sizeof(char *));
+      encoding = (char **)gmallocn(256, sizeof(char *));
       for (j = 0; j < 256; ++j) {
 	encoding[j] = NULL;
       }
-      line = getNextLine(line);
-      for (j = 0; j < 300 && line; ++j) {
-	line1 = getNextLine(line);
+      for (j = 0, line = getNextLine(line);
+	   j < 300 && line && (line1 = getNextLine(line));
+	   ++j, line = line1) {
 	if ((n = line1 - line) > 255) {
 	  n = 255;
 	}
@@ -192,15 +195,12 @@ void FoFiType1::parse() {
 	    break;
 	  }
 	}
-	line = line1;
       }
       //~ check for getinterval/putinterval junk
 
     } else {
       line = getNextLine(line);
     }
-
-    ++i;
   }
 
   parsed = gTrue;

@@ -14,6 +14,11 @@
        image, image-root-nnn.xxx, where nnn is the  image  number
        and xxx is the image type (.ppm, .pbm, .jpg).
 
+       NB:  pdfimages  extracts  the  raw image data from the PDF
+       file, without performing any additional  transforms.   Any
+       rotation,  clipping, color inversion, etc. done by the PDF
+       content stream is ignored.
+
                                                                ()
 
 2 ONFIGURATION_FIL
@@ -82,7 +87,7 @@
 2 AUTHOR
 
        The  pdfimages  software  and  documentation are copyright
-       1998-2004 Glyph & Cog, LLC.
+       1998-2005 Glyph & Cog, LLC.
 
                                                                ()
 

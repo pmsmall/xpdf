@@ -46,6 +46,13 @@ static String fallbackResources[] = {
   "  Ctrl<Key>f:forward-character()\\n"
   "  Ctrl<Key>u:beginning-of-line()delete-to-end-of-line()\\n"
   "  Ctrl<Key>k:delete-to-end-of-line()\\n",
+  "*.toolTipEnable: True",
+  "*.toolTipPostDelay: 1500",
+  "*.toolTipPostDuration: 0",
+  "*.TipLabel.foreground: black",
+  "*.TipLabel.background: LightYellow",
+  "*.TipShell.borderWidth: 1",
+  "*.TipShell.borderColor: black",
   NULL
 };
 
@@ -64,6 +71,7 @@ static XrmOptionDescRec xOpts[] = {
   {"-rgb",           ".rgbCubeSize",     XrmoptionSepArg,  NULL},
   {"-rv",            ".reverseVideo",    XrmoptionNoArg,   (XPointer)"true"},
   {"-papercolor",    ".paperColor",      XrmoptionSepArg,  NULL},
+  {"-mattecolor",    ".matteColor",      XrmoptionSepArg,  NULL},
   {"-z",             ".initialZoom",     XrmoptionSepArg,  NULL}
 };
 
@@ -76,6 +84,7 @@ struct XPDFAppResources {
   int rgbCubeSize;
   Bool reverseVideo;
   String paperColor;
+  String matteColor;
   String initialZoom;
   Bool viKeys;
 };
@@ -92,6 +101,7 @@ static XtResource xResources[] = {
   { "rgbCubeSize",  "RgbCubeSize",  XtRInt,    sizeof(int),    XtOffsetOf(XPDFAppResources, rgbCubeSize),  XtRInt,    (XtPointer)&defRGBCubeSize  },
   { "reverseVideo", "ReverseVideo", XtRBool,   sizeof(Bool),   XtOffsetOf(XPDFAppResources, reverseVideo), XtRBool,   (XtPointer)&defReverseVideo },
   { "paperColor",   "PaperColor",   XtRString, sizeof(String), XtOffsetOf(XPDFAppResources, paperColor),   XtRString, (XtPointer)NULL             },
+  { "matteColor",   "MatteColor",   XtRString, sizeof(String), XtOffsetOf(XPDFAppResources, matteColor),   XtRString, (XtPointer)"gray50"         },
   { "initialZoom",  "InitialZoom",  XtRString, sizeof(String), XtOffsetOf(XPDFAppResources, initialZoom),  XtRString, (XtPointer)NULL             },
   { "viKeys",       "ViKeys",       XtRBool,   sizeof(Bool),   XtOffsetOf(XPDFAppResources, viKeys),       XtRBool,   (XtPointer)&defViKeys       }
 };
@@ -164,23 +174,29 @@ void XPDFApp::getResources() {
   rgbCubeSize = resources.rgbCubeSize;
   reverseVideo = (GBool)resources.reverseVideo;
   if (reverseVideo) {
-    paperRGB = splashMakeRGB8(0x00, 0x00, 0x00);
-    paperColor = BlackPixel(display, screenNum);
+    paperRGB[0] = paperRGB[1] = paperRGB[2] = 0;
+    paperPixel = BlackPixel(display, screenNum);
   } else {
-    paperRGB = splashMakeRGB8(0xff, 0xff, 0xff);
-    paperColor = WhitePixel(display, screenNum);
+    paperRGB[0] = paperRGB[1] = paperRGB[2] = 0xff;
+    paperPixel = WhitePixel(display, screenNum);
   }
+  XtVaGetValues(appShell, XmNcolormap, &colormap, NULL);
   if (resources.paperColor) {
-    XtVaGetValues(appShell, XmNcolormap, &colormap, NULL);
     if (XAllocNamedColor(display, colormap, resources.paperColor,
 			 &xcol, &xcol2)) {
-      paperRGB = splashMakeRGB8(xcol.red >> 8,
-				xcol.green >> 8,
-				xcol.blue >> 8);
-      paperColor = xcol.pixel;
+      paperRGB[0] = xcol.red >> 8;
+      paperRGB[1] = xcol.green >> 8;
+      paperRGB[2] = xcol.blue >> 8;
+      paperPixel = xcol.pixel;
     } else {
       error(-1, "Couldn't allocate color '%s'", resources.paperColor);
     }
+  }
+  if (XAllocNamedColor(display, colormap, resources.matteColor,
+		       &xcol, &xcol2)) {
+    mattePixel = xcol.pixel;
+  } else {
+    mattePixel = paperPixel;
   }
   initialZoom = resources.initialZoom ? new GString(resources.initialZoom)
                                       : (GString *)NULL;

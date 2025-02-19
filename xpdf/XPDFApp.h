@@ -65,8 +65,9 @@ public:
   GBool getInstallCmap() { return installCmap; }
   int getRGBCubeSize() { return rgbCubeSize; }
   GBool getReverseVideo() { return reverseVideo; }
-  SplashRGB8 getPaperRGB() { return paperRGB; }
-  Gulong getPaperColor() { return paperColor; }
+  SplashColorPtr getPaperRGB() { return paperRGB; }
+  Gulong getPaperPixel() { return paperPixel; }
+  Gulong getMattePixel() { return mattePixel; }
   GString *getInitialZoom() { return initialZoom; }
   GBool getViKeys() { return viKeys; }
   void setFullScreen(GBool fullScreenA) { fullScreen = fullScreenA; }
@@ -98,8 +99,9 @@ private:
   GBool installCmap;
   int rgbCubeSize;
   GBool reverseVideo;
-  SplashRGB8 paperRGB;
-  Gulong paperColor;
+  SplashColor paperRGB;
+  Gulong paperPixel;
+  Gulong mattePixel;
   GString *initialZoom;
   GBool viKeys;
   GBool fullScreen;

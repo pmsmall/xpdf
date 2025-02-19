@@ -21,6 +21,7 @@
 // command line options
 //------------------------------------------------------------------------
 
+static GBool contView = gFalse;
 static char enableT1libStr[16] = "";
 static char enableFreeTypeStr[16] = "";
 static char antialiasStr[16] = "";
@@ -61,6 +62,8 @@ static ArgDesc argDesc[] = {
    "color of paper background"},
   {"-z",          argStringDummy, NULL,           0,
    "initial zoom level (percent, 'page', 'width')"},
+  {"-cont",       argFlag,        &contView,      0,
+   "start in continuous view mode" },
 #if HAVE_T1LIB_H
   {"-t1lib",      argString,      enableT1libStr, sizeof(enableT1libStr),
    "enable t1lib font rasterizer: yes, no"},
@@ -147,6 +150,9 @@ int main(int argc, char *argv[]) {
   // read config file
   globalParams = new GlobalParams(cfgFileName);
   globalParams->setupBaseFonts(NULL);
+  if (contView) {
+    globalParams->setContinuousView(contView);
+  }
   if (psFileArg[0]) {
     globalParams->setPSFile(psFileArg);
   }
@@ -236,6 +242,11 @@ int main(int argc, char *argv[]) {
       destName = new GString(&argv[2][1]);
     } else {
       pg = atoi(argv[2]);
+      if (pg < 0) {
+	fprintf(stderr, "Invalid page number (%d)\n", pg);
+	exitCode = 99;
+	goto done2;
+      }
     }
   }
 

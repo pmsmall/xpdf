@@ -1,7 +1,7 @@
-.\" Copyright 1996-2004 Glyph & Cog, LLC
-.TH xpdf 1 "22 January 2004"
+.\" Copyright 1996-2005 Glyph & Cog, LLC
+.TH xpdf 1 "17 August 2005"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 3.00)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 3.01)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -30,7 +30,8 @@ xpdf file.pdf 18
 .RE
 .PP
 You can also give a named destination, prefixed with \'+' in place of
-the page number.
+the page number.  (This is only useful with PDF files that provide
+named destination targets.)
 .PP
 You can also start xpdf without opening any files:
 .PP
@@ -83,12 +84,22 @@ will not work too well with PDF files that do things like filling in
 white behind the text.
 .RB "[X resource: " xpdf.paperColor ]
 .TP
+.BI \-mattecolor " color"
+Set the matte color, i.e., the color used for background outside the
+actual page area.
+.RB "[X resource: " xpdf.matteColor ]
+.TP
 .BI \-z " zoom"
 Set the initial zoom factor.  A number specifies a zoom percentage,
 where 100 means 72 dpi.You may also specify \'page', to fit the page
 to the window size, or \'width', to fit the page width to the window
 width.
 .RB "[config file: " initialZoom "; or X resource: " xpdf.initialZoom ]
+.TP
+.B \-cont
+Start in continuous view mode, i.e., with one vertical scroll bar for
+the whole document.
+.RB "[config file: " continuousView ]
 .TP
 .BI \-t1lib " yes | no"
 Enable or disable t1lib (a Type 1 font rasterizer).  This defaults to
@@ -105,8 +116,9 @@ Enable or disable font anti-aliasing.  This defaults to "yes".
 .RB "[config file: " antialias ]
 .TP
 .BI \-ps " PS-file"
-Set the default file name for PostScript output.  This can also be of
-the form \'|command' to pipe the PostScript through a command.
+Set the default file name for PostScript output (i.e., the name which
+will appear in the print dialog).  This can also be of the form
+\'|command' to pipe the PostScript through a command.
 .RB "[config file: " psFile ]
 .TP
 .BI \-paper " size"
@@ -219,6 +231,10 @@ The following X resources do not have command line option equivalents:
 .B xpdf.viKeys
 Enables the \'h', \'l', \'k' and \'j' keys for left, right, up, and
 down scrolling.
+.TP
+.B xpdf.toolTipEnable
+Enables (if set to true) or disables (if set to false) the tool-tips
+on the toolbar buttons.
 .SH CONTROLS
 .SS On-screen controls, at the bottom of the xpdf window
 .TP
@@ -274,6 +290,9 @@ was last loaded.
 .TP
 .B "Save as..."
 Save the current file via a file requester.
+.TP
+.B "Continuous view"
+Toggles between single page and continuous view modes.
 .TP
 .B "Rotate counterclockwise"
 Rotate the page 90 degrees counterclockwise.
@@ -380,7 +399,7 @@ Scroll the current page.
 Activate the page number text field ("goto page").
 .TP
 .B 0
-Set the zoom factor to zero (72 dpi).
+Set the zoom factor to 125%.
 .TP
 .B +
 Zoom in (increment the zoom factor by 1).
@@ -480,7 +499,7 @@ Error related to PDF permissions.
 99
 Other error.
 .SH AUTHOR
-The xpdf software and documentation are copyright 1996-2004 Glyph &
+The xpdf software and documentation are copyright 1996-2005 Glyph &
 Cog, LLC.
 .SH "SEE ALSO"
 .BR pdftops (1),
