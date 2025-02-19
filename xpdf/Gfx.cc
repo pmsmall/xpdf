@@ -1677,13 +1677,17 @@ void Gfx::opXObject(Object args[], int numArgs) {
 
 void Gfx::doImage(Object *ref, Stream *str, GBool inlineImg) {
   Dict *dict;
-  Object obj1, obj2;
   int width, height;
   int bits;
   GBool mask;
+  GBool invert;
   GfxColorSpace *colorSpace;
   GfxImageColorMap *colorMap;
-  GBool invert;
+  Object maskObj;
+  GBool haveMask;
+  int maskColors[2*gfxColorMaxComps];
+  Object obj1, obj2;
+  int i;
 
   // get stream dict
   dict = str->getDict();
@@ -1791,10 +1795,25 @@ void Gfx::doImage(Object *ref, Stream *str, GBool inlineImg) {
       goto err1;
     }
 
+    // get the mask
+    haveMask = gFalse;
+    dict->lookup("Mask", &maskObj);
+    if (maskObj.isArray()) {
+      for (i = 0; i < maskObj.arrayGetLength(); ++i) {
+	maskObj.arrayGet(i, &obj1);
+	maskColors[i] = obj1.getInt();
+	obj1.free();
+      }
+      haveMask = gTrue;
+    }
+
     // draw it
-    out->drawImage(state, ref, str, width, height, colorMap, inlineImg);
+    out->drawImage(state, ref, str, width, height, colorMap,
+		   haveMask ? maskColors : NULL,  inlineImg);
     delete colorMap;
     str->close();
+
+    maskObj.free();
   }
 
   return;

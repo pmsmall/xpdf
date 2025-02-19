@@ -84,7 +84,9 @@ typedef char *XPointer;
 //
 //------------------------------------------------------------------------
 
+extern "C" {
 static Bool isExposeEvent(Display *display, XEvent *e, XPointer w);
+}
 
 //------------------------------------------------------------------------
 // LTKMenu
@@ -223,9 +225,11 @@ void LTKMenu::post(LTKWindow *win1, int x1, int y1, LTKMenu *parent1) {
   currentSubmenu = NULL;
 }
 
+extern "C" {
 static Bool isExposeEvent(Display *display, XEvent *e, XPointer w) {
   return e->type == Expose &&
          e->xexpose.window == ((LTKMenu *)w)->getXWindow();
+}
 }
 
 void LTKMenu::repost() {

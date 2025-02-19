@@ -272,6 +272,10 @@ static PSSubstFont psSubstFonts[] = {
 // PSOutputDev
 //------------------------------------------------------------------------
 
+extern "C" {
+typedef void (*SignalFunc)(int);
+}
+
 PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
 			 int firstPage, int lastPage,
 			 GBool embedType11, GBool doForm1) {
@@ -303,7 +307,7 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
     fileType = psPipe;
 #ifdef HAVE_POPEN
 #ifndef WIN32
-    signal(SIGPIPE, (void (*)(int))SIG_IGN);
+    signal(SIGPIPE, (SignalFunc)SIG_IGN);
 #endif
     if (!(f = popen(fileName + 1, "w"))) {
       error(-1, "Couldn't run print command '%s'", fileName);
@@ -484,7 +488,7 @@ PSOutputDev::~PSOutputDev() {
     else if (fileType == psPipe) {
       pclose(f);
 #ifndef WIN32
-      signal(SIGPIPE, (void (*)(int))SIG_DFL);
+      signal(SIGPIPE, (SignalFunc)SIG_DFL);
 #endif
     }
 #endif
@@ -1350,7 +1354,7 @@ void PSOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 
 void PSOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			    int width, int height, GfxImageColorMap *colorMap,
-			    GBool inlineImg) {
+			    int *maskColors, GBool inlineImg) {
   int len;
 
   len = height * ((width * colorMap->getNumPixelComps() *

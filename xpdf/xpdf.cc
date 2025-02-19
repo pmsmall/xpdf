@@ -945,18 +945,18 @@ static void displayPage(int page1, int zoom1, int rotate1, GBool addToHist) {
     dpi = (hDPI < vDPI) ? hDPI : vDPI;
   } else if (zoom == zoomPage) {
     if (rot == 90 || rot == 270) {
-      hDPI = ((win->getWidth() - 28) / doc->getPageHeight(page)) * 72;
-      vDPI = ((win->getHeight() - 56) / doc->getPageWidth(page)) * 72;
+      hDPI = (canvas->getWidth() / doc->getPageHeight(page)) * 72;
+      vDPI = (canvas->getHeight() / doc->getPageWidth(page)) * 72;
     } else {
-      hDPI = ((win->getWidth() - 28) / doc->getPageWidth(page)) * 72;
-      vDPI = ((win->getHeight() - 56) / doc->getPageHeight(page)) * 72;
+      hDPI = (canvas->getWidth() / doc->getPageWidth(page)) * 72;
+      vDPI = (canvas->getHeight() / doc->getPageHeight(page)) * 72;
     }
     dpi = (hDPI < vDPI) ? hDPI : vDPI;
   } else if (zoom == zoomWidth) {
     if (rot == 90 || rot == 270) {
-      dpi = ((win->getWidth() - 28) / doc->getPageHeight(page)) * 72;
+      dpi = (canvas->getWidth() / doc->getPageHeight(page)) * 72;
     } else {
-      dpi = ((win->getWidth() - 28) / doc->getPageWidth(page)) * 72;
+      dpi = (canvas->getWidth() / doc->getPageWidth(page)) * 72;
     }
   } else {
     dpi = zoomDPI[zoom - minZoom];

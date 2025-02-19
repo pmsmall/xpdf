@@ -88,7 +88,8 @@ void ImageOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 
 void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
-			       GfxImageColorMap *colorMap, GBool inlineImg) {
+			       GfxImageColorMap *colorMap,
+			       int *maskColors, GBool inlineImg) {
   FILE *f;
   ImageStream *imgStr;
   Guchar pixBuf[4];

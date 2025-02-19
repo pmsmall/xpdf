@@ -2813,20 +2813,16 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			       GBool inlineImg) {
   ImageStream *imgStr;
   XImage *image;
-  double xt, yt;
+  double *ctm;
+  GBool rot;
+  double xScale, yScale, xShear, yShear;
+  int tx, ty, scaledWidth, scaledHeight, xSign, ySign;
   int ulx, uly, llx, lly, urx, ury, lrx, lry;
-  int hx, hy;
+  int ulx1, uly1, llx1, lly1, urx1, ury1, lrx1, lry1;
   int bx0, by0, bx1, by1, bw, bh;
   int cx0, cy0, cx1, cy1, cw, ch;
-  int dx, dy;
-  int dvx, dvdx, dvpx, dvqx, dvdx2, dvtx;
-  int dvy, dvdy, dvpy, dvqy, dvdy2, dvty;
-  int dhx, dhdx, dhpx, dhqx, dhdx2, dhtx, dhtx0;
-  int dhy, dhdy, dhpy, dhqy, dhdy2, dhty, dhty0;
-  int ivy, ivdy, ivpy, ivqy, ivty;
-  int ihx, ihdx, ihpx, ihqx, ihtx;
-  int vn, vi, hn, hi;
-  int bufy;
+  int yp, yq, yt, yStep, lastYStep;
+  int xp, xq, xt, xStep, xSrc;
   GfxRGB rgb;
   Guchar *pixBuf;
   int imgPix;
@@ -2837,80 +2833,94 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
   double r0, g0, b0, r1, g1, b1;
   Gulong pix;
   Guchar *p;
+  int x, y, x1, y1, x2, y2;
   int n, m, i, j;
 
-  // corners in device space
-  state->transform(0, 0, &xt, &yt);
-  llx = xoutRound(xt);
-  lly = xoutRound(yt);
-  state->transform(0, 1, &xt, &yt);
-  ulx = xoutRound(xt);
-  uly = xoutRound(yt);
-  state->transform(1, 0, &xt, &yt);
-  lrx = xoutRound(xt);
-  lry = xoutRound(yt);
-  state->transform(1, 1, &xt, &yt);
-  urx = xoutRound(xt);
-  ury = xoutRound(yt);
-
-  // horizontal traversal
-  hx = urx - ulx;
-  if (abs(lrx - llx) < abs(hx)) {
-    hx = lrx - llx;
+  // get CTM, check for singular matrix
+  ctm = state->getCTM();
+  if (fabs(ctm[0] * ctm[3] - ctm[1] * ctm[2]) < 0.000001) {
+    error(-1, "Singular CTM in drawImage");
+    if (inlineImg) {
+      j = height * ((width + 7) / 8);
+      str->reset();
+      for (i = 0; i < j; ++i) {
+	str->getChar();
+      }
+    }
+    return;
   }
-  hy = ury - uly;
-  if (abs(lry - lly) < abs(hy)) {
-    hy = lry - lly;
+
+  // compute scale, shear, rotation, translation parameters
+  rot = fabs(ctm[1]) > fabs(ctm[0]);
+  if (rot) {
+    xScale = -ctm[1];
+    yScale = -ctm[2] + (ctm[0] * ctm[3]) / ctm[1];
+    xShear = ctm[3] / yScale;
+    yShear = -ctm[0] / ctm[1];
+  } else {
+    xScale = ctm[0];
+    yScale = -ctm[3] + (ctm[1] * ctm[2]) / ctm[0];
+    xShear = -ctm[2] / yScale;
+    yShear = ctm[1] / ctm[0];
+  }
+  tx = xoutRound(ctm[2] + ctm[4]);
+  ty = xoutRound(ctm[3] + ctm[5]);
+  scaledWidth = abs(xoutRound(xScale)) - 1;
+  xSign = (xScale < 0) ? -1 : 1;
+  scaledHeight = abs(xoutRound(yScale)) - 1;
+  ySign = (yScale < 0) ? -1 : 1;
+
+  // compute corners in device space
+  ulx1 = 0;
+  uly1 = 0;
+  urx1 = xSign * scaledWidth;
+  ury1 = xoutRound(yShear * urx1);
+  llx1 = xoutRound(xShear * ySign * scaledHeight);
+  lly1 = ySign * scaledHeight + xoutRound(yShear * llx1);
+  lrx1 = xSign * scaledWidth + xoutRound(xShear * ySign * scaledHeight);
+  lry1 = ySign * scaledHeight + xoutRound(yShear * lrx1);
+  if (rot) {
+    ulx = tx + uly1;    uly = ty - ulx1;
+    urx = tx + ury1;    ury = ty - urx1;
+    llx = tx + lly1;    lly = ty - llx1;
+    lrx = tx + lry1;    lry = ty - lrx1;
+  } else {
+    ulx = tx + ulx1;    uly = ty + uly1;
+    urx = tx + urx1;    ury = ty + ury1;
+    llx = tx + llx1;    lly = ty + lly1;
+    lrx = tx + lrx1;    lry = ty + lry1;
   }
 
   // bounding box:
   //   (bx0, by0) = upper-left corner
   //   (bx1, by1) = lower-right corner
   //   (bw, bh) = size
-  bx0 = bx1 = ulx;
-  if (llx < bx0) {
-    bx0 = llx;
-  } else if (llx > bx1) {
-    bx1 = llx;
-  }
-  if (urx < bx0) {
-    bx0 = urx;
-  } else if (urx > bx1) {
-    bx1 = urx;
-  }
-  if (lrx < bx0) {
-    bx0 = lrx;
-  } else if (lrx > bx1) {
-    bx1 = lrx;
-  }
-  by0 = by1 = uly;
-  if (lly < by0) {
-    by0 = lly;
-  } else if (lly > by1) {
-    by1 = lly;
-  }
-  if (ury < by0) {
-    by0 = ury;
-  } else if (ury > by1) {
-    by1 = ury;
-  }
-  if (lry < by0) {
-    by0 = lry;
-  } else if (lry > by1) {
-    by1 = lry;
-  }
+  bx0 = (ulx < urx) ? (ulx < llx) ? (ulx < lrx) ? ulx : lrx
+                                  : (llx < lrx) ? llx : lrx
+		    : (urx < llx) ? (urx < lrx) ? urx : lrx
+                                  : (llx < lrx) ? llx : lrx;
+  bx1 = (ulx > urx) ? (ulx > llx) ? (ulx > lrx) ? ulx : lrx
+                                  : (llx > lrx) ? llx : lrx
+		    : (urx > llx) ? (urx > lrx) ? urx : lrx
+                                  : (llx > lrx) ? llx : lrx;
+  by0 = (uly < ury) ? (uly < lly) ? (uly < lry) ? uly : lry
+                                  : (lly < lry) ? lly : lry
+		    : (ury < lly) ? (ury < lry) ? ury : lry
+                                  : (lly < lry) ? lly : lry;
+  by1 = (uly > ury) ? (uly > lly) ? (uly > lry) ? uly : lry
+                                  : (lly > lry) ? lly : lry
+		    : (ury > lly) ? (ury > lry) ? ury : lry
+                                  : (lly > lry) ? lly : lry;
   bw = bx1 - bx0 + 1;
   bh = by1 - by0 + 1;
 
-  // bounding box clipped to pixmap, i.e., "valid" rectangle:
-  //   (cx0, cy0) = upper-left corner of valid rectangle in page pixmap
-  //   (cx1, cy1) = upper-left corner of valid rectangle in image pixmap
+  // Bounding box clipped to pixmap, i.e., "valid" rectangle:
+  //   (cx0, cy0) = upper-left corner of valid rectangle in Pixmap
+  //   (cx1, cy1) = upper-left corner of valid rectangle in XImage
   //   (cw, ch) = size of valid rectangle
-  if (bx1 >= pixmapW) {
-    cw = pixmapW - bx0;
-  } else {
-    cw = bw;
-  }
+  // These values will be used to transfer the XImage from/to the
+  // Pixmap.
+  cw = (bx1 >= pixmapW) ? pixmapW - bx0 : bw;
   if (bx0 < 0) {
     cx0 = 0;
     cx1 = -bx0;
@@ -2919,11 +2929,7 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     cx0 = bx0;
     cx1 = 0;
   }
-  if (by1 >= pixmapH) {
-    ch = pixmapH - by0;
-  } else {
-    ch = bh;
-  }
+  ch = (by1 >= pixmapH) ? pixmapH - by0 : bh;
   if (by0 < 0) {
     cy0 = 0;
     cy1 = -by0;
@@ -2935,7 +2941,7 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 
   // check for tiny (zero width or height) images
   // and off-page images
-  if (cw <= 0 || ch <= 0) {
+  if (scaledWidth < 0 || scaledHeight < 0 || cw <= 0 || ch <= 0) {
     if (inlineImg) {
       j = height * ((width + 7) / 8);
       str->reset();
@@ -2946,59 +2952,22 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     return;
   }
 
-  // Bresenham parameters for vertical traversal
-  // (device coordinates and image coordinates)
-  dx = llx - ulx;
-  dy = lly - uly;
-  if (abs(dx) > abs(dy)) {
-    vn = abs(dx);
-    dvdx = dx > 0 ? 1 : -1;
-    dvpx = 0;
-    dvdx2 = 0;
-    dvdy = 0;
-    dvpy = abs(dy);
-    dvdy2 = dy > 0 ? 1 : -1;
+  // compute Bresenham parameters for x and y scaling
+  if (scaledHeight == 0) {
+    yp = yq = 0;
   } else {
-    vn = abs(dy);
-    dvdx = 0;
-    dvpx = abs(dx);
-    dvdx2 = dx > 0 ? 1 : -1;
-    dvdy = dy > 0 ? 1 : -1;
-    dvpy = 0;
-    dvdy2 = 0;
+    yp = (height - 1) / scaledHeight;
+    yq = (height - 1) % scaledHeight;
   }
-  dvqx = dvqy = vn;
-  ivqy = vn + 1;
-  ivdy = height / ivqy;
-  ivpy = height % ivqy;
-
-  // Bresenham parameters for horizontal traversal
-  // (device coordinates and image coordinates)
-  if (abs(hx) > abs(hy)) {
-    hn = abs(hx);
-    dhdx = hx > 0 ? 1 : -1;
-    dhpx = 0;
-    dhdx2 = 0;
-    dhdy = 0;
-    dhpy = abs(hy);
-    dhdy2 = hy > 0 ? 1 : -1;
+  if (scaledWidth == 0) {
+    xp = xq = 0;
   } else {
-    hn = abs(hy);
-    dhdx = 0;
-    dhpx = abs(hx);
-    dhdx2 = hx > 0 ? 1 : -1;
-    dhdy = hy > 0 ? 1 : -1;
-    dhpy = 0;
-    dhdy2 = 0;
+    xp = (width - 1) / scaledWidth;
+    xq = (width - 1) % scaledWidth;
   }
-  dhqx = dhqy = hn;
-  ihqx = hn + 1;
-  ihdx = width / ihqx;
-  ihpx = width % ihqx;
 
   // allocate pixel buffer
-  n = ivdy + (ivpy > 0 ? 1 : 0);
-  pixBuf = (Guchar *)gmalloc(n * width * sizeof(Guchar));
+  pixBuf = (Guchar *)gmalloc((yp + 1) * width * sizeof(Guchar));
 
   // allocate XImage and read from page pixmap
   image = XCreateImage(display, DefaultVisual(display, screenNum),
@@ -3026,26 +2995,28 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
   imgStr = new ImageStream(str, width, 1, 1);
   imgStr->reset();
 
-  // traverse left edge of image
-  dvx = ulx;
-  dvtx = 0;
-  dvy = uly;
-  dvty = 0;
-  ivy = 0;
-  ivty = 0;
-  dhtx0 = 0;
-  dhty0 = 0;
-  n = 0;
-  bufy = -1;
-  for (vi = 0; vi <= vn; ++vi) {
+  // init y scale Bresenham
+  yt = 0;
+  yStep = 1;
+
+  for (y = 0; y <= scaledHeight; ++y) {
+
+    // y scale Bresenham
+    lastYStep = yStep;
+    yStep = yp;
+    yt += yq;
+    if (yt >= scaledHeight) {
+      yt -= scaledHeight;
+      ++yStep;
+    }
 
     // read row(s) from image
-    if (ivy > bufy) {
-      if (ivdy == 0) {
-	n = 1;
-      } else {
-	n = ivdy + (ivty + ivpy >= ivqy ? 1 : 0);
-      }
+    if (yp == 0) {
+      n = (lastYStep == 1) ? 1 : 0;
+    } else {
+      n = yStep;
+    }
+    if (n > 0) {
       p = pixBuf;
       for (i = 0; i < n; ++i) {
 	for (j = 0; j < width; ++j) {
@@ -3056,26 +3027,43 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 	  ++p;
 	}
       }
-      bufy = ivy;
     }
 
-    // traverse a horizontal stripe
-    dhx = 0;
-    dhy = 0;
-    dhtx = dhtx0;
-    dhty = dhty0;
-    ihx = 0;
-    ihtx = 0;
-    for (hi = 0; hi <= hn; ++hi) {
+    // init x scale Bresenham
+    xt = 0;
+    xSrc = 0;
 
-      // compute filtered pixel value
-      imgPix = 0;
-      if (ihdx == 0) {
-	m = 1;
-      } else {
-	m = ihdx + (ihtx + ihpx >= ihqx ? 1 : 0);
+    for (x = 0; x <= scaledWidth; ++x) {
+
+      // x scale Bresenham
+      xStep = xp;
+      xt += xq;
+      if (xt >= scaledWidth) {
+	xt -= scaledWidth;
+	++xStep;
       }
-      p = pixBuf + ihx * sizeof(Guchar);
+
+      // x shear
+      x1 = xSign * x + xoutRound(xShear * ySign * y);
+
+      // y shear
+      y1 = ySign * y + xoutRound(yShear * x1);
+
+      // rotation
+      if (rot) {
+	x2 = y1;
+	y2 = -x1;
+      } else {
+	x2 = x1;
+	y2 = y1;
+      }
+
+      // compute the filtered pixel at (x,y) after the
+      // x and y scaling operations
+      n = yStep > 0 ? yStep : 1;
+      m = xStep > 0 ? xStep : 1;
+      p = pixBuf + xSrc;
+      imgPix = 0;
       for (i = 0; i < n; ++i) {
 	for (j = 0; j < m; ++j) {
 	  imgPix += *p++;
@@ -3083,9 +3071,12 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 	p += width - m;
       }
 
+      // x scale Bresenham
+      xSrc += xStep;
+
       // blend image pixel with background
       alpha = (double)imgPix / (double)(n * m);
-      xcolor.pixel = XGetPixel(image, dvx + dhx - bx0, dvy + dhy - by0);
+      xcolor.pixel = XGetPixel(image, tx + x2 - bx0, ty + y2 - by0);
       if (xcolor.pixel != lastPixel) {
 	XQueryColor(display, colormap, &xcolor);
 	r1 = (double)xcolor.red / 65535.0;
@@ -3099,64 +3090,10 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
       pix = findColor(&rgb2);
 
       // set pixel
-      XPutPixel(image, dvx + dhx - bx0, dvy + dhy - by0, pix);
-
-      // Bresenham increment (horizontal stripe)
-      dhx += dhdx;
-      dhtx += dhpx;
-      if (dhtx >= dhqx) {
-	dhx += dhdx2;
-	dhtx -= dhqx;
-      }
-      dhy += dhdy;
-      dhty += dhpy;
-      if (dhty >= dhqy) {
-	dhy += dhdy2;
-	dhty -= dhqy;
-      }
-      ihx += ihdx;
-      ihtx += ihpx;
-      if (ihtx >= ihqx) {
-	++ihx;
-	ihtx -= ihqx;
-      }
-    }
-
-    // Bresenham increment (left edge)
-    dvx += dvdx;
-    dvtx += dvpx;
-    dhty0 += dvdx * dhdx * dhpy;
-    if (dvtx >= dvqx) {
-      dvx += dvdx2;
-      dvtx -= dvqx;
-      dhty0 += dvdx2 * dhdx * dhpy;
-    }
-    dvy += dvdy;
-    dvty += dvpy;
-    dhtx0 += dvdy * dhdy * dhpx;
-    if (dvty >= dvqy) {
-      dvy += dvdy2;
-      dvty -= dvqy;
-      dhtx0 += dvdy2 * dhdy * dhpx;
-    }
-    ivy += ivdy;
-    ivty += ivpy;
-    if (ivty >= ivqy) {
-      ++ivy;
-      ivty -= ivqy;
-    }
-    if (dhtx0 >= dhqy) {
-      dhtx0 -= dhqx;
-    } else if (dhtx0 < 0) {
-      dhtx0 += dhqx;
-    }
-    if (dhty0 >= dhqx) {
-      dhty0 -= dhqy;
-    } else if (dhty0 < 0) {
-      dhty0 += dhqy;
+      XPutPixel(image, tx + x2 - bx0, ty + y2 - by0, pix);
     }
   }
-  
+
   // blit the image into the pixmap
   XPutImage(display, pixmap, fillGC, image, cx1, cy1, cx0, cy0, cw, ch);
 
@@ -3170,33 +3107,32 @@ void XOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 
 void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GfxImageColorMap *colorMap,
-			   GBool inlineImg) {
+			   int *maskColors, GBool inlineImg) {
   ImageStream *imgStr;
   XImage *image;
   int nComps, nVals, nBits;
   GBool dither;
-  double xt, yt;
+  double *ctm;
+  GBool rot;
+  double xScale, yScale, xShear, yShear;
+  int tx, ty, scaledWidth, scaledHeight, xSign, ySign;
   int ulx, uly, llx, lly, urx, ury, lrx, lry;
-  int hx, hy;
+  int ulx1, uly1, llx1, lly1, urx1, ury1, lrx1, lry1;
   int bx0, by0, bx1, by1, bw, bh;
   int cx0, cy0, cx1, cy1, cw, ch;
-  int dx, dy;
-  int dvx, dvdx, dvpx, dvqx, dvdx2, dvtx;
-  int dvy, dvdy, dvpy, dvqy, dvdy2, dvty;
-  int dhx, dhdx, dhpx, dhqx, dhdx2, dhtx, dhtx0;
-  int dhy, dhdy, dhpy, dhqy, dhdy2, dhty, dhty0;
-  int ivy, ivdy, ivpy, ivqy, ivty;
-  int ihx, ihdx, ihpx, ihqx, ihtx;
-  int vn, vi, hn, hi;
-  int bufy;
+  int yp, yq, yt, yStep, lastYStep;
+  int xp, xq, xt, xStep, xSrc;
   GfxRGB *pixBuf;
+  Guchar *alphaBuf;
   Guchar pixBuf2[gfxColorMaxComps];
   GfxRGB color2, err, errRight;
   GfxRGB *errDown;
-  double r0, g0, b0;
+  double r0, g0, b0, alpha;
   Gulong pix;
   GfxRGB *p;
-  int n, m, i, j;
+  Guchar *q;
+  int x, y, x1, y1, x2, y2;
+  int n, m, i, j, k;
 
   // image parameters
   nComps = colorMap->getNumPixelComps();
@@ -3204,66 +3140,81 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   nBits = colorMap->getBits();
   dither = nComps > 1 || nBits > 1;
 
-  // corners in device space
-  state->transform(0, 0, &xt, &yt);
-  llx = xoutRound(xt);
-  lly = xoutRound(yt);
-  state->transform(0, 1, &xt, &yt);
-  ulx = xoutRound(xt);
-  uly = xoutRound(yt);
-  state->transform(1, 0, &xt, &yt);
-  lrx = xoutRound(xt);
-  lry = xoutRound(yt);
-  state->transform(1, 1, &xt, &yt);
-  urx = xoutRound(xt);
-  ury = xoutRound(yt);
-
-  // horizontal traversal
-  hx = urx - ulx;
-  if (abs(lrx - llx) < abs(hx)) {
-    hx = lrx - llx;
+  // get CTM, check for singular matrix
+  ctm = state->getCTM();
+  if (fabs(ctm[0] * ctm[3] - ctm[1] * ctm[2]) < 0.000001) {
+    error(-1, "Singular CTM in drawImage");
+    if (inlineImg) {
+      str->reset();
+      j = height * ((nVals * nBits + 7) / 8);
+      for (i = 0; i < j; ++i) {
+	str->getChar();
+      }
+    }
+    return;
   }
-  hy = ury - uly;
-  if (abs(lry - lly) < abs(hy)) {
-    hy = lry - lly;
+
+  // compute scale, shear, rotation, translation parameters
+  rot = fabs(ctm[1]) > fabs(ctm[0]);
+  if (rot) {
+    xScale = -ctm[1];
+    yScale = -ctm[2] + (ctm[0] * ctm[3]) / ctm[1];
+    xShear = ctm[3] / yScale;
+    yShear = -ctm[0] / ctm[1];
+  } else {
+    xScale = ctm[0];
+    yScale = -ctm[3] + (ctm[1] * ctm[2]) / ctm[0];
+    xShear = -ctm[2] / yScale;
+    yShear = ctm[1] / ctm[0];
+  }
+  tx = xoutRound(ctm[2] + ctm[4]);
+  ty = xoutRound(ctm[3] + ctm[5]);
+  scaledWidth = abs(xoutRound(xScale)) - 1;
+  xSign = (xScale < 0) ? -1 : 1;
+  scaledHeight = abs(xoutRound(yScale)) - 1;
+  ySign = (yScale < 0) ? -1 : 1;
+
+  // compute corners in device space
+  ulx1 = 0;
+  uly1 = 0;
+  urx1 = xSign * scaledWidth;
+  ury1 = xoutRound(yShear * urx1);
+  llx1 = xoutRound(xShear * ySign * scaledHeight);
+  lly1 = ySign * scaledHeight + xoutRound(yShear * llx1);
+  lrx1 = xSign * scaledWidth + xoutRound(xShear * ySign * scaledHeight);
+  lry1 = ySign * scaledHeight + xoutRound(yShear * lrx1);
+  if (rot) {
+    ulx = tx + uly1;    uly = ty - ulx1;
+    urx = tx + ury1;    ury = ty - urx1;
+    llx = tx + lly1;    lly = ty - llx1;
+    lrx = tx + lry1;    lry = ty - lrx1;
+  } else {
+    ulx = tx + ulx1;    uly = ty + uly1;
+    urx = tx + urx1;    ury = ty + ury1;
+    llx = tx + llx1;    lly = ty + lly1;
+    lrx = tx + lrx1;    lry = ty + lry1;
   }
 
   // bounding box:
   //   (bx0, by0) = upper-left corner
   //   (bx1, by1) = lower-right corner
   //   (bw, bh) = size
-  bx0 = bx1 = ulx;
-  if (llx < bx0) {
-    bx0 = llx;
-  } else if (llx > bx1) {
-    bx1 = llx;
-  }
-  if (urx < bx0) {
-    bx0 = urx;
-  } else if (urx > bx1) {
-    bx1 = urx;
-  }
-  if (lrx < bx0) {
-    bx0 = lrx;
-  } else if (lrx > bx1) {
-    bx1 = lrx;
-  }
-  by0 = by1 = uly;
-  if (lly < by0) {
-    by0 = lly;
-  } else if (lly > by1) {
-    by1 = lly;
-  }
-  if (ury < by0) {
-    by0 = ury;
-  } else if (ury > by1) {
-    by1 = ury;
-  }
-  if (lry < by0) {
-    by0 = lry;
-  } else if (lry > by1) {
-    by1 = lry;
-  }
+  bx0 = (ulx < urx) ? (ulx < llx) ? (ulx < lrx) ? ulx : lrx
+                                  : (llx < lrx) ? llx : lrx
+		    : (urx < llx) ? (urx < lrx) ? urx : lrx
+                                  : (llx < lrx) ? llx : lrx;
+  bx1 = (ulx > urx) ? (ulx > llx) ? (ulx > lrx) ? ulx : lrx
+                                  : (llx > lrx) ? llx : lrx
+		    : (urx > llx) ? (urx > lrx) ? urx : lrx
+                                  : (llx > lrx) ? llx : lrx;
+  by0 = (uly < ury) ? (uly < lly) ? (uly < lry) ? uly : lry
+                                  : (lly < lry) ? lly : lry
+		    : (ury < lly) ? (ury < lry) ? ury : lry
+                                  : (lly < lry) ? lly : lry;
+  by1 = (uly > ury) ? (uly > lly) ? (uly > lry) ? uly : lry
+                                  : (lly > lry) ? lly : lry
+		    : (ury > lly) ? (ury > lry) ? ury : lry
+                                  : (lly > lry) ? lly : lry;
   bw = bx1 - bx0 + 1;
   bh = by1 - by0 + 1;
 
@@ -3273,11 +3224,7 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   //   (cw, ch) = size of valid rectangle
   // These values will be used to transfer the XImage from/to the
   // Pixmap.
-  if (bx1 >= pixmapW) {
-    cw = pixmapW - bx0;
-  } else {
-    cw = bw;
-  }
+  cw = (bx1 >= pixmapW) ? pixmapW - bx0 : bw;
   if (bx0 < 0) {
     cx0 = 0;
     cx1 = -bx0;
@@ -3286,11 +3233,7 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     cx0 = bx0;
     cx1 = 0;
   }
-  if (by1 >= pixmapH) {
-    ch = pixmapH - by0;
-  } else {
-    ch = bh;
-  }
+  ch = (by1 >= pixmapH) ? pixmapH - by0 : bh;
   if (by0 < 0) {
     cy0 = 0;
     cy1 = -by0;
@@ -3302,7 +3245,7 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 
   // check for tiny (zero width or height) images
   // and off-page images
-  if (cw <= 0 || ch <= 0) {
+  if (scaledWidth < 0 || scaledHeight < 0 || cw <= 0 || ch <= 0) {
     if (inlineImg) {
       str->reset();
       j = height * ((nVals * nBits + 7) / 8);
@@ -3312,59 +3255,27 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     return;
   }
 
-  // Bresenham parameters for vertical traversal
-  // (device coordinates and image coordinates)
-  dx = llx - ulx;
-  dy = lly - uly;
-  if (abs(dx) > abs(dy)) {
-    vn = abs(dx);
-    dvdx = dx > 0 ? 1 : -1;
-    dvpx = 0;
-    dvdx2 = 0;
-    dvdy = 0;
-    dvpy = abs(dy);
-    dvdy2 = dy > 0 ? 1 : -1;
+  // compute Bresenham parameters for x and y scaling
+  if (scaledHeight == 0) {
+    yp = yq = 0;
   } else {
-    vn = abs(dy);
-    dvdx = 0;
-    dvpx = abs(dx);
-    dvdx2 = dx > 0 ? 1 : -1;
-    dvdy = dy > 0 ? 1 : -1;
-    dvpy = 0;
-    dvdy2 = 0;
+    yp = (height - 1) / scaledHeight;
+    yq = (height - 1) % scaledHeight;
   }
-  dvqx = dvqy = vn;
-  ivqy = vn + 1;
-  ivdy = height / ivqy;
-  ivpy = height % ivqy;
-
-  // Bresenham parameters for horizontal traversal
-  // (device coordinates and image coordinates)
-  if (abs(hx) > abs(hy)) {
-    hn = abs(hx);
-    dhdx = hx > 0 ? 1 : -1;
-    dhpx = 0;
-    dhdx2 = 0;
-    dhdy = 0;
-    dhpy = abs(hy);
-    dhdy2 = hy > 0 ? 1 : -1;
+  if (scaledWidth == 0) {
+    xp = xq = 0;
   } else {
-    hn = abs(hy);
-    dhdx = 0;
-    dhpx = abs(hx);
-    dhdx2 = hx > 0 ? 1 : -1;
-    dhdy = hy > 0 ? 1 : -1;
-    dhpy = 0;
-    dhdy2 = 0;
+    xp = (width - 1) / scaledWidth;
+    xq = (width - 1) % scaledWidth;
   }
-  dhqx = dhqy = hn;
-  ihqx = hn + 1;
-  ihdx = width / ihqx;
-  ihpx = width % ihqx;
 
   // allocate pixel buffer
-  n = ivdy + (ivpy > 0 ? 1 : 0);
-  pixBuf = (GfxRGB *)gmalloc(n * width * sizeof(GfxRGB));
+  pixBuf = (GfxRGB *)gmalloc((yp + 1) * width * sizeof(GfxRGB));
+  if (maskColors) {
+    alphaBuf = (Guchar *)gmalloc((yp + 1) * width * sizeof(Guchar));
+  } else {
+    alphaBuf = NULL;
+  }
 
   // allocate XImage
   image = XCreateImage(display, DefaultVisual(display, screenNum),
@@ -3372,9 +3283,11 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   image->data = (char *)gmalloc(bh * image->bytes_per_line);
 
   // if the transform is anything other than a 0/90/180/270 degree
-  // rotation/flip, read the backgound pixmap to fill in the corners
+  // rotation/flip, or if there is color key masking, read the
+  // backgound pixmap to fill in the corners
   if (!((ulx == llx && uly == ury) ||
-	(uly == lly && ulx == urx))) {
+	(uly == lly && ulx == urx)) ||
+      maskColors) {
     XGetSubImage(display, pixmap, cx0, cy0, cw, ch, (1 << depth) - 1, ZPixmap,
 		 image, cx1, cy1);
   }
@@ -3393,94 +3306,131 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   imgStr = new ImageStream(str, width, nComps, nBits);
   imgStr->reset();
 
-  // traverse left edge of image
-  dvx = ulx;
-  dvtx = 0;
-  dvy = uly;
-  dvty = 0;
-  ivy = 0;
-  ivty = 0;
-  dhtx0 = 0;
-  dhty0 = 0;
-  n = 0;
-  bufy = -1;
-  for (vi = 0; vi <= vn; ++vi) {
+  // init y scale Bresenham
+  yt = 0;
+  yStep = 1;
+
+  for (y = 0; y <= scaledHeight; ++y) {
+
+    // y scale Bresenham
+    lastYStep = yStep;
+    yStep = yp;
+    yt += yq;
+    if (yt >= scaledHeight) {
+      yt -= scaledHeight;
+      ++yStep;
+    }
 
     // read row(s) from image
-    if (ivy > bufy) {
-      if (ivdy == 0) {
-	n = 1;
-      } else {
-	n = ivdy + (ivty + ivpy >= ivqy ? 1 : 0);
-      }
+    if (yp == 0) {
+      n = (lastYStep == 1) ? 1 : 0;
+    } else {
+      n = yStep;
+    }
+    if (n > 0) {
       p = pixBuf;
+      q = alphaBuf;
       for (i = 0; i < n; ++i) {
 	for (j = 0; j < width; ++j) {
 	  imgStr->getPixel(pixBuf2);
 	  colorMap->getRGB(pixBuf2, p);
 	  ++p;
+	  if (maskColors) {
+	    *q = 1;
+	    for (k = 0; k < nComps; ++k) {
+	      if (pixBuf2[k] < maskColors[2*k] ||
+		  pixBuf2[k] > maskColors[2*k]) {
+		*q = 0;
+		break;
+	      }
+	    }
+	    ++q;
+	  }
 	}
       }
-      bufy = ivy;
     }
 
-    // clear error accumulator
-    errRight.r = errRight.g = errRight.b = 0;
+    // init x scale Bresenham
+    xt = 0;
+    xSrc = 0;
 
-    // traverse a horizontal stripe
-    dhx = 0;
-    dhy = 0;
-    dhtx = dhtx0;
-    dhty = dhty0;
-    ihx = 0;
-    ihtx = 0;
-    for (hi = 0; hi <= hn; ++hi) {
+    for (x = 0; x <= scaledWidth; ++x) {
 
-      // compute filtered pixel value
-      if (ihdx == 0) {
-	m = 1;
-      } else {
-	m = ihdx + (ihtx + ihpx >= ihqx ? 1 : 0);
+      // x scale Bresenham
+      xStep = xp;
+      xt += xq;
+      if (xt >= scaledWidth) {
+	xt -= scaledWidth;
+	++xStep;
       }
-      p = pixBuf + ihx * sizeof(Guchar);
+
+      // x shear
+      x1 = xSign * x + xoutRound(xShear * ySign * y);
+
+      // y shear
+      y1 = ySign * y + xoutRound(yShear * x1);
+
+      // rotation
+      if (rot) {
+	x2 = y1;
+	y2 = -x1;
+      } else {
+	x2 = x1;
+	y2 = y1;
+      }
+
+      // compute the filtered pixel at (x,y) after the
+      // x and y scaling operations
+      n = yStep > 0 ? yStep : 1;
+      m = xStep > 0 ? xStep : 1;
+      p = pixBuf + xSrc;
       r0 = g0 = b0 = 0;
+      q = alphaBuf + xSrc;
+      alpha = 0;
       for (i = 0; i < n; ++i) {
 	for (j = 0; j < m; ++j) {
 	  r0 += p->r;
 	  g0 += p->g;
 	  b0 += p->b;
 	  ++p;
+	  if (maskColors) {
+	    alpha += *q++;
+	  }
 	}
 	p += width - m;
       }
       r0 /= n * m;
       g0 /= n * m;
       b0 /= n * m;
+      alpha /= n * m;
+
+      // x scale Bresenham
+      xSrc += xStep;
 
       // compute pixel
       if (dither) {
-	color2.r = r0 + errRight.r + errDown[dvx + dhx - bx0].r;
+	color2.r = r0 + errRight.r + errDown[tx + x2 - bx0].r;
 	if (color2.r > 1) {
 	  color2.r = 1;
 	} else if (color2.r < 0) {
 	  color2.r = 0;
 	}
-	color2.g = g0 + errRight.g + errDown[dvx + dhx - bx0].g;
+	color2.g = g0 + errRight.g + errDown[tx + x2 - bx0].g;
 	if (color2.g > 1) {
 	  color2.g = 1;
 	} else if (color2.g < 0) {
 	  color2.g = 0;
 	}
-	color2.b = b0 + errRight.b + errDown[dvx + dhx - bx0].b;
+	color2.b = b0 + errRight.b + errDown[tx + x2 - bx0].b;
 	if (color2.b > 1) {
 	  color2.b = 1;
 	} else if (color2.b < 0) {
 	  color2.b = 0;
 	}
 	pix = findColor(&color2, &err);
-	errRight.r = errDown[dvx + dhx - bx0].r = err.r / 2;
-	errRight.g = errDown[dvx + dhx - bx0].g = err.g / 2;
-	errRight.b = errDown[dvx + dhx - bx0].b = err.b / 2;
+	errRight.r = errDown[tx + x2 - bx0].r = err.r / 2;
+	errRight.g = errDown[tx + x2 - bx0].g = err.g / 2;
+	errRight.b = errDown[tx + x2 - bx0].b = err.b / 2;
       } else {
 	color2.r = r0;
 	color2.g = g0;
@@ -3489,70 +3439,22 @@ void XOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
       }
 
       // set pixel
-      XPutPixel(image, dvx + dhx - bx0, dvy + dhy - by0, pix);
-
-      // Bresenham increment (horizontal stripe)
-      dhx += dhdx;
-      dhtx += dhpx;
-      if (dhtx >= dhqx) {
-	dhx += dhdx2;
-	dhtx -= dhqx;
+      //~ this should do a blend when 0 < alpha < 1
+      if (alpha < 0.75) {
+	XPutPixel(image, tx + x2 - bx0, ty + y2 - by0, pix);
       }
-      dhy += dhdy;
-      dhty += dhpy;
-      if (dhty >= dhqy) {
-	dhy += dhdy2;
-	dhty -= dhqy;
-      }
-      ihx += ihdx;
-      ihtx += ihpx;
-      if (ihtx >= ihqx) {
-	++ihx;
-	ihtx -= ihqx;
-      }
-    }
-
-    // Bresenham increment (left edge)
-    dvx += dvdx;
-    dvtx += dvpx;
-    dhty0 += dvdx * dhdx * dhpy;
-    if (dvtx >= dvqx) {
-      dvx += dvdx2;
-      dvtx -= dvqx;
-      dhty0 += dvdx2 * dhdx * dhpy;
-    }
-    dvy += dvdy;
-    dvty += dvpy;
-    dhtx0 += dvdy * dhdy * dhpx;
-    if (dvty >= dvqy) {
-      dvy += dvdy2;
-      dvty -= dvqy;
-      dhtx0 += dvdy2 * dhdy * dhpx;
-    }
-    ivy += ivdy;
-    ivty += ivpy;
-    if (ivty >= ivqy) {
-      ++ivy;
-      ivty -= ivqy;
-    }
-    if (dhtx0 >= dhqy) {
-      dhtx0 -= dhqx;
-    } else if (dhtx0 < 0) {
-      dhtx0 += dhqx;
-    }
-    if (dhty0 >= dhqx) {
-      dhty0 -= dhqy;
-    } else if (dhty0 < 0) {
-      dhty0 += dhqy;
     }
   }
-  
+
   // blit the image into the pixmap
   XPutImage(display, pixmap, fillGC, image, cx1, cy1, cx0, cy0, cw, ch);
 
   // free memory
   delete imgStr;
   gfree(pixBuf);
+  if (maskColors) {
+    gfree(alphaBuf);
+  }
   gfree(image->data);
   image->data = NULL;
   XDestroyImage(image);

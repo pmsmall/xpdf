@@ -40,8 +40,10 @@
 
 //------------------------------------------------------------------------
 
+extern "C" {
 static int CDECL cmpWidthExcep(const void *w1, const void *w2);
 static int CDECL cmpWidthExcepV(const void *w1, const void *w2);
+}
 
 //------------------------------------------------------------------------
 
@@ -966,12 +968,14 @@ void GfxFont::getType0EncAndWidths(Dict *fontDict) {
   makeWidths(fontDict, NULL, NULL, 0);
 }
 
+extern "C" {
 static int CDECL cmpWidthExcep(const void *w1, const void *w2) {
   return ((GfxFontWidthExcep *)w1)->first - ((GfxFontWidthExcep *)w2)->first;
 }
 
 static int CDECL cmpWidthExcepV(const void *w1, const void *w2) {
   return ((GfxFontWidthExcepV *)w1)->first - ((GfxFontWidthExcepV *)w2)->first;
+}
 }
 
 //------------------------------------------------------------------------

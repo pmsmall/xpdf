@@ -47,7 +47,9 @@ typedef struct {
 } MotifWmHints;
 #define MWM_HINTS_DECORATIONS (1L << 1)
 
+extern "C" {
 static Bool isExposeEvent(Display *display, XEvent *e, XPointer w);
+}
 
 LTKWindow::LTKWindow(LTKApp *app1, GBool dialog1, char *title1,
 		     char **iconData1, char *defaultWidgetName,
@@ -365,6 +367,7 @@ void LTKWindow::map() {
     app->setGrabWin(this);
 }
 
+extern "C" {
 static Bool isExposeEvent(Display *display, XEvent *e, XPointer w) {
   LTKWindow *win;
   LTKWidget *widget;
@@ -374,6 +377,7 @@ static Bool isExposeEvent(Display *display, XEvent *e, XPointer w) {
   xwin = e->xany.window;
   return e->type == Expose &&
          win->getApp()->findWindow(xwin, &widget) == win;
+}
 }
 
 void LTKWindow::redraw() {

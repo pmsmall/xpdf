@@ -18,7 +18,7 @@ SFontEngine::SFontEngine(Display *display, Visual *visual, int depth,
   this->visual = visual;
   this->depth = depth;
   this->colormap = colormap;
-};
+}
 
 SFontEngine::~SFontEngine() {
 }

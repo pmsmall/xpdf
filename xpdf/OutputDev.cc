@@ -72,7 +72,7 @@ void OutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 
 void OutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			  int width, int height, GfxImageColorMap *colorMap,
-			  GBool inlineImg) {
+			  int *maskColors, GBool inlineImg) {
   int i, j;
 
   if (inlineImg) {

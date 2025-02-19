@@ -705,3 +705,12 @@ Added "-title" switch and "xpdf.title" resource to set the window
 Check for <freetype.h> in addition to <freetype/freetype.h>.
 Upgraded the configure script to smr_macros 0.2.4 - this should fix a
   bug where configure wasn't correctly finding t1lib.
+
+0.92a (2001-dec-17)
+-------------------
+Added 'extern "C" { ... }' in various places for ANSI C++ compliance.
+Tweaked the code that figures out DPI for fit-to-page and fit-to-width
+  modes.
+Fixed the image transformation code in XOutputDev -- no more missing
+  lines.
+Implemented color key image masking in XOutputDev.
