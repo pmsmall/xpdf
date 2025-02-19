@@ -25,6 +25,11 @@
 #undef OPI_SUPPORT
 
 /*
+ * Enable multithreading support.
+ */
+#undef MULTITHREADED
+
+/*
  * Directory with the Xpdf app-defaults file.
  */
 #undef APPDEFDIR

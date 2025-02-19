@@ -838,6 +838,7 @@ Optional Features:
                           PostScript output
   --enable-no-text-select do not allow text selection
   --enable-opi            include support for OPI comments
+  --enable-multithreaded  include support for multithreading
   --disable-largefile     omit support for large files
 
 Optional Packages:
@@ -1255,6 +1256,14 @@ if test "${enable_opi+set}" = set; then
   enableval="$enable_opi"
   cat >>confdefs.h <<\_ACEOF
 #define OPI_SUPPORT 1
+_ACEOF
+
+fi;
+# Check whether --enable-multithreaded or --disable-multithreaded was given.
+if test "${enable_multithreaded+set}" = set; then
+  enableval="$enable_multithreaded"
+  cat >>confdefs.h <<\_ACEOF
+#define MULTITHREADED 1
 _ACEOF
 
 fi;

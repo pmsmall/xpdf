@@ -1,8 +1,8 @@
 .\" Copyright 1997-2002 Glyph & Cog, LLC
-.TH pdftotext 1 "04 November 2002"
+.TH pdftotext 1 "05 December 2002"
 .SH NAME
 pdftotext \- Portable Document Format (PDF) to text converter
-(version 2.00)
+(version 2.01)
 .SH SYNOPSIS
 .B pdftotext
 [options]
@@ -44,11 +44,15 @@ Specifies the first page to convert.
 .BI \-l " number"
 Specifies the last page to convert.
 .TP
+.B \-layout
+Maintain (as best as possible) the original physical layout of the
+text.  The default is to \'undo' physical layout (columns,
+hyphenation, etc.) and output the text in reading order.
+.TP
 .B \-raw
 Keep the text in content stream order.  This is a hack which often
-"undoes" column formatting, etc.  This option will likely be replaced
-with something more sophisticated when pdftotext is rewritten to use a
-smarter text placement algorithm.
+"undoes" column formatting, etc.  Use of raw mode is no longer
+recommended.
 .TP
 .B \-htmlmeta
 Generate a simple HTML file, including the meta information.  This

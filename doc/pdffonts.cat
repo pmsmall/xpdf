@@ -6,7 +6,7 @@ pdffonts(1)                                           pdffonts(1)
 
 NAME
        pdffonts  -  Portable  Document Format (PDF) font analyzer
-       (version 2.00)
+       (version 2.01)
 
 SYNOPSIS
        pdffonts [options] [PDF-file]
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                         04 November 2002                       1
+                         05 December 2002                       1
 
 
 
@@ -127,6 +127,6 @@ SEE ALSO
 
 
 
-                         04 November 2002                       2
+                         05 December 2002                       2
 
 

@@ -1,7 +1,7 @@
 .\" Copyright 2002 Glyph & Cog, LLC
-.TH xpdfrc 5 "04 November 2002"
+.TH xpdfrc 5 "05 December 2002"
 .SH NAME
-xpdfrc \- configuration file for Xpdf tools (version 2.00)
+xpdfrc \- configuration file for Xpdf tools (version 2.01)
 .SH DESCRIPTION
 All of the Xpdf tools read a single configuration file.  If you have a
 .I .xpdfrc
@@ -155,7 +155,7 @@ to a TrueType font for display.  The TrueType font file,
 should be a standard .ttf file.
 .TP
 .BI displayNamedCIDFontX " PDF\-font\-name XLFD encoding\-name"
-Maps a PDF CID (16-bit) font,
+Maps a specific PDF CID (16-bit) font,
 .IR PDF\-font\-name ,
 to the X font,
 .IR XLFD ,
@@ -170,11 +170,25 @@ Maps the
 character collection to the X font,
 .IR XLFD ,
 for display.  This mapping is used if the font name doesn't match any
-of the fonts declared with displayNamedCIDFontX commands.  The
+of the fonts declared with displayNamedCIDFont* commands.  The
 encoding given by
 .I encoding\-name
 must be defined with the unicodeMap command.  There are no default
 display CID font mappings.
+.TP
+.BI displayNamedCIDFontT1 " PDF\-font\-name T1\-file"
+Maps a specific PDF CID (16-bit) font,
+.IR PDF\-font\-name ,
+to a CID font (16-bit PostScript font), for display.  There are no
+default CID font mappings.
+.TP
+.BI displayCIDFontT1 " registry\-ordering T1\-file"
+Maps the
+.I registry\-ordering
+character collection to a CID font (16-bit PostScript font), for
+display.  This mapping is used if the font name doesn't match any of
+the fonts declared with displayNamedCIDFont* commands.  There are no
+default CID font mappings.
 .TP
 .BI fontDir " dir"
 Specifies a search directory for external font files.  There can be

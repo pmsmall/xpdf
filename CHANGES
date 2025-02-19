@@ -1110,3 +1110,42 @@ Fixed a bug in decryption when using the newer (PDF 1.4) algorithm
   with shorter-than-128-bit keys.
 Minor optimization for image data streams: the ImageStream class can
   return an entire buffered line.
+
+2.01 (2002-dec-05)
+------------------
+Redesigned the text extraction process:
+  - process the text into "reading order"
+  - added a "-layout" flag to pdftotext to switch back to the old
+    style, where physical layout is maintained
+  - use of the "-raw" flag is no longer recommended
+Added the -reload option for xpdf (in remote mode).
+Added support for external CID fonts; added the displayCIDFontT1 and
+  displayNamedCIDFontT1 commands to the xpdfrc file.
+Handle the case of moveto/newpath/clip, which defines an empty
+  clipping region (just like moveto/closepath/clip).
+Accept XYZ link destinations with missing array elements.
+Fix some problems with state save/restore triggered by Type 3 fonts
+  that reference other fonts.
+Accept bogus font names based on "Symbol": Symbol,{Bold,Italic,
+  BoldItalic}.
+Fixed color and font resource names in the xpdf man page.
+Was using delete instead of gfree in OutlineItem::~OutlineItem.
+Set the busy cursor in the find dialog while searching.
+Map variants of the copyright, trademark, and registered trademark
+  symbols to the proder Unicode codes, not to Adobe's corporate use
+  area codes.
+Fixed a floating point exception bug in TextOutputDev (check for a
+  too-small denominator).
+Fixed a typo in TextOutputDev, in the code that generating blank lines
+  to add vertical whitespace.
+Config files whose last line didn't end with a LF (or CR+LF) weren't
+  being handled correctly.
+The code that handled CIDToGIDMaps in Type 2 CIDFonts was broken.
+Check the per-glyph bounding box in Type 3 fonts, and don't try to
+  cache glyphs with bogus bboxes.
+Allow ToUnicode CMaps to use fewer than four hex digits in the Unicode
+  char indexes.
+Added multithreading protection to the GlobalParams class.
+Fixed a bug in end-of-stream detection with the TIFF predictor.
+Added some characters to MacRomanEncoding to match up with Apple's
+  definition.

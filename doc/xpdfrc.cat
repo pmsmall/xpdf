@@ -5,7 +5,7 @@ xpdfrc(5)                                               xpdfrc(5)
 
 
 NAME
-       xpdfrc - configuration file for Xpdf tools (version 2.00)
+       xpdfrc - configuration file for Xpdf tools (version 2.01)
 
 DESCRIPTION
        All  of  the  Xpdf tools read a single configuration file.
@@ -61,7 +61,7 @@ CHARACTER MAPPING
 
 
 
-                         04 November 2002                       1
+                         05 December 2002                       1
 
 
 
@@ -127,7 +127,7 @@ DISPLAY FONTS
 
 
 
-                         04 November 2002                       2
+                         05 December 2002                       2
 
 
 
@@ -152,20 +152,33 @@ xpdfrc(5)                                               xpdfrc(5)
               should be a standard .ttf file.
 
        displayNamedCIDFontX PDF-font-name XLFD encoding-name
-              Maps a PDF CID (16-bit) font, PDF-font-name, to the
-              X font, XLFD, for display.  The encoding  given  by
-              encoding-name  must  be defined with the unicodeMap
-              command.  There are no  default  display  CID  font
-              mappings.
+              Maps    a   specific   PDF   CID   (16-bit)   font,
+              PDF-font-name, to the X font,  XLFD,  for  display.
+              The encoding given by encoding-name must be defined
+              with the unicodeMap command.  There are no  default
+              display CID font mappings.
 
        displayCIDFontX registry-ordering XLFD encoding-name
               Maps  the registry-ordering character collection to
               the X font, XLFD, for  display.   This  mapping  is
               used  if  the  font  name  doesn't match any of the
-              fonts declared with displayNamedCIDFontX  commands.
+              fonts declared with displayNamedCIDFont*  commands.
               The encoding given by encoding-name must be defined
               with the unicodeMap command.  There are no  default
               display CID font mappings.
+
+       displayNamedCIDFontT1 PDF-font-name T1-file
+              Maps    a   specific   PDF   CID   (16-bit)   font,
+              PDF-font-name, to a  CID  font  (16-bit  PostScript
+              font),  for display.  There are no default CID font
+              mappings.
+
+       displayCIDFontT1 registry-ordering T1-file
+              Maps the registry-ordering character collection  to
+              a  CID  font (16-bit PostScript font), for display.
+              This mapping is used if the font name doesn't match
+              any of the fonts declared with displayNamedCIDFont*
+              commands.  There are no default CID font  mappings.
 
        fontDir dir
               Specifies  a  search  directory  for  external font
@@ -177,6 +190,18 @@ xpdfrc(5)                                               xpdfrc(5)
               ated  PostScript).   Only  files  with  suffixes of
               ".pfa", ".pfb", or ".ttf" will be used; other files
               in these directories will be ignored.  There are no
+
+
+
+                         05 December 2002                       3
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
               default fontDir directories.
 
 POSTSCRIPT CONTROL
@@ -190,17 +215,6 @@ POSTSCRIPT CONTROL
               standard  size.  The default paper size is set when
               xpdf and pdftops are built, typically  to  "letter"
               or "A4".
-
-
-
-                         04 November 2002                       3
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
 
        psDuplex yes | no
               If  set to "yes", the generated PostScript will set
@@ -243,6 +257,17 @@ xpdfrc(5)                                               xpdfrc(5)
               writing  mode  and  encoding  (which must have been
               defined with the unicodeMap command).
 
+
+
+                         05 December 2002                       4
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
        psEmbedType1Fonts yes | no
               If set to "no", prevents embedding of Type 1  fonts
               in generated PostScript.  This defaults to "yes".
@@ -256,18 +281,6 @@ xpdfrc(5)                                               xpdfrc(5)
               If  set to "no", prevents embedding of CID TrueType
               fonts  in  generated  PostScript.   For   Level   3
               PostScript,  this  generates  a CID font, for lower
-
-
-
-                         04 November 2002                       4
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
-
               levels it generates a non-CID composite font.
 
        psEmbedCIDPostScriptFonts yes | no
@@ -309,6 +322,18 @@ TEXT CONTROL
               with the  unicodeMap  command  (see  above).   This
               defaults to "Latin1".
 
+
+
+
+                         05 December 2002                       5
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
        textEOL unix | dos | mac
               Sets  the  end-of-line  convention  to use for text
               output.  The options are:
@@ -320,19 +345,6 @@ TEXT CONTROL
               (This can be overridden with the "-eol"  switch  on
               the  command  line.)  The default value is based on
               the OS where xpdf and pdftotext were built.
-
-
-
-
-
-                         04 November 2002                       5
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
 
        textKeepTinyChars yes | no
               If set to "yes",  text  extraction  will  keep  all
@@ -377,6 +389,17 @@ MISCELLANEOUS SETTINGS
               annotation.  The string "%s" will be replaced  with
               the movie file name.  This has no default value.
 
+
+
+                         05 December 2002                       6
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
        mapNumericCharNames yes | no
               If set to "yes", the Xpdf tools will attempt to map
               various numeric character names sometimes  used  in
@@ -388,18 +411,6 @@ MISCELLANEOUS SETTINGS
        printCommands yes | no
               If set to "yes", drawing commands  are  printed  as
               they're  executed  (useful  for  debugging).   This
-
-
-
-                         04 November 2002                       6
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
-
               defaults to "no".
 
        errQuiet yes | no
@@ -443,6 +454,18 @@ EXAMPLES
        displayCIDFontX Adobe-Japan1 "-*-fixed-medium-r-normal-*-%s-*-*-*-*-*-jisx0208.1983-0" JISX0208
 
        # use the Bakoma Type 1 fonts
+
+
+
+                         05 December 2002                       7
+
+
+
+
+
+xpdfrc(5)                                               xpdfrc(5)
+
+
        # (this assumes they happen to be installed in /usr/local/fonts/bakoma)
        fontDir /usr/local/fonts/bakoma
 
@@ -453,18 +476,6 @@ EXAMPLES
        psEmbedType1Fonts    yes
        psEmbedTrueTypeFonts yes
        psFile               "| lpr -Pprinter5"
-
-
-
-
-                         04 November 2002                       7
-
-
-
-
-
-xpdfrc(5)                                               xpdfrc(5)
-
 
        # assume that the PostScript printer has the Univers and
        # Univers-Bold fonts
@@ -512,17 +523,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-                         04 November 2002                       8
+                         05 December 2002                       8
 
 

@@ -2,7 +2,7 @@
 1 xpdf
 
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 2.00)
+       (version 2.01)
 
        xpdf [options] [PDF-file [page | +dest]]
 
@@ -155,51 +155,55 @@
               Start/contact xpdf  remote  server  with  specified
               name (see the REMOTE SERVER MODE section below).
 
+       -reload
+              Reload  xpdf  remote  server  window  (with -remote
+              only).
+
        -raise Raise  xpdf  remote  server  window  (with  -remote
               only).
 
        -quit  Kill xpdf remote server (with -remote only).
 
-       -cmd   Print commands  as  they're  executed  (useful  for
+       -cmd   Print  commands  as  they're  executed  (useful for
               debugging).  [config file: printCommands]
 
-       -q     Don't  print any messages or errors.  [config file:
+       -q     Don't print any messages or errors.  [config  file:
               errQuiet]
 
        -cfg config-file
-              Read config-file in place of ~/.xpdfrc or the  sys-
+              Read  config-file in place of ~/.xpdfrc or the sys-
               tem-wide config file.
 
        -v     Print copyright and version information.
 
-       -h     Print  usage  information.   (-help  and --help are
+       -h     Print usage information.   (-help  and  --help  are
               equivalent.)
 
-       Several other standard X options and resources  will  work
+       Several  other  standard X options and resources will work
        as expected:
 
        -display display
               [X resource: xpdf.display]
 
        -fg color
-              (-foreground    is   equivalent.)    [X   resource:
-              xpdf.foreground]
+              (-foreground   is   equivalent.)    [X    resource:
+              xpdf*Foreground]
 
        -bg color
-              (-background   is   equivalent.)    [X    resource:
-              xpdf.background]
+              (-background    is   equivalent.)    [X   resource:
+              xpdf*Background]
 
        -font font
-              (-fn is equivalent.)  [X resource: xpdf.font]
+              (-fn is equivalent.)  [X resource: xpdf*fontList]
 
-       The  color and font options only affect the user interface
+       The color and font options only affect the user  interface
        elements, not the PDF display (the 'paper').
 
-       The following X resources do not have command line  option
+       The  following X resources do not have command line option
        equivalents:
 
        xpdf.viKeys
-              Enables  the  'h',  'l', 'k' and 'j' keys for left,
+              Enables the 'h', 'l', 'k' and 'j'  keys  for  left,
               right, up, and down scrolling.
 
 2 CONTROLS

@@ -1,4 +1,4 @@
-Subject: ANNOUNCE: Xpdf 2.00 - a PDF viewer for X
+Subject: ANNOUNCE: Xpdf 2.01 - a PDF viewer for X
 
 
 Glyph & Cog, LLC is pleased to announce a new version of Xpdf, the
@@ -11,11 +11,14 @@ components (pdftops, pdftotext, etc.) also run on Win32 systems and
 should run on pretty much any system with a decent C++ compiler.
 
 Major changes:
-* Switched to the Motif toolkit.
-* Support multiple open documents (in separate windows).
-* Added document outlines to the viewer.
-* Modified the text extraction (placement) algorithm.
-* Implemented the JBIG2 decoder.
+* Redesigned the text extraction process:
+  - process the text into "reading order"
+  - added a "-layout" flag to pdftotext to switch back to the old
+    style, where physical layout is maintained
+  - use of the "-raw" flag is no longer recommended
+* Added the -reload option for xpdf (in remote mode).
+* Added support for external CID fonts; added the displayCIDFontT1 and
+  displayNamedCIDFontT1 commands to the xpdfrc file.
 
 See the `CHANGES' file for a complete list of changes.
 
