@@ -24,6 +24,7 @@
 // command line options
 //------------------------------------------------------------------------
 
+static GBool openArg = gFalse;
 static GBool reverseVideoArg = gFalse;
 static char paperColorArg[256] = "";
 static char matteColorArg[256] = "";
@@ -42,6 +43,7 @@ static GBool printVersionArg = gFalse;
 static GBool printHelpArg = gFalse;
 
 static ArgDesc argDesc[] = {
+  {"-open",         argFlag,   &openArg,           0,                          "open file using a default remote server"},
   {"-rv",           argFlag,   &reverseVideoArg,   0,                          "reverse video"},
   {"-papercolor",   argString, paperColorArg,      sizeof(paperColorArg),      "color of paper background"},
   {"-mattecolor",   argString, matteColorArg,      sizeof(matteColorArg),      "color of matte background"},
@@ -75,7 +77,7 @@ XpdfApp::XpdfApp(int &argc, char **argv):
   QLocalSocket *sock;
   QString sockName;
   const char *fileName, *dest;
-  GString *color;
+  GString *color, *cmd;
   GBool ok;
   int pg, i;
 
@@ -183,6 +185,40 @@ XpdfApp::XpdfApp(int &argc, char **argv):
     }
   }
 
+  //--- default remote server
+  if (openArg) {
+    sock = new QLocalSocket(this);
+    sockName = "xpdf_default";
+    sock->connectToServer(sockName, QIODevice::WriteOnly);
+    if (sock->waitForConnected(5000)) {
+      if (argc >= 2) {
+	cmd = GString::format("openFileIn({0:s},tab)\n", argv[1]);
+	sock->write(cmd->getCString());
+	delete cmd;
+	while (sock->bytesToWrite()) {
+	  sock->waitForBytesWritten(5000);
+	}
+      }
+      delete sock;
+      ::exit(0);
+    } else {
+      delete sock;
+      if (argc >= 2) {
+	// on Windows: xpdf.cc converts command line args to UTF-8
+	// on Linux: command line args are in the local 8-bit charset
+#ifdef _WIN32
+	QString qFileName = QString::fromUtf8(argv[1]);
+#else
+	QString qFileName = QString::fromLocal8Bit(argv[1]);
+#endif
+	openInNewWindow(qFileName, 1, "", passwordArg, fullScreen, "default");
+      } else {
+	newWindow(fullScreen, "default");
+      }
+      return;
+    }
+  }
+
   //--- load PDF file(s) requested on the command line
   if (argc >= 2) {
     i = 1;
@@ -241,7 +277,8 @@ XpdfViewer *XpdfApp::newWindow(GBool fullScreen,
 }
 
 GBool XpdfApp::openInNewWindow(QString fileName, int page, QString dest,
-			       QString password, GBool fullScreen) {
+			       QString password, GBool fullScreen,
+			       const char *remoteServerName) {
   XpdfViewer *viewer;
 
   viewer = XpdfViewer::create(this, fileName, page, dest, password, fullScreen);
@@ -249,6 +286,9 @@ GBool XpdfApp::openInNewWindow(QString fileName, int page, QString dest,
     return gFalse;
   }
   viewers->append(viewer);
+  if (remoteServerName) {
+    viewer->startRemoteServer(remoteServerName);
+  }
   viewer->tweakSize();
   viewer->show();
   return gTrue;

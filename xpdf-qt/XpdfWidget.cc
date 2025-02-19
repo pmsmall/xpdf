@@ -20,6 +20,8 @@
 #include <QPaintEvent>
 #include <QTimer>
 #include <QAbstractScrollArea>
+#include <QGesture>
+#include <QGestureEvent>
 #if XPDFWIDGET_PRINTING
 #  include <QPrinter>
 #  include <QPrintDialog>
@@ -111,6 +113,11 @@ void XpdfWidget::setup(const QColor &paperColor, const QColor &matteColor,
 
   keyPassthrough = false;
   mousePassthrough = false;
+
+  viewport()->installEventFilter(this);
+  touchPanEnabled = false;
+  touchZoomEnabled = false;
+  pinchZoomStart = 100;
 
   tickTimer = new QTimer(this);
   connect(tickTimer, SIGNAL(timeout()), this, SLOT(tick()));
@@ -210,6 +217,24 @@ void XpdfWidget::enablePan(bool on) {
   try {
     core->enablePan((GBool)on);
   } catch (GMemException e) {
+  }
+}
+
+void XpdfWidget::enableTouchPan(bool on) {
+  touchPanEnabled = on;
+  if (touchPanEnabled) {
+    viewport()->grabGesture(Qt::PanGesture);
+  } else {
+    viewport()->ungrabGesture(Qt::PanGesture);
+  }
+}
+
+void XpdfWidget::enableTouchZoom(bool on) {
+  touchZoomEnabled = on;
+  if (touchZoomEnabled) {
+    viewport()->grabGesture(Qt::PinchGesture);
+  } else {
+    viewport()->ungrabGesture(Qt::PinchGesture);
   }
 }
 
@@ -2007,6 +2032,43 @@ void XpdfWidget::wheelEvent(QWheelEvent *e) {
     QAbstractScrollArea::wheelEvent(e);
   }
   emit mouseWheel(e);
+}
+
+bool XpdfWidget::eventFilter(QObject *obj, QEvent *event) {
+  QGestureEvent *gestureEvent;
+  QPanGesture *panGesture;
+  QPinchGesture *pinchGesture;
+  double z;
+
+  if (obj == viewport() && event->type() == QEvent::Gesture) {
+    gestureEvent = (QGestureEvent *)event;
+    if (touchPanEnabled &&
+	(panGesture = (QPanGesture *)gestureEvent->gesture(Qt::PanGesture))) {
+      core->scrollTo(core->getScrollX() - (int)panGesture->delta().x(),
+		     core->getScrollY() - (int)panGesture->delta().y());
+      gestureEvent->accept();
+      return true;
+    } else if (touchZoomEnabled &&
+	       (pinchGesture =
+		  (QPinchGesture *)gestureEvent->gesture(Qt::PinchGesture))) {
+      if (pinchGesture->changeFlags() & QPinchGesture::ScaleFactorChanged) {
+	if (pinchGesture->state() == Qt::GestureStarted) {
+	  pinchZoomStart = getZoomPercent(core->getMidPageNum());
+	} else {
+	  z = pinchZoomStart * pinchGesture->totalScaleFactor();
+	  if (z < 10) {
+	    z = 10;
+	  } else if (z > 800) {
+	    z = 800;
+	  }
+	  core->zoomCentered(z);
+	}
+      }
+      gestureEvent->accept();
+      return true;
+    }
+  }
+  return QAbstractScrollArea::eventFilter(obj, event);
 }
 
 void XpdfWidget::tick() {

@@ -444,7 +444,6 @@ void QtPDFCore::doLinkCbk(LinkAction *action) {
 QString QtPDFCore::getSelectedTextQString() {
   GString *s, *enc;
   QString qs;
-  QChar c;
   int i;
 
   if (!doc->okToCopy()) {

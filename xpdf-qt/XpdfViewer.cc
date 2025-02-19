@@ -28,6 +28,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QProcess>
 #include <QProgressDialog>
@@ -49,6 +50,8 @@
 #include "GList.h"
 #include "GlobalParams.h"
 #include "QtPDFCore.h"
+#include "PDFDoc.h"
+#include "TextString.h"
 #include "XpdfApp.h"
 #include "XpdfViewer.h"
 #include "gmempp.h"
@@ -74,7 +77,7 @@ static const char *aboutHTML =
   "<br>"
   "XpdfReader uses the following open source libraries:"
   "<ul>"
-  "FreeType is copyright 2006-2018 David Turner, Robert Wilhelm, and Werner Lemberg.  FreeType is used here under the terms of the FreeType Project License."
+  "FreeType is copyright 2006-2019 David Turner, Robert Wilhelm, and Werner Lemberg.  FreeType is used here under the terms of the FreeType Project License."
   "<li>The Qt Toolkit is Copyright 2015 The Qt Company Ltd.  Qt is used here under the terms of the LGPL v2.1."
   "</ul>";
 
@@ -119,6 +122,7 @@ XpdfViewerCmd XpdfViewer::cmdTab[] = {
 #endif
   { "endPan",                  0, gTrue,  gTrue,  &XpdfViewer::cmdEndPan },
   { "endSelection",            0, gTrue,  gTrue,  &XpdfViewer::cmdEndSelection },
+  { "expandSidebar",           1, gFalse, gFalse, &XpdfViewer::cmdExpandSidebar },
   { "find",                    0, gTrue,  gFalse, &XpdfViewer::cmdFind },
   { "findFirst",               0, gTrue,  gFalse, &XpdfViewer::cmdFindFirst },
   { "findNext",                0, gTrue,  gFalse, &XpdfViewer::cmdFindNext },
@@ -140,6 +144,7 @@ XpdfViewerCmd XpdfViewer::cmdTab[] = {
   { "gotoPage",                1, gTrue,  gFalse, &XpdfViewer::cmdGotoPage },
 //~   { "gotoPageNoScroll",        1, gTrue,  gFalse, &XpdfViewer::cmdGotoPageNoScroll },
   { "help",                    0, gFalse, gFalse, &XpdfViewer::cmdHelp },
+  { "hideToolbar",             0, gFalse, gFalse, &XpdfViewer::cmdHideToolbar },
   { "horizontalContinuousMode",0, gFalse, gFalse, &XpdfViewer::cmdHorizontalContinuousMode },
   { "linearSelectMode",        0, gFalse, gFalse, &XpdfViewer::cmdLinearSelectMode },
   { "loadTabState",            0, gFalse, gFalse, &XpdfViewer::cmdLoadTabState },
@@ -152,11 +157,11 @@ XpdfViewerCmd XpdfViewer::cmdTab[] = {
   { "openErrorWindow",         0, gFalse, gFalse, &XpdfViewer::cmdOpenErrorWindow },
   { "openFile",                1, gFalse, gFalse, &XpdfViewer::cmdOpenFile },
   { "openFileAtDest",          2, gFalse, gFalse, &XpdfViewer::cmdOpenFileAtDest },
-//~   { "openFileAtDestInNewWin",  2, gFalse, gFalse, &XpdfViewer::cmdOpenFileAtDestInNewWin },
+  { "openFileAtDestIn",        3, gFalse, gFalse, &XpdfViewer::cmdOpenFileAtDestIn },
   { "openFileAtPage",          2, gFalse, gFalse, &XpdfViewer::cmdOpenFileAtPage },
-//~   { "openFileAtPageInNewWin",  2, gFalse, gFalse, &XpdfViewer::cmdOpenFileAtPageInNewWin },
-//~   { "openFileInNewWin",        1, gFalse, gFalse, &XpdfViewer::cmdOpenFileInNewWin },
-//~   { "openInNewWin",            0, gFalse, gFalse, &XpdfViewer::cmdOpenInNewWin },
+  { "openFileAtPageIn",        3, gFalse, gFalse, &XpdfViewer::cmdOpenFileAtPageIn },
+  { "openFileIn",              2, gFalse, gFalse, &XpdfViewer::cmdOpenFileIn },
+  { "openIn",                  1, gFalse, gFalse, &XpdfViewer::cmdOpenIn },
   { "openSidebar",             0, gFalse, gFalse, &XpdfViewer::cmdOpenSidebar },
   { "openSidebarMoveResizeWin",    0, gFalse, gFalse, &XpdfViewer::cmdOpenSidebarMoveResizeWin },
   { "openSidebarResizeWin",    0, gFalse, gFalse, &XpdfViewer::cmdOpenSidebarResizeWin },
@@ -194,6 +199,8 @@ XpdfViewerCmd XpdfViewer::cmdTab[] = {
   { "scrollUp",                1, gTrue,  gFalse, &XpdfViewer::cmdScrollUp },
   { "scrollUpPrevPage",        1, gTrue,  gFalse, &XpdfViewer::cmdScrollUpPrevPage },
   { "setSelection",            5, gTrue,  gFalse, &XpdfViewer::cmdSetSelection },
+  { "showToolbar",             0, gFalse, gFalse, &XpdfViewer::cmdShowToolbar },
+  { "shrinkSidebar",           1, gFalse, gFalse, &XpdfViewer::cmdShrinkSidebar },
   { "sideBySideContinuousMode",0, gFalse, gFalse, &XpdfViewer::cmdSideBySideContinuousMode },
   { "sideBySideSingleMode",    0, gFalse, gFalse, &XpdfViewer::cmdSideBySideSingleMode },
   { "singlePageMode",          0, gFalse, gFalse, &XpdfViewer::cmdSinglePageMode },
@@ -205,6 +212,9 @@ XpdfViewerCmd XpdfViewer::cmdTab[] = {
   { "toggleSidebar",           0, gFalse, gFalse, &XpdfViewer::cmdToggleSidebar },
   { "toggleSidebarMoveResizeWin",  0, gFalse, gFalse, &XpdfViewer::cmdToggleSidebarMoveResizeWin },
   { "toggleSidebarResizeWin",  0, gFalse, gFalse, &XpdfViewer::cmdToggleSidebarResizeWin },
+  { "toggleToolbar",           0, gFalse, gFalse, &XpdfViewer::cmdShowToolbar },
+  { "viewPageLabels",          0, gFalse, gFalse, &XpdfViewer::cmdViewPageLabels },
+  { "viewPageNumbers",         0, gFalse, gFalse, &XpdfViewer::cmdViewPageNumbers },
   { "windowMode",              0, gFalse, gFalse, &XpdfViewer::cmdWindowMode },
   { "zoomFitPage",             0, gFalse, gFalse, &XpdfViewer::cmdZoomFitPage },
   { "zoomFitWidth",            0, gFalse, gFalse, &XpdfViewer::cmdZoomFitWidth },
@@ -726,8 +736,6 @@ bool LayerModel::setData(const QModelIndex &idx, const QVariant &value,
 }
 
 Qt::ItemFlags LayerModel::flags(const QModelIndex &idx) const {
-  Qt::ItemFlags f;
-
   if (!idx.isValid()) {
     return 0;
   }
@@ -1132,6 +1140,7 @@ void XpdfViewer::cmdCloseSidebar(GString *args[], int nArgs,
   sizes[0] = 0;
   sizes[1] += sidebarWidth;
   sidebarSplitter->setSizes(sizes);
+  toggleSidebarMenuItem->setChecked(false);
 }
 
 void XpdfViewer::cmdCloseSidebarMoveResizeWin(GString *args[], int nArgs,
@@ -1147,6 +1156,7 @@ void XpdfViewer::cmdCloseSidebarMoveResizeWin(GString *args[], int nArgs,
   sidebarSplitter->setSizes(sizes);
   setGeometry(geometry().x() + sidebarWidth, geometry().y(),
 	      newWidth, height());
+  toggleSidebarMenuItem->setChecked(false);
 }
 
 void XpdfViewer::cmdCloseSidebarResizeWin(GString *args[], int nArgs,
@@ -1161,6 +1171,7 @@ void XpdfViewer::cmdCloseSidebarResizeWin(GString *args[], int nArgs,
   sizes[0] = 0;
   sidebarSplitter->setSizes(sizes);
   resize(newWidth, height());
+  toggleSidebarMenuItem->setChecked(false);
 }
 
 void XpdfViewer::cmdCloseTabOrQuit(GString *args[], int nArgs,
@@ -1200,6 +1211,19 @@ void XpdfViewer::cmdEndPan(GString *args[], int nArgs, QInputEvent *event) {
 void XpdfViewer::cmdEndSelection(GString *args[], int nArgs,
 				 QInputEvent *event) {
   currentTab->pdf->getCore()->endSelection(mouseX(event), mouseY(event));
+}
+
+void XpdfViewer::cmdExpandSidebar(GString *args[], int nArgs,
+				  QInputEvent *event) {
+  QList<int> sizes = sidebarSplitter->sizes();
+  int nPixels = atoi(args[0]->getCString());
+  if (nPixels > sizes[1]) {
+    nPixels = sizes[1];
+  }
+  sizes[0] += nPixels;
+  sizes[1] -= nPixels;
+  sidebarSplitter->setSizes(sizes);
+  toggleSidebarMenuItem->setChecked(true);
 }
 
 void XpdfViewer::cmdFind(GString *args[], int nArgs, QInputEvent *event) {
@@ -1337,6 +1361,12 @@ void XpdfViewer::cmdHelp(GString *args[], int nArgs, QInputEvent *event) {
   QDesktopServices::openUrl(QUrl(helpURL, QUrl::TolerantMode));
 }
 
+void XpdfViewer::cmdHideToolbar(GString *args[], int nArgs,
+				QInputEvent *event) {
+  toolBar->hide();
+  toggleToolbarMenuItem->setChecked(false);
+}
+
 void XpdfViewer::cmdHorizontalContinuousMode(GString *args[], int nArgs,
 					     QInputEvent *event) {
   currentTab->pdf->setDisplayMode(XpdfWidget::pdfDisplayHorizontalContinuous);
@@ -1469,9 +1499,71 @@ void XpdfViewer::cmdOpenFileAtDest(GString *args[], int nArgs,
   open(args[0]->getCString(), 1, args[1]->getCString(), "");
 }
 
+void XpdfViewer::cmdOpenFileAtDestIn(GString *args[], int nArgs,
+				     QInputEvent *event) {
+  if (!args[2]->cmp("win")) {
+    app->openInNewWindow(args[0]->getCString(), 1, args[1]->getCString());
+  } else if (!args[2]->cmp("tab")) {
+    openInNewTab(args[0]->getCString(), 1, args[1]->getCString(), "", gTrue);
+  } else {
+    open(args[0]->getCString(), 1, args[1]->getCString(), "");
+  }
+}
+
 void XpdfViewer::cmdOpenFileAtPage(GString *args[], int nArgs,
 				   QInputEvent *event) {
   open(args[0]->getCString(), atoi(args[1]->getCString()), "", "");
+}
+
+void XpdfViewer::cmdOpenFileAtPageIn(GString *args[], int nArgs,
+				     QInputEvent *event) {
+  if (!args[2]->cmp("win")) {
+    app->openInNewWindow(args[0]->getCString(), atoi(args[1]->getCString()));
+  } else if (!args[2]->cmp("tab")) {
+    openInNewTab(args[0]->getCString(), atoi(args[1]->getCString()),
+		 "", "", gTrue);
+  } else {
+    open(args[0]->getCString(), atoi(args[1]->getCString()), "", "");
+  }
+}
+
+void XpdfViewer::cmdOpenFileIn(GString *args[], int nArgs,
+			       QInputEvent *event) {
+  if (!args[1]->cmp("win")) {
+    app->openInNewWindow(args[0]->getCString(), 1);
+  } else if (!args[1]->cmp("tab")) {
+    openInNewTab(args[0]->getCString(), 1, "", "", gTrue);
+  } else {
+    open(args[0]->getCString(), 1, "", "");
+  }
+}
+
+void XpdfViewer::cmdOpenIn(GString *args[], int nArgs, QInputEvent *event) {
+  QString startFile, fileName;
+  QDir startDir;
+
+  if (!(startFile = currentTab->pdf->getFileName()).isEmpty()) {
+    startDir = QDir(startFile);
+    startDir.cdUp();
+  } else if (!lastFileOpened.isEmpty()) {
+    startDir = QDir(lastFileOpened);
+    startDir.cdUp();
+  } else {
+    startDir = QDir(".");
+  }
+  fileName = QFileDialog::getOpenFileName(this, "Open PDF File",
+					  startDir.canonicalPath(),
+					  "PDF files (*.pdf)");
+  if (fileName.isEmpty()) {
+    return;
+  }
+  if (!args[0]->cmp("win")) {
+    app->openInNewWindow(fileName, 1);
+  } else if (!args[0]->cmp("tab")) {
+    openInNewTab(fileName, 1, "", "", gTrue);
+  } else {
+    open(fileName, 1, "", "");
+  }
 }
 
 void XpdfViewer::cmdOpenSidebar(GString *args[], int nArgs,
@@ -1483,6 +1575,7 @@ void XpdfViewer::cmdOpenSidebar(GString *args[], int nArgs,
   sizes[0] = sidebarWidth;
   sizes[1] -= sidebarWidth;
   sidebarSplitter->setSizes(sizes);
+  toggleSidebarMenuItem->setChecked(true);
 }
 
 void XpdfViewer::cmdOpenSidebarMoveResizeWin(GString *args[], int nArgs,
@@ -1497,6 +1590,7 @@ void XpdfViewer::cmdOpenSidebarMoveResizeWin(GString *args[], int nArgs,
   sidebarSplitter->setSizes(sizes);
   setGeometry(geometry().x() - sidebarWidth, geometry().y(),
 	      newWidth, height());
+  toggleSidebarMenuItem->setChecked(true);
 }
 
 void XpdfViewer::cmdOpenSidebarResizeWin(GString *args[], int nArgs,
@@ -1510,6 +1604,7 @@ void XpdfViewer::cmdOpenSidebarResizeWin(GString *args[], int nArgs,
   newWidth = width() + sidebarWidth;
   sidebarSplitter->setSizes(sizes);
   resize(newWidth, height());
+  toggleSidebarMenuItem->setChecked(true);
 }
 
 void XpdfViewer::cmdPageDown(GString *args[], int nArgs, QInputEvent *event) {
@@ -1842,6 +1937,29 @@ void XpdfViewer::cmdSetSelection(GString *args[], int nArgs,
 				       atof(args[4]->getCString()));
 }
 
+void XpdfViewer::cmdShowToolbar(GString *args[], int nArgs,
+				QInputEvent *event) {
+  toolBar->show();
+  toggleToolbarMenuItem->setChecked(true);
+}
+
+void XpdfViewer::cmdShrinkSidebar(GString *args[], int nArgs,
+				  QInputEvent *event) {
+  QList<int> sizes = sidebarSplitter->sizes();
+  if (sizes[0] == 0) {
+    return;
+  }
+  int nPixels = atoi(args[0]->getCString());
+  if (sizes[0] - nPixels
+      < sidebarSplitter->widget(0)->minimumSizeHint().width()) {
+    cmdCloseSidebar(args, nArgs, event);
+    return;
+  }
+  sizes[0] -= nPixels;
+  sizes[1] += nPixels;
+  sidebarSplitter->setSizes(sizes);
+}
+
 void XpdfViewer::cmdSideBySideContinuousMode(GString *args[], int nArgs,
 					     QInputEvent *event) {
   currentTab->pdf->setDisplayMode(XpdfWidget::pdfDisplaySideBySideContinuous);
@@ -1925,6 +2043,27 @@ void XpdfViewer::cmdToggleSidebarResizeWin(GString *args[], int nArgs,
   } else {
     cmdCloseSidebarResizeWin(args, nArgs, event);
   }
+}
+
+void XpdfViewer::cmdToggleToolbar(GString *args[], int nArgs,
+				  QInputEvent *event) {
+  if (toolBar->isVisible()) {
+    cmdHideToolbar(args, nArgs, event);
+  } else {
+    cmdShowToolbar(args, nArgs, event);
+  }
+}
+
+void XpdfViewer::cmdViewPageLabels(GString *args[], int nArgs,
+				   QInputEvent *event) {
+  viewPageLabelsMenuItem->setChecked(true);
+  updatePageNumberOrLabel(currentTab->pdf->getMidPage());
+}
+
+void XpdfViewer::cmdViewPageNumbers(GString *args[], int nArgs,
+				    QInputEvent *event) {
+  viewPageLabelsMenuItem->setChecked(false);
+  updatePageNumberOrLabel(currentTab->pdf->getMidPage());
 }
 
 void XpdfViewer::cmdWindowMode(GString *args[], int nArgs,
@@ -2321,10 +2460,39 @@ void XpdfViewer::keyPressEvent(QKeyEvent *e) {
   keyPress(e);
 }
 
+void XpdfViewer::dragEnterEvent(QDragEnterEvent *e) {
+  if (e->mimeData()->hasUrls() &&
+      e->mimeData()->urls().front().isLocalFile()) {
+    e->acceptProposedAction();
+  }
+}
+
+void XpdfViewer::dropEvent(QDropEvent *e) {
+  if (e->mimeData()->hasUrls()) {
+    QUrl url = e->mimeData()->urls().front();
+    if (url.isLocalFile()) {
+      openInNewTab(url.toLocalFile(), 1, "", "", gTrue);
+    }
+  }
+}
+
+bool XpdfViewer::eventFilter(QObject *watched, QEvent *event) {
+  // if the user clicks in the find edit box, clear the find error
+  // indicator (if any)
+  if (watched == findEdit && event->type() == QEvent::MouseButtonPress) {
+    clearFindError();
+  }
+  return false;
+}
+
 void XpdfViewer::pageChange(int pg) {
-  pageNumber->setText(QString().setNum(pg));
+  updatePageNumberOrLabel(pg);
   updateZoomInfo();
   updateOutline(pg);
+}
+
+void XpdfViewer::sidebarSplitterMoved(int pos, int index) {
+  toggleSidebarMenuItem->setChecked(pos > 0);
 }
 
 #if XPDFWIDGET_PRINTING
@@ -2365,7 +2533,7 @@ void XpdfViewer::openMenuAction() {
 }
 
 void XpdfViewer::openInNewWinMenuAction() {
-  execCmd("openInNewWin", NULL);
+  execCmd("openIn(win)", NULL);
 }
 
 void XpdfViewer::reloadMenuAction() {
@@ -2430,6 +2598,18 @@ void XpdfViewer::zoomToSelectionMenuAction() {
   execCmd("zoomToSelection", NULL);
 }
 
+void XpdfViewer::toggleToolbarMenuAction(bool checked) {
+  execCmd(checked ? "showToolbar" : "hideToolbar", NULL); 
+}
+
+void XpdfViewer::toggleSidebarMenuAction(bool checked) {
+  execCmd(checked ? "openSidebar" : "closeSidebar", NULL); 
+}
+
+void XpdfViewer::viewPageLabelsMenuAction(bool checked) {
+  execCmd(checked ? "viewPageLabels" : "viewPageNumbers", NULL);
+}
+
 
 
 void XpdfViewer::newTabMenuAction() {
@@ -2470,11 +2650,30 @@ void XpdfViewer::popupMenuAction(int idx) {
   }
 }
 
-void XpdfViewer::pageNumberChanged() {
-  int pg;
-  GString *cmd;
+void XpdfViewer::toggleSidebarButtonPressed() {
+  execCmd("toggleSidebar", NULL);
+}
 
-  pg = pageNumber->text().toInt();
+void XpdfViewer::pageNumberChanged() {
+  TextString *ts;
+  GString *cmd;
+  int pg, i;
+
+  if (viewPageLabelsMenuItem->isChecked() &&
+      currentTab->pdf->getCore()->getDoc()->getCatalog()->hasPageLabels()) {
+    ts = new TextString();
+    for (i = 0; i < pageNumber->text().size(); ++i) {
+      ts->append((Unicode)pageNumber->text().at(i).unicode());
+    }
+    pg = currentTab->pdf->getCore()->getDoc()->getCatalog()
+                                                ->getPageNumFromPageLabel(ts);
+    delete ts;
+    if (pg <= 0) {
+      return;
+    }
+  } else {
+    pg = pageNumber->text().toInt();
+  }
   cmd = GString::format("gotoPage({0:d})", pg);
   execCmd(cmd->getCString(), NULL);
   delete cmd;
@@ -2609,6 +2808,8 @@ void XpdfViewer::createWindow() {
 
   setWindowIcon(QIcon(":/xpdf-icon"));
 
+  setAcceptDrops(true);
+
   createMainMenu();
 
   createXpdfPopupMenu();
@@ -2616,9 +2817,17 @@ void XpdfViewer::createWindow() {
   createToolBar();
   addToolBar(toolBar);
   setUnifiedTitleAndToolBarOnMac(true);
+  if (globalParams->getInitialToolbarState()) {
+    toggleToolbarMenuItem->setChecked(true);
+  } else {
+    toolBar->hide();
+    toggleToolbarMenuItem->setChecked(false);
+  }
 
   sidebarSplitter = new QSplitter(Qt::Horizontal);
   setCentralWidget(sidebarSplitter);
+  connect(sidebarSplitter, SIGNAL(splitterMoved(int, int)),
+	  this, SLOT(sidebarSplitterMoved(int, int)));
 
   QSplitter *vSplitter = new QSplitter(Qt::Vertical);
   sidebarSplitter->addWidget(vSplitter);
@@ -2638,10 +2847,13 @@ void XpdfViewer::createWindow() {
   sidebarSplitter->addWidget(viewerStack);
 
   QList<int> sidebarSplitterSizes = sidebarSplitter->sizes();
-  if (!globalParams->getInitialSidebarState()) {
+  if (globalParams->getInitialSidebarState()) {
+    toggleSidebarMenuItem->setChecked(true);
+  } else {
     sidebarSplitterSizes[0] = 0;
     sidebarSplitterSizes[1] = 1;
     sidebarSplitter->setSizes(sidebarSplitterSizes);
+    toggleSidebarMenuItem->setChecked(false);
   }
   // note: this is just an arbitrary initial value for sidebarWidth;
   // it will be updated by open/close/toggleSidebar
@@ -2676,11 +2888,56 @@ void XpdfViewer::createToolBar() {
   toolBar->setFloatable(false);
   toolBar->setMovable(false);
 
-  //--- page number and page count
+  //--- toolbar icon size
   pageNumber = new QLineEdit();
   toolBarFontSize = pageNumber->sizeHint().height();
   toolBar->setIconSize(QSize(toolBarFontSize - 2, toolBarFontSize - 2));
   //~ not sure why the magic "+6" is needed
+
+  //--- toggle sidebar button
+  addToolBarButton(QIcon(":/toggleSidebar-button"),
+		   SLOT(toggleSidebarButtonPressed()), "show/hide sidebar");
+
+  //--- status indicator
+  QToolButton *indicatorBtn =
+      addToolBarButton(QIcon(":/indicator-icon0"),
+		       SLOT(statusIndicatorPressed()),
+		       "click to open error window");
+  indicatorIcons.append(QIcon(":/indicator-icon0"));
+  indicatorIcons.append(QIcon(":/indicator-icon1"));
+  indicatorIcons.append(QIcon(":/indicator-icon2"));
+  indicatorIcons.append(QIcon(":/indicator-icon3"));
+  indicatorIcons.append(QIcon(":/indicator-icon4"));
+  indicatorIcons.append(QIcon(":/indicator-icon5"));
+  indicatorIcons.append(QIcon(":/indicator-icon6"));
+  indicatorIcons.append(QIcon(":/indicator-icon7"));
+  indicatorErrIcons.append(QIcon(":/indicator-icon-err0"));
+  indicatorErrIcons.append(QIcon(":/indicator-icon-err1"));
+  indicatorErrIcons.append(QIcon(":/indicator-icon-err2"));
+  indicatorErrIcons.append(QIcon(":/indicator-icon-err3"));
+  indicatorErrIcons.append(QIcon(":/indicator-icon-err4"));
+  indicatorErrIcons.append(QIcon(":/indicator-icon-err5"));
+  indicatorErrIcons.append(QIcon(":/indicator-icon-err6"));
+  indicatorErrIcons.append(QIcon(":/indicator-icon-err7"));
+  indicatorAnimation = new PropertyListAnimation(indicatorBtn, "icon",
+						 indicatorIcons);
+  indicatorAnimation->setDuration(1000);
+  indicatorAnimation->setLoopCount(-1);
+  indicatorAnimation->setStartValue(indicatorIcons[0]);
+  indicatorAnimation->setEndValue(indicatorIcons[7]);
+  indicatorAnimation->start();
+  indicatorAnimation->pause();
+
+  //--- selection mode toggle
+  selectModeBtn = addToolBarButton(QIcon(":/selectModeLinear-button"),
+				   SLOT(selectModeButtonPressed()),
+				   "toggle selection mode");
+
+  addToolBarSeparator();
+
+  //--- page number and page count
+  // note: the pageNumber widget was created earlier because we need
+  // to look at its font size
   pageNumber->setFixedWidth(pageNumber->fontMetrics().width("00000") + 6);
   pageNumber->setToolTip("current page number");
   toolBar->addWidget(pageNumber);
@@ -2689,16 +2946,16 @@ void XpdfViewer::createToolBar() {
   addToolBarSpacing(2);
   connect(pageNumber, SIGNAL(returnPressed()), this, SLOT(pageNumberChanged()));
   pageCount = new QLabel("");
-  pageCount->setMinimumWidth(pageNumber->fontMetrics().width("0000"));
   pageCount->setToolTip("page count");
   toolBar->addWidget(pageCount);
-  addToolBarSeparator();
+  addToolBarSpacing(4);
 
   //--- back / forward buttons
   addToolBarButton(QIcon(":/back-button"),
 		   SLOT(backButtonPressed()), "back to previous view");
   addToolBarButton(QIcon(":/forward-button"),
 		   SLOT(forwardButtonPressed()), "forward to next view");
+
   addToolBarSeparator();
 
   //--- zoom controls
@@ -2732,49 +2989,15 @@ void XpdfViewer::createToolBar() {
   fitPageBtn = addToolBarButton(QIcon(":/fitPage-button"),
 				SLOT(fitPageButtonPressed()),
 				"fit page to window");
-  addToolBarSeparator();
 
-  //--- selection mode toggle
-  selectModeBtn = addToolBarButton(QIcon(":/selectModeLinear-button"),
-				   SLOT(selectModeButtonPressed()),
-				   "toggle selection mode");
   addToolBarSeparator();
-
-  //--- status indicator
-  QToolButton *indicatorBtn =
-      addToolBarButton(QIcon(":/indicator-icon0"),
-		       SLOT(statusIndicatorPressed()),
-		       "click to open error window");
-  indicatorIcons.append(QIcon(":/indicator-icon0"));
-  indicatorIcons.append(QIcon(":/indicator-icon1"));
-  indicatorIcons.append(QIcon(":/indicator-icon2"));
-  indicatorIcons.append(QIcon(":/indicator-icon3"));
-  indicatorIcons.append(QIcon(":/indicator-icon4"));
-  indicatorIcons.append(QIcon(":/indicator-icon5"));
-  indicatorIcons.append(QIcon(":/indicator-icon6"));
-  indicatorIcons.append(QIcon(":/indicator-icon7"));
-  indicatorErrIcons.append(QIcon(":/indicator-icon-err0"));
-  indicatorErrIcons.append(QIcon(":/indicator-icon-err1"));
-  indicatorErrIcons.append(QIcon(":/indicator-icon-err2"));
-  indicatorErrIcons.append(QIcon(":/indicator-icon-err3"));
-  indicatorErrIcons.append(QIcon(":/indicator-icon-err4"));
-  indicatorErrIcons.append(QIcon(":/indicator-icon-err5"));
-  indicatorErrIcons.append(QIcon(":/indicator-icon-err6"));
-  indicatorErrIcons.append(QIcon(":/indicator-icon-err7"));
-  indicatorAnimation = new PropertyListAnimation(indicatorBtn, "icon",
-						 indicatorIcons);
-  indicatorAnimation->setDuration(1000);
-  indicatorAnimation->setLoopCount(-1);
-  indicatorAnimation->setStartValue(indicatorIcons[0]);
-  indicatorAnimation->setEndValue(indicatorIcons[7]);
-  indicatorAnimation->start();
-  indicatorAnimation->pause();
 
   //--- find controls
   addToolBarStretch();
   findEdit = new QLineEdit();
   findEdit->setPlaceholderText("find");
   findEdit->setFixedWidth(20 * findEdit->fontMetrics().width("0"));
+  findEdit->installEventFilter(this);
   toolBar->addWidget(findEdit);
   connect(findEdit, SIGNAL(returnPressed()), this, SLOT(findTextChanged()));
   connect(findEdit, SIGNAL(cursorPositionChanged(int, int)),
@@ -2864,6 +3087,19 @@ void XpdfViewer::createMainMenu() {
   editSubmenu->addAction("Copy", this, SLOT(copyMenuAction()));
 
   QMenu *viewSubmenu = mainMenu->addMenu("&View");
+  toggleToolbarMenuItem =
+      viewSubmenu->addAction("Toolbar", this,
+			     SLOT(toggleToolbarMenuAction(bool)));
+  toggleToolbarMenuItem->setCheckable(true);
+  toggleSidebarMenuItem =
+      viewSubmenu->addAction("Sidebar", this,
+			     SLOT(toggleSidebarMenuAction(bool)));
+  toggleSidebarMenuItem->setCheckable(true);
+  viewPageLabelsMenuItem =
+      viewSubmenu->addAction("Page labels", this,
+			     SLOT(viewPageLabelsMenuAction(bool)));
+  viewPageLabelsMenuItem->setCheckable(true);
+  viewSubmenu->addSeparator();
   displayModeSubmenu = new QMenu(this);
   QActionGroup *displayModeGroup = new QActionGroup(this);
   QAction *action;
@@ -2928,22 +3164,22 @@ void XpdfViewer::createXpdfPopupMenu() {
   QAction *action;
   int n, i;
 
-  n = globalParams->getNumPopupMenuCmds();
-  if (n == 0) {
-    popupMenu = NULL;
-    return;
-  }
-
   popupMenu = new QMenu(this);
   popupMenuSignalMapper = new QSignalMapper(this);
   connect(popupMenuSignalMapper, SIGNAL(mapped(int)),
 	  this, SLOT(popupMenuAction(int)));
 
-  for (i = 0; i < n; ++i) {
-    cmd = globalParams->getPopupMenuCmd(i);
-    action = popupMenu->addAction(cmd->label->getCString(),
-				  popupMenuSignalMapper, SLOT(map()));
-    popupMenuSignalMapper->setMapping(action, i);
+  n = globalParams->getNumPopupMenuCmds();
+  if (n == 0) {
+    popupMenu->addAction("use 'popupMenuCmd' to add items to this menu");
+    popupMenu->addAction("see the xpdfrc(5) documentation");
+  } else {
+    for (i = 0; i < n; ++i) {
+      cmd = globalParams->getPopupMenuCmd(i);
+      action = popupMenu->addAction(cmd->label->getCString(),
+				    popupMenuSignalMapper, SLOT(map()));
+      popupMenuSignalMapper->setMapping(action, i);
+    }
   }
 }
 
@@ -3070,13 +3306,20 @@ void XpdfViewer::addTab() {
   XpdfWidget *pdf;
   QTreeView *outlineTree, *layerTree;
   QTableWidget *attachmentList;
+  GString *initialSelectMode;
 
   pdf = new XpdfWidget(NULL, app->getPaperColor(), app->getMatteColor(),
 		       app->getReverseVideo());
   pdf->enableHyperlinks(false);
   pdf->setKeyPassthrough(true);
   pdf->setMousePassthrough(true);
-  pdf->setLinearSelectMode();
+  initialSelectMode = globalParams->getInitialSelectMode();
+  if (!initialSelectMode->cmp("block")) {
+    pdf->setBlockSelectMode();
+  } else {
+    pdf->setLinearSelectMode();
+  }
+  delete initialSelectMode;
   connect(pdf, SIGNAL(resized()), this, SLOT(pdfResized()));
   connect(pdf, SIGNAL(paintDone(bool)), this, SLOT(pdfPaintDone(bool)));
   connect(pdf, SIGNAL(preLoad()), this, SLOT(preLoad()));
@@ -3283,7 +3526,7 @@ void XpdfViewer::updateDocInfo() {
   currentTab->listItem->setToolTip(tabTitle);
 
   //--- page number
-  pageNumber->setText(QString().setNum(currentTab->pdf->getMidPage()));
+  updatePageNumberOrLabel(currentTab->pdf->getMidPage());
 
   //--- page count
   QString nPages;
@@ -3304,6 +3547,26 @@ void XpdfViewer::updateDocInfo() {
   currentTab->pdf->unsetCursor();
   linkTargetBar->hide();
   linkTargetInfo = QString();
+}
+
+void XpdfViewer::updatePageNumberOrLabel(int pg) {
+  TextString *ts;
+  QString qs;
+  Unicode *u;
+  int i;
+
+  if (viewPageLabelsMenuItem->isChecked() &&
+      (ts = currentTab->pdf->getCore()->getDoc()->getCatalog()
+                                                    ->getPageLabel(pg))) {
+    u = ts->getUnicode();
+    for (i = 0; i < ts->getLength(); ++i) {
+      qs.append((QChar)u[i]);
+    }
+    delete ts;
+  } else {
+    qs.setNum(pg);
+  }
+  pageNumber->setText(qs);
 }
 
 void XpdfViewer::updateOutline(int pg) {
@@ -3524,7 +3787,7 @@ void XpdfViewer::execSaveImageDialog() {
     int page;
     double x0, y0, x1, y1;
     if (wholePage) {
-      page = pageBtn->text().toInt();
+      page = pageEdit->text().toInt();
       if (page < 1 || page > currentTab->pdf->getNumPages()) {
 	page = 1;
       }

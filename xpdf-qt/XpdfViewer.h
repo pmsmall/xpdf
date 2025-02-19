@@ -168,6 +168,7 @@ private slots:
   void mouseWheel(QWheelEvent *e);
   void mouseMove(QMouseEvent *e);
   void pageChange(int pg);
+  void sidebarSplitterMoved(int pos, int index);
 #if XPDFWIDGET_PRINTING
   void printStatus(int nextPage, int firstPage, int lastPage);
   void cancelPrint();
@@ -192,6 +193,9 @@ private slots:
   void rotateClockwiseMenuAction();
   void rotateCounterclockwiseMenuAction();
   void zoomToSelectionMenuAction();
+  void toggleToolbarMenuAction(bool checked);
+  void toggleSidebarMenuAction(bool checked);
+  void viewPageLabelsMenuAction(bool checked);
   void newTabMenuAction();
   void newWindowMenuAction();
   void closeTabMenuAction();
@@ -202,6 +206,7 @@ private slots:
 
   void popupMenuAction(int idx);
 
+  void toggleSidebarButtonPressed();
   void pageNumberChanged();
   void backButtonPressed();
   void forwardButtonPressed();
@@ -250,6 +255,7 @@ private:
 #endif
   void cmdEndPan(GString *args[], int nArgs, QInputEvent *event);
   void cmdEndSelection(GString *args[], int nArgs, QInputEvent *event);
+  void cmdExpandSidebar(GString *args[], int nArgs, QInputEvent *event);
   void cmdFind(GString *args[], int nArgs, QInputEvent *event);
   void cmdFindFirst(GString *args[], int nArgs, QInputEvent *event);
   void cmdFindNext(GString *args[], int nArgs, QInputEvent *event);
@@ -269,6 +275,7 @@ private:
   void cmdGotoLastPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdGotoPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdHelp(GString *args[], int nArgs, QInputEvent *event);
+  void cmdHideToolbar(GString *args[], int nArgs, QInputEvent *event);
   void cmdHorizontalContinuousMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdLinearSelectMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdLoadTabState(GString *args[], int nArgs, QInputEvent *event);
@@ -281,7 +288,11 @@ private:
   void cmdOpenErrorWindow(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenFile(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenFileAtDest(GString *args[], int nArgs, QInputEvent *event);
+  void cmdOpenFileAtDestIn(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenFileAtPage(GString *args[], int nArgs, QInputEvent *event);
+  void cmdOpenFileAtPageIn(GString *args[], int nArgs, QInputEvent *event);
+  void cmdOpenFileIn(GString *args[], int nArgs, QInputEvent *event);
+  void cmdOpenIn(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenSidebar(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenSidebarMoveResizeWin(GString *args[], int nArgs, QInputEvent *event);
   void cmdOpenSidebarResizeWin(GString *args[], int nArgs, QInputEvent *event);
@@ -317,6 +328,8 @@ private:
   void cmdScrollUp(GString *args[], int nArgs, QInputEvent *event);
   void cmdScrollUpPrevPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdSetSelection(GString *args[], int nArgs, QInputEvent *event);
+  void cmdShowToolbar(GString *args[], int nArgs, QInputEvent *event);
+  void cmdShrinkSidebar(GString *args[], int nArgs, QInputEvent *event);
   void cmdSideBySideContinuousMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdSideBySideSingleMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdSinglePageMode(GString *args[], int nArgs, QInputEvent *event);
@@ -328,6 +341,9 @@ private:
   void cmdToggleSidebar(GString *args[], int nArgs, QInputEvent *event);
   void cmdToggleSidebarMoveResizeWin(GString *args[], int nArgs, QInputEvent *event);
   void cmdToggleSidebarResizeWin(GString *args[], int nArgs, QInputEvent *event);
+  void cmdToggleToolbar(GString *args[], int nArgs, QInputEvent *event);
+  void cmdViewPageLabels(GString *args[], int nArgs, QInputEvent *event);
+  void cmdViewPageNumbers(GString *args[], int nArgs, QInputEvent *event);
   void cmdWindowMode(GString *args[], int nArgs, QInputEvent *event);
   void cmdZoomFitPage(GString *args[], int nArgs, QInputEvent *event);
   void cmdZoomFitWidth(GString *args[], int nArgs, QInputEvent *event);
@@ -344,6 +360,9 @@ private:
   int getContext(Qt::KeyboardModifiers qtMods);
   int getMouseButton(Qt::MouseButton qtBtn);
   virtual void keyPressEvent(QKeyEvent *e);
+  virtual void dragEnterEvent(QDragEnterEvent *e);
+  virtual void dropEvent(QDropEvent *e);
+  virtual bool eventFilter(QObject *watched, QEvent *event);
 
   //--- GUI setup
   void createWindow();
@@ -370,6 +389,7 @@ private:
   void updateZoomInfo();
   void updateSelectModeInfo();
   void updateDocInfo();
+  void updatePageNumberOrLabel(int pg);
   void updateOutline(int pg);
   void setOutlineOpenItems(const QModelIndex &idx);
   void fillAttachmentList();
@@ -389,6 +409,9 @@ private:
   QMenuBar *mainMenu;
   QMenu *displayModeSubmenu;
   QAction *fullScreenMenuItem;
+  QAction *toggleToolbarMenuItem;
+  QAction *toggleSidebarMenuItem;
+  QAction *viewPageLabelsMenuItem;
 
   // popup menu
   QMenu *popupMenu;

@@ -85,7 +85,9 @@ if ((QT4_FOUND OR Qt5Widgets_FOUND)
   target_link_libraries(xpdf ${QT_LIBRARIES} ${EXTRA_QT_LIBRARIES}
                         ${PAPER_LIBRARY}
                         ${FREETYPE_LIBRARY} ${FREETYPE_OTHER_LIBS}
-                        ${DTYPE_LIBRARY} ${LCMS_LIBRARY}
+                        ${DTYPE_LIBRARY}
+                        ${LCMS_LIBRARY}
+                        ${FONTCONFIG_LIBRARY}
                         ${CMAKE_THREAD_LIBS_INIT})
   set_property(TARGET xpdf PROPERTY WIN32_EXECUTABLE 1)
   if (QT4_FOUND)

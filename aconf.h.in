@@ -91,6 +91,11 @@
 #cmakedefine01 HAVE_PAPER_H
 
 /*
+ * This is defined if using libfontconfig.
+ */
+#cmakedefine01 HAVE_FONTCONFIG
+
+/*
  * Defined if the Splash library is avaiable.
  */
 #cmakedefine01 HAVE_SPLASH

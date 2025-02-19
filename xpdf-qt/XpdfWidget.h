@@ -9,7 +9,9 @@
 //! \mainpage
 //!
 //! XpdfWidget is a PDF viewer widget class for Qt.
-//! <br><br><br>
+//! <br><br>
+//! <a href="changes.html">Change history</a>
+//! <br><br>
 //! Copyright 2009-2019 Glyph & Cog, LLC
 
 //! \file
@@ -180,6 +182,16 @@ public:
   //! the page.  If disabled, the middle button is ignored.  The default
   //! is enabled.
   void enablePan(bool on);
+
+  //! Control touchscreen panning.
+  //! If enabled, QPanGestures are recognized and used to pan the PDF
+  //! view.
+  void enableTouchPan(bool on);
+
+  //! Control touchscreen zooming.
+  //! If enabled QPinchGestures are recognized and used to pinch-zoom
+  //! the PDF view.
+  void enableTouchZoom(bool on);
 
   //! Control keypress passthrough.
   //! If enabled, XpdfWidget will pass keypress events through to the
@@ -875,6 +887,7 @@ protected:
   virtual void mouseReleaseEvent(QMouseEvent *e);
   virtual void mouseMoveEvent(QMouseEvent *e);
   virtual void wheelEvent(QWheelEvent *e);
+  virtual bool eventFilter(QObject *obj, QEvent *event);
 
   //! \endcond
 
@@ -917,6 +930,10 @@ private:
 
   bool keyPassthrough;
   bool mousePassthrough;
+
+  bool touchPanEnabled;
+  bool touchZoomEnabled;
+  double pinchZoomStart;
 
   QTimer *tickTimer;
 };

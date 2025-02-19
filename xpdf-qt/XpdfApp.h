@@ -38,7 +38,8 @@ public:
   GBool openInNewWindow(QString fileName, int page = 1,
 			QString dest = QString(),
 			QString password = QString(),
-			GBool fullScreen = gFalse);
+			GBool fullScreen = gFalse,
+			const char *remoteServerName = NULL);
 
   void closeWindowOrQuit(XpdfViewer *viewer);
 
