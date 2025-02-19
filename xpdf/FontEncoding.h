@@ -28,7 +28,7 @@ public:
   FontEncoding();
 
   // Construct an encoding from an array of char names.
-  FontEncoding(char **encoding, int size);
+  FontEncoding(char **encodingA, int sizeA);
 
   // Destructor.
   ~FontEncoding();

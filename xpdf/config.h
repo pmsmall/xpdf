@@ -14,14 +14,14 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion "0.92e"
+#define xpdfVersion "0.93"
 
 // supported PDF version
-#define supportedPDFVersionStr "1.3"
-#define supportedPDFVersionNum 1.3
+#define supportedPDFVersionStr "1.4"
+#define supportedPDFVersionNum 1.4
 
 // copyright notice
-#define xpdfCopyright "Copyright 1996-2000 Derek B. Noonburg"
+#define xpdfCopyright "Copyright 1996-2001 Derek B. Noonburg"
 
 // default paper size (in points) for PostScript output
 #ifdef A4_PAPER
@@ -32,12 +32,15 @@
 #define defPaperHeight 792
 #endif
 
-// config file name
+// user config file name, relative to the user's home directory
 #if defined(VMS)
-#define xpdfConfigFile "xpdfrc"
+#define xpdfUserConfigFile "xpdfrc"
 #else
-#define xpdfConfigFile ".xpdfrc"
+#define xpdfUserConfigFile ".xpdfrc"
 #endif
+
+// system config file name (set via the configure script)
+#define xpdfSysConfigFile SYSTEM_XPDFRC
 
 //------------------------------------------------------------------------
 // X-related constants
@@ -67,7 +70,7 @@
 #define pclose _pclose
 #endif
 
-#if defined(VMS) || defined(VMCMS) || defined(DOS) || defined(OS2) || defined(WIN32) || defined(__DJGPP__) || defined(__CYGWIN32) || defined(MACOS)
+#if defined(VMS) || defined(VMCMS) || defined(DOS) || defined(OS2) || defined(WIN32) || defined(__DJGPP__) || defined(__CYGWIN32__) || defined(MACOS)
 #define POPEN_READ_MODE "rb"
 #else
 #define POPEN_READ_MODE "r"

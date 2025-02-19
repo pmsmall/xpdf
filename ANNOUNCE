@@ -1,4 +1,4 @@
-Subject: ANNOUNCE: xpdf 0.92 - a PDF viewer for X
+Subject: ANNOUNCE: xpdf 0.93 - a PDF viewer for X
 
 
 I've just released a new version of xpdf, my Portable Document Format
@@ -10,23 +10,20 @@ systems.
 
 Noticeable changes:
 
-* Implemented separable CMYK PostScript output (the -level1sep switch
-  to pdftops).
-* Implemented Pattern color spaces with tiling patterns (polygon fills
-  only).
-* Implemented Stamp annotations.
-* Implemented Named link actions.
-* Fixed a really dumb bug in the TrueColor code in SFont (which
-  affects both Type 1 and TrueType font rendering on 16-bit
-  displays).
-* Print a warning about Type 3 fonts (XOutputDev, PSOutputDev).
-* Added CNS (Big5) Chinese font support (CHINESE_CNS_SUPPORT); renamed
-  CHINESE_SUPPORT to CHINESE_GB_SUPPORT.
-* Added Big5 support to pdftotext (with CHINESE_CNS_SUPPORT enabled).
-* Fix an endianness problem in the Type 1 font code which resulted in
-  an incorrect display with "-t1lib plain" on big-endian systems.
-* Added "-title" switch and "xpdf.title" resource to set the window
-  title.
+* Embed TrueType fonts in PostScript output.  (Added a "-noembtt" flag
+  to pdftops.)
+* Implement PDF 1.4 (128-bit) decryption.
+* Bump supported PDF version number to 1.4.
+* Text output for Simplified Chinese.  [Thanks to Cheung Siu Fai.]
+* Read an app-defaults file for Xpdf.  Read a system-wide config file
+  (<prefix>/etc/xpdfrc) if ~/.xpdfrc doesn't exist.
+* Accept and verify owner password; if correct, allow all actions.
+* Added a "-level2sep" option to pdftops to generate Level 2 separable
+  PostScript.  The PostScript separation convention operators are used
+  to handle custom (spot) colors.  [Thanks to Thomas Freitag for help
+  on this.]
+* Add support for FreeType 2 to the configure script.  Warning: this
+  requires FT 2.0.5 or newer (see the INSTALL file for details).
 
 See the `CHANGES' file for a complete list.
 
@@ -42,4 +39,4 @@ xpdf web page and ftp site:
 Source and Linux binaries are on sunsite.unc.edu, currently in
 the incoming directory, but they will be moved to:
 
-    ftp://sunsite.unc.edu/pub/Linux/apps/graphics/viewers/X
+    ftp://ftp.ibiblio.org/pub/Linux/apps/graphics/viewers/X

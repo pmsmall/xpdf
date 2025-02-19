@@ -6,7 +6,7 @@ xpdf(1)                                                   xpdf(1)
 
 NAME
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 0.92)
+       (version 0.93)
 
 SYNOPSIS
        xpdf [options] [PDF-file [page]]
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           03 Dec 2000                          1
+                           25 Oct 2001                          1
 
 
 
@@ -127,7 +127,7 @@ xpdf(1)                                                   xpdf(1)
 
 
 
-                           03 Dec 2000                          2
+                           25 Oct 2001                          2
 
 
 
@@ -139,6 +139,10 @@ xpdf(1)                                                   xpdf(1)
               they contain images), but will  print  on  Level  1
               printers.   This  also converts all images to black
               and white.  [xpdf.psLevel1]
+
+       -opw password
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
        -upw password
               Specify the user password for the PDF file.
@@ -185,15 +189,11 @@ xpdf(1)                                                   xpdf(1)
               link.   See  the  WEB  BROWSERS  section  below for
               details.
 
-       xpdf.japaneseFont
-              Sets the X font name pattern to  use  for  Japanese
-              text.  The default is:
-
-              -*-fixed-medium-r-
 
 
 
-                           03 Dec 2000                          3
+
+                           25 Oct 2001                          3
 
 
 
@@ -202,7 +202,12 @@ xpdf(1)                                                   xpdf(1)
 xpdf(1)                                                   xpdf(1)
 
 
-              normal-*-%s-*-*-*-*-*-jisx0208.1983-0
+       xpdf.japaneseFont
+              Sets the X font name pattern to  use  for  Japanese
+              text.  The default is:
+
+              -*-fixed-medium-r-nor-
+              mal-*-%s-*-*-*-*-*-jisx0208.1983-0
 
        xpdf.chineseGBFont
               Sets the X font name pattern to use for Chinese  GB
@@ -250,16 +255,11 @@ CONTROLS
        double left/right arrow buttons
               Move backward or forward by ten pages.
 
-       dashed left/right arrow buttons
-              Move backward or forward along the history path.
-
-       'Page' entry box
-              Move to a specific page number.  Click in  the  box
-              to  activate  it,  type  the  page number, then hit
 
 
 
-                           03 Dec 2000                          4
+
+                           25 Oct 2001                          4
 
 
 
@@ -268,6 +268,12 @@ CONTROLS
 xpdf(1)                                                   xpdf(1)
 
 
+       dashed left/right arrow buttons
+              Move backward or forward along the history path.
+
+       'Page' entry box
+              Move to a specific page number.  Click in  the  box
+              to  activate  it,  type  the  page number, then hit
               return.
 
        zoom popup menu
@@ -316,22 +322,23 @@ xpdf(1)                                                   xpdf(1)
        Rotate clockwise
               Rotate  the  page  90  degrees  clockwise.  The two
               rotate commands  are  intended  primarily  for  PDF
-              files  where the rotation isn't correctly specified
-              in the file, but they're  also  useful  if  your  X
-              server doesn't support font rotation.
-
-       Quit   Quit xpdf.
 
 
 
-
-                           03 Dec 2000                          5
+                           25 Oct 2001                          5
 
 
 
 
 
 xpdf(1)                                                   xpdf(1)
+
+
+              files  where the rotation isn't correctly specified
+              in the file, but they're  also  useful  if  your  X
+              server doesn't support font rotation.
+
+       Quit   Quit xpdf.
 
 
    Text selection
@@ -381,17 +388,10 @@ xpdf(1)                                                   xpdf(1)
 
        <End>  Scroll to bottom of current page.
 
-       arrows Scroll the current page.
-
-       0      Set the zoom factor to zero (72 dpi).
-
-       +      Zoom in (increment the zoom factor by 1).
-
-       -      Zoom out (decrement the zoom factor by 1).
 
 
 
-                           03 Dec 2000                          6
+                           25 Oct 2001                          6
 
 
 
@@ -399,6 +399,14 @@ xpdf(1)                                                   xpdf(1)
 
 xpdf(1)                                                   xpdf(1)
 
+
+       arrows Scroll the current page.
+
+       0      Set the zoom factor to zero (72 dpi).
+
+       +      Zoom in (increment the zoom factor by 1).
+
+       -      Zoom out (decrement the zoom factor by 1).
 
        z      Set the zoom factor to 'page' (fit page to window).
 
@@ -447,17 +455,9 @@ REMOTE SERVER MODE
 
               xpdf -remote myServer another.pdf 9
 
-       is issued, a  new  copy  of  xpdf  will  not  be  started.
-       Instead, the first xpdf (the server) will load another.pdf
-       and display page nine.  If the file name is the same:
-
-              xpdf -remote myServer another.pdf 4
-
-       the xpdf server will simply display the specified page.
 
 
-
-                           03 Dec 2000                          7
+                           25 Oct 2001                          7
 
 
 
@@ -465,6 +465,14 @@ REMOTE SERVER MODE
 
 xpdf(1)                                                   xpdf(1)
 
+
+       is issued, a  new  copy  of  xpdf  will  not  be  started.
+       Instead, the first xpdf (the server) will load another.pdf
+       and display page nine.  If the file name is the same:
+
+              xpdf -remote myServer another.pdf 4
+
+       the xpdf server will simply display the specified page.
 
        The -raise option tells the server to raise its window; it
        can be specified with or without a file name and page num-
@@ -512,9 +520,21 @@ CONFIGURATION FILE
 BUGS
        No support for Type 3 fonts.
 
+
+
+
+                           25 Oct 2001                          8
+
+
+
+
+
+xpdf(1)                                                   xpdf(1)
+
+
 AUTHOR
        The  xpdf  software  and   documentation   are   copyright
-       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2001 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
        pdftops(1),  pdftotext(1), pdfinfo(1), pdftopbm(1), pdfim-
@@ -523,6 +543,52 @@ SEE ALSO
 
 
 
-                           03 Dec 2000                          8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           25 Oct 2001                          9
 
 

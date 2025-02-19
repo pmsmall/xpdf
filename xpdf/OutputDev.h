@@ -48,7 +48,7 @@ public:
   //----- initialization and control
 
   // Set default transform matrix.
-  virtual void setDefaultCTM(double *ctm1);
+  virtual void setDefaultCTM(double *ctm);
 
   // Start a page.
   virtual void startPage(int pageNum, GfxState *state) {}
@@ -133,8 +133,8 @@ public:
 
 private:
 
-  double ctm[6];		// coordinate transform matrix
-  double ictm[6];		// inverse CTM
+  double defCTM[6];		// default coordinate transform matrix
+  double defICTM[6];		// inverse of default CTM
 };
 
 #endif

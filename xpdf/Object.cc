@@ -56,9 +56,9 @@ Object *Object::initDict() {
   return this;
 }
 
-Object *Object::initStream(Stream *stream1) {
+Object *Object::initStream(Stream *streamA) {
   initObj(objStream);
-  stream = stream1;
+  stream = streamA;
   return this;
 }
 

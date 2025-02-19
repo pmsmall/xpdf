@@ -41,7 +41,7 @@ public:
   //---------- constructor and destructor ----------
 
   // Constructor.  The extra args are the list of menu items.
-  LTKMenu(char *title1, int numItems1, ...);
+  LTKMenu(char *titleA, int numItemsA, ...);
 
   // Destructor.
   ~LTKMenu();
@@ -51,14 +51,14 @@ public:
   Window getXWindow() { return xwin; }
   int getNumItems() { return numItems; }
   LTKMenuItem *getItem(int i) { return items[i]; }
-  void setParentWidget(LTKWidget *widget) { this->widget = widget; }
+  void setParentWidget(LTKWidget *widgetA) { widget = widgetA; }
   LTKWidget *getParentWidget() { return widget; }
 
   //---------- drawing ----------
 
   // Post the menu.  Put the top left corner as close as possible
-  // to <x1>,<y1>.
-  void post(LTKWindow *win1, int x1, int y1, LTKMenu *parent1);
+  // to <x>,<y>.
+  void post(LTKWindow *winA, int xA, int yA, LTKMenu *parentA);
 
   //---------- event handlers ----------
 
@@ -104,17 +104,17 @@ public:
   //---------- constructor ----------
 
   // Constructor.
-  LTKMenuItem(char *text1, char *shortcut1, int itemNum1,
-	      LTKMenuCbk cbk1, LTKMenu *submenu1);
+  LTKMenuItem(char *textA, char *shortcutA, int itemNumA,
+	      LTKMenuCbk cbkA, LTKMenu *submenuA);
 
   //---------- access ----------
 
   int getItemNum() { return itemNum; }
   char *getText() { return text; }
   LTKMenuCbk getCbk() { return cbk; }
-  void setCbk(LTKMenuCbk cbk) { this->cbk = cbk; }
+  void setCbk(LTKMenuCbk cbkA) { cbk = cbkA; }
   LTKMenu *getParent() { return parent; }
-  void setParent(LTKMenu *parent) { this->parent = parent; }
+  void setParent(LTKMenu *parentA) { parent = parentA; }
 
 private:
 

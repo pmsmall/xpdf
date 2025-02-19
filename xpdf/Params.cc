@@ -22,7 +22,7 @@ static int fontPathLen, fontPathSize;
 DevFontMapEntry *devFontMap = NULL;
 static int devFontMapLen, devFontMapSize;
 
-void initParams(char *configFile) {
+void initParams(char *userConfigFile, char *sysConfigFile) {
   GString *fileName;
   FILE *f;
   char buf[256];
@@ -36,8 +36,11 @@ void initParams(char *configFile) {
   devFontMap[devFontMapLen = 0].pdfFont = NULL;
 
   // read config file
-  fileName = appendToPath(getHomeDir(), configFile);
-  if ((f = fopen(fileName->getCString(), "r"))) {
+  fileName = appendToPath(getHomeDir(), userConfigFile);
+  if (!(f = fopen(fileName->getCString(), "r"))) {
+    f = fopen(sysConfigFile, "r");
+  }
+  if (f) {
     while (fgets(buf, sizeof(buf)-1, f)) {
       buf[sizeof(buf)-1] = '\0';
       p = strtok(buf, " \t\n\r");

@@ -755,9 +755,9 @@ Extract ascent/descent info from font descriptor.
 
 0.92d (2001-jun-26)
 -------------------
-Extract encoding from TrueType fonts.
 Embed TrueType fonts in PostScript output.  (Added a "-noembtt" flag
   to pdftops.)
+Extract encoding from TrueType fonts.
 Moved Function classes to a separate file (Function.h/cc).
 Implemented multi-dimensional sampled Functions.
 Implemented Type 4 (PostScript calculator) Functions.
@@ -779,3 +779,50 @@ Changed "rotate left/right" menu items to "rotate
 The link parsing code choked if the Border array was incorrect (too
   short).
 Modified PSOutputDev to output CMYK for fill/stroke colors.
+
+0.93 (2001-oct-25)
+------------------
+Implement PDF 1.4 (128-bit) decryption.
+Bump supported PDF version number to 1.4.
+Text output for Simplified Chinese.  [Thanks to Cheung Siu Fai.]
+Read an app-defaults file for Xpdf.
+Read a system-wide config file (<prefix>/etc/xpdfrc) if ~/.xpdfrc
+  doesn't exist.
+Accept and verify owner password; if correct, allow all actions.
+Added a "-level2sep" option to pdftops to generate Level 2 separable
+  PostScript.  The PostScript separation convention operators are used
+  to handle custom (spot) colors.  [Thanks to Thomas Freitag for help
+  on this.]
+Add support for FreeType 2 to the configure script.  Warning: this
+  requires FT 2.0.5 or newer.
+Fixed the bounding rectangle overlap test in the disconnected subpath
+  fill hack in XOutputDev.
+Stupid typo in font name table in PSOutputDev.
+Changing the zoom setting with a keyboard shortcut didn't update the
+  displayed setting.
+Modified the mouse wheel support and added the second wheel (mouse
+  buttons 6 and 7).  [Thanks to Michal Pasternak.]
+Character and word spacing is affected by horizontal scaling (display
+  and PS output).  [Thanks to Eddy Ng.]
+Rotation specified by the text matrix, character spacing, and
+  horizontal scaling interacted incorrectly (display and PS output).
+Some broken Type 1/1C fonts have a zero BBox -- kludge around this by
+  assuming a largeish BBox.
+Handle PDF files with an incorrect (too small) xref table size.
+Allow "-?" and "--help" as aliases for "-h" (all apps).
+Correctly handle unescaped parens in strings in Lexer.
+Fixed a bug in LTK where a menu got posted multiple times if you right
+  clicked while a page was being rendered.
+Removed a comma inside a string in configure.in.
+Kludge around broken PDF files that use char 32 but encode it as
+  .notdef instead of space.
+Clean up various compiler warnings: use constructor args like "fooA"
+  if there is a field named "foo".  Everything now compiles cleanly
+  under gcc 2.91.66, 2.95.2, and 3.0.1.
+Page objects now read all of the page rectangles (MediaBox, CropBox,
+  BleedBox, TrimBox, ArtBox), as requested by the pdfTeX folks.
+  Added a new PDFRectangle struct to hold these.
+Use XOutputDev's Type 3 font size hack in TextOutputDev too, so it
+  does a little better job of extracting text in Type 3 fonts.
+Modify pdfimages to write one-bit images as PBM files.
+Work around a bug in cygwin's implementation of fseek.

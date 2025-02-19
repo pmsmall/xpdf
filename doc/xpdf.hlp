@@ -2,7 +2,7 @@
 1 xpdf
 
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 0.92)
+       (version 0.93)
 
        xpdf [options] [PDF-file [page]]
 
@@ -113,6 +113,10 @@
               printers.   This  also converts all images to black
               and white.  [xpdf.psLevel1]
 
+       -opw password
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
+
        -upw password
               Specify the user password for the PDF file.
 
@@ -186,10 +190,10 @@
        fonts to use for the Base 14 fonts:
 
               xpdf.t1TimesRoman
+
               xpdf.t1TimesItalic
               xpdf.t1TimesBold
               xpdf.t1TimesBoldItalic
-
               xpdf.t1Helvetica
               xpdf.t1HelveticaOblique
               xpdf.t1HelveticaBold
@@ -432,7 +436,7 @@
 2 AUTHOR
 
        The   xpdf   software   and  documentation  are  copyright
-       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2001 Derek B. Noonburg (derekn@foolabs.com).
 
 2 SEE_ALSO
 

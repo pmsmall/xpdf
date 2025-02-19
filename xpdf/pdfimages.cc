@@ -29,6 +29,7 @@
 static int firstPage = 1;
 static int lastPage = 0;
 static GBool dumpJPEG = gFalse;
+static char ownerPassword[33] = "";
 static char userPassword[33] = "";
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
@@ -40,6 +41,8 @@ static ArgDesc argDesc[] = {
    "last page to convert"},
   {"-j",      argFlag,     &dumpJPEG,      0,
    "write JPEG images as JPEG files"},
+  {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
+   "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,   sizeof(userPassword),
    "user password (for encrypted files)"},
   {"-q",      argFlag,     &errQuiet,      0,
@@ -50,6 +53,10 @@ static ArgDesc argDesc[] = {
    "print usage information"},
   {"-help",   argFlag,     &printHelp,     0,
    "print usage information"},
+  {"--help",  argFlag,     &printHelp,     0,
+   "print usage information"},
+  {"-?",      argFlag,     &printHelp,     0,
+   "print usage information"},
   {NULL}
 };
 
@@ -57,7 +64,7 @@ int main(int argc, char *argv[]) {
   PDFDoc *doc;
   GString *fileName;
   char *imgRoot;
-  GString *userPW;
+  GString *ownerPW, *userPW;
   ImageOutputDev *imgOut;
   GBool ok;
 
@@ -78,18 +85,26 @@ int main(int argc, char *argv[]) {
   errorInit();
 
   // read config file
-  initParams(xpdfConfigFile);
+  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
 
   // open PDF file
   xref = NULL;
+  if (ownerPassword[0]) {
+    ownerPW = new GString(ownerPassword);
+  } else {
+    ownerPW = NULL;
+  }
   if (userPassword[0]) {
     userPW = new GString(userPassword);
   } else {
     userPW = NULL;
   }
-  doc = new PDFDoc(fileName, userPW);
+  doc = new PDFDoc(fileName, ownerPW, userPW);
   if (userPW) {
     delete userPW;
+  }
+  if (ownerPW) {
+    delete ownerPW;
   }
   if (!doc->isOk()) {
     goto err;

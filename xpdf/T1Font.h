@@ -26,8 +26,8 @@ class FontEncoding;
 class T1FontEngine: public SFontEngine {
 public:
 
-  T1FontEngine(Display *display, Visual *visual, int depth,
-	       Colormap colormap, GBool aa, GBool aaHigh);
+  T1FontEngine(Display *displayA, Visual *visualA, int depthA,
+	       Colormap colormapA, GBool aaA, GBool aaHighA);
   GBool isOk() { return ok; }
   virtual ~T1FontEngine();
 
@@ -46,7 +46,7 @@ private:
 class T1FontFile: public SFontFile {
 public:
 
-  T1FontFile(T1FontEngine *engine, char *fontFileName,
+  T1FontFile(T1FontEngine *engineA, char *fontFileName,
 	     FontEncoding *fontEnc);
   GBool isOk() { return ok; }
   virtual ~T1FontFile();
@@ -73,7 +73,7 @@ struct T1FontCacheTag {
 class T1Font: public SFont {
 public:
 
-  T1Font(T1FontFile *fontFile, double *m);
+  T1Font(T1FontFile *fontFileA, double *m);
   GBool isOk() { return ok; }
   virtual ~T1Font();
   virtual GBool drawChar(Drawable d, int w, int h, GC gc,

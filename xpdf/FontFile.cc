@@ -423,10 +423,10 @@ static char *getString(int sid, Guchar *stringIdxPtr,
 // Type1CFontConverter
 //------------------------------------------------------------------------
 
-Type1CFontConverter::Type1CFontConverter(char *file, int len, FILE *out) {
-  this->file = file;
-  this->len = len;
-  this->out = out;
+Type1CFontConverter::Type1CFontConverter(char *fileA, int lenA, FILE *outA) {
+  file = fileA;
+  len = lenA;
+  out = outA;
   r1 = 55665;
   line = 0;
 }
@@ -851,7 +851,7 @@ void Type1CFontConverter::convert() {
 	nominalWidthXFP = fp[0];
 	break;
       default:
-	error(-1, "Uknown Type 1C private dict entry %04x", key);
+	error(-1, "Unknown Type 1C private dict entry %04x", key);
 	break;
       }
       i = 0;
@@ -1515,12 +1515,12 @@ void Type1CFontConverter::cvtGlyphWidth(GBool useOp) {
   eexecDumpOp1(13);
 }
 
-void Type1CFontConverter::eexecDumpNum(double x, GBool fp) {
+void Type1CFontConverter::eexecDumpNum(double x, GBool fpA) {
   Guchar buf[12];
   int y, n;
 
   n = 0;
-  if (fp) {
+  if (fpA) {
     if (x >= -32768 && x < 32768) {
       y = (int)(x * 256.0);
       buf[0] = 255;
@@ -1566,13 +1566,13 @@ void Type1CFontConverter::eexecDumpNum(double x, GBool fp) {
   charBuf->append((char *)buf, n);
 }
 
-void Type1CFontConverter::eexecDumpOp1(int op) {
-  charBuf->append((char)op);
+void Type1CFontConverter::eexecDumpOp1(int opA) {
+  charBuf->append((char)opA);
 }
 
-void Type1CFontConverter::eexecDumpOp2(int op) {
+void Type1CFontConverter::eexecDumpOp2(int opA) {
   charBuf->append((char)12);
-  charBuf->append((char)op);
+  charBuf->append((char)opA);
 }
 
 void Type1CFontConverter::eexecWriteCharstring(Guchar *s, int n) {
@@ -1601,7 +1601,7 @@ void Type1CFontConverter::eexecWriteCharstring(Guchar *s, int n) {
   }
 }
 
-void Type1CFontConverter::getDeltaInt(char *buf, char *name, double *op,
+void Type1CFontConverter::getDeltaInt(char *buf, char *name, double *opA,
 				      int n) {
   int x, i;
 
@@ -1609,14 +1609,14 @@ void Type1CFontConverter::getDeltaInt(char *buf, char *name, double *op,
   buf += strlen(buf);
   x = 0;
   for (i = 0; i < n; ++i) {
-    x += (int)op[i];
+    x += (int)opA[i];
     sprintf(buf, "%s%d", i > 0 ? " " : "", x);
     buf += strlen(buf);
   }
   sprintf(buf, "] def\n");
 }
 
-void Type1CFontConverter::getDeltaReal(char *buf, char *name, double *op,
+void Type1CFontConverter::getDeltaReal(char *buf, char *name, double *opA,
 				       int n) {
   double x;
   int i;
@@ -1625,7 +1625,7 @@ void Type1CFontConverter::getDeltaReal(char *buf, char *name, double *op,
   buf += strlen(buf);
   x = 0;
   for (i = 0; i < n; ++i) {
-    x += op[i];
+    x += opA[i];
     sprintf(buf, "%s%g", i > 0 ? " " : "", x);
     buf += strlen(buf);
   }
@@ -1975,11 +1975,11 @@ static char *macGlyphNames[258] = {
   "dmacron"
 };
 
-TrueTypeFontFile::TrueTypeFontFile(char *file, int len) {
+TrueTypeFontFile::TrueTypeFontFile(char *fileA, int lenA) {
   int pos, i;
 
-  this->file = file;
-  this->len = len;
+  file = fileA;
+  len = lenA;
 
   encoding = NULL;
   freeEnc = gTrue;
@@ -2042,7 +2042,7 @@ FontEncoding *TrueTypeFontFile::getEncoding(GBool taken) {
   int pos, i, j, k;
   Guint fmt;
   GString *s;
-  int stringIdx, stringPos, len;
+  int stringIdx, stringPos, n;
 
   //----- construct the (char code) -> (glyph idx) mapping
 
@@ -2113,7 +2113,7 @@ FontEncoding *TrueTypeFontFile::getEncoding(GBool taken) {
       }
       break;
     default:
-      error(-1, "Unimplemented cmap type (%d) in TrueType font file\n",
+      error(-1, "Unimplemented cmap type (%d) in TrueType font file",
 	    cmapFmt);
       break;
     }
@@ -2150,12 +2150,12 @@ FontEncoding *TrueTypeFontFile::getEncoding(GBool taken) {
 		   stringIdx < j;
 		   ++stringIdx, stringPos += 1 + getByte(stringPos)) ;
 	    }
-	    len = getByte(stringPos);
-	    s = new GString(file + stringPos + 1, len);
+	    n = getByte(stringPos);
+	    s = new GString(file + stringPos + 1, n);
 	    encoding->addChar(i, copyString(s->getCString()));
 	    delete s;
 	    ++stringIdx;
-	    stringPos += 1 + len;
+	    stringPos += 1 + n;
 	  }
 	} else {
 	  encoding->addChar(i, copyString(macGlyphNames[0]));
@@ -2195,7 +2195,7 @@ FontEncoding *TrueTypeFontFile::getEncoding(GBool taken) {
   return encoding;
 }
 
-void TrueTypeFontFile::convertToType42(char *name, FontEncoding *encoding,
+void TrueTypeFontFile::convertToType42(char *name, FontEncoding *encodingA,
 				       FILE *out) {
   // write the header
   fprintf(out, "%%!PS-TrueTypeFont-%g\n", getFixed(0));
@@ -2210,8 +2210,8 @@ void TrueTypeFontFile::convertToType42(char *name, FontEncoding *encoding,
   fprintf(out, "/PaintType 0 def\n");
 
   // write the guts of the dictionary
-  cvtEncoding(encoding, out);
-  cvtCharStrings(encoding, out);
+  cvtEncoding(encodingA, out);
+  cvtCharStrings(encodingA, out);
   cvtSfnts(out);
 
   // end the dictionary and define the font
@@ -2277,13 +2277,13 @@ int TrueTypeFontFile::seekTable(char *tag) {
   return -1;
 }
 
-void TrueTypeFontFile::cvtEncoding(FontEncoding *encoding, FILE *out) {
+void TrueTypeFontFile::cvtEncoding(FontEncoding *encodingA, FILE *out) {
   char *name;
   int i;
 
   fprintf(out, "/Encoding 256 array\n");
   for (i = 0; i < 256; ++i) {
-    if (!(name = encoding->getCharName(i))) {
+    if (!(name = encodingA->getCharName(i))) {
       name = ".notdef";
     }
     fprintf(out, "dup %d /%s put\n", i, name);
@@ -2291,7 +2291,7 @@ void TrueTypeFontFile::cvtEncoding(FontEncoding *encoding, FILE *out) {
   fprintf(out, "readonly def\n");
 }
 
-void TrueTypeFontFile::cvtCharStrings(FontEncoding *encoding, FILE *out) {
+void TrueTypeFontFile::cvtCharStrings(FontEncoding *encodingA, FILE *out) {
   int cmap[256];
   int nCmaps, cmapPlatform, cmapEncoding, cmapFmt, cmapLen, cmapOffset;
   int segCnt, segStart, segEnd, segDelta, segOffset;
@@ -2367,7 +2367,7 @@ void TrueTypeFontFile::cvtCharStrings(FontEncoding *encoding, FILE *out) {
       }
       break;
     default:
-      error(-1, "Unimplemented cmap type (%d) in TrueType font file\n",
+      error(-1, "Unimplemented cmap type (%d) in TrueType font file",
 	    cmapFmt);
       break;
     }
@@ -2386,12 +2386,12 @@ void TrueTypeFontFile::cvtCharStrings(FontEncoding *encoding, FILE *out) {
   // etc.), and we want the lowest-numbered definition to "stick"
   // (because the higher-numbered defn(s) may not have valid cmap
   // entries)
-  i = encoding->getSize();
+  i = encodingA->getSize();
   if (i > 255) {
     i = 255;
   }
   for (; i >= 0; --i) {
-    name = encoding->getCharName(i);
+    name = encodingA->getCharName(i);
     if (name && strcmp(name, ".notdef")) {
       fprintf(out, "/%s %d def\n", name, cmap[i]);
     }
@@ -2508,20 +2508,20 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
   fprintf(out, "] def\n");
 }
 
-void TrueTypeFontFile::dumpString(char *s, int len, FILE *out) {
+void TrueTypeFontFile::dumpString(char *s, int n, FILE *out) {
   int i, j;
 
   fprintf(out, "<");
-  for (i = 0; i < len; i += 32) {
-    for (j = 0; j < 32 && i+j < len; ++j) {
+  for (i = 0; i < n; i += 32) {
+    for (j = 0; j < 32 && i+j < n; ++j) {
       fprintf(out, "%02X", s[i+j] & 0xff);
     }
-    if (i+32 < len) {
+    if (i+32 < n) {
       fprintf(out, "\n");
     }
   }
-  if (len & 3) {
-    for (i = 0; i < 4 - (len & 3); ++i) {
+  if (n & 3) {
+    for (i = 0; i < 4 - (n & 3); ++i) {
       fprintf(out, "00");
     }
   }

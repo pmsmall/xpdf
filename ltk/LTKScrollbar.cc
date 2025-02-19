@@ -31,14 +31,14 @@
 // LTKScrollbar
 //------------------------------------------------------------------------
 
-LTKScrollbar::LTKScrollbar(char *name1, int widgetNum1,
-			   GBool vertical1, int minPos1, int maxPos1,
-			   LTKIntValCbk moveCbk1):
-    LTKWidget(name1, widgetNum1) {
-  vertical = vertical1;
-  minPos = minPos1;
-  maxPos = maxPos1;
-  moveCbk = moveCbk1;
+LTKScrollbar::LTKScrollbar(char *nameA, int widgetNumA,
+			   GBool verticalA, int minPosA, int maxPosA,
+			   LTKIntValCbk moveCbkA):
+    LTKWidget(nameA, widgetNumA) {
+  vertical = verticalA;
+  minPos = minPosA;
+  maxPos = maxPosA;
+  moveCbk = moveCbkA;
 
   pos = minPos;
   if ((size = (maxPos - minPos) / 8) == 0)
@@ -73,11 +73,11 @@ void LTKScrollbar::redraw() {
   drawSlider(pos, gTrue);
 }
 
-void LTKScrollbar::setLimits(int minPos1, int maxPos1) {
+void LTKScrollbar::setLimits(int minPosA, int maxPosA) {
   if (getXWindow() != None)
     drawSlider(pos, gFalse);
-  minPos = minPos1;
-  maxPos = maxPos1;
+  minPos = minPosA;
+  maxPos = maxPosA;
   if (maxPos < minPos)
     maxPos = minPos;
   if (size > maxPos - minPos + 1)
@@ -90,11 +90,11 @@ void LTKScrollbar::setLimits(int minPos1, int maxPos1) {
     drawSlider(pos, gTrue);
 }
 
-void LTKScrollbar::setPos(int pos1, int size1) {
+void LTKScrollbar::setPos(int posA, int sizeA) {
   if (getXWindow() != None)
     drawSlider(pos, gFalse);
-  pos = pos1;
-  size = size1;
+  pos = posA;
+  size = sizeA;
   if (size > maxPos - minPos + 1)
     size = maxPos - minPos + 1;
   if (pos < minPos)
@@ -131,7 +131,7 @@ void LTKScrollbar::drawDownButton() {
 		     downPressed ? ltkBorderSunken : ltkBorderRaised);
 }
 
-void LTKScrollbar::drawSlider(int pos1, Bool on) {
+void LTKScrollbar::drawSlider(int posA, Bool on) {
   int w1, h1;
   int tx, ty, tw, th;
   LTKBorder border;
@@ -141,7 +141,7 @@ void LTKScrollbar::drawSlider(int pos1, Bool on) {
     th = (size * h1) / (maxPos - minPos + 1);
     ty = ltkBorderWidth + 12;
     if (minPos < maxPos)
-      ty += ((pos1 - minPos) * h1) / (maxPos - minPos + 1);
+      ty += ((posA - minPos) * h1) / (maxPos - minPos + 1);
     if (th < 16)
       th = 16;
     if (ty + th > height - ltkBorderWidth - 12)
@@ -155,7 +155,7 @@ void LTKScrollbar::drawSlider(int pos1, Bool on) {
     tw = (size * w1) / (maxPos - minPos + 1);
     tx = ltkBorderWidth + 12;
     if (minPos < maxPos)
-      tx += ((pos1 - minPos) * w1) / (maxPos - minPos + 1);
+      tx += ((posA - minPos) * w1) / (maxPos - minPos + 1);
     else
       tx = ltkBorderWidth;
     if (tw < 16)

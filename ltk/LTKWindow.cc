@@ -51,17 +51,17 @@ extern "C" {
 static Bool isExposeEvent(Display *display, XEvent *e, XPointer w);
 }
 
-LTKWindow::LTKWindow(LTKApp *app1, GBool dialog1, char *title1,
-		     char **iconData1, char *defaultWidgetName,
-		     LTKBox *box1) {
-  app = app1;
-  dialog = dialog1;
-  title = new GString(title1);
-  iconData = iconData1;
+LTKWindow::LTKWindow(LTKApp *appA, GBool dialogA, char *titleA,
+		     char **iconDataA, char *defaultWidgetName,
+		     LTKBox *boxA) {
+  app = appA;
+  dialog = dialogA;
+  title = new GString(titleA);
+  iconData = iconDataA;
   width = 0;
   height = 0;
   widgets = NULL;
-  box = box1;
+  box = boxA;
   box->setParent(this);
   selection = NULL;
   savedCursor = None;
@@ -173,7 +173,7 @@ GBool LTKWindow::checkFills(char **err) {
   return gTrue;
 }
 
-void LTKWindow::layout(int x, int y, int width1, int height1) {
+void LTKWindow::layout(int x, int y, int widthA, int heightA) {
   XColor bgXcol;
   XColor xcol;
   XGCValues gcValues;
@@ -257,8 +257,8 @@ void LTKWindow::layout(int x, int y, int width1, int height1) {
   minWidth = box->getWidth();
   minHeight = box->getHeight();
   if (box->getXFill() > 0 && box->getYFill() > 0) {
-    width2 = (width1 < minWidth) ? minWidth : width1;
-    height2 = (height1 < minHeight) ? minHeight : height1;
+    width2 = (widthA < minWidth) ? minWidth : widthA;
+    height2 = (heightA < minHeight) ? minHeight : heightA;
     box->layout2(0, 0, width2, height2);
   } else {
     box->layout2(0, 0, minWidth, minHeight);
@@ -284,7 +284,7 @@ void LTKWindow::layout(int x, int y, int width1, int height1) {
       XStringListToTextProperty(&title1, 1, &iconName);
       sizeHints->flags = PMinSize;
       sizeHints->flags |= (x >= 0 || y >= 0) ? USPosition : PPosition;
-      sizeHints->flags |= (width1 >= 0 || height1 >= 0) ? USSize : PSize;
+      sizeHints->flags |= (widthA >= 0 || heightA >= 0) ? USSize : PSize;
       sizeHints->min_width = minWidth;
       sizeHints->min_height = minHeight;
       if (!(box->getXFill() > 0 && box->getYFill() > 0)) {
@@ -304,7 +304,7 @@ void LTKWindow::layout(int x, int y, int width1, int height1) {
       }
 #endif
       classHints->res_name = app->getAppName()->getCString();
-      classHints->res_class = app->getAppName()->getCString();
+      classHints->res_class = app->getAppClass()->getCString();
       XSetWMProperties(display, xwin, &windowName, &iconName,
 		       NULL, 0, sizeHints, wmHints, classHints);
     }
@@ -325,7 +325,7 @@ void LTKWindow::layout(int x, int y, int width1, int height1) {
     (*layoutCbk)(this);
 }
 
-void LTKWindow::layoutDialog(LTKWindow *overWin1, int width1, int height1) {
+void LTKWindow::layoutDialog(LTKWindow *overWinA, int widthA, int heightA) {
   Window w1, w2, root;
   Window *children;
   Guint numChildren;
@@ -333,10 +333,10 @@ void LTKWindow::layoutDialog(LTKWindow *overWin1, int width1, int height1) {
   Guint w, h, bw, depth;
 
   // save the over-window
-  overWin = overWin1;
+  overWin = overWinA;
 
   // layout the dialog
-  layout(0, 0, width1, height1);
+  layout(0, 0, widthA, heightA);
 
   // find the window manager's outermost parent of <overWin>
   w2 = overWin->getXWindow();
@@ -440,12 +440,12 @@ GC LTKWindow::makeGC(unsigned long color, int lineWidth, int lineStyle) {
   return gc;
 }
 
-void LTKWindow::setTitle(GString *title1) {
+void LTKWindow::setTitle(GString *titleA) {
   XTextProperty windowName, iconName;
   char *title2;
 
   delete title;
-  title = title1;
+  title = titleA;
   title2 = title->getCString();
   if (xwin != None) {
     XStringListToTextProperty(&title2, 1, &windowName);

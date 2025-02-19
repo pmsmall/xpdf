@@ -19,15 +19,15 @@
 #include "LTKButton.h"
 #include "LTKBorder.h"
 
-LTKButton::LTKButton(char *name1, int widgetNum1, const char *label1,
-		     LTKButtonAction action1, LTKBoolValCbk pressCbk1):
-    LTKWidget(name1, widgetNum1) {
-  label = new GString(label1);
+LTKButton::LTKButton(char *nameA, int widgetNumA, const char *labelA,
+		     LTKButtonAction actionA, LTKBoolValCbk pressCbkA):
+    LTKWidget(nameA, widgetNumA) {
+  label = new GString(labelA);
   icon = None;
   iconData = NULL;
-  action = action1;
+  action = actionA;
   on = gFalse;
-  pressCbk = pressCbk1;
+  pressCbk = pressCbkA;
 }
 
 LTKButton::LTKButton(char *name1, int widgetNum1,
@@ -146,9 +146,9 @@ void LTKButton::activateDefault() {
   buttonRelease(0, 0, 1, gTrue);
 }
 
-void LTKButton::setState(GBool on1) {
-  if (on1 != on) {
-    on = on1;
+void LTKButton::setState(GBool onA) {
+  if (onA != on) {
+    on = onA;
     ltkDrawBorder(getDisplay(), xwin, getBrightGC(), getDarkGC(), getBgGC(),
 		  0, 0, width, height, on ? ltkBorderSunken : ltkBorderRaised);
   }

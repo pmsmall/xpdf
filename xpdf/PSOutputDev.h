@@ -21,6 +21,8 @@
 class GfxPath;
 class GfxFont;
 class GfxColorSpace;
+class GfxSeparationColorSpace;
+class PSOutCustomColor;
 
 //------------------------------------------------------------------------
 // Parameters
@@ -31,6 +33,9 @@ extern GBool psOutLevel1;
 
 // Generate Level 1 separable PostScript?
 extern GBool psOutLevel1Sep;
+
+// Generate Level 2 separable PostScript?
+extern GBool psOutLevel2Sep;
 
 // Generate Encapsulated PostScript?
 extern GBool psOutEPS;
@@ -60,8 +65,8 @@ public:
   // Open a PostScript output file, and write the prolog.
   PSOutputDev(char *fileName, Catalog *catalog,
 	      int firstPage, int lastPage,
-	      GBool embedType1, GBool embedTrueType,
-	      GBool doForm);
+	      GBool embedType1A, GBool embedTrueTypeA,
+	      GBool doFormA);
 
   // Destructor -- writes the trailer and closes the file.
   virtual ~PSOutputDev();
@@ -151,6 +156,8 @@ private:
   void setupEmbeddedTrueTypeFont(GfxFont *font, Ref *id, char *psName);
   void setupImages(Dict *resDict);
   void setupImage(Ref id, Stream *str);
+  void addProcessColor(double c, double m, double y, double k);
+  void addCustomColor(GfxSeparationColorSpace *sepCS);
   void doPath(GfxPath *path);
   void doImageL1(GfxImageColorMap *colorMap,
 		 GBool invert, GBool inlineImg,
@@ -193,6 +200,10 @@ private:
   GBool landscape;		// true for landscape, false for portrait
 
   GString *embFontList;		// resource comments for embedded fonts
+
+  int processColors;		// used process colors
+  PSOutCustomColor		// used custom colors
+    *customColors;
 
 #if OPI_SUPPORT
   int opi13Nest;		// nesting level of OPI 1.3 objects

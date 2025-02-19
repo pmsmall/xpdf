@@ -35,16 +35,16 @@ class T1FontFile;
 class T1Font;
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 class FTFontEngine;
 class FTFontFile;
 class FTFont;
-#else
+#endif
+
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 class TTFontEngine;
 class TTFontFile;
 class TTFont;
-#endif
 #endif
 
 //------------------------------------------------------------------------
@@ -85,7 +85,7 @@ extern int rgbCubeSize;
 extern GString *t1libControl;
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
 // Type of FreeType font rendering to use:
 //     "none"   -- don't use FreeType
 //     "plain"  -- FreeType, without anti-aliasing
@@ -136,7 +136,7 @@ class XOutputFont {
 public:
 
   XOutputFont(GfxFont *gfxFont, double m11, double m12,
-	      double m21, double m22, Display *display,
+	      double m21, double m22, Display *displayA,
 	      XOutputFontCache *cache);
 
   virtual ~XOutputFont();
@@ -179,7 +179,7 @@ public:
 
   XOutputT1Font(GfxFont *gfxFont, GString *pdfBaseFont,
 		double m11, double m12, double m21, double m22,
-		Display *display, XOutputFontCache *cache);
+		Display *displayA, XOutputFontCache *cache);
 
   virtual ~XOutputT1Font();
 
@@ -198,11 +198,9 @@ private:
   T1FontFile *fontFile;
   T1Font *font;
 };
-#endif
+#endif // HAVE_T1LIB_H
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
-
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 //------------------------------------------------------------------------
 // XOutputFTFont
 //------------------------------------------------------------------------
@@ -212,7 +210,7 @@ public:
 
   XOutputFTFont(GfxFont *gfxFont, GString *pdfBaseFont,
 		double m11, double m12, double m21, double m22,
-		Display *display, XOutputFontCache *cache);
+		Display *displayA, XOutputFontCache *cache);
 
   virtual ~XOutputFTFont();
 
@@ -231,9 +229,9 @@ private:
   FTFontFile *fontFile;
   FTFont *font;
 };
+#endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
-#else // FREETYPE2
-
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 //------------------------------------------------------------------------
 // XOutputTTFont
 //------------------------------------------------------------------------
@@ -242,7 +240,7 @@ class XOutputTTFont: public XOutputFont {
 public:
 
   XOutputTTFont(GfxFont *gfxFont, double m11, double m12,
-		double m21, double m22, Display *display,
+		double m21, double m22, Display *displayA,
 		XOutputFontCache *cache);
 
   virtual ~XOutputTTFont();
@@ -262,9 +260,7 @@ private:
   TTFontFile *fontFile;
   TTFont *font;
 };
-
-#endif // FREETYPE2
-#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#endif // !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 //------------------------------------------------------------------------
 // XOutputServerFont
@@ -278,7 +274,7 @@ public:
 		    double m11, double m12, double m21, double m22,
 		    double size, double ntm11, double ntm12,
 		    double ntm21, double ntm22,
-		    Display *display, XOutputFontCache *cache);
+		    Display *displayA, XOutputFontCache *cache);
 
   virtual ~XOutputServerFont();
 
@@ -310,25 +306,25 @@ struct XOutputT1FontFile {
 };
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 struct XOutputFTFontFile {
   int num, gen;
   FTFontFile *fontFile;
 };
-#else
+#endif
+
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 struct XOutputTTFontFile {
   int num, gen;
   TTFontFile *fontFile;
 };
-#endif
 #endif
 
 class XOutputFontCache {
 public:
 
   // Constructor.
-  XOutputFontCache(Display *display, Guint depth);
+  XOutputFontCache(Display *displayA, Guint depthA);
 
   // Destructor.
   ~XOutputFontCache();
@@ -352,14 +348,14 @@ public:
   GBool getT1libAA() { return t1libAA; }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // Get a FreeType font file.
   FTFontFile *getFTFont(GfxFont *gfxFont, GString *pdfBaseFont);
-#else
+#endif
+
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // Get a FreeType font file.
   TTFontFile *getTTFont(GfxFont *gfxFont);
-#endif
 #endif
 
 private:
@@ -383,10 +379,11 @@ private:
   int t1FontFilesSize;		// size of t1FontFiles array
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
   GBool useFreeType;		// if false, FreeType is not used at all
   GBool freeTypeAA;		// true for anti-aliased fonts
-#if FREETYPE2
+#endif
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   FTFontEngine *ftEngine;	// FreeType font engine
   XOutputFTFont *		// FreeType fonts in reverse-LRU order
     ftFonts[ftFontCacheSize];
@@ -394,7 +391,8 @@ private:
   XOutputFTFontFile *		// list of FreeType font files
     ftFontFiles;
   int ftFontFilesSize;		// size of ftFontFiles array
-#else
+#endif
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   TTFontEngine *ttEngine;	// TrueType font engine
   XOutputTTFont *		// TrueType fonts in reverse-LRU order
     ttFonts[ttFontCacheSize];
@@ -402,7 +400,6 @@ private:
   XOutputTTFontFile *		// list of TrueType font files
     ttFontFiles;
   int ttFontFilesSize;		// size of ttFontFiles array
-#endif
 #endif
 
   XOutputServerFont *		// X server fonts in reverse-LRU order
@@ -429,8 +426,8 @@ class XOutputDev: public OutputDev {
 public:
 
   // Constructor.
-  XOutputDev(Display *display1, Pixmap pixmap1, Guint depth1,
-	     Colormap colormap, unsigned long paperColor);
+  XOutputDev(Display *displayA, Pixmap pixmapA, Guint depthA,
+	     Colormap colormapA, unsigned long paperColor);
 
   // Destructor.
   virtual ~XOutputDev();

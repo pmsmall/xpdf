@@ -30,12 +30,12 @@ typedef char *XPointer;
 
 static void menuItemCbk(LTKMenuItem *item);
 
-LTKMenuButton::LTKMenuButton(char *name, int widgetNum, LTKMenu *menu):
-    LTKWidget(name, widgetNum) {
+LTKMenuButton::LTKMenuButton(char *nameA, int widgetNumA, LTKMenu *menuA):
+    LTKWidget(nameA, widgetNumA) {
   LTKMenuItem *item;
   int i;
 
-  this->menu = menu;
+  menu = menuA;
   menuItem = NULL;
 
   cbks = (LTKMenuCbk *)gmalloc(menu->getNumItems() * sizeof(LTKMenuCbk));

@@ -8,8 +8,7 @@
 #pragma implementation
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if !FREETYPE2
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 #include <string.h>
 #include "gmem.h"
@@ -17,16 +16,16 @@
 
 //------------------------------------------------------------------------
 
-TTFontEngine::TTFontEngine(Display *display, Visual *visual, int depth,
-			   Colormap colormap, GBool aa):
-  SFontEngine(display, visual, depth, colormap) {
+TTFontEngine::TTFontEngine(Display *displayA, Visual *visualA, int depthA,
+			   Colormap colormapA, GBool aaA):
+  SFontEngine(displayA, visualA, depthA, colormapA) {
   static TT_Byte ttPalette[5] = {0, 1, 2, 3, 4};
 
   ok = gFalse;
   if (TT_Init_FreeType(&engine)) {
     return;
   }
-  this->aa = aa;
+  aa = aaA;
   if (aa) {
     if (TT_Set_Raster_Gray_Palette(engine, ttPalette)) {
       return;
@@ -41,12 +40,12 @@ TTFontEngine::~TTFontEngine() {
 
 //------------------------------------------------------------------------
 
-TTFontFile::TTFontFile(TTFontEngine *engine, char *fontFileName) {
+TTFontFile::TTFontFile(TTFontEngine *engineA, char *fontFileName) {
   TT_Face_Properties props;
   TT_UShort platform, encoding, i;
 
   ok = gFalse;
-  this->engine = engine;
+  engine = engineA;
   if (TT_Open_Face(engine->engine, fontFileName, &face)) {
     return;
   }
@@ -88,7 +87,7 @@ TTFontFile::~TTFontFile() {
 
 //------------------------------------------------------------------------
 
-TTFont::TTFont(TTFontFile *fontFile, double *m) {
+TTFont::TTFont(TTFontFile *fontFileA, double *m) {
   TTFontEngine *engine;
   TT_Face_Properties props;
   TT_Instance_Metrics metrics;
@@ -97,7 +96,7 @@ TTFont::TTFont(TTFontFile *fontFile, double *m) {
   int i;
 
   ok = gFalse;
-  this->fontFile = fontFile;
+  fontFile = fontFileA;
   engine = fontFile->engine;
   if (TT_New_Instance(fontFile->face, &instance) ||
       TT_Set_Instance_Resolutions(instance, 72, 72) ||
@@ -387,5 +386,4 @@ GBool TTFont::getGlyphPixmap(Gushort c) {
   return gTrue;
 }
 
-#endif // !FREETYPE2
-#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#endif // !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)

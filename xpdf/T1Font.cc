@@ -19,9 +19,9 @@
 
 //------------------------------------------------------------------------
 
-T1FontEngine::T1FontEngine(Display *display, Visual *visual, int depth,
-			   Colormap colormap, GBool aa, GBool aaHigh):
-  SFontEngine(display, visual, depth, colormap)
+T1FontEngine::T1FontEngine(Display *displayA, Visual *visualA, int depthA,
+			   Colormap colormapA, GBool aaA, GBool aaHighA):
+  SFontEngine(displayA, visualA, depthA, colormapA)
 {
   static unsigned long grayVals[17] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
@@ -33,8 +33,8 @@ T1FontEngine::T1FontEngine(Display *display, Visual *visual, int depth,
 		  T1_NO_AFM)) {
     return;
   }
-  this->aa = aa;
-  this->aaHigh = aaHigh;
+  aa = aaA;
+  aaHigh = aaHighA;
   if (aa) {
     T1_AASetBitsPerPixel(8);
     if (aaHigh) {
@@ -56,14 +56,14 @@ T1FontEngine::~T1FontEngine() {
 
 //------------------------------------------------------------------------
 
-T1FontFile::T1FontFile(T1FontEngine *engine, char *fontFileName,
+T1FontFile::T1FontFile(T1FontEngine *engineA, char *fontFileName,
 		       FontEncoding *fontEnc) {
   int encStrSize;
   char *encPtr;
   int i;
 
   ok = gFalse;
-  this->engine = engine;
+  engine = engineA;
   enc = NULL;
   encStr = NULL;
 
@@ -111,7 +111,7 @@ T1FontFile::~T1FontFile() {
 
 //------------------------------------------------------------------------
 
-T1Font::T1Font(T1FontFile *fontFile, double *m) {
+T1Font::T1Font(T1FontFile *fontFileA, double *m) {
   T1FontEngine *engine;
   T1_TMATRIX matrix;
   BBox bbox;
@@ -119,8 +119,8 @@ T1Font::T1Font(T1FontFile *fontFile, double *m) {
   int i;
 
   ok = gFalse;
+  fontFile = fontFileA;
   engine = fontFile->engine;
-  this->fontFile = fontFile;
 
   id = T1_CopyFont(fontFile->id);
 
@@ -130,6 +130,13 @@ T1Font::T1Font(T1FontFile *fontFile, double *m) {
   // transform the four corners of the font bounding box -- the min
   // and max values form the bounding box of the transformed font
   bbox = T1_GetFontBBox(id);
+  if (bbox.llx == 0 && bbox.lly == 0 &&
+      bbox.urx == 0 && bbox.ury == 0) {
+    // broken font, so we fake it (with values large enough that most
+    // glyphs should fit)
+    bbox.llx = bbox.lly = -500;
+    bbox.urx = bbox.ury = 1500;
+  }
   x = (int)((m[0] * bbox.llx + m[2] * bbox.lly) * 0.001);
   xMin = xMax = x;
   y = (int)((m[1] * bbox.llx + m[3] * bbox.lly) * 0.001);

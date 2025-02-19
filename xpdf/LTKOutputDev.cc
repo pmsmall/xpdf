@@ -28,12 +28,12 @@
 
 //------------------------------------------------------------------------
 
-LTKOutputDev::LTKOutputDev(LTKWindow *win1, unsigned long paperColor):
-  XOutputDev(win1->getDisplay(),
-	     ((LTKScrollingCanvas *)win1->findWidget("canvas"))->getPixmap(),
-	     0, win1->getColormap(), paperColor)
+LTKOutputDev::LTKOutputDev(LTKWindow *winA, unsigned long paperColor):
+  XOutputDev(winA->getDisplay(),
+	     ((LTKScrollingCanvas *)winA->findWidget("canvas"))->getPixmap(),
+	     0, winA->getColormap(), paperColor)
 {
-  win = win1;
+  win = winA;
   canvas = (LTKScrollingCanvas *)win->findWidget("canvas");
   setPixmap(canvas->getPixmap(),
 	    canvas->getRealWidth(), canvas->getRealHeight());

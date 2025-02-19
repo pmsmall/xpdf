@@ -42,11 +42,11 @@ FontEncoding::FontEncoding() {
     hashTab[i] = -1;
 }
 
-FontEncoding::FontEncoding(char **encoding, int size) {
+FontEncoding::FontEncoding(char **encodingA, int sizeA) {
   int i;
 
-  this->encoding = encoding;
-  this->size = size;
+  encoding = encodingA;
+  size = sizeA;
   freeEnc = gFalse;
   for (i = 0; i < fontEncHashSize; ++i)
     hashTab[i] = -1;

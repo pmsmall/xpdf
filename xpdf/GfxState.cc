@@ -17,6 +17,7 @@
 #include "Error.h"
 #include "Object.h"
 #include "Array.h"
+#include "Page.h"
 #include "GfxState.h"
 
 //------------------------------------------------------------------------
@@ -261,9 +262,9 @@ GfxCalRGBColorSpace::GfxCalRGBColorSpace() {
   whiteX = whiteY = whiteZ = 1;
   blackX = blackY = blackZ = 0;
   gammaR = gammaG = gammaB = 1;
-  m[0] = 1; m[1] = 0; m[2] = 0;
-  m[3] = 0; m[4] = 1; m[5] = 0;
-  m[6] = 0; m[7] = 0; m[8] = 1;
+  mat[0] = 1; mat[1] = 0; mat[2] = 0;
+  mat[3] = 0; mat[4] = 1; mat[5] = 0;
+  mat[6] = 0; mat[7] = 0; mat[8] = 1;
 }
 
 GfxCalRGBColorSpace::~GfxCalRGBColorSpace() {
@@ -284,7 +285,7 @@ GfxColorSpace *GfxCalRGBColorSpace::copy() {
   cs->gammaG = gammaG;
   cs->gammaB = gammaB;
   for (i = 0; i < 9; ++i) {
-    cs->m[i] = m[i];
+    cs->mat[i] = mat[i];
   }
   return cs;
 }
@@ -344,7 +345,7 @@ GfxColorSpace *GfxCalRGBColorSpace::parse(Array *arr) {
       obj2.arrayGetLength() == 9) {
     for (i = 0; i < 9; ++i) {
       obj2.arrayGet(i, &obj3);
-      cs->m[i] = obj3.getNum();
+      cs->mat[i] = obj3.getNum();
       obj3.free();
     }
   }
@@ -609,11 +610,11 @@ void GfxLabColorSpace::getDefaultRanges(double *decodeLow, double *decodeRange,
 // GfxICCBasedColorSpace
 //------------------------------------------------------------------------
 
-GfxICCBasedColorSpace::GfxICCBasedColorSpace(int nComps, GfxColorSpace *alt,
-					     Ref *iccProfileStream) {
-  this->nComps = nComps;
-  this->alt = alt;
-  this->iccProfileStream = *iccProfileStream;
+GfxICCBasedColorSpace::GfxICCBasedColorSpace(int nCompsA, GfxColorSpace *altA,
+					     Ref *iccProfileStreamA) {
+  nComps = nCompsA;
+  alt = altA;
+  iccProfileStream = *iccProfileStreamA;
   rangeMin[0] = rangeMin[1] = rangeMin[2] = rangeMin[3] = 0;
   rangeMax[0] = rangeMax[1] = rangeMax[2] = rangeMax[3] = 1;
 }
@@ -636,19 +637,19 @@ GfxColorSpace *GfxICCBasedColorSpace::copy() {
 
 GfxColorSpace *GfxICCBasedColorSpace::parse(Array *arr) {
   GfxICCBasedColorSpace *cs;
-  Ref iccProfileStream;
-  int nComps;
-  GfxColorSpace *alt;
+  Ref iccProfileStreamA;
+  int nCompsA;
+  GfxColorSpace *altA;
   Dict *dict;
   Object obj1, obj2, obj3;
   int i;
 
   arr->getNF(1, &obj1);
   if (obj1.isRef()) {
-    iccProfileStream = obj1.getRef();
+    iccProfileStreamA = obj1.getRef();
   } else {
-    iccProfileStream.num = 0;
-    iccProfileStream.gen = 0;
+    iccProfileStreamA.num = 0;
+    iccProfileStreamA.gen = 0;
   }
   obj1.free();
   arr->get(1, &obj1);
@@ -664,19 +665,19 @@ GfxColorSpace *GfxICCBasedColorSpace::parse(Array *arr) {
     obj1.free();
     return NULL;
   }
-  nComps = obj2.getInt();
+  nCompsA = obj2.getInt();
   obj2.free();
   if (dict->lookup("Alternate", &obj2)->isNull() ||
-      !(alt = GfxColorSpace::parse(&obj2))) {
-    switch (nComps) {
+      !(altA = GfxColorSpace::parse(&obj2))) {
+    switch (nCompsA) {
     case 1:
-      alt = new GfxDeviceGrayColorSpace();
+      altA = new GfxDeviceGrayColorSpace();
       break;
     case 3:
-      alt = new GfxDeviceRGBColorSpace();
+      altA = new GfxDeviceRGBColorSpace();
       break;
     case 4:
-      alt = new GfxDeviceCMYKColorSpace();
+      altA = new GfxDeviceCMYKColorSpace();
       break;
     default:
       error(-1, "Bad ICCBased color space - invalid N");
@@ -686,10 +687,10 @@ GfxColorSpace *GfxICCBasedColorSpace::parse(Array *arr) {
     }
   }
   obj2.free();
-  cs = new GfxICCBasedColorSpace(nComps, alt, &iccProfileStream);
+  cs = new GfxICCBasedColorSpace(nCompsA, altA, &iccProfileStreamA);
   if (dict->lookup("Range", &obj2)->isArray() &&
-      obj2.arrayGetLength() == 2 * nComps) {
-    for (i = 0; i < nComps; ++i) {
+      obj2.arrayGetLength() == 2 * nCompsA) {
+    for (i = 0; i < nCompsA; ++i) {
       obj2.arrayGet(2*i, &obj3);
       cs->rangeMin[i] = obj3.getNum();
       obj3.free();
@@ -730,12 +731,12 @@ void GfxICCBasedColorSpace::getDefaultRanges(double *decodeLow,
 // GfxIndexedColorSpace
 //------------------------------------------------------------------------
 
-GfxIndexedColorSpace::GfxIndexedColorSpace(GfxColorSpace *base,
-					   int indexHigh) {
-  this->base = base;
-  this->indexHigh = indexHigh;
-  this->lookup = (Guchar *)gmalloc((indexHigh + 1) * base->getNComps() *
-				   sizeof(Guchar));
+GfxIndexedColorSpace::GfxIndexedColorSpace(GfxColorSpace *baseA,
+					   int indexHighA) {
+  base = baseA;
+  indexHigh = indexHighA;
+  lookup = (Guchar *)gmalloc((indexHigh + 1) * base->getNComps() *
+			     sizeof(Guchar));
 }
 
 GfxIndexedColorSpace::~GfxIndexedColorSpace() {
@@ -754,8 +755,8 @@ GfxColorSpace *GfxIndexedColorSpace::copy() {
 
 GfxColorSpace *GfxIndexedColorSpace::parse(Array *arr) {
   GfxIndexedColorSpace *cs;
-  GfxColorSpace *base;
-  int indexHigh;
+  GfxColorSpace *baseA;
+  int indexHighA;
   Object obj1;
   int x;
   char *s;
@@ -766,7 +767,7 @@ GfxColorSpace *GfxIndexedColorSpace::parse(Array *arr) {
     goto err1;
   }
   arr->get(1, &obj1);
-  if (!(base = GfxColorSpace::parse(&obj1))) {
+  if (!(baseA = GfxColorSpace::parse(&obj1))) {
     error(-1, "Bad Indexed color space (base color space)");
     goto err2;
   }
@@ -775,14 +776,14 @@ GfxColorSpace *GfxIndexedColorSpace::parse(Array *arr) {
     error(-1, "Bad Indexed color space (hival)");
     goto err2;
   }
-  indexHigh = obj1.getInt();
+  indexHighA = obj1.getInt();
   obj1.free();
-  cs = new GfxIndexedColorSpace(base, indexHigh);
+  cs = new GfxIndexedColorSpace(baseA, indexHighA);
   arr->get(3, &obj1);
-  n = base->getNComps();
+  n = baseA->getNComps();
   if (obj1.isStream()) {
     obj1.streamReset();
-    for (i = 0; i <= indexHigh; ++i) {
+    for (i = 0; i <= indexHighA; ++i) {
       for (j = 0; j < n; ++j) {
 	if ((x = obj1.streamGetChar()) == EOF) {
 	  error(-1, "Bad Indexed color space (lookup table stream too short)");
@@ -793,12 +794,12 @@ GfxColorSpace *GfxIndexedColorSpace::parse(Array *arr) {
     }
     obj1.streamClose();
   } else if (obj1.isString()) {
-    if (obj1.getString()->getLength() < (indexHigh + 1) * n) {
+    if (obj1.getString()->getLength() < (indexHighA + 1) * n) {
       error(-1, "Bad Indexed color space (lookup table string too short)");
       goto err3;
     }
     s = obj1.getString()->getCString();
-    for (i = 0; i <= indexHigh; ++i) {
+    for (i = 0; i <= indexHighA; ++i) {
       for (j = 0; j < n; ++j) {
 	cs->lookup[i*n + j] = (Guchar)*s++;
       }
@@ -868,12 +869,12 @@ void GfxIndexedColorSpace::getDefaultRanges(double *decodeLow,
 // GfxSeparationColorSpace
 //------------------------------------------------------------------------
 
-GfxSeparationColorSpace::GfxSeparationColorSpace(GString *name,
-						 GfxColorSpace *alt,
-						 Function *func) {
-  this->name = name;
-  this->alt = alt;
-  this->func = func;
+GfxSeparationColorSpace::GfxSeparationColorSpace(GString *nameA,
+						 GfxColorSpace *altA,
+						 Function *funcA) {
+  name = nameA;
+  alt = altA;
+  func = funcA;
 }
 
 GfxSeparationColorSpace::~GfxSeparationColorSpace() {
@@ -889,9 +890,9 @@ GfxColorSpace *GfxSeparationColorSpace::copy() {
 //~ handle the 'All' and 'None' colorants
 GfxColorSpace *GfxSeparationColorSpace::parse(Array *arr) {
   GfxSeparationColorSpace *cs;
-  GString *name;
-  GfxColorSpace *alt;
-  Function *func;
+  GString *nameA;
+  GfxColorSpace *altA;
+  Function *funcA;
   Object obj1;
 
   if (arr->getLength() != 4) {
@@ -902,31 +903,31 @@ GfxColorSpace *GfxSeparationColorSpace::parse(Array *arr) {
     error(-1, "Bad Separation color space (name)");
     goto err2;
   }
-  name = new GString(obj1.getName());
+  nameA = new GString(obj1.getName());
   obj1.free();
   arr->get(2, &obj1);
-  if (!(alt = GfxColorSpace::parse(&obj1))) {
+  if (!(altA = GfxColorSpace::parse(&obj1))) {
     error(-1, "Bad Separation color space (alternate color space)");
     goto err3;
   }
   obj1.free();
   arr->get(3, &obj1);
-  if (!(func = Function::parse(&obj1))) {
+  if (!(funcA = Function::parse(&obj1))) {
     goto err4;
   }
-  if (!func->isOk()) {
+  if (!funcA->isOk()) {
     goto err5;
   }
   obj1.free();
-  cs = new GfxSeparationColorSpace(name, alt, func);
+  cs = new GfxSeparationColorSpace(nameA, altA, funcA);
   return cs;
 
  err5:
-  delete func;
+  delete funcA;
  err4:
-  delete alt;
+  delete altA;
  err3:
-  delete name;
+  delete nameA;
  err2:
   obj1.free();
  err1:
@@ -958,12 +959,12 @@ void GfxSeparationColorSpace::getCMYK(GfxColor *color, GfxCMYK *cmyk) {
 // GfxDeviceNColorSpace
 //------------------------------------------------------------------------
 
-GfxDeviceNColorSpace::GfxDeviceNColorSpace(int nComps,
-					   GfxColorSpace *alt,
-					   Function *func) {
-  this->nComps = nComps;
-  this->alt = alt;
-  this->func = func;
+GfxDeviceNColorSpace::GfxDeviceNColorSpace(int nCompsA,
+					   GfxColorSpace *altA,
+					   Function *funcA) {
+  nComps = nCompsA;
+  alt = altA;
+  func = funcA;
 }
 
 GfxDeviceNColorSpace::~GfxDeviceNColorSpace() {
@@ -990,10 +991,10 @@ GfxColorSpace *GfxDeviceNColorSpace::copy() {
 //~ handle the 'None' colorant
 GfxColorSpace *GfxDeviceNColorSpace::parse(Array *arr) {
   GfxDeviceNColorSpace *cs;
-  int nComps;
-  GString *names[gfxColorMaxComps];
-  GfxColorSpace *alt;
-  Function *func;
+  int nCompsA;
+  GString *namesA[gfxColorMaxComps];
+  GfxColorSpace *altA;
+  Function *funcA;
   Object obj1, obj2;
   int i;
 
@@ -1005,44 +1006,44 @@ GfxColorSpace *GfxDeviceNColorSpace::parse(Array *arr) {
     error(-1, "Bad DeviceN color space (names)");
     goto err2;
   }
-  nComps = obj1.arrayGetLength();
-  for (i = 0; i < nComps; ++i) {
+  nCompsA = obj1.arrayGetLength();
+  for (i = 0; i < nCompsA; ++i) {
     if (!obj1.arrayGet(i, &obj2)->isName()) {
       error(-1, "Bad DeviceN color space (names)");
       obj2.free();
       goto err2;
     }
-    names[i] = new GString(obj2.getName());
+    namesA[i] = new GString(obj2.getName());
     obj2.free();
   }
   obj1.free();
   arr->get(2, &obj1);
-  if (!(alt = GfxColorSpace::parse(&obj1))) {
+  if (!(altA = GfxColorSpace::parse(&obj1))) {
     error(-1, "Bad DeviceN color space (alternate color space)");
     goto err3;
   }
   obj1.free();
   arr->get(3, &obj1);
-  if (!(func = Function::parse(&obj1))) {
+  if (!(funcA = Function::parse(&obj1))) {
     goto err4;
   }
-  if (!func->isOk()) {
+  if (!funcA->isOk()) {
     goto err5;
   }
   obj1.free();
-  cs = new GfxDeviceNColorSpace(nComps, alt, func);
-  for (i = 0; i < nComps; ++i) {
-    cs->names[i] = names[i];
+  cs = new GfxDeviceNColorSpace(nCompsA, altA, funcA);
+  for (i = 0; i < nCompsA; ++i) {
+    cs->names[i] = namesA[i];
   }
   return cs;
 
  err5:
-  delete func;
+  delete funcA;
  err4:
-  delete alt;
+  delete altA;
  err3:
-  for (i = 0; i < nComps; ++i) {
-    delete names[i];
+  for (i = 0; i < nCompsA; ++i) {
+    delete namesA[i];
   }
  err2:
   obj1.free();
@@ -1075,8 +1076,8 @@ void GfxDeviceNColorSpace::getCMYK(GfxColor *color, GfxCMYK *cmyk) {
 // GfxPatternColorSpace
 //------------------------------------------------------------------------
 
-GfxPatternColorSpace::GfxPatternColorSpace(GfxColorSpace *under) {
-  this->under = under;
+GfxPatternColorSpace::GfxPatternColorSpace(GfxColorSpace *underA) {
+  under = underA;
 }
 
 GfxPatternColorSpace::~GfxPatternColorSpace() {
@@ -1092,24 +1093,24 @@ GfxColorSpace *GfxPatternColorSpace::copy() {
 
 GfxColorSpace *GfxPatternColorSpace::parse(Array *arr) {
   GfxPatternColorSpace *cs;
-  GfxColorSpace *under;
+  GfxColorSpace *underA;
   Object obj1;
 
   if (arr->getLength() != 1 && arr->getLength() != 2) {
     error(-1, "Bad Pattern color space");
     return NULL;
   }
-  under = NULL;
+  underA = NULL;
   if (arr->getLength() == 2) {
     arr->get(1, &obj1);
-    if (!(under = GfxColorSpace::parse(&obj1))) {
+    if (!(underA = GfxColorSpace::parse(&obj1))) {
       error(-1, "Bad Pattern color space (underlying color space)");
       obj1.free();
       return NULL;
     }
     obj1.free();
   }
-  cs = new GfxPatternColorSpace(under);
+  cs = new GfxPatternColorSpace(underA);
   return cs;
 }
 
@@ -1130,8 +1131,8 @@ void GfxPatternColorSpace::getCMYK(GfxColor *color, GfxCMYK *cmyk) {
 // Pattern
 //------------------------------------------------------------------------
 
-GfxPattern::GfxPattern(int type) {
-  this->type = type;
+GfxPattern::GfxPattern(int typeA) {
+  type = typeA;
 }
 
 GfxPattern::~GfxPattern() {
@@ -1248,8 +1249,8 @@ GfxTilingPattern::GfxTilingPattern(GfxTilingPattern *pat):
 // GfxImageColorMap
 //------------------------------------------------------------------------
 
-GfxImageColorMap::GfxImageColorMap(int bits, Object *decode,
-				   GfxColorSpace *colorSpace) {
+GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
+				   GfxColorSpace *colorSpaceA) {
   GfxIndexedColorSpace *indexedCS;
   GfxSeparationColorSpace *sepCS;
   int maxPixel, indexHigh;
@@ -1263,9 +1264,9 @@ GfxImageColorMap::GfxImageColorMap(int bits, Object *decode,
   ok = gTrue;
 
   // bits per component and color space
-  this->bits = bits;
+  bits = bitsA;
   maxPixel = (1 << bits) - 1;
-  this->colorSpace = colorSpace;
+  colorSpace = colorSpaceA;
 
   // get decode map
   if (decode->isNull()) {
@@ -1569,14 +1570,14 @@ void GfxPath::curveTo(double x1, double y1, double x2, double y2,
 // GfxState
 //------------------------------------------------------------------------
 
-GfxState::GfxState(double dpi, double px1a, double py1a,
-		   double px2a, double py2a, int rotate, GBool upsideDown) {
+GfxState::GfxState(double dpi, PDFRectangle *pageBox, int rotate,
+		   GBool upsideDown) {
   double k;
 
-  px1 = px1a;
-  py1 = py1a;
-  px2 = px2a;
-  py2 = py2a;
+  px1 = pageBox->x1;
+  py1 = pageBox->y1;
+  px2 = pageBox->x2;
+  py2 = pageBox->y2;
   k = dpi / 72.0;
   if (rotate == 90) {
     ctm[0] = 0;

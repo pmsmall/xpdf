@@ -18,14 +18,14 @@
 #include "LTKWindow.h"
 #include "LTKScrollingCanvas.h"
 
-LTKScrollingCanvas::LTKScrollingCanvas(char *name1, int widgetNum1,
-				       int realWidth1, int realHeight1,
-				       int minWidth1, int minHeight1):
-    LTKWidget(name1, widgetNum1) {
-  realWidth = realWidth1;
-  realHeight = realHeight1;
-  minWidth = minWidth1;
-  minHeight = minHeight1;
+LTKScrollingCanvas::LTKScrollingCanvas(char *nameA, int widgetNumA,
+				       int realWidthA, int realHeightA,
+				       int minWidthA, int minHeightA):
+    LTKWidget(nameA, widgetNumA) {
+  realWidth = realWidthA;
+  realHeight = realHeightA;
+  minWidth = minWidthA;
+  minHeight = minHeightA;
   left = top = 0;
   pixmap = None;
 }
@@ -87,12 +87,12 @@ void LTKScrollingCanvas::mouseMove(int mx, int my, int btn) {
   LTKWidget::mouseMove(left + mx, top + my, btn);
 }
 
-void LTKScrollingCanvas::resize(int realWidth1, int realHeight1) {
-  if (realWidth1 != realWidth || realHeight1 != realHeight) {
+void LTKScrollingCanvas::resize(int realWidthA, int realHeightA) {
+  if (realWidthA != realWidth || realHeightA != realHeight) {
     if (pixmap != None)
       XFreePixmap(getDisplay(), pixmap);
-    realWidth = realWidth1;
-    realHeight = realHeight1;
+    realWidth = realWidthA;
+    realHeight = realHeightA;
     pixmap = XCreatePixmap(getDisplay(), getXWindow(), realWidth, realHeight,
 			   DefaultDepth(getDisplay(), getScreenNum()));
     XFillRectangle(getDisplay(), pixmap, getBgGC(),
@@ -101,18 +101,18 @@ void LTKScrollingCanvas::resize(int realWidth1, int realHeight1) {
   }
 }
 
-void LTKScrollingCanvas::scroll(int x, int y) {
+void LTKScrollingCanvas::scroll(int xA, int yA) {
   int newLeft, newTop;
   int x1, y1, x2, y2, w, h;
 
   // compute new position
-  newLeft = x;
+  newLeft = xA;
   if (newLeft + width > realWidth) {
     newLeft = realWidth - width;
     if (newLeft < 0)
       newLeft = 0;
   }
-  newTop = y;
+  newTop = yA;
   if (newTop + height > realHeight) {
     newTop = realHeight - height;
     if (newTop < 0)

@@ -53,7 +53,7 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKApp(char *appName1, XrmOptionDescRec *opts,
+  LTKApp(char *appNameA, char *appClassA, XrmOptionDescRec *opts,
 	 int *argc, char *argv[]);
 
   ~LTKApp();
@@ -63,6 +63,7 @@ public:
   Display *getDisplay() { return display; }
   int getScreenNum() { return screenNum; }
   GString *getAppName() { return appName; }
+  GString *getAppClass() { return appClass; }
   int getDisplayWidth() { return DisplayWidth(display, screenNum); }
   int getDisplayHeight() { return DisplayHeight(display, screenNum); }
 
@@ -89,8 +90,8 @@ public:
 
   void setGrabWin(LTKWindow *win) { grabWin = win; }
   void setMenu(LTKMenu *menu) { activeMenu = menu; }
-  void setRepeatEvent(LTKWidget *repeatWidget1, int repeatDelay1,
-		      int repeatPeriod1);
+  void setRepeatEvent(LTKWidget *repeatWidgetA, int repeatDelayA,
+		      int repeatPeriodA);
   void setKillCbk(LTKAppKillCbk cbk) { killCbk = cbk; }
   void clearButton() { pressedBtn = 0; }
 
@@ -101,6 +102,7 @@ public:
 private:
 
   GString *appName;		// application name (for X resources)
+  GString *appClass;		// application class (for X resources)
   LTKWindow *windows;		// list of windows
   LTKWinHash			// hash table of (X window) -> (LTK
     *winTab[ltkWinTabSize];	//   window/widget) mappings

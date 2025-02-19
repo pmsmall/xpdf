@@ -9,18 +9,13 @@
 #ifndef FTFONT_H
 #define FTFONT_H
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 #ifdef __GNUC__
 #pragma interface
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H
 #include <freetype/freetype.h>
-#else
-#include <freetype.h>
-#endif
 #include "SFont.h"
 
 class FontEncoding;
@@ -30,8 +25,8 @@ class FontEncoding;
 class FTFontEngine: public SFontEngine {
 public:
 
-  FTFontEngine(Display *display, Visual *visual, int depth,
-	       Colormap colormap, GBool aa);
+  FTFontEngine(Display *displayA, Visual *visualA, int depthA,
+	       Colormap colormapA, GBool aaA);
   GBool isOk() { return ok; }
   virtual ~FTFontEngine();
 
@@ -51,7 +46,7 @@ private:
 class FTFontFile: public SFontFile {
 public:
 
-  FTFontFile(FTFontEngine *engine, char *fontFileName,
+  FTFontFile(FTFontEngine *engineA, char *fontFileName,
 	     FontEncoding *fontEnc);
   GBool isOk() { return ok; }
   virtual ~FTFontFile();
@@ -79,7 +74,7 @@ struct FTFontCacheTag {
 class FTFont: public SFont {
 public:
 
-  FTFont(FTFontFile *fontFile, double *m);
+  FTFont(FTFontFile *fontFileA, double *m);
   GBool isOk() { return ok; }
   virtual ~FTFont();
   virtual GBool drawChar(Drawable d, int w, int h, GC gc,
@@ -102,7 +97,6 @@ private:
   GBool ok;
 };
 
-#endif // FREETYPE2
-#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 #endif

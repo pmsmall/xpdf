@@ -14,14 +14,15 @@ $ APPS = "XPDF,PDFTOPS,PDFTOTEXT,PDFINFO,PDFTOPBM,PDFIMAGES"
 $ if f$search("COMMON.OLB").eqs."" then lib/create common.olb
 $!
 $ COMMON_OBJS = "Array.obj,Catalog.obj,Decrypt.obj,Dict.obj,Error.obj," + -
-                "FontEncoding.obj,FontFile.obj,FormWidget.obj,Gfx.obj," + -
-                "GfxFont.obj,GfxState.obj,Lexer.obj,Link.obj,Object.obj," + -
-                "OutputDev.obj,Page.obj,Params.obj,Parser.obj,PDFdoc.obj," + -
-		"Stream.obj,XRef.obj"
+                "FontEncoding.obj,FontFile.obj,FormWidget.obj," + -
+                "Function.obj,Gfx.obj,GfxFont.obj,GfxState.obj,Lexer.obj," + -
+                "Link.obj,Object.obj,OutputDev.obj,Page.obj,Params.obj," + -
+                "Parser.obj,PDFdoc.obj,Stream.obj,XRef.obj"
 $ COMMON_LIBS = "[]common.olb/lib,[-.goo]libgoo.olb/lib"
 $!
-$ XPDF_OBJS = "xpdf.obj,LTKOutputDev.obj,PSOutputDev.obj,SFont.obj," + - 
-              "T1Font.obj,TextOutputDev.obj,TTFont.obj,XOutputDev.obj"
+$ XPDF_OBJS = "xpdf.obj,FTFont.obj,LTKOutputDev.obj,PSOutputDev.obj," + -
+              "SFont.obj,T1Font.obj,TextOutputDev.obj,TTFont.obj," + -
+              "XOutputDev.obj"
 $ XPDF_LIBS = "[-.ltk]libltk.olb/lib"
 $!
 $ PDFTOPS_OBJS = "pdftops.obj,PSOutputDev.obj" 
@@ -33,8 +34,8 @@ $!
 $ PDFINFO_OBJS =  "pdfinfo.obj"
 $ PDFINFO_LIBS = ""
 $!
-$ PDFTOPBM_OBJS = "pdftopbm.obj,PBMOutputDev.obj,SFont.obj,T1Font.obj," + -
-                  "TextOutputDev.obj,TTFont.obj,XOutputDev.obj"
+$ PDFTOPBM_OBJS = "pdftopbm.obj,FTFont.obj,PBMOutputDev.obj,SFont.obj," + -
+                  "T1Font.obj,TextOutputDev.obj,TTFont.obj,XOutputDev.obj"
 $ PDFTOPBM_LIBS = ""
 $!
 $ PDFIMAGES_OBJS = "pdfimages.obj,ImageOutputDev.obj"

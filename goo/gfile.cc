@@ -507,7 +507,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
 // GDir and GDirEntry
 //------------------------------------------------------------------------
 
-GDirEntry::GDirEntry(char *dirPath, char *name1, GBool doStat) {
+GDirEntry::GDirEntry(char *dirPath, char *nameA, GBool doStat) {
 #ifdef VMS
   char *p;
 #elif defined(WIN32)
@@ -519,17 +519,17 @@ GDirEntry::GDirEntry(char *dirPath, char *name1, GBool doStat) {
   GString *s;
 #endif
 
-  name = new GString(name1);
+  name = new GString(nameA);
   dir = gFalse;
   if (doStat) {
 #ifdef VMS
-    if (!strcmp(name1, "-") ||
-	((p = strrchr(name1, '.')) && !strncmp(p, ".DIR;", 5)))
+    if (!strcmp(nameA, "-") ||
+	((p = strrchr(nameA, '.')) && !strncmp(p, ".DIR;", 5)))
       dir = gTrue;
 #elif defined(ACORN)
 #else
     s = new GString(dirPath);
-    appendToPath(s, name1);
+    appendToPath(s, nameA);
 #ifdef WIN32
     fa = GetFileAttributes(s->getCString());
     dir = (fa != 0xFFFFFFFF && (fa & FILE_ATTRIBUTE_DIRECTORY));
@@ -546,9 +546,9 @@ GDirEntry::~GDirEntry() {
   delete name;
 }
 
-GDir::GDir(char *name, GBool doStat1) {
+GDir::GDir(char *name, GBool doStatA) {
   path = new GString(name);
-  doStat = doStat1;
+  doStat = doStatA;
 #if defined(WIN32)
   GString *tmp;
 

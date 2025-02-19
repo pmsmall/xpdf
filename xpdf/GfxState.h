@@ -19,6 +19,7 @@
 
 class Array;
 class GfxFont;
+struct PDFRectangle;
 
 //------------------------------------------------------------------------
 // GfxColor
@@ -201,14 +202,14 @@ public:
   double getGammaR() { return gammaR; }
   double getGammaG() { return gammaG; }
   double getGammaB() { return gammaB; }
-  double *getMatrix() { return m; }
+  double *getMatrix() { return mat; }
 
 private:
 
   double whiteX, whiteY, whiteZ;    // white point
   double blackX, blackY, blackZ;    // black point
   double gammaR, gammaG, gammaB;    // gamma values
-  double m[9];			    // ABC -> XYZ transform matrix
+  double mat[9];		// ABC -> XYZ transform matrix
 };
 
 //------------------------------------------------------------------------
@@ -283,8 +284,8 @@ private:
 class GfxICCBasedColorSpace: public GfxColorSpace {
 public:
 
-  GfxICCBasedColorSpace(int nComps, GfxColorSpace *alt,
-			Ref *iccProfileStream);
+  GfxICCBasedColorSpace(int nCompsA, GfxColorSpace *altA,
+			Ref *iccProfileStreamA);
   virtual ~GfxICCBasedColorSpace();
   virtual GfxColorSpace *copy();
   virtual GfxColorSpaceMode getMode() { return csICCBased; }
@@ -320,7 +321,7 @@ private:
 class GfxIndexedColorSpace: public GfxColorSpace {
 public:
 
-  GfxIndexedColorSpace(GfxColorSpace *base, int indexHigh);
+  GfxIndexedColorSpace(GfxColorSpace *baseA, int indexHighA);
   virtual ~GfxIndexedColorSpace();
   virtual GfxColorSpace *copy();
   virtual GfxColorSpaceMode getMode() { return csIndexed; }
@@ -356,8 +357,8 @@ private:
 class GfxSeparationColorSpace: public GfxColorSpace {
 public:
 
-  GfxSeparationColorSpace(GString *name, GfxColorSpace *alt,
-			  Function *func);
+  GfxSeparationColorSpace(GString *nameA, GfxColorSpace *altA,
+			  Function *funcA);
   virtual ~GfxSeparationColorSpace();
   virtual GfxColorSpace *copy();
   virtual GfxColorSpaceMode getMode() { return csSeparation; }
@@ -424,7 +425,7 @@ private:
 class GfxPatternColorSpace: public GfxColorSpace {
 public:
 
-  GfxPatternColorSpace(GfxColorSpace *under);
+  GfxPatternColorSpace(GfxColorSpace *underA);
   virtual ~GfxPatternColorSpace();
   virtual GfxColorSpace *copy();
   virtual GfxColorSpaceMode getMode() { return csPattern; }
@@ -454,7 +455,7 @@ private:
 class GfxPattern {
 public:
 
-  GfxPattern(int type);
+  GfxPattern(int typeA);
   virtual ~GfxPattern();
 
   static GfxPattern *parse(Object *obj);
@@ -511,7 +512,7 @@ class GfxImageColorMap {
 public:
 
   // Constructor.
-  GfxImageColorMap(int bits, Object *decode, GfxColorSpace *colorSpace);
+  GfxImageColorMap(int bitsA, Object *decode, GfxColorSpace *colorSpaceA);
 
   // Destructor.
   ~GfxImageColorMap();
@@ -659,10 +660,10 @@ class GfxState {
 public:
 
   // Construct a default GfxState, for a device with resolution <dpi>,
-  // page box (<x1>,<y1>)-(<x2>,<y2>), page rotation <rotate>, and
-  // coordinate system specified by <upsideDown>.
-  GfxState(double dpi, double px1a, double py1a,
-	   double px2a, double py2a, int rotate, GBool upsideDown);
+  // page box <pageBox>, page rotation <rotate>, and coordinate system
+  // specified by <upsideDown>.
+  GfxState(double dpi, PDFRectangle *pageBox, int rotate,
+	   GBool upsideDown);
 
   // Destructor.
   ~GfxState();
@@ -761,9 +762,9 @@ public:
   void setFlatness(int flatness1) { flatness = flatness1; }
   void setLineJoin(int lineJoin1) { lineJoin = lineJoin1; }
   void setLineCap(int lineCap1) { lineCap = lineCap1; }
-  void setMiterLimit(double miterLimit1) { miterLimit = miterLimit1; }
-  void setFont(GfxFont *font1, double fontSize1)
-    { font = font1; fontSize = fontSize1; }
+  void setMiterLimit(double limit) { miterLimit = limit; }
+  void setFont(GfxFont *fontA, double fontSizeA)
+    { font = fontA; fontSize = fontSizeA; }
   void setTextMat(double a, double b, double c,
 		  double d, double e, double f)
     { textMat[0] = a; textMat[1] = b; textMat[2] = c;
@@ -774,12 +775,12 @@ public:
     { wordSpace = space; }
   void setHorizScaling(double scale)
     { horizScaling = 0.01 * scale; }
-  void setLeading(double leading1)
-    { leading = leading1; }
-  void setRise(double rise1)
-    { rise = rise1; }
-  void setRender(int render1)
-    { render = render1; }
+  void setLeading(double leadingA)
+    { leading = leadingA; }
+  void setRise(double riseA)
+    { rise = riseA; }
+  void setRender(int renderA)
+    { render = renderA; }
 
   // Add to path.
   void moveTo(double x, double y)

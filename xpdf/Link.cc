@@ -28,11 +28,11 @@ static GString *getFileSpecName(Object *fileSpecObj);
 // LinkDest
 //------------------------------------------------------------------------
 
-LinkDest::LinkDest(Array *a, GBool pageIsRef1) {
+LinkDest::LinkDest(Array *a, GBool pageIsRefA) {
   Object obj1, obj2;
 
   // initialize fields
-  pageIsRef = pageIsRef1;
+  pageIsRef = pageIsRefA;
   left = bottom = right = top = zoom = 0;
   ok = gFalse;
 
@@ -384,8 +384,8 @@ LinkNamed::~LinkNamed() {
 // LinkUnknown
 //------------------------------------------------------------------------
 
-LinkUnknown::LinkUnknown(char *action1) {
-  action = new GString(action1);
+LinkUnknown::LinkUnknown(char *actionA) {
+  action = new GString(actionA);
 }
 
 LinkUnknown::~LinkUnknown() {

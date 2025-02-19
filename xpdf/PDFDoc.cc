@@ -37,7 +37,8 @@
 // PDFDoc
 //------------------------------------------------------------------------
 
-PDFDoc::PDFDoc(GString *fileName1, GString *userPassword) {
+PDFDoc::PDFDoc(GString *fileNameA, GString *ownerPassword,
+	       GString *userPassword) {
   Object obj;
   GString *fileName2;
 
@@ -50,7 +51,7 @@ PDFDoc::PDFDoc(GString *fileName1, GString *userPassword) {
   links = NULL;
 
   // try to open file
-  fileName = fileName1;
+  fileName = fileNameA;
   fileName2 = NULL;
 #ifdef VMS
   if (!(file = fopen(fileName->getCString(), "rb", "ctx=stm"))) {
@@ -77,28 +78,29 @@ PDFDoc::PDFDoc(GString *fileName1, GString *userPassword) {
   obj.initNull();
   str = new FileStream(file, 0, -1, &obj);
 
-  ok = setup(userPassword);
+  ok = setup(ownerPassword, userPassword);
 }
 
-PDFDoc::PDFDoc(BaseStream *str, GString *userPassword) {
+PDFDoc::PDFDoc(BaseStream *strA, GString *ownerPassword,
+	       GString *userPassword) {
   ok = gFalse;
   fileName = NULL;
   file = NULL;
-  this->str = str;
+  str = strA;
   xref = NULL;
   catalog = NULL;
   links = NULL;
-  ok = setup(userPassword);
+  ok = setup(ownerPassword, userPassword);
 }
 
-GBool PDFDoc::setup(GString *userPassword) {
+GBool PDFDoc::setup(GString *ownerPassword, GString *userPassword) {
   Object catObj;
 
   // check header
   checkHeader();
 
   // read xref table
-  xref = new XRef(str, userPassword);
+  xref = new XRef(str, ownerPassword, userPassword);
   if (!xref->isOk()) {
     error(-1, "Couldn't read xref table");
     return gFalse;

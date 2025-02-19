@@ -25,12 +25,12 @@
 // LTKButtonDialog
 //------------------------------------------------------------------------
 
-LTKButtonDialog::LTKButtonDialog(LTKWindow *overWin1, char *title,
+LTKButtonDialog::LTKButtonDialog(LTKWindow *overWinA, char *title,
 				 char *line1, char *line2, char *line3,
 				 char *trueBtnLabel, char *falseBtnLabel) {
   LTKBox *box;
 
-  overWin = overWin1;
+  overWin = overWinA;
   widget = new LTKButtonDialogWidget(NULL, 0, line1, line2, line3,
 				     trueBtnLabel, falseBtnLabel);
   box = new LTKBox(NULL, 1, 1, 0, 0, 0, 0, ltkBorderNone, 0, 0, widget);
@@ -54,12 +54,12 @@ GBool LTKButtonDialog::go() {
 // LTKButtonDialogWidget
 //------------------------------------------------------------------------
 
-LTKButtonDialogWidget::LTKButtonDialogWidget(char *name1, int widgetNum1,
+LTKButtonDialogWidget::LTKButtonDialogWidget(char *nameA, int widgetNumA,
 					     char *line1, char *line2,
 					     char *line3,
 					     char *trueBtnLabel,
 					     char *falseBtnLabel):
-    LTKCompoundWidget(name1, widgetNum1) {
+    LTKCompoundWidget(nameA, widgetNumA) {
   LTKLabel *label1, *label2, *label3;
   LTKBox *labelBox1, *labelBox2, *labelBox3, *labelBox;
   LTKButton *trueBtn, *falseBtn;

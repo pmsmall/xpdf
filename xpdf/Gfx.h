@@ -27,6 +27,7 @@ struct GfxFontEncoding16;
 class GfxPattern;
 class GfxState;
 class Gfx;
+struct PDFRectangle;
 
 //------------------------------------------------------------------------
 // Gfx
@@ -62,7 +63,7 @@ struct Operator {
 class GfxResources {
 public:
 
-  GfxResources(Dict *resDict, GfxResources *next);
+  GfxResources(Dict *resDict, GfxResources *nextA);
   ~GfxResources();
 
   GfxFont *lookupFont(char *name);
@@ -88,10 +89,8 @@ class Gfx {
 public:
 
   // Constructor for regular output.
-  Gfx(OutputDev *out1, int pageNum, Dict *resDict,
-      double dpi, double x1, double y1, double x2, double y2, GBool crop,
-      double cropX1, double cropY1, double cropX2, double cropY2,
-      int rotate);
+  Gfx(OutputDev *outA, int pageNum, Dict *resDict, double dpi,
+      PDFRectangle *box, GBool crop, PDFRectangle *cropBox, int rotate);
 
   // Destructor.
   ~Gfx();

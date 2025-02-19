@@ -228,6 +228,7 @@ static char remoteName[100] = "xpdf_";
 static GBool doRemoteRaise = gFalse;
 static GBool doRemoteQuit = gFalse;
 static GBool viKeys = gFalse;
+static char ownerPassword[33] = "";
 static char userPassword[33] = "";
 static GBool fullScreen = gFalse;
 
@@ -272,6 +273,8 @@ static ArgDesc argDesc[] = {
    "paper height, in points"},
   {"-level1",     argFlagDummy,   NULL,           0,
    "generate Level 1 PostScript"},
+  {"-opw",        argString,      ownerPassword,  sizeof(ownerPassword),
+   "owner password (for encrypted files)"},
   {"-upw",        argString,      userPassword,   sizeof(userPassword),
    "user password (for encrypted files)"},
   {"-fullscreen", argFlag,        &fullScreen,    0,
@@ -285,6 +288,10 @@ static ArgDesc argDesc[] = {
   {"-h",          argFlag,        &printHelp,     0,
    "print usage information"},
   {"-help",       argFlag,        &printHelp,     0,
+   "print usage information"},
+  {"--help",  argFlag,     &printHelp,     0,
+   "print usage information"},
+  {"-?",      argFlag,     &printHelp,     0,
    "print usage information"},
   {NULL}
 };
@@ -424,10 +431,10 @@ int main(int argc, char *argv[]) {
   errorInit();
 
   // read config file
-  initParams(xpdfConfigFile);
+  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
 
   // create LTKApp (and parse X-related args)
-  app = new LTKApp("xpdf", opts, &argc, argv);
+  app = new LTKApp("xpdf", "Xpdf", opts, &argc, argv);
   app->setKillCbk(&killCbk);
   display = app->getDisplay();
 
@@ -815,7 +822,7 @@ int main(int argc, char *argv[]) {
 static GBool loadFile(GString *fileName) {
   GString *title;
   PDFDoc *newDoc;
-  GString *userPW;
+  GString *ownerPW, *userPW;
   char s[20];
   char *p;
 
@@ -824,14 +831,22 @@ static GBool loadFile(GString *fileName) {
     win->setBusyCursor(gTrue);
 
   // open PDF file
+  if (ownerPassword[0]) {
+    ownerPW = new GString(ownerPassword);
+  } else {
+    ownerPW = NULL;
+  }
   if (userPassword[0]) {
     userPW = new GString(userPassword);
   } else {
     userPW = NULL;
   }
-  newDoc = new PDFDoc(fileName, userPW);
+  newDoc = new PDFDoc(fileName, ownerPW, userPW);
   if (userPW) {
     delete userPW;
+  }
+  if (ownerPW) {
+    delete ownerPW;
   }
   if (!newDoc->isOk()) {
     delete newDoc;
@@ -1088,8 +1103,7 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
 	break;
       }
       if (zoom >= minZoom && zoom < maxZoom) {
-	++zoom;
-	displayPage(page, zoom, rotate, gFalse);
+	zoomMenuBtn->setMenuItem(zoomMenu->getItem(zoom + 1 - minZoom));
       }
       break;
     case '-':
@@ -1097,23 +1111,20 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
 	break;
       }
       if (zoom > minZoom && zoom <= maxZoom) {
-	--zoom;
-	displayPage(page, zoom, rotate, gFalse);
+	zoomMenuBtn->setMenuItem(zoomMenu->getItem(zoom - 1 - minZoom));
       }
       break;
     case 'z':
       if (fullScreen) {
 	break;
       }
-      zoom = zoomPage;
-      displayPage(page, zoom, rotate, gFalse);
+      zoomMenuBtn->setMenuItem(zoomMenu->getItem(maxZoom - minZoom + 2));
       break;
     case 'w':
       if (fullScreen) {
 	break;
       }
-      zoom = zoomWidth;
-      displayPage(page, zoom, rotate, gFalse);
+      zoomMenuBtn->setMenuItem(zoomMenu->getItem(maxZoom - minZoom + 3));
       break;
     case '\014':		// ^L
       win->redraw();
@@ -1263,8 +1274,7 @@ static void buttonPressCbk(LTKWidget *canvas1, int n,
     } else if (vScrollbar->getPos() == 0) {
       gotoPrevPage(1, gFalse, gTrue);
     } else {
-      vScrollbar->setPos(vScrollbar->getPos() - canvas->getHeight(),
-			 canvas->getHeight());
+      vScrollbar->setPos(vScrollbar->getPos() - 16, canvas->getHeight());
       canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
     }
     break;
@@ -1274,10 +1284,23 @@ static void buttonPressCbk(LTKWidget *canvas1, int n,
 	canvas->getRealHeight() - canvas->getHeight()) {
       gotoNextPage(1, gTrue);
     } else {
-      vScrollbar->setPos(vScrollbar->getPos() + canvas->getHeight(),
-			 canvas->getHeight());
+      vScrollbar->setPos(vScrollbar->getPos() + 16, canvas->getHeight());
       canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
     }
+    break;
+  case 6: // second mouse wheel right
+    if (fullScreen) {
+      return;
+    }
+    hScrollbar->setPos(hScrollbar->getPos() + 16, canvas->getWidth());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+    break;
+  case 7: // second mouse wheel left
+    if (fullScreen) {
+      return;
+    }
+    hScrollbar->setPos(hScrollbar->getPos() - 16, canvas->getWidth());
+    canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
     break;
   }
 }

@@ -98,7 +98,7 @@ class GfxFont {
 public:
 
   // Constructor.
-  GfxFont(char *tag1, Ref id1, Dict *fontDict);
+  GfxFont(char *tagA, Ref idA, Dict *fontDict);
 
   // Destructor.
   ~GfxFont();
@@ -110,7 +110,7 @@ public:
   Ref getID() { return id; }
 
   // Does this font match the tag?
-  GBool matches(char *tag1) { return !tag->cmp(tag1); }
+  GBool matches(char *tagA) { return !tag->cmp(tagA); }
 
   // Get base font name.
   GString *getName() { return name; }

@@ -83,7 +83,7 @@ private:
 class Type1CFontConverter {
 public:
 
-  Type1CFontConverter(char *file, int len, FILE *out);
+  Type1CFontConverter(char *fileA, int lenA, FILE *outA);
   ~Type1CFontConverter();
   void convert();
 
@@ -92,12 +92,12 @@ private:
   void eexecWrite(char *s);
   void cvtGlyph(char *name, Guchar *s, int n);
   void cvtGlyphWidth(GBool useOp);
-  void eexecDumpNum(double x, GBool fp);
-  void eexecDumpOp1(int op);
-  void eexecDumpOp2(int op);
+  void eexecDumpNum(double x, GBool fpA);
+  void eexecDumpOp1(int opA);
+  void eexecDumpOp2(int opA);
   void eexecWriteCharstring(Guchar *s, int n);
-  void getDeltaInt(char *buf, char *name, double *op, int n);
-  void getDeltaReal(char *buf, char *name, double *op, int n);
+  void getDeltaInt(char *buf, char *name, double *opA, int n);
+  void getDeltaReal(char *buf, char *name, double *opA, int n);
 
   char *file;
   int len;
@@ -123,7 +123,7 @@ struct TTFontTableHdr;
 class TrueTypeFontFile: public FontFile {
 public:
 
-  TrueTypeFontFile(char *file, int len);
+  TrueTypeFontFile(char *fileA, int lenA);
   ~TrueTypeFontFile();
 
   // This always returns NULL, since it's probably better to trust the
@@ -138,7 +138,7 @@ public:
   // don't need to depend on the 'name' table in the font).  The
   // encoding is needed because the PDF Font object can modify the
   // encoding.
-  void convertToType42(char *name, FontEncoding *encoding, FILE *out);
+  void convertToType42(char *name, FontEncoding *encodingA, FILE *out);
 
 private:
 
@@ -161,10 +161,10 @@ private:
   Guint getULong(int pos);
   double getFixed(int pos);
   int seekTable(char *tag);
-  void cvtEncoding(FontEncoding *encoding, FILE *out);
-  void cvtCharStrings(FontEncoding *encoding, FILE *out);
+  void cvtEncoding(FontEncoding *encodingA, FILE *out);
+  void cvtCharStrings(FontEncoding *encodingA, FILE *out);
   void cvtSfnts(FILE *out);
-  void dumpString(char *s, int len, FILE *out);
+  void dumpString(char *s, int n, FILE *out);
 };
 
 #endif

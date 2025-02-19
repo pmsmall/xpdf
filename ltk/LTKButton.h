@@ -38,13 +38,13 @@ public:
 
   //---------- constructors and destructor ----------
 
-  LTKButton(char *name1, int widgetNum1, const char *label1,
-	    LTKButtonAction action1, LTKBoolValCbk pressCbk1);
+  LTKButton(char *nameA, int widgetNumA, const char *labelA,
+	    LTKButtonAction actionA, LTKBoolValCbk pressCbkA);
 
-  LTKButton(char *name1, int widgetNum1,
-	    unsigned char *iconData1,
-	    int iconWidth1, int iconHeight1,
-	    LTKButtonAction action1, LTKBoolValCbk pressCbk1);
+  LTKButton(char *nameA, int widgetNumA,
+	    unsigned char *iconDataA,
+	    int iconWidthA, int iconHeightA,
+	    LTKButtonAction actionA, LTKBoolValCbk pressCbkA);
 
   virtual ~LTKButton();
 
@@ -54,7 +54,7 @@ public:
 
   //---------- special access ----------
 
-  void setState(GBool on1);
+  void setState(GBool onA);
 
   //---------- layout ----------
 

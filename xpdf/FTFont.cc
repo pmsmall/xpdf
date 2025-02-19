@@ -8,33 +8,26 @@
 #pragma implementation
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 #include <math.h>
 #include <string.h>
 #include "gmem.h"
 #include "freetype/internal/ftobjs.h"
-#include "freetype/internal/t1types.h"
-#include "freetype/internal/cfftypes.h"
-#include "freetype/internal/tttypes.h"
 #include "FontEncoding.h"
 #include "FTFont.h"
 
-typedef TT_Face CFF_Face;
-extern "C" int CFF_Find_Char(CFF_Face face, char *name);
-
 //------------------------------------------------------------------------
 
-FTFontEngine::FTFontEngine(Display *display, Visual *visual, int depth,
-			   Colormap colormap, GBool aa):
-  SFontEngine(display, visual, depth, colormap) {
+FTFontEngine::FTFontEngine(Display *displayA, Visual *visualA, int depthA,
+			   Colormap colormapA, GBool aaA):
+  SFontEngine(displayA, visualA, depthA, colormapA) {
 
   ok = gFalse;
   if (FT_Init_FreeType(&lib)) {
     return;
   }
-  this->aa = aa;
+  aa = aaA;
   ok = gTrue;
 }
 
@@ -44,59 +37,34 @@ FTFontEngine::~FTFontEngine() {
 
 //------------------------------------------------------------------------
 
-FTFontFile::FTFontFile(FTFontEngine *engine, char *fontFileName,
+FTFontFile::FTFontFile(FTFontEngine *engineA, char *fontFileName,
 		       FontEncoding *fontEnc) {
-  T1_Face t1Face;
-  char *name1, *name2;
-  int i, j;
+  char *name;
+  int i;
 
   ok = gFalse;
-  this->engine = engine;
-#if 0 //~
-  int err;
-  if ((err = FT_New_Face(engine->lib, fontFileName, 0, &face))) {
-    fprintf(stderr, "failed at FT_New_Face (%d %x)\n", err, err);
-    return;
-  }
-#else
+  engine = engineA;
   if (FT_New_Face(engine->lib, fontFileName, 0, &face)) {
     return;
   }
-#endif
-#if 0 //~
-  printf("FT module = %s\n", face->driver->root.clazz->module_name);
-#endif
 
   if (!strcmp(face->driver->root.clazz->module_name, "type1")) {
 
-#if 0 //~
-    printf("FT2: type1\n");
-#endif
     useGlyphMap = gTrue;
-    t1Face = (T1_Face)face;
     for (i = 0; i < 256; ++i) {
       glyphMap[i] = 0;
-      if ((name1 = fontEnc->getCharName(i))) {
-	for (j = 0; j < t1Face->type1.num_glyphs; ++j) {
-	  if ((name2 = t1Face->type1.glyph_names[j]) &&
-	      !strcmp(name1, name2)) {
-	    glyphMap[i] = j;
-	    break;
-	  }
-	}
+      if ((name = fontEnc->getCharName(i))) {
+	glyphMap[i] = FT_Get_Name_Index(face, name);
       }
     }
 
   } else if (!strcmp(face->driver->root.clazz->module_name, "cff")) {
 
-#if 0 //~
-    printf("FT2: type1c\n");
-#endif
     useGlyphMap = gTrue;
     for (i = 0; i < 256; ++i) {
       glyphMap[i] = 0;
-      if ((name1 = fontEnc->getCharName(i))) {
-	glyphMap[i] = CFF_Find_Char((CFF_Face)face, name1);
+      if ((name = fontEnc->getCharName(i))) {
+	glyphMap[i] = FT_Get_Name_Index(face, name);
       }
     }
 
@@ -113,14 +81,6 @@ FTFontFile::FTFontFile(FTFontEngine *engine, char *fontFileName,
     //    2), offset all character indexes by 0xf000.
     // This seems to match what acroread does, but may need further
     // tweaking.
-#if 0 //~
-    printf("available cmaps:\n");
-    for (i = 0; i < face->num_charmaps; ++i) {
-      printf("  %d: %d %d\n", i,
-	     face->charmaps[i]->platform_id,
-	     face->charmaps[i]->encoding_id);
-    }
-#endif
     for (i = 0; i < face->num_charmaps; ++i) {
       if (face->charmaps[i]->platform_id == 7) {
 	break;
@@ -137,18 +97,12 @@ FTFontFile::FTFontFile(FTFontEngine *engine, char *fontFileName,
 	i = 0;
       }
     }
-#if 0 //~
-    printf("chose cmap %d\n", i);
-#endif
     charMapOffset = 0;
     if (face->charmaps[i]->platform_id == 3 &&
 	face->charmaps[i]->encoding_id == 0) {
       charMapOffset = 0xf000;
     }
     if (FT_Set_Charmap(face, face->charmaps[i])) {
-#if 0 //~
-      fprintf(stderr, "failed at FT_Set_Charmap\n");
-#endif
       return;
     }
   }
@@ -164,7 +118,7 @@ FTFontFile::~FTFontFile() {
 
 //------------------------------------------------------------------------
 
-FTFont::FTFont(FTFontFile *fontFile, double *m) {
+FTFont::FTFont(FTFontFile *fontFileA, double *m) {
   FTFontEngine *engine;
   FT_Face face;
   double size;
@@ -173,7 +127,7 @@ FTFont::FTFont(FTFontFile *fontFile, double *m) {
   int i;
 
   ok = gFalse;
-  this->fontFile = fontFile;
+  fontFile = fontFileA;
   engine = fontFile->engine;
   face = fontFile->face;
   if (FT_New_Size(face, &sizeObj)) {
@@ -188,48 +142,48 @@ FTFont::FTFont(FTFontFile *fontFile, double *m) {
   // transform the four corners of the font bounding box -- the min
   // and max values form the bounding box of the transformed font
   x = (int)((m[0] * face->bbox.xMin + m[2] * face->bbox.yMin) /
-	    face->units_per_EM);
+	    (65536.0 * face->units_per_EM));
   xMin = xMax = x;
   y = (int)((m[1] * face->bbox.xMin + m[3] * face->bbox.yMin) /
-	    face->units_per_EM);
+	    (65536.0 * face->units_per_EM));
   yMin = yMax = y;
   x = (int)((m[0] * face->bbox.xMin + m[2] * face->bbox.yMax) /
-	    face->units_per_EM);
+	    (65536.0 * face->units_per_EM));
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
   y = (int)((m[1] * face->bbox.xMin + m[3] * face->bbox.yMax) /
-	    face->units_per_EM);
+	    (65536.0 * face->units_per_EM));
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
     yMax = y;
   }
   x = (int)((m[0] * face->bbox.xMax + m[2] * face->bbox.yMin) /
-	    face->units_per_EM);
+	    (65536.0 * face->units_per_EM));
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
   y = (int)((m[1] * face->bbox.xMax + m[3] * face->bbox.yMin) /
-	    face->units_per_EM);
+	    (65536.0 * face->units_per_EM));
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
     yMax = y;
   }
   x = (int)((m[0] * face->bbox.xMax + m[2] * face->bbox.yMax) /
-	    face->units_per_EM);
+	    (65536.0 * face->units_per_EM));
   if (x < xMin) {
     xMin = x;
   } else if (x > xMax) {
     xMax = x;
   }
   y = (int)((m[1] * face->bbox.xMax + m[3] * face->bbox.yMax) /
-	    face->units_per_EM);
+	    (65536.0 * face->units_per_EM));
   if (y < yMin) {
     yMin = y;
   } else if (y > yMax) {
@@ -247,8 +201,10 @@ FTFont::FTFont(FTFontFile *fontFile, double *m) {
     yMax = (int)(1.2 * size);
   }
 #endif
-  glyphW = xMax - xMin + 1;
-  glyphH = yMax - yMin + 1;
+  // this should be (max - min + 1), but we add some padding to
+  // deal with rounding errors
+  glyphW = xMax - xMin + 3;
+  glyphH = yMax - yMin + 3;
   if (engine->aa) {
     glyphSize = glyphW * glyphH;
   } else {
@@ -374,7 +330,10 @@ GBool FTFont::drawChar(Drawable d, int w, int h, GC gc,
     for (yy = 0; yy < gh; ++yy) {
       for (xx = 0; xx < gw; ++xx) {
 	pix = *p++ & 0xff;
-	pix = (pix * 4) / 255;
+	// this is a heuristic which seems to produce decent
+	// results -- the linear mapping would be:
+	// pix = (pix * 5) / 256;
+	pix = (pix * 4) / 230;
 	if (pix > 0) {
 	  XPutPixel(image, xx, yy, colors[pix]);
 	}
@@ -437,7 +396,6 @@ Guchar *FTFont::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
   fontFile->face->size = sizeObj;
   FT_Set_Transform(fontFile->face, &matrix, NULL);
   slot = fontFile->face->glyph;
-#if 1 //~
   if (fontFile->useGlyphMap) {
     if (c < 256) {
       idx = fontFile->glyphMap[c];
@@ -447,9 +405,6 @@ Guchar *FTFont::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
   } else {
     idx = FT_Get_Char_Index(fontFile->face, fontFile->charMapOffset + c);
   }
-#else
-  idx = FT_Get_Char_Index(fontFile->face, fontFile->charMapOffset + c);
-#endif
   if (FT_Load_Glyph(fontFile->face, idx, FT_LOAD_DEFAULT) ||
       FT_Render_Glyph(slot,
 		      fontFile->engine->aa ? ft_render_mode_normal :
@@ -492,5 +447,4 @@ Guchar *FTFont::getGlyphPixmap(Gushort c, int *x, int *y, int *w, int *h) {
   return ret;
 }
 
-#endif // FREETYPE2
-#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)

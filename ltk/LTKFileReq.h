@@ -32,8 +32,8 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKFileReq(char *name1, int widgetNum1,
-	     LTKStringValCbk selectCbk1, char *fontName1);
+  LTKFileReq(char *nameA, int widgetNumA,
+	     LTKStringValCbk selectCbkA, char *fontNameA);
 
   virtual ~LTKFileReq();
 
@@ -41,7 +41,7 @@ public:
 
   GString *getSelection();
   GString *getDir() { return dir->copy(); }
-  void setDir(GString *dir1);
+  void setDir(GString *dirA);
 
   //---------- layout ----------
 
@@ -52,11 +52,11 @@ protected:
 
   void makeWidgets();
   void loadDirList();
-  static void clickCbk(LTKWidget *widget, int widgetNum, int line);
-  static void dblClickCbk(LTKWidget *widget, int widgetNum, int line);
-  static void dirNameCbk(LTKWidget *widget, int widgetNum, GString *val);
-  static void hScrollCbk(LTKWidget *widget, int widgetNum, int val);
-  static void vScrollCbk(LTKWidget *widget, int widgetNum, int val);
+  static void clickCbk(LTKWidget *widget, int widgetNumA, int line);
+  static void dblClickCbk(LTKWidget *widget, int widgetNumA, int line);
+  static void dirNameCbk(LTKWidget *widget, int widgetNumA, GString *val);
+  static void hScrollCbk(LTKWidget *widget, int widgetNumA, int val);
+  static void vScrollCbk(LTKWidget *widget, int widgetNumA, int val);
 
   LTKStringValCbk selectCbk;	// called when user selects a file
   char *fontName;		// font name for TextIn and List widgets

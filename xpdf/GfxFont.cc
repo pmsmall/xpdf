@@ -66,7 +66,7 @@ static Gushort *defCharWidths[12] = {
 // GfxFont
 //------------------------------------------------------------------------
 
-GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
+GfxFont::GfxFont(char *tagA, Ref idA, Dict *fontDict) {
   BuiltinFont *builtinFont;
   Object obj1, obj2, obj3, obj4;
   int missingWidth;
@@ -74,8 +74,8 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
   int i;
 
   // get font tag and ID
-  tag = new GString(tag1);
-  id = id1;
+  tag = new GString(tagA);
+  id = idA;
 
   // get font type
   type = fontUnknownType;
@@ -661,8 +661,13 @@ void GfxFont::makeWidths(Dict *fontDict, FontEncoding *builtinEncoding,
     code2 = 0; // to make gcc happy
     for (code = 0; code < 256; ++code) {
       if ((charName = encoding->getCharName(code)) &&
-	  (code2 = builtinEncoding->getCharCode(charName)) >= 0)
+	  (code2 = builtinEncoding->getCharCode(charName)) >= 0) {
 	widths[code] = builtinWidths[code2] * 0.001;
+      } else if (code == 32) {
+	// this is a kludge for broken PDF files that encode char 32
+	// as .notdef
+	widths[code] = builtinWidths[' '] * 0.001;
+      }
     }
 
   // couldn't find widths -- use defaults 
@@ -751,7 +756,7 @@ void GfxFont::getType0EncAndWidths(Dict *fontDict) {
       goto err4;
 #endif
     } else {
-      error(-1, "Uknown Type 0 character set: %s-%s",
+      error(-1, "Unknown Type 0 character set: %s-%s",
 	    obj4.getString()->getCString(), obj5.getString()->getCString());
       goto err4;
     }

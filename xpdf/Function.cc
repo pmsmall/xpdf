@@ -905,7 +905,7 @@ GBool PostScriptFunction::parseCode(Stream *str, int *codePtr) {
   char *p;
   GBool isReal;
   int opPtr, elsePtr;
-  int a, b, m, cmp;
+  int a, b, mid, cmp;
 
   while (1) {
     if (!(tok = getToken(str))) {
@@ -994,14 +994,14 @@ GBool PostScriptFunction::parseCode(Stream *str, int *codePtr) {
       b = nPSOps;
       // invariant: psOpNames[a] < tok < psOpNames[b]
       while (b - a > 1) {
-	m = (a + b) / 2;
-	cmp = tok->cmp(psOpNames[m]);
+	mid = (a + b) / 2;
+	cmp = tok->cmp(psOpNames[mid]);
 	if (cmp > 0) {
-	  a = m;
+	  a = mid;
 	} else if (cmp < 0) {
-	  b = m;
+	  b = mid;
 	} else {
-	  a = b = m;
+	  a = b = mid;
 	}
       }
       if (cmp != 0) {

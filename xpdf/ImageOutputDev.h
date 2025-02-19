@@ -30,7 +30,7 @@ public:
   // <fileRoot>-NNN.<type>.  Normally, all images are written as PBM
   // (.pbm) or PPM (.ppm) files.  If <dumpJPEG> is set, JPEG images are
   // written as JPEG (.jpg) files.
-  ImageOutputDev(char *fileRoot1, GBool dumpJPEG1);
+  ImageOutputDev(char *fileRootA, GBool dumpJPEGA);
 
   // Destructor.
   virtual ~ImageOutputDev();

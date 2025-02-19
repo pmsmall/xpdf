@@ -25,6 +25,7 @@
 #include "GfxState.h"
 #include "OutputDev.h"
 #include "Params.h"
+#include "Page.h"
 #include "Error.h"
 #include "Gfx.h"
 
@@ -197,7 +198,7 @@ GBool printCommands = gFalse;
 // GfxResources
 //------------------------------------------------------------------------
 
-GfxResources::GfxResources(Dict *resDict, GfxResources *next) {
+GfxResources::GfxResources(Dict *resDict, GfxResources *nextA) {
   Object obj1;
 
   if (resDict) {
@@ -230,7 +231,7 @@ GfxResources::GfxResources(Dict *resDict, GfxResources *next) {
     gStateDict.initNull();
   }
 
-  this->next = next;
+  next = nextA;
 }
 
 GfxResources::~GfxResources() {
@@ -337,18 +338,16 @@ GBool GfxResources::lookupGState(char *name, Object *obj) {
 // Gfx
 //------------------------------------------------------------------------
 
-Gfx::Gfx(OutputDev *out1, int pageNum, Dict *resDict,
-	 double dpi, double x1, double y1, double x2, double y2, GBool crop,
-	 double cropX1, double cropY1, double cropX2, double cropY2,
-	 int rotate) {
+Gfx::Gfx(OutputDev *outA, int pageNum, Dict *resDict, double dpi,
+	 PDFRectangle *box, GBool crop, PDFRectangle *cropBox, int rotate) {
   int i;
 
   // start the resource stack
   res = new GfxResources(resDict, NULL);
 
   // initialize
-  out = out1;
-  state = new GfxState(dpi, x1, y1, x2, y2, rotate, out->upsideDown());
+  out = outA;
+  state = new GfxState(dpi, box, rotate, out->upsideDown());
   fontChanged = gFalse;
   clip = clipNone;
   ignoreUndef = 0;
@@ -361,10 +360,10 @@ Gfx::Gfx(OutputDev *out1, int pageNum, Dict *resDict,
 
   // set crop box
   if (crop) {
-    state->moveTo(cropX1, cropY1);
-    state->lineTo(cropX2, cropY1);
-    state->lineTo(cropX2, cropY2);
-    state->lineTo(cropX1, cropY2);
+    state->moveTo(cropBox->x1, cropBox->y1);
+    state->lineTo(cropBox->x2, cropBox->y1);
+    state->lineTo(cropBox->x2, cropBox->y2);
+    state->lineTo(cropBox->x1, cropBox->y2);
     state->closePath();
     out->clip(state);
     state->clearPath();
@@ -1330,6 +1329,7 @@ void Gfx::opSetWordSpacing(Object args[], int numArgs) {
 void Gfx::opSetHorizScaling(Object args[], int numArgs) {
   state->setHorizScaling(args[0].getNum());
   out->updateHorizScaling(state);
+  fontChanged = gTrue;
 }
 
 //------------------------------------------------------------------------
@@ -1486,12 +1486,12 @@ void Gfx::doShowText(GString *s) {
     while (n > 0) {
       m = getNextChar16(enc, p, &c16);
       if (enc->wMode == 0) {
-	width = state->getFontSize() * state->getHorizScaling() *
-	        font->getWidth16(c16) +
+	width = state->getFontSize() * font->getWidth16(c16) +
 	        state->getCharSpace();
-	if (c16 == ' ') {
+	if (m == 1 && c16 == ' ') {
 	  width += state->getWordSpace();
 	}
+	width *= state->getHorizScaling();
 	height = 0;
       } else {
 	width = 0;
@@ -1562,12 +1562,12 @@ void Gfx::doShowText(GString *s) {
 	state = state->restore();
 	out->restoreState(state);
 	charProc.free();
-	width = state->getFontSize() * state->getHorizScaling() *
-	        font->getWidth(c8) +
+	width = state->getFontSize() * font->getWidth(c8) +
 	        state->getCharSpace();
 	if (c8 == ' ') {
 	  width += state->getWordSpace();
 	}
+	width *= state->getHorizScaling();
 	state->textShift(width);
       }
       parser = oldParser;
@@ -1579,11 +1579,12 @@ void Gfx::doShowText(GString *s) {
       state->textTransformDelta(0, state->getRise(), &dx, &dy);
       for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
 	c8 = *p;
-	width = state->getFontSize() * state->getHorizScaling() *
-	        font->getWidth(c8) +
+	width = state->getFontSize() * font->getWidth(c8) +
 	        state->getCharSpace();
-	if (c8 == ' ')
+	if (c8 == ' ') {
 	  width += state->getWordSpace();
+	}
+	width *= state->getHorizScaling();
 	state->textTransformDelta(width, 0, &w, &h);
 	out->drawChar(state, state->getCurX() + dx, state->getCurY() + dy,
 		      w, h, c8);
@@ -1592,13 +1593,14 @@ void Gfx::doShowText(GString *s) {
       out->endString(state);
     } else {
       out->drawString(state, s);
-      width = state->getFontSize() * state->getHorizScaling() *
-	      font->getWidth(s) +
+      width = state->getFontSize() * font->getWidth(s) +
 	      s->getLength() * state->getCharSpace();
       for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
-	if (*p == ' ')
+	if (*p == ' ') {
 	  width += state->getWordSpace();
+	}
       }
+      width *= state->getHorizScaling();
       state->textShift(width);
     }
   }

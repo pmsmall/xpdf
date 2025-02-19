@@ -72,14 +72,15 @@ extern "C" int gettimeofday (struct timeval *__tp, void *__tzp);
 // LTKApp
 //------------------------------------------------------------------------
 
-LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
+LTKApp::LTKApp(char *appNameA, char *appClassA, XrmOptionDescRec *opts,
 	       int *argc, char *argv[]) {
   int numOpts;
   XrmDatabase cmdLineDB;
   GString *displayName;
   int h;
 
-  appName = new GString(appName1);
+  appName = new GString(appNameA);
+  appClass = new GString(appClassA);
   windows = NULL;
   for (h = 0; h < ltkWinTabSize; ++h)
     winTab[h] = NULL;
@@ -94,7 +95,8 @@ LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
   XrmInitialize();
   for (numOpts = 0; opts[numOpts].option; ++numOpts) ;
   ltkGetCmdLineResources(&cmdLineDB, opts, numOpts, appName, argc, argv);
-  displayName = ltkGetStringResource(cmdLineDB, appName, "display", "");
+  displayName = ltkGetStringResource(cmdLineDB, appName, appClass,
+				     "display", "");
   if (!(display = XOpenDisplay(displayName->getCString()))) {
     ltkError("Cannot connect to X server %s\n",
 	     XDisplayName(displayName->getCString()));
@@ -102,7 +104,7 @@ LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
   }
   delete displayName;
   screenNum = DefaultScreen(display);
-  ltkGetOtherResources(display, cmdLineDB, &resourceDB);
+  ltkGetOtherResources(display, appClass, cmdLineDB, &resourceDB);
   wmDeleteWinAtom = XInternAtom(display, "WM_DELETE_WINDOW", False);
   pressedBtn = 0;
   killCbk = NULL;
@@ -118,35 +120,37 @@ LTKApp::~LTKApp() {
   }
   XCloseDisplay(display);
   delete appName;
+  delete appClass;
 }
 
 GString *LTKApp::getStringResource(char *inst, char *def) {
-  return ltkGetStringResource(resourceDB, appName, inst, def);
+  return ltkGetStringResource(resourceDB, appName, appClass, inst, def);
 }
 
 int LTKApp::getIntResource(char *inst, int def) {
-  return ltkGetIntResource(resourceDB, appName, inst, def);
+  return ltkGetIntResource(resourceDB, appName, appClass, inst, def);
 }
 
 GBool LTKApp::getBoolResource(char *inst, GBool def) {
-  return ltkGetBoolResource(resourceDB, appName, inst, def);
+  return ltkGetBoolResource(resourceDB, appName, appClass, inst, def);
 }
 
 unsigned long LTKApp::getColorResource(char *inst,
 				       char *def1, unsigned long def2,
 				       XColor *xcol) {
-  return ltkGetColorResource(resourceDB, appName, inst,
+  return ltkGetColorResource(resourceDB, appName, appClass, inst,
 			     display, screenNum, def1, def2, xcol);
 }
 
 XFontStruct *LTKApp::getFontResource(char *inst, char *def) {
-  return ltkGetFontResouce(resourceDB, appName, inst, display, screenNum, def);
+  return ltkGetFontResouce(resourceDB, appName, appClass, inst,
+			   display, screenNum, def);
 }
 
 void LTKApp::getGeometryResource(char *inst, int *x, int *y,
 				 Guint *width, Guint *height) {
-  ltkGetGeometryResource(resourceDB, appName, inst, display, screenNum,
-			 x, y, width, height);
+  ltkGetGeometryResource(resourceDB, appName, appClass, inst,
+			 display, screenNum, x, y, width, height);
 }
 
 LTKWindow *LTKApp::addWindow(LTKWindow *w) {
@@ -222,11 +226,11 @@ LTKWindow *LTKApp::findWindow(Window xwin, LTKWidget **widget) {
   return NULL;
 }
 
-void LTKApp::setRepeatEvent(LTKWidget *repeatWidget1, int repeatDelay1,
-			    int repeatPeriod1) {
-  repeatWidget = repeatWidget1;
-  repeatDelay = repeatDelay1;
-  repeatPeriod = repeatPeriod1;
+void LTKApp::setRepeatEvent(LTKWidget *repeatWidgetA, int repeatDelayA,
+			    int repeatPeriodA) {
+  repeatWidget = repeatWidgetA;
+  repeatDelay = repeatDelayA;
+  repeatPeriod = repeatPeriodA;
   firstRepeat = gTrue;
   gettimeofday(&lastRepeat, NULL);
 }
@@ -244,7 +248,6 @@ void LTKApp::doEvent(GBool wait) {
   Window pointerRoot, pointerChild;
   LTKWindow *win;
   LTKWidget *widget;
-  LTKMenu *menu;
   KeySym key;
   GString *str;
   char buf[20];
@@ -316,10 +319,6 @@ void LTKApp::doEvent(GBool wait) {
 
   XNextEvent(display, &event);
   win = findWindow(event.xany.window, &widget);
-  if (activeMenu && event.xany.window == activeMenu->getXWindow())
-    menu = activeMenu;
-  else
-    menu = NULL;
   switch (event.type) {
   case Expose:
     // redraw the window or widget, ignoring all but the last
@@ -329,8 +328,8 @@ void LTKApp::doEvent(GBool wait) {
 	widget->redraw();
       else if (win)
 	win->redrawBackground();
-      else if (menu)
-	menu->redraw();
+      else if (activeMenu)
+	activeMenu->redraw();
     }
     break;
   case GraphicsExpose:
@@ -341,8 +340,8 @@ void LTKApp::doEvent(GBool wait) {
 	widget->redraw();
       else if (win)
 	win->redrawBackground();
-      else if (menu)
-	menu->redraw();
+      else if (activeMenu)
+	activeMenu->redraw();
     }
     break;
   case ConfigureNotify:
@@ -363,9 +362,9 @@ void LTKApp::doEvent(GBool wait) {
     dblClick = event.xbutton.time - buttonPressTime < ltkDoubleClickTime;
     buttonPressTime = event.xbutton.time;
     pressedBtn = event.xbutton.button - Button1 + 1;
-    if (menu) {
-      menu->buttonPress(event.xbutton.x, event.xbutton.y,
-			pressedBtn, dblClick);
+    if (activeMenu) {
+      activeMenu->buttonPress(event.xbutton.x, event.xbutton.y,
+			      pressedBtn, dblClick);
     } else if (win && !(grabWin && win != grabWin)) {
       if (event.xbutton.button == Button3) {
 	win->postMenu(event.xbutton.x_root, event.xbutton.y_root);
@@ -386,9 +385,9 @@ void LTKApp::doEvent(GBool wait) {
   case ButtonRelease:
     pressedBtn = 0;
     click = event.xbutton.time - buttonPressTime < ltkSingleClickTime;
-    if (menu) {
-      menu->buttonRelease(event.xbutton.x, event.xbutton.y,
-			  event.xbutton.button - Button1 + 1, click);
+    if (activeMenu) {
+      activeMenu->buttonRelease(event.xbutton.x, event.xbutton.y,
+				event.xbutton.button - Button1 + 1, click);
     } else if (win && !(grabWin && win != grabWin) && widget) {
       widget->buttonRelease(event.xbutton.x, event.xbutton.y,
 			    event.xbutton.button - Button1 + 1, click);
@@ -399,8 +398,8 @@ void LTKApp::doEvent(GBool wait) {
     // to call XQueryPointer
     XQueryPointer(display, event.xany.window, &pointerRoot, &pointerChild,
 		  &rx, &ry, &x, &y, &mask);
-    if (menu) {
-      menu->mouseMove(x, y, pressedBtn);
+    if (activeMenu) {
+      activeMenu->mouseMove(x, y, pressedBtn);
     } else if (win && !(grabWin && win != grabWin) && widget) {
       widget->mouseMove(x, y, pressedBtn);
     }

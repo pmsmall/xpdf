@@ -25,20 +25,20 @@
 #define horizBorder 2
 #define vertBorder  2
 
-LTKTextIn::LTKTextIn(char *name1, int widgetNum1, int minWidth1,
-		     char *fontName1, LTKStringValCbk doneCbk1,
-		     char *tabTarget1):
-    LTKWidget(name1, widgetNum1) {
-  minWidth = minWidth1;
+LTKTextIn::LTKTextIn(char *nameA, int widgetNumA, int minWidthA,
+		     char *fontNameA, LTKStringValCbk doneCbkA,
+		     char *tabTargetA):
+    LTKWidget(nameA, widgetNumA) {
+  minWidth = minWidthA;
   text = new GString();
   active = gFalse;
   firstChar = 0;
   cursor = 0;
   selectionEnd = 0;
   dragging = gFalse;
-  doneCbk = doneCbk1;
-  tabTarget = tabTarget1;
-  fontName = fontName1;
+  doneCbk = doneCbkA;
+  tabTarget = tabTargetA;
+  fontName = fontNameA;
   fontStruct = NULL;
   textGC = None;
 }
@@ -319,16 +319,16 @@ int LTKTextIn::xToCursor(int mx) {
 int LTKTextIn::cursorToX(int cur) {
   XCharStruct extents;
   int direction, ascent, descent;
-  int x;
+  int x1;
 
-  x = horizBorder;
+  x1 = horizBorder;
   if (cur > firstChar) {
     XTextExtents(fontStruct, text->getCString() + firstChar,
 		 cur - firstChar,
 		 &direction, &ascent, &descent, &extents);
-    x += extents.width;
+    x1 += extents.width;
   }
-  return x;
+  return x1;
 }
 
 void LTKTextIn::xorCursor() {

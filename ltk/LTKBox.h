@@ -28,29 +28,29 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKBox(char *name1, int cols1, int rows1,
-	 int left1, int right1, int top1, int bottom1,
-	 LTKBorder border1, int xfill1, int yfill1, ...);
+  LTKBox(char *nameA, int colsA, int rowsA,
+	 int leftA, int rightA, int topA, int bottomA,
+	 LTKBorder borderA, int xfillA, int yfillA, ...);
 
   virtual ~LTKBox();
 
   //---------- access ----------
 
   virtual GBool isBox() { return gTrue; }
-  virtual void setParent(LTKWindow *parent1);
-  virtual void setCompoundParent(LTKWidget *compParent1);
+  virtual void setParent(LTKWindow *parentA);
+  virtual void setCompoundParent(LTKWidget *compParentA);
   int getXFill() { return xfill; }
   int getYFill() { return yfill; }
 
   //---------- special access ----------
 
-  void setBorder(LTKBorder border1);
+  void setBorder(LTKBorder borderA);
 
   //---------- layout ----------
 
   GBool checkFills(char **err);
   virtual void layout1();
-  virtual void layout2(int x1, int y1, int width1, int height1);
+  virtual void layout2(int xA, int yA, int widthA, int heightA);
   virtual void layout3();
   virtual void map();
 

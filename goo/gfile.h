@@ -92,7 +92,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext);
 class GDirEntry {
 public:
 
-  GDirEntry(char *dirPath, char *name1, GBool doStat);
+  GDirEntry(char *dirPath, char *nameA, GBool doStat);
   ~GDirEntry();
   GString *getName() { return name; }
   GBool isDir() { return dir; }
@@ -106,7 +106,7 @@ private:
 class GDir {
 public:
 
-  GDir(char *name, GBool doStat1 = gTrue);
+  GDir(char *name, GBool doStatA = gTrue);
   ~GDir();
   GDirEntry *getNextEntry();
   void rewind();

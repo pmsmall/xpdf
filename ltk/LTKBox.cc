@@ -18,28 +18,28 @@
 #include "LTKWindow.h"
 #include "LTKBox.h"
 
-LTKBox::LTKBox(char *name1, int cols1, int rows1,
-	       int left1, int right1, int top1, int bottom1,
-	       LTKBorder border1, int xfill1, int yfill1, ...):
-    LTKWidget(name1, 0) {
+LTKBox::LTKBox(char *nameA, int colsA, int rowsA,
+	       int leftA, int rightA, int topA, int bottomA,
+	       LTKBorder borderA, int xfillA, int yfillA, ...):
+    LTKWidget(nameA, 0) {
   int col, row;
   va_list args;
 
-  cols = cols1;
-  rows = rows1;
-  left = left1;
-  right = right1;
-  top = top1;
-  bottom = bottom1;
-  border = border1;
+  cols = colsA;
+  rows = rowsA;
+  left = leftA;
+  right = rightA;
+  top = topA;
+  bottom = bottomA;
+  border = borderA;
   if (border == ltkBorderNone)
     borderWidth = 0;
   else
     borderWidth = ltkBorderWidth;
-  xfill = xfill1;
-  yfill = yfill1;
+  xfill = xfillA;
+  yfill = yfillA;
   contents = new LTKWidget*[cols*rows];
-  va_start(args, yfill1);
+  va_start(args, yfillA);
   for (row = 0; row < rows; ++row)
     for (col = 0; col < cols; ++col)
       get(col, row) = va_arg(args, LTKWidget *);
@@ -55,27 +55,27 @@ LTKBox::~LTKBox() {
   delete[] contents;
 }
 
-void LTKBox::setParent(LTKWindow *parent1) {
+void LTKBox::setParent(LTKWindow *parentA) {
   int col, row;
 
-  parent = parent1;
+  parent = parentA;
   for (col = 0; col < cols; ++col)
     for (row = 0; row < rows; ++row)
-      get(col, row)->setParent(parent1);
+      get(col, row)->setParent(parentA);
 }
 
-void LTKBox::setCompoundParent(LTKWidget *compParent1) {
+void LTKBox::setCompoundParent(LTKWidget *compParentA) {
   int col, row;
 
-  compParent = compParent1;
+  compParent = compParentA;
   for (col = 0; col < cols; ++col)
     for (row = 0; row < rows; ++row)
-      get(col, row)->setCompoundParent(compParent1);
+      get(col, row)->setCompoundParent(compParentA);
 }
 
-void LTKBox::setBorder(LTKBorder border1) {
-  if (border1 != border) {
-    border = border1;
+void LTKBox::setBorder(LTKBorder borderA) {
+  if (borderA != border) {
+    border = borderA;
     ltkDrawBorder(getDisplay(), getParent()->getXWindow(),
 		  getBrightGC(), getDarkGC(), getBgGC(),
 		  x, y, width, height, border);
@@ -205,16 +205,16 @@ void LTKBox::layout1() {
   height += h1 + top + bottom + 2 * borderWidth;
 }
 
-void LTKBox::layout2(int x1, int y1, int width1, int height1) {
+void LTKBox::layout2(int xA, int yA, int widthA, int heightA) {
   int *widths, *heights;
   int col, row;
   int dw1, dw2, dh1, dh2;
   int tx, ty;
 
-  x = x1 + left;
-  y = y1 + top;
-  width = width1 - left - right;
-  height = height1 - top - bottom;
+  x = xA + left;
+  y = yA + top;
+  width = widthA - left - right;
+  height = heightA - top - bottom;
 
   if (cols == 1 && rows == 1 && !get(0, 0)->isBox()) {
     get(0, 0)->layout2(x + borderWidth, y + borderWidth,

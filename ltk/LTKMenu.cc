@@ -92,14 +92,14 @@ static Bool isExposeEvent(Display *display, XEvent *e, XPointer w);
 // LTKMenu
 //------------------------------------------------------------------------
 
-LTKMenu::LTKMenu(char *title1, int numItems1, ...) {
+LTKMenu::LTKMenu(char *titleA, int numItemsA, ...) {
   va_list args;
   int i;
 
-  title = title1;
-  numItems = numItems1;
+  title = titleA;
+  numItems = numItemsA;
   items = (LTKMenuItem **)gmalloc(numItems * sizeof(LTKMenuItem *));
-  va_start(args, numItems1);
+  va_start(args, numItemsA);
   for (i = 0; i < numItems; ++i) {
     items[i] = va_arg(args, LTKMenuItem *);
     items[i]->setParent(this);
@@ -118,7 +118,7 @@ LTKMenu::~LTKMenu() {
   gfree(items);
 }
 
-void LTKMenu::post(LTKWindow *win1, int x1, int y1, LTKMenu *parent1) {
+void LTKMenu::post(LTKWindow *winA, int xA, int yA, LTKMenu *parentA) {
   XFontStruct *fontStruct;
   XCharStruct extents;
   XSetWindowAttributes attr;
@@ -128,10 +128,10 @@ void LTKMenu::post(LTKWindow *win1, int x1, int y1, LTKMenu *parent1) {
   GBool haveSubmenus;
 
   // parent menu
-  parent = parent1;
+  parent = parentA;
 
   // parent window
-  win = win1;
+  win = winA;
   display = win->getDisplay();
   fgGC = win->getFgGC();
   bgGC = win->getBgGC();
@@ -184,12 +184,12 @@ void LTKMenu::post(LTKWindow *win1, int x1, int y1, LTKMenu *parent1) {
   // compute position
   w = win->getApp()->getDisplayWidth();
   h = win->getApp()->getDisplayHeight();
-  x = x1;
+  x = xA;
   if (x + width > w)
     x = w - width;
   if (x < 0)
     x = 0;
-  y = y1;
+  y = yA;
   if (y + height > h)
     y = h - height;
   if (y < 0)
@@ -411,12 +411,12 @@ void LTKMenu::mouseMove(int mx, int my, int btn) {
 // LTKMenuItem
 //------------------------------------------------------------------------
 
-LTKMenuItem::LTKMenuItem(char *text1, char *shortcut1, int itemNum1,
-			 LTKMenuCbk cbk1, LTKMenu *submenu1) {
-  text = text1;
-  shortcut = shortcut1;
-  itemNum = itemNum1;
-  cbk = cbk1;
-  submenu = submenu1;
+LTKMenuItem::LTKMenuItem(char *textA, char *shortcutA, int itemNumA,
+			 LTKMenuCbk cbkA, LTKMenu *submenuA) {
+  text = textA;
+  shortcut = shortcutA;
+  itemNum = itemNumA;
+  cbk = cbkA;
+  submenu = submenuA;
   parent = NULL;
 }

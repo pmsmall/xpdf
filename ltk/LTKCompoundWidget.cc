@@ -26,8 +26,8 @@
 // LTKCompoundWidget
 //------------------------------------------------------------------------
 
-LTKCompoundWidget::LTKCompoundWidget(char *name1, int widgetNum1):
-    LTKWidget(name1, widgetNum1) {
+LTKCompoundWidget::LTKCompoundWidget(char *nameA, int widgetNumA):
+    LTKWidget(nameA, widgetNumA) {
   box = NULL;
 }
 
@@ -35,9 +35,9 @@ LTKCompoundWidget::~LTKCompoundWidget() {
   delete box;
 }
 
-void LTKCompoundWidget::setParent(LTKWindow *parent1) {
-  LTKWidget::setParent(parent1);
-  box->setParent(parent1);
+void LTKCompoundWidget::setParent(LTKWindow *parentA) {
+  LTKWidget::setParent(parentA);
+  box->setParent(parentA);
 }
 
 void LTKCompoundWidget::layout1() {
@@ -46,9 +46,9 @@ void LTKCompoundWidget::layout1() {
   height = box->getHeight();
 }
 
-void LTKCompoundWidget::layout2(int x1, int y1, int width1, int height1) {
-  box->layout2(x1, y1, width1, height1);
-  LTKWidget::layout2(x1, y1, width1, height1);
+void LTKCompoundWidget::layout2(int xA, int yA, int widthA, int heightA) {
+  box->layout2(xA, yA, widthA, heightA);
+  LTKWidget::layout2(xA, yA, widthA, heightA);
 }
 
 void LTKCompoundWidget::layout3() {

@@ -18,12 +18,12 @@
 #include "LTKWindow.h"
 #include "LTKCanvas.h"
 
-LTKCanvas::LTKCanvas(char *name1, int widgetNum1,
-		     int minWidth1, int minHeight1, LTKRedrawCbk redrawCbk1):
-    LTKWidget(name1, widgetNum1) {
-  minWidth = minWidth1;
-  minHeight = minHeight1;
-  redrawCbk = redrawCbk1;
+LTKCanvas::LTKCanvas(char *nameA, int widgetNumA,
+		     int minWidthA, int minHeightA, LTKRedrawCbk redrawCbkA):
+    LTKWidget(nameA, widgetNumA) {
+  minWidth = minWidthA;
+  minHeight = minHeightA;
+  redrawCbk = redrawCbkA;
 }
 
 void LTKCanvas::layout1() {

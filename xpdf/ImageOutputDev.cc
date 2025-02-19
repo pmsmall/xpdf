@@ -22,10 +22,10 @@
 #include "Stream.h"
 #include "ImageOutputDev.h"
 
-ImageOutputDev::ImageOutputDev(char *fileRoot1, GBool dumpJPEG1) {
-  fileRoot = copyString(fileRoot1);
+ImageOutputDev::ImageOutputDev(char *fileRootA, GBool dumpJPEGA) {
+  fileRoot = copyString(fileRootA);
   fileName = (char *)gmalloc(strlen(fileRoot) + 20);
-  dumpJPEG = dumpJPEG1;
+  dumpJPEG = dumpJPEGA;
   imgNum = 0;
   ok = gTrue;
 }
@@ -99,6 +99,7 @@ void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   GfxRGB rgb;
   int x, y;
   int c;
+  int size, i;
 
   // dump JPEG file
   if (dumpJPEG && str->getKind() == strDCT &&
@@ -120,6 +121,31 @@ void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     // copy the stream
     while ((c = str->getChar()) != EOF)
       fputc(c, f);
+
+    fclose(f);
+
+  // dump PBM file
+  } else if (colorMap->getNumPixelComps() == 1 &&
+	     colorMap->getBits() == 1) {
+
+    // open the image file and write the PBM header
+    sprintf(fileName, "%s-%03d.pbm", fileRoot, imgNum);
+    ++imgNum;
+    if (!(f = fopen(fileName, "wb"))) {
+      error(-1, "Couldn't open image file '%s'", fileName);
+      return;
+    }
+    fprintf(f, "P4\n");
+    fprintf(f, "%d %d\n", width, height);
+
+    // initialize stream
+    str->reset();
+
+    // copy the stream
+    size = height * ((width + 7) / 8);
+    for (i = 0; i < size; ++i) {
+      fputc(str->getChar(), f);
+    }
 
     fclose(f);
 

@@ -34,12 +34,11 @@
 #if HAVE_T1LIB_H
 #include "T1Font.h"
 #endif
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 #include "FTFont.h"
-#else
-#include "TTFont.h"
 #endif
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
+#include "TTFont.h"
 #endif
 
 #include "XOutputFontInfo.h"
@@ -79,7 +78,7 @@ int rgbCubeSize = defaultRGBCube;
 GString *t1libControl = NULL;
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
 GString *freeTypeControl = NULL;
 #endif
 
@@ -504,13 +503,13 @@ static char *multiChars[] = {
 //------------------------------------------------------------------------
 
 XOutputFont::XOutputFont(GfxFont *gfxFont, double m11, double m12,
-			 double m21, double m22, Display *display,
+			 double m21, double m22, Display *displayA,
 			 XOutputFontCache *cache) {
   int code;
   char *charName;
 
   id = gfxFont->getID();
-  this->display = display;
+  display = displayA;
   tm11 = m11;
   tm12 = m12;
   tm21 = m21;
@@ -553,8 +552,8 @@ XOutputFont::~XOutputFont() {
 
 XOutputT1Font::XOutputT1Font(GfxFont *gfxFont, GString *pdfBaseFont,
 			     double m11, double m12, double m21, double m22,
-			     Display *display, XOutputFontCache *cache):
-  XOutputFont(gfxFont, m11, m12, m21, m22, display, cache)
+			     Display *displayA, XOutputFontCache *cache):
+  XOutputFont(gfxFont, m11, m12, m21, m22, displayA, cache)
 {
   Ref embRef;
   double matrix[4];
@@ -614,17 +613,15 @@ void XOutputT1Font::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 }
 #endif // HAVE_T1LIB_H
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
-
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 //------------------------------------------------------------------------
 // XOutputFTFont
 //------------------------------------------------------------------------
 
 XOutputFTFont::XOutputFTFont(GfxFont *gfxFont, GString *pdfBaseFont,
 			     double m11, double m12, double m21, double m22,
-			     Display *display, XOutputFontCache *cache):
-  XOutputFont(gfxFont, m11, m12, m21, m22, display, cache)
+			     Display *displayA, XOutputFontCache *cache):
+  XOutputFont(gfxFont, m11, m12, m21, m22, displayA, cache)
 {
   Ref embRef;
   double matrix[4];
@@ -682,17 +679,17 @@ void XOutputFTFont::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 		 (int)(rgb.r * 65535), (int)(rgb.g * 65535),
 		 (int)(rgb.b * 65535), c);
 }
+#endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
-#else // FREETYPE2
-
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 //------------------------------------------------------------------------
 // XOutputTTFont
 //------------------------------------------------------------------------
 
 XOutputTTFont::XOutputTTFont(GfxFont *gfxFont, double m11, double m12,
-			     double m21, double m22, Display *display,
+			     double m21, double m22, Display *displayA,
 			     XOutputFontCache *cache):
-  XOutputFont(gfxFont, m11, m12, m21, m22, display, cache)
+  XOutputFont(gfxFont, m11, m12, m21, m22, displayA, cache)
 {
   Ref embRef;
   double matrix[4];
@@ -746,9 +743,7 @@ void XOutputTTFont::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 		 (int)(rgb.r * 65535), (int)(rgb.g * 65535),
 		 (int)(rgb.b * 65535), c);
 }
-
-#endif // FREETYPE2
-#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#endif // !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 //------------------------------------------------------------------------
 // XOutputServerFont
@@ -761,9 +756,9 @@ XOutputServerFont::XOutputServerFont(GfxFont *gfxFont, char *fontNameFmt,
 				     double size,
 				     double ntm11, double ntm12,
 				     double ntm21, double ntm22,
-				     Display *display,
+				     Display *displayA,
 				     XOutputFontCache *cache):
-  XOutputFont(gfxFont, m11, m12, m21, m22, display, cache)
+  XOutputFont(gfxFont, m11, m12, m21, m22, displayA, cache)
 {
   char fontName[200], fontSize[100];
   GBool rotated;
@@ -964,9 +959,9 @@ void XOutputServerFont::drawChar(GfxState *state, Pixmap pixmap, int w, int h,
 // XOutputFontCache
 //------------------------------------------------------------------------
 
-XOutputFontCache::XOutputFontCache(Display *display, Guint depth) {
-  this->display = display;
-  this->depth = depth;
+XOutputFontCache::XOutputFontCache(Display *displayA, Guint depthA) {
+  display = displayA;
+  depth = depthA;
 
 #if HAVE_T1LIB_H
   t1Engine = NULL;
@@ -981,12 +976,13 @@ XOutputFontCache::XOutputFontCache(Display *display, Guint depth) {
   }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   ftEngine = NULL;
-#else
+#endif
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   ttEngine = NULL;
 #endif
+#if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
   if (freeTypeControl) {
     useFreeType = freeTypeControl->cmp("none") != 0;
     freeTypeAA = freeTypeControl->cmp("plain") != 0;
@@ -1028,9 +1024,8 @@ void XOutputFontCache::startDoc(int screenNum, Colormap colormap,
   }
 #endif // HAVE_T1LIB_H
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   if (useFreeType) {
-#if FREETYPE2
     ftEngine = new FTFontEngine(display, DefaultVisual(display, screenNum),
 				depth, colormap, freeTypeAA);
     if (ftEngine->isOk()) {
@@ -1043,7 +1038,11 @@ void XOutputFontCache::startDoc(int screenNum, Colormap colormap,
       delete ftEngine;
       ftEngine = NULL;
     }
-#else
+  }
+#endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
+
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
+  if (useFreeType) {
     ttEngine = new TTFontEngine(display, DefaultVisual(display, screenNum),
 				depth, colormap, freeTypeAA);
     if (ttEngine->isOk()) {
@@ -1056,9 +1055,8 @@ void XOutputFontCache::startDoc(int screenNum, Colormap colormap,
       delete ttEngine;
       ttEngine = NULL;
     }
-#endif
   }
-#endif
+#endif // !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 }
 
 void XOutputFontCache::delFonts() {
@@ -1078,8 +1076,7 @@ void XOutputFontCache::delFonts() {
   }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // delete FreeType fonts
   for (i = 0; i < nFTFonts; ++i) {
     delete ftFonts[i];
@@ -1091,7 +1088,9 @@ void XOutputFontCache::delFonts() {
   if (ftEngine) {
     delete ftEngine;
   }
-#else
+#endif
+
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // delete TrueType fonts
   for (i = 0; i < nTTFonts; ++i) {
     delete ttFonts[i];
@@ -1103,7 +1102,6 @@ void XOutputFontCache::delFonts() {
   if (ttEngine) {
     delete ttEngine;
   }
-#endif
 #endif
 
   // delete server fonts
@@ -1125,8 +1123,7 @@ void XOutputFontCache::clear() {
   t1FontFilesSize = 0;
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // clear FreeType font cache
   for (i = 0; i < ftFontCacheSize; ++i) {
     ftFonts[i] = NULL;
@@ -1134,7 +1131,9 @@ void XOutputFontCache::clear() {
   nFTFonts = 0;
   ftFontFiles = NULL;
   ftFontFilesSize = 0;
-#else
+#endif
+
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // clear TrueType font cache
   for (i = 0; i < ttFontCacheSize; ++i) {
     ttFonts[i] = NULL;
@@ -1142,7 +1141,6 @@ void XOutputFontCache::clear() {
   nTTFonts = 0;
   ttFontFiles = NULL;
   ttFontFilesSize = 0;
-#endif
 #endif
 
   // clear server font cache
@@ -1158,12 +1156,11 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
 #if HAVE_T1LIB_H
   XOutputT1Font *t1Font;
 #endif
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   XOutputFTFont *ftFont;
-#else
-  XOutputTTFont *ttFont;
 #endif
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
+  XOutputTTFont *ttFont;
 #endif
   XOutputServerFont *serverFont;
   FontMapEntry *fme;
@@ -1185,18 +1182,17 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
     return t1Fonts[0];
   }
 #endif
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   if (useFreeType && nFTFonts > 0 &&
       ftFonts[0]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
     return ftFonts[0];
   }
-#else
+#endif
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   if (useFreeType && nTTFonts > 0 &&
       ttFonts[0]->matches(gfxFont->getID(), m11, m12, m21, m22)) {
     return ttFonts[0];
   }
-#endif
 #endif
   if (nServerFonts > 0 && serverFonts[0]->matches(gfxFont->getID(),
 						  m11, m12, m21, m22)) {
@@ -1219,8 +1215,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
   }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // is it in the FreeType cache?
   if (useFreeType) {
     for (i = 1; i < nFTFonts; ++i) {
@@ -1234,7 +1229,9 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
       }
     }
   }
-#else
+#endif
+
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // is it in the TrueType cache?
   if (useFreeType) {
     for (i = 1; i < nTTFonts; ++i) {
@@ -1248,7 +1245,6 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
       }
     }
   }
-#endif
 #endif
 
   // is it in the server cache?
@@ -1366,8 +1362,7 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
     }
   }
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // try to create a new FreeType font
   if (useFreeType) {
     ftFont = new XOutputFTFont(gfxFont, t1FontName, m11, m12, m21, m22,
@@ -1389,7 +1384,9 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
     }
     delete ftFont;
   }
-#else
+#endif
+
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
   // try to create a new TrueType font
   if (useFreeType) {
     ttFont = new XOutputTTFont(gfxFont, m11, m12, m21, m22, display, this);
@@ -1410,7 +1407,6 @@ XOutputFont *XOutputFontCache::getFont(GfxFont *gfxFont,
     }
     delete ttFont;
   }
-#endif
 #endif
 
 #if HAVE_T1LIB_H
@@ -1573,9 +1569,7 @@ T1FontFile *XOutputFontCache::getT1Font(GfxFont *gfxFont,
 }
 #endif
 
-#if HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
-#if FREETYPE2
-
+#if FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont,
 					GString *pdfBaseFont) {
   Ref id;
@@ -1657,9 +1651,9 @@ FTFontFile *XOutputFontCache::getFTFont(GfxFont *gfxFont,
 
   return fontFile;
 }
+#endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
-#else // FREETYPE2
-
+#if !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 TTFontFile *XOutputFontCache::getTTFont(GfxFont *gfxFont) {
   Ref id;
   TTFontFile *fontFile;
@@ -1730,16 +1724,14 @@ TTFontFile *XOutputFontCache::getTTFont(GfxFont *gfxFont) {
 
   return fontFile;
 }
-
-#endif // FREETYPE2
-#endif // HAVE_FREETYPE_FREETYPE_H | HAVE_FREETYPE_H
+#endif // !FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)
 
 //------------------------------------------------------------------------
 // XOutputDev
 //------------------------------------------------------------------------
 
-XOutputDev::XOutputDev(Display *display, Pixmap pixmap, Guint depth,
-		       Colormap colormap, unsigned long paperColor) {
+XOutputDev::XOutputDev(Display *displayA, Pixmap pixmapA, Guint depthA,
+		       Colormap colormapA, unsigned long paperColor) {
   XVisualInfo visualTempl;
   XVisualInfo *visualList;
   int nVisuals;
@@ -1751,16 +1743,16 @@ XOutputDev::XOutputDev(Display *display, Pixmap pixmap, Guint depth,
   GBool ok;
 
   // get display/pixmap info
-  this->display = display;
+  display = displayA;
   screenNum = DefaultScreen(display);
-  this->pixmap = pixmap;
-  this->depth = depth;
-  this->colormap = colormap;
+  pixmap = pixmapA;
+  depth = depthA;
+  colormap = colormapA;
 
   // check for TrueColor visual
   trueColor = gFalse;
   if (depth == 0) {
-    this->depth = DefaultDepth(display, screenNum);
+    depth = DefaultDepth(display, screenNum);
     visualList = XGetVisualInfo(display, 0, &visualTempl, &nVisuals);
     for (i = 0; i < nVisuals; ++i) {
       if (visualList[i].visual == DefaultVisual(display, screenNum)) {
@@ -1896,7 +1888,7 @@ XOutputDev::XOutputDev(Display *display, Pixmap pixmap, Guint depth,
   // set up the font cache and fonts
   gfxFont = NULL;
   font = NULL;
-  fontCache = new XOutputFontCache(display, this->depth);
+  fontCache = new XOutputFontCache(display, depth);
 
   // empty state stack
   save = NULL;
@@ -2169,12 +2161,14 @@ void XOutputDev::updateFont(GfxState *state) {
   }
   state->getFontTransMat(&m11, &m12, &m21, &m22);
   m11 *= state->getHorizScaling();
-  m21 *= state->getHorizScaling();
+  m12 *= state->getHorizScaling();
   font = fontCache->getFont(gfxFont, m11, m12, m21, m22);
   if (font) {
     font->updateGC(fillGC);
     font->updateGC(strokeGC);
   }
+
+  text->updateFont(state);
 
   // look for Type 3 font
   if (!type3Warning && gfxFont->getType() == fontType3) {
@@ -2357,7 +2351,7 @@ int XOutputDev::convertPath(GfxState *state, XPoint **points, int *size,
 
     // close subpath if necessary
     if (fillHack && ((*points)[*numPoints-1].x != (*points)[j].x ||
-		   (*points)[*numPoints-1].y != (*points)[j].y)) {
+		     (*points)[*numPoints-1].y != (*points)[j].y)) {
       addPoint(points, size, numPoints, (*points)[j].x, (*points)[j].y);
     }
 
@@ -2387,13 +2381,12 @@ int XOutputDev::convertPath(GfxState *state, XPoint **points, int *size,
 
 	// look for the first subsequent subpath, if any, which overlaps
 	for (ii = i; ii < n; ++ii) {
-	  if (((rects[ii].xMin > rect.xMin && rects[ii].xMin < rect.xMax) ||
-	       (rects[ii].xMax > rect.xMin && rects[ii].xMax < rect.xMax) ||
-	       (rects[ii].xMin < rect.xMin && rects[ii].xMax > rect.xMax)) &&
-	      ((rects[ii].yMin > rect.yMin && rects[ii].yMin < rect.yMax) ||
-	       (rects[ii].yMax > rect.yMin && rects[ii].yMax < rect.yMax) ||
-	       (rects[ii].yMin < rect.yMin && rects[ii].yMax > rect.yMax)))
+	  if (rects[ii].xMax > rects[i].xMin &&
+	      rects[ii].xMin < rects[i].xMax &&
+	      rects[ii].yMax > rects[i].yMin &&
+	      rects[ii].yMin < rects[i].yMax) {
 	    break;
+	  }
 	}
 
 	// if there is an overlap, combine the polygons

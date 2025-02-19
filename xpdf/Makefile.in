@@ -8,6 +8,8 @@
 
 SHELL = /bin/sh
 
+prefix = @prefix@
+sysconfdir = @sysconfdir@
 srcdir = @srcdir@
 VPATH = @srcdir@
 
@@ -16,11 +18,11 @@ GOOLIBDIR = ../goo
 LTKSRCDIR = $(srcdir)/../ltk
 LTKLIBDIR = ../ltk
 
-CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOOSRCDIR) -I$(LTKSRCDIR) -I$(srcdir) @X_CFLAGS@ @Xpm_CFLAGS@ @t1_CFLAGS@ @freetype_CFLAGS@
+CXXFLAGS = @CXXFLAGS@ @DEFS@ @OPTIONS@ -I$(GOOSRCDIR) -I$(LTKSRCDIR) -I$(srcdir) @X_CFLAGS@ @Xpm_CFLAGS@ @t1_CFLAGS@ @freetype_CFLAGS@ @freetype2_CFLAGS@ -DSYSTEM_XPDFRC=\"$(sysconfdir)/xpdfrc\"
 
 LDFLAGS = @LDFLAGS@
 
-XLIBS = @Xpm_LIBS@ @t1_LIBS@ @freetype_LIBS@ @X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
+XLIBS = @Xpm_LIBS@ @t1_LIBS@ @freetype_LIBS@ @freetype2_LIBS@ @X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
 
 OTHERLIBS = @LIBS@
 
@@ -194,6 +196,7 @@ Decrypt.o: ./Decrypt.cc ../goo/gmem.h Decrypt.h ../goo/gtypes.h \
 Dict.o: ./Dict.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h XRef.h
 Error.o: ./Error.cc ../goo/gtypes.h Params.h Error.h config.h
+FTFont.o: ./FTFont.cc
 FontEncoding.o: ./FontEncoding.cc ../goo/gmem.h FontEncoding.h \
  ../goo/gtypes.h
 FontFile.o: ./FontFile.cc ../goo/gmem.h Error.h config.h FontFile.h \
@@ -205,17 +208,17 @@ Function.o: ./Function.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h Error.h config.h Function.h
 Gfx.o: ./Gfx.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h Lexer.h Parser.h GfxFont.h \
- FontEncoding.h GfxState.h OutputDev.h Params.h Error.h config.h Gfx.h
+ FontEncoding.h GfxState.h Function.h OutputDev.h Params.h Page.h \
+ Error.h config.h Gfx.h
 GfxFont.o: ./GfxFont.cc ../goo/GString.h ../goo/gmem.h ../goo/gfile.h \
  ../goo/gtypes.h config.h Object.h Array.h Dict.h Stream.h Error.h \
- Params.h FontFile.h FontEncoding.h GfxFont.h FontInfo.h \
- Japan12CMapInfo.h GB12CMapInfo.h CNS13CMapInfo.h
+ Params.h FontFile.h FontEncoding.h GfxFont.h FontInfo.h
 GfxState.o: ./GfxState.cc ../goo/gmem.h Error.h config.h Object.h \
- ../goo/gtypes.h ../goo/GString.h Array.h Dict.h Stream.h Function.h \
- GfxState.h
+ ../goo/gtypes.h ../goo/GString.h Array.h Dict.h Stream.h Page.h \
+ GfxState.h Function.h
 ImageOutputDev.o: ./ImageOutputDev.cc ../goo/gmem.h config.h Error.h \
  GfxState.h ../goo/gtypes.h Object.h ../goo/GString.h Array.h Dict.h \
- Stream.h ImageOutputDev.h OutputDev.h
+ Stream.h Function.h ImageOutputDev.h OutputDev.h
 Lexer.o: ./Lexer.cc Lexer.h Object.h ../goo/gtypes.h ../goo/gmem.h \
  ../goo/GString.h Array.h Dict.h Stream.h Error.h config.h
 Link.o: ./Link.cc ../goo/gmem.h ../goo/GString.h Error.h config.h \
@@ -223,12 +226,13 @@ Link.o: ./Link.cc ../goo/gmem.h ../goo/GString.h Error.h config.h \
 LTKOutputDev.o: ./LTKOutputDev.cc ../goo/gmem.h ../goo/GString.h \
  ../ltk/LTKWindow.h ../goo/gtypes.h ../ltk/LTKScrollingCanvas.h \
  ../ltk/LTKWidget.h Object.h Array.h Dict.h Stream.h GfxState.h \
- GfxFont.h FontEncoding.h Error.h config.h Params.h LTKOutputDev.h \
- XOutputDev.h OutputDev.h
+ Function.h GfxFont.h FontEncoding.h Error.h config.h Params.h \
+ LTKOutputDev.h XOutputDev.h OutputDev.h
 Object.o: ./Object.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
  ../goo/GString.h Array.h Dict.h Stream.h Error.h config.h XRef.h
 OutputDev.o: ./OutputDev.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
- ../goo/GString.h Array.h Dict.h Stream.h GfxState.h OutputDev.h
+ ../goo/GString.h Array.h Dict.h Stream.h GfxState.h Function.h \
+ OutputDev.h
 Page.o: ./Page.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
  ../goo/GString.h Array.h Dict.h Stream.h XRef.h Link.h OutputDev.h \
  Gfx.h FormWidget.h Error.h config.h Params.h Page.h
@@ -238,16 +242,16 @@ Parser.o: ./Parser.cc Object.h ../goo/gtypes.h ../goo/gmem.h \
  ../goo/GString.h Array.h Dict.h Stream.h Parser.h Lexer.h XRef.h \
  Error.h config.h Decrypt.h
 PBMOutputDev.o: ./PBMOutputDev.cc ../goo/gmem.h ../goo/GString.h \
- Object.h ../goo/gtypes.h Array.h Dict.h Stream.h GfxState.h GfxFont.h \
- FontEncoding.h Error.h config.h Params.h PBMOutputDev.h XOutputDev.h \
- OutputDev.h
+ Object.h ../goo/gtypes.h Array.h Dict.h Stream.h GfxState.h \
+ Function.h GfxFont.h FontEncoding.h Error.h config.h Params.h \
+ PBMOutputDev.h XOutputDev.h OutputDev.h
 PDFDoc.o: ./PDFDoc.cc ../goo/GString.h config.h Page.h Object.h \
  ../goo/gtypes.h ../goo/gmem.h Array.h Dict.h Stream.h Catalog.h \
  XRef.h Link.h OutputDev.h Params.h Error.h Lexer.h Parser.h PDFDoc.h
 PSOutputDev.o: ./PSOutputDev.cc ../goo/GString.h config.h Object.h \
  ../goo/gtypes.h ../goo/gmem.h Array.h Dict.h Stream.h Error.h \
  Function.h GfxState.h GfxFont.h FontEncoding.h FontFile.h Catalog.h \
- Page.h FormWidget.h PSOutputDev.h OutputDev.h Japan12ToRKSJ.h
+ Page.h FormWidget.h PSOutputDev.h OutputDev.h
 SFont.o: ./SFont.cc SFont.h ../goo/gtypes.h
 Stream.o: ./Stream.cc ../goo/gmem.h ../goo/gfile.h ../goo/gtypes.h \
  config.h Error.h Object.h ../goo/GString.h Array.h Dict.h Stream.h \
@@ -256,14 +260,14 @@ T1Font.o: ./T1Font.cc ../goo/gmem.h FontEncoding.h ../goo/gtypes.h \
  T1Font.h SFont.h
 TextOutputDev.o: ./TextOutputDev.cc ../goo/GString.h ../goo/gmem.h \
  config.h Error.h GfxState.h ../goo/gtypes.h Object.h Array.h Dict.h \
- Stream.h FontEncoding.h TextOutputDev.h GfxFont.h OutputDev.h \
- TextOutputFontInfo.h
+ Stream.h Function.h FontEncoding.h TextOutputDev.h GfxFont.h \
+ OutputDev.h TextOutputFontInfo.h
 TTFont.o: ./TTFont.cc ../goo/gmem.h TTFont.h SFont.h ../goo/gtypes.h
 XOutputDev.o: ./XOutputDev.cc ../goo/gmem.h ../goo/gfile.h \
  ../goo/gtypes.h ../goo/GString.h Object.h Array.h Dict.h Stream.h \
- Link.h GfxState.h GfxFont.h FontEncoding.h FontFile.h Error.h \
- config.h Params.h TextOutputDev.h OutputDev.h XOutputDev.h T1Font.h \
- SFont.h TTFont.h XOutputFontInfo.h
+ Link.h GfxState.h Function.h GfxFont.h FontEncoding.h FontFile.h \
+ Error.h config.h Params.h TextOutputDev.h OutputDev.h XOutputDev.h \
+ T1Font.h SFont.h TTFont.h XOutputFontInfo.h
 XRef.o: ./XRef.cc ../goo/gmem.h Object.h ../goo/gtypes.h \
  ../goo/GString.h Array.h Dict.h Stream.h Lexer.h Parser.h Decrypt.h \
  Error.h config.h XRef.h

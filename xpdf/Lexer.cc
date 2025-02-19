@@ -204,11 +204,15 @@ Object *Lexer::getObj(Object *obj) {
 
       case '(':
 	++numParen;
+	c2 = c;
 	break;
 
       case ')':
-	if (--numParen == 0)
+	if (--numParen == 0) {
 	  done = gTrue;
+	} else {
+	  c2 = c;
+	}
 	break;
 
       case '\\':

@@ -26,9 +26,9 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKTextIn(char *name1, int widgetNum1, int minWidth1,
-	    char *fontName1, LTKStringValCbk doneCbk1,
-	    char *tabTarget1);
+  LTKTextIn(char *nameA, int widgetNumA, int minWidthA,
+	    char *fontNameA, LTKStringValCbk doneCbkA,
+	    char *tabTargetA);
 
   virtual ~LTKTextIn();
 

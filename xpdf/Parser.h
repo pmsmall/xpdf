@@ -23,7 +23,7 @@ class Parser {
 public:
 
   // Constructor.
-  Parser(Lexer *lexer1);
+  Parser(Lexer *lexerA);
 
   // Destructor.
   ~Parser();
@@ -31,7 +31,8 @@ public:
   // Get the next object from the input stream.
 #ifndef NO_DECRYPTION
   Object *getObj(Object *obj,
-		 Guchar *fileKey = NULL, int objNum = 0, int objGen = 0);
+		 Guchar *fileKey = NULL, int keyLength = 0,
+		 int objNum = 0, int objGen = 0);
 #else
   Object *getObj(Object *obj);
 #endif

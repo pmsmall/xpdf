@@ -17,20 +17,20 @@
 #include <X11/Xutil.h>
 #include "LTKLabel.h"
 
-LTKLabel::LTKLabel(char *name1, int widgetNum1,
-		   LTKLabelSize size1, int maxLength1,
-		   char *fontName1, char *text1):
-    LTKWidget(name1, widgetNum1) {
-  size = size1;
+LTKLabel::LTKLabel(char *nameA, int widgetNumA,
+		   LTKLabelSize sizeA, int maxLengthA,
+		   char *fontNameA, char *textA):
+    LTKWidget(nameA, widgetNumA) {
+  size = sizeA;
   if (size == ltkLabelMaxLength)
-    maxLength = maxLength1;
+    maxLength = maxLengthA;
   else
     maxLength = -1;
-  text = text1 ? new GString(text1) : new GString();
+  text = textA ? new GString(textA) : new GString();
   length = text->getLength();
   if (maxLength >= 0 && length > maxLength)
     length = maxLength;
-  fontName = fontName1;
+  fontName = fontNameA;
   fontStruct = NULL;
   textGC = None;
 }
@@ -43,11 +43,11 @@ LTKLabel::~LTKLabel() {
   }
 }
 
-void LTKLabel::setText(char *text1) {
+void LTKLabel::setText(char *textA) {
   if (size == ltkLabelStatic)
     return;
   delete text;
-  text = text1 ? new GString(text1) : new GString();
+  text = textA ? new GString(textA) : new GString();
   length = text->getLength();
   if (maxLength >= 0 && length > maxLength)
     length = maxLength;

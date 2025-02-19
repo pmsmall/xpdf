@@ -39,6 +39,7 @@ static GBool useEUCJP = gFalse;
 #endif
 static GBool rawOrder = gFalse;
 static GBool htmlMeta = gFalse;
+static char ownerPassword[33] = "";
 static char userPassword[33] = "";
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
@@ -62,6 +63,8 @@ static ArgDesc argDesc[] = {
    "keep strings in content stream order"},
   {"-htmlmeta", argFlag,   &htmlMeta,      0,
    "generate a simple HTML file, including the meta information"},
+  {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
+   "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,   sizeof(userPassword),
    "user password (for encrypted files)"},
   {"-q",      argFlag,     &errQuiet,      0,
@@ -72,6 +75,10 @@ static ArgDesc argDesc[] = {
    "print usage information"},
   {"-help",   argFlag,     &printHelp,     0,
    "print usage information"},
+  {"--help",  argFlag,     &printHelp,     0,
+   "print usage information"},
+  {"-?",      argFlag,     &printHelp,     0,
+   "print usage information"},
   {NULL}
 };
 
@@ -79,7 +86,7 @@ int main(int argc, char *argv[]) {
   PDFDoc *doc;
   GString *fileName;
   GString *textFileName;
-  GString *userPW;
+  GString *ownerPW, *userPW;
   TextOutputDev *textOut;
   TextOutputCharSet charSet;
   FILE *f;
@@ -103,18 +110,26 @@ int main(int argc, char *argv[]) {
   errorInit();
 
   // read config file
-  initParams(xpdfConfigFile);
+  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
 
   // open PDF file
   xref = NULL;
+  if (ownerPassword[0]) {
+    ownerPW = new GString(ownerPassword);
+  } else {
+    ownerPW = NULL;
+  }
   if (userPassword[0]) {
     userPW = new GString(userPassword);
   } else {
     userPW = NULL;
   }
-  doc = new PDFDoc(fileName, userPW);
+  doc = new PDFDoc(fileName, ownerPW, userPW);
   if (userPW) {
     delete userPW;
+  }
+  if (ownerPW) {
+    delete ownerPW;
   }
   if (!doc->isOk()) {
     goto err1;
@@ -175,7 +190,7 @@ int main(int argc, char *argv[]) {
 		      "<meta name=\"Producer\" content=\"%s\">\n");
       printInfoDate(f, info.getDict(), "CreationDate",
 		    "<meta name=\"CreationDate\" content=\"%s\">\n");
-      printInfoDate(f, info.getDict(), "ModDate",
+      printInfoDate(f, info.getDict(), "LastModifiedDate",
 		    "<meta name=\"ModDate\" content=\"%s\">\n");
     }
     info.free();

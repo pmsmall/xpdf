@@ -47,9 +47,9 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKWindow(LTKApp *app1, GBool dialog1, char *title,
-	    char **iconData1, char *defaultWidgetName,
-	    LTKBox *box1);
+  LTKWindow(LTKApp *appA, GBool dialogA, char *titleA,
+	    char **iconDataA, char *defaultWidgetName,
+	    LTKBox *boxA);
 
   ~LTKWindow();
 
@@ -72,7 +72,7 @@ public:
   GC getXorGC() { return xorGC; }
   XFontStruct *getXFontStruct() { return fontStruct; }
   LTKWindow *getNext() { return next; }
-  LTKWindow *setNext(LTKWindow *next1) { return next = next1; }
+  LTKWindow *setNext(LTKWindow *nextA) { return next = nextA; }
   LTKWidget *addWidget(LTKWidget *widget);
   LTKWidget *delWidget(LTKWidget *widget);
   LTKWidget *findWidget(char *name);
@@ -80,7 +80,7 @@ public:
   //---------- special access ----------
 
   void setInstallCmap(GBool inst) { installCmap = inst; }
-  void setMenu(LTKMenu *menu1) { menu = menu1; }
+  void setMenu(LTKMenu *menuA) { menu = menuA; }
   void setKeyCbk(LTKWindowKeyCbk cbk) { keyCbk = cbk; }
   void setPropChangeCbk(LTKWindowPropCbk cbk);
   void setLayoutCbk(LTKWindowLayoutCbk cbk) { layoutCbk = cbk; }
@@ -94,8 +94,8 @@ public:
   //---------- layout ----------
 
   GBool checkFills(char **err);
-  void layout(int x, int y, int width1, int height1);
-  void layoutDialog(LTKWindow *overWin1, int width1, int height1);
+  void layout(int x, int y, int widthA, int heightA);
+  void layoutDialog(LTKWindow *overWinA, int widthA, int heightA);
   void map();
 
   //---------- drawing ----------
@@ -120,7 +120,7 @@ public:
   GC makeGC(unsigned long color, int lineWidth, int lineStyle);
 
   // Set the window title.
-  void setTitle(GString *title1);
+  void setTitle(GString *title);
 
   // Set the cursor to one listed X11/cursorfont.h.
   void setCursor(Guint cursor);

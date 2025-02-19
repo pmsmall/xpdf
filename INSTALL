@@ -1,11 +1,11 @@
 xpdf
 ====
 
-version 0.92
-2000-dec-03
+version 0.93
+2001-oct-25
 
 The xpdf software and documentation are
-copyright 1996-2000 Derek B. Noonburg.
+copyright 1996-2001 Derek B. Noonburg.
 
 Email: derekn@foolabs.com
 WWW: http://www.foolabs.com/xpdf/
@@ -43,6 +43,19 @@ different systems.
 
     --with-freetype-library=PATH
     --with-freetype-includes=PATH
+
+* To use FreeType 2, you must have version 2.0.5 or newer.  Recent
+  versions of XFree86 ship with an older version, which means you'll
+  need to explicitly set include and library paths to get the correct
+  version:
+
+    --enable-freetype2
+    --with-freetype-library=PATH
+    --with-freetype-includes=PATH
+
+  (With the default installation, the library path is
+  /usr/local/include and the include path is
+  /usr/local/include/freetype2.)
 
 * Run the configure script:
 
@@ -88,6 +101,10 @@ different systems.
 
     --with-gzip
         Use gzip instead of uncompress.
+
+    --with-appdef-dir=DIR
+        Use the specified app-defaults directory.  The default is
+        /usr/lib/X11/app-defaults.
 
 * Type 'make'.  This should build the executables:
 

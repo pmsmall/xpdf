@@ -27,7 +27,7 @@ public:
   // constraints in the underlying XOutputDev object.)
 
   static PBMOutputDev *makePBMOutputDev(char *displayName,
-					char *fileRoot1);
+					char *fileRootA);
 
   static void killPBMOutputDev(PBMOutputDev *out);
 
@@ -43,9 +43,9 @@ public:
 
 private:
 
-  PBMOutputDev(Display *display1, int screen1,
-	       Pixmap pixmap1, Window dummyWin1,
-	       int invert1, char *fileRoot1);
+  PBMOutputDev(Display *displayA, int screenA,
+	       Pixmap pixmapA, Window dummyWinA,
+	       int invertA, char *fileRootA);
 
   char *fileRoot;
   char *fileName;

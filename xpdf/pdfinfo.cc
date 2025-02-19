@@ -29,11 +29,14 @@
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
 
+static char ownerPassword[33] = "";
 static char userPassword[33] = "";
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
 
 static ArgDesc argDesc[] = {
+  {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
+   "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,   sizeof(userPassword),
    "user password (for encrypted files)"},
   {"-v",      argFlag,     &printVersion,  0,
@@ -42,13 +45,17 @@ static ArgDesc argDesc[] = {
    "print usage information"},
   {"-help",   argFlag,     &printHelp,     0,
    "print usage information"},
+  {"--help",  argFlag,     &printHelp,     0,
+   "print usage information"},
+  {"-?",      argFlag,     &printHelp,     0,
+   "print usage information"},
   {NULL}
 };
 
 int main(int argc, char *argv[]) {
   PDFDoc *doc;
   GString *fileName;
-  GString *userPW;
+  GString *ownerPW, *userPW;
   Object info;
   double w, h;
   GBool ok;
@@ -69,18 +76,26 @@ int main(int argc, char *argv[]) {
   errorInit();
 
   // read config file
-  initParams(xpdfConfigFile);
+  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
 
   // open PDF file
   xref = NULL;
+  if (ownerPassword[0]) {
+    ownerPW = new GString(ownerPassword);
+  } else {
+    ownerPW = NULL;
+  }
   if (userPassword[0]) {
     userPW = new GString(userPassword);
   } else {
     userPW = NULL;
   }
-  doc = new PDFDoc(fileName, userPW);
+  doc = new PDFDoc(fileName, ownerPW, userPW);
   if (userPW) {
     delete userPW;
+  }
+  if (ownerPW) {
+    delete ownerPW;
   }
   if (!doc->isOk()) {
     exit(1);
@@ -107,10 +122,10 @@ int main(int argc, char *argv[]) {
   printf("Encrypted:    ");
   if (doc->isEncrypted()) {
     printf("yes (print:%s copy:%s change:%s addNotes:%s)\n",
-	   doc->okToPrint() ? "yes" : "no",
-	   doc->okToCopy() ? "yes" : "no",
-	   doc->okToChange() ? "yes" : "no",
-	   doc->okToAddNotes() ? "yes" : "no");
+	   doc->okToPrint(gTrue) ? "yes" : "no",
+	   doc->okToCopy(gTrue) ? "yes" : "no",
+	   doc->okToChange(gTrue) ? "yes" : "no",
+	   doc->okToAddNotes(gTrue) ? "yes" : "no");
   } else {
     printf("no\n");
   }

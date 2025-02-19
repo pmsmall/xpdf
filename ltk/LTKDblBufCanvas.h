@@ -26,8 +26,8 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKDblBufCanvas(char *name1, int widgetNum1,
-		  int minWidth1, int minHeight1);
+  LTKDblBufCanvas(char *nameA, int widgetNumA,
+		  int minWidthA, int minHeightA);
 
   virtual ~LTKDblBufCanvas();
 

@@ -6,7 +6,7 @@ pdftotext(1)                                         pdftotext(1)
 
 NAME
        pdftotext  -  Portable  Document Format (PDF) to text con-
-       verter (version 0.92)
+       verter (version 0.93)
 
 SYNOPSIS
        pdftotext [options] [PDF-file [text-file]]
@@ -54,14 +54,14 @@ OPTIONS
               more  sophisticated  when pdftotext is rewritten to
               use a smarter text placement algorithm.
 
-       -upw password
-              Specify the user password for the PDF file.
-
-       -q     Don't print any messages or errors.
-
+       -opw password
+              Specify the owner password for the PDF file.   Pro-
+              viding  this will bypass all security restrictions.
 
 
-                           03 Dec 2000                          1
+
+
+                           25 Oct 2001                          1
 
 
 
@@ -69,6 +69,11 @@ OPTIONS
 
 pdftotext(1)                                         pdftotext(1)
 
+
+       -upw password
+              Specify the user password for the PDF file.
+
+       -q     Don't print any messages or errors.
 
        -v     Print copyright and version information.
 
@@ -81,7 +86,7 @@ BUGS
 
 AUTHOR
        The pdftotext software  and  documentation  are  copyright
-       1996-2000 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2001 Derek B. Noonburg (derekn@foolabs.com).
 
 SEE ALSO
        xpdf(1), pdftops(1), pdfinfo(1), pdftopbm(1), pdfimages(1)
@@ -122,11 +127,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-                           03 Dec 2000                          2
+                           25 Oct 2001                          2
 
 

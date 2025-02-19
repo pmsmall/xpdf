@@ -23,6 +23,7 @@ del *.o
 %CXX% %CXXFLAGS% -c FontEncoding.cc
 %CXX% %CXXFLAGS% -c FontFile.cc
 %CXX% %CXXFLAGS% -c FormWidget.cc
+%CXX% %CXXFLAGS% -c Function.cc
 %CXX% %CXXFLAGS% -c Gfx.cc
 %CXX% %CXXFLAGS% -c GfxFont.cc
 %CXX% %CXXFLAGS% -c GfxState.cc

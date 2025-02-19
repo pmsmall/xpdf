@@ -48,6 +48,9 @@ GBool psOutLevel1 = gFalse;
 // Generate Level 1 separable PostScript?
 GBool psOutLevel1Sep = gFalse;
 
+// Generate Level 2 separable PostScript?
+GBool psOutLevel2Sep = gFalse;
+
 // Generate Encapsulated PostScript?
 GBool psOutEPS = gFalse;
 
@@ -94,19 +97,83 @@ static char *prolog[] = {
   "  /pdfHorizScaling 1 def",
   "} def",
   "/pdfEndPage { end } def",
+  "% separation convention operators",
+  "/findcmykcustomcolor where {",
+  "  pop",
+  "}{",
+  "  /findcmykcustomcolor { 5 array astore } def",
+  "} ifelse",
+  "/setcustomcolor where {",
+  "  pop",
+  "}{",
+  "  /setcustomcolor {",
+  "    exch",
+  "    [ exch /Separation exch dup 4 get exch /DeviceCMYK exch",
+  "      0 4 getinterval cvx",
+  "      [ exch /dup load exch { mul exch dup } /forall load",
+  "        /pop load dup ] cvx",
+  "    ] setcolorspace setcolor",
+  "  } def",
+  "} ifelse",
+  "/customcolorimage where {",
+  "  pop",
+  "}{",
+  "  /customcolorimage {",
+  "    gsave",
+  "    [ exch /Separation exch dup 4 get exch /DeviceCMYK exch",
+  "      0 4 getinterval cvx",
+  "      [ exch /dup load exch { mul exch dup } /forall load",
+  "        /pop load dup ] cvx",
+  "    ] setcolorspace",
+  "    10 dict begin",
+  "      /ImageType 1 def",
+  "      /DataSource exch def",
+  "      /ImageMatrix exch def",
+  "      /BitsPerComponent exch def",
+  "      /Height exch def",
+  "      /Width exch def",
+  "      /Decode [1 0] def",
+  "    currentdict end",
+  "    image",
+  "    grestore",
+  "  } def",
+  "} ifelse",
+  "% PDF color state",
   "/sCol {",
   "  pdfLastStroke not {",
   "    pdfStroke aload length",
-  "    dup 1 eq { pop setgray }",
-  "      { 3 eq { setrgbcolor } { setcmykcolor } ifelse } ifelse",
+  "    dup 1 eq {",
+  "      pop setgray",
+  "    }{",
+  "      dup 3 eq {",
+  "        pop setrgbcolor",
+  "      }{",
+  "        4 eq {",
+  "          setcmykcolor",
+  "        }{",
+  "          findcmykcustomcolor exch setcustomcolor",
+  "        } ifelse",
+  "      } ifelse",
+  "    } ifelse",
   "    /pdfLastStroke true def /pdfLastFill false def",
   "  } if",
   "} def",
   "/fCol {",
   "  pdfLastFill not {",
   "    pdfFill aload length",
-  "    dup 1 eq { pop setgray }",
-  "      { 3 eq { setrgbcolor } { setcmykcolor } ifelse } ifelse",
+  "    dup 1 eq {",
+  "      pop setgray",
+  "    }{",
+  "      dup 3 eq {",
+  "        pop setrgbcolor",
+  "      }{",
+  "        4 eq {",
+  "          setcmykcolor",
+  "        }{",
+  "          findcmykcustomcolor exch setcustomcolor",
+  "        } ifelse",
+  "      } ifelse",
+  "    } ifelse",
   "    /pdfLastFill true def /pdfLastStroke false def",
   "  } if",
   "} def",
@@ -145,6 +212,12 @@ static char *prolog[] = {
   "     /pdfLastFill true def /pdfLastStroke false def } def",
   "/K { 4 copy 4 array astore /pdfStroke exch def setcmykcolor",
   "     /pdfLastStroke true def /pdfLastFill false def } def",
+  "/ck { 6 copy 6 array astore /pdfFill exch def",
+  "      findcmykcustomcolor exch setcustomcolor",
+  "      /pdfLastFill true def /pdfLastStroke false def } def",
+  "/CK { 6 copy 6 array astore /pdfStroke exch def",
+  "      findcmykcustomcolor exch setcustomcolor",
+  "      /pdfLastStroke true def /pdfLastFill false def } def",
   "% path segment operators",
   "/m { moveto } def",
   "/l { lineto } def",
@@ -178,8 +251,9 @@ static char *prolog[] = {
   "      pdfFontSize mul pdfHorizScaling mul",
   "      1 index stringwidth pdfTextMat idtransform pop",
   "      sub 1 index length dup 0 ne { div } { pop pop 0 } ifelse",
-  "      pdfWordSpacing 0 pdfTextMat dtransform 32",
-  "      4 3 roll pdfCharSpacing add 0 pdfTextMat dtransform",
+  "      pdfWordSpacing pdfHorizScaling mul 0 pdfTextMat dtransform 32",
+  "      4 3 roll pdfCharSpacing pdfHorizScaling mul add 0",
+  "      pdfTextMat dtransform",
   "      6 5 roll awidthshow",
   "      0 pdfTextRise neg pdfTextMat dtransform rmoveto } def",
   "/TJm { pdfFontSize 0.001 mul mul neg 0",
@@ -212,6 +286,20 @@ static char *prolog[] = {
   "    not { pop exit } if",
   "    (%-EOD-) eq { exit } if } loop",
   "} def",
+  "/pdfImSep {",
+  "  findcmykcustomcolor exch",
+  "  dup /Width get /pdfImBuf1 exch string def",
+  "  begin Width Height BitsPerComponent ImageMatrix DataSource end",
+  "  /pdfImData exch def",
+  "  { pdfImData pdfImBuf1 readstring pop",
+  "    0 1 2 index length 1 sub {",
+  "      1 index exch 2 copy get 255 exch sub put",
+  "    } for }",
+  "  6 5 roll customcolorimage",
+  "  { currentfile pdfImBuf readline",
+  "    not { pop exit } if",
+  "    (%-EOD-) eq { exit } if } loop",
+  "} def",
   "/pdfImM {",
   "  fCol imagemask",
   "  { currentfile pdfImBuf readline",
@@ -239,7 +327,7 @@ struct PSSubstFont {
 static PSFont psFonts[] = {
   {"Courier",               "Courier"},
   {"Courier-Bold",          "Courier-Bold"},
-  {"Courier-Oblique",       "Courier-Bold"},
+  {"Courier-Oblique",       "Courier-Oblique"},
   {"Courier-BoldOblique",   "Courier-BoldOblique"},
   {"Helvetica",             "Helvetica"},
   {"Helvetica-Bold",        "Helvetica-Bold"},
@@ -270,6 +358,46 @@ static PSSubstFont psSubstFonts[] = {
 };
 
 //------------------------------------------------------------------------
+// process colors
+//------------------------------------------------------------------------
+
+#define psProcessCyan     1
+#define psProcessMagenta  2
+#define psProcessYellow   4
+#define psProcessBlack    8
+#define psProcessCMYK    15
+
+//------------------------------------------------------------------------
+// PSOutCustomColor
+//------------------------------------------------------------------------
+
+class PSOutCustomColor {
+public:
+
+  PSOutCustomColor(double cA, double mA,
+		   double yA, double kA, GString *nameA);
+  ~PSOutCustomColor();
+
+  double c, m, y, k;
+  GString *name;
+  PSOutCustomColor *next;
+};
+
+PSOutCustomColor::PSOutCustomColor(double cA, double mA,
+				   double yA, double kA, GString *nameA) {
+  c = cA;
+  m = mA;
+  y = yA;
+  k = kA;
+  name = nameA;
+  next = NULL;
+}
+
+PSOutCustomColor::~PSOutCustomColor() {
+  delete name;
+}
+
+//------------------------------------------------------------------------
 // PSOutputDev
 //------------------------------------------------------------------------
 
@@ -279,9 +407,10 @@ typedef void (*SignalFunc)(int);
 
 PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
 			 int firstPage, int lastPage,
-			 GBool embedType1, GBool embedTrueType,
-			 GBool doForm) {
+			 GBool embedType1A, GBool embedTrueTypeA,
+			 GBool doFormA) {
   Page *page;
+  PDFRectangle *box;
   Dict *resDict;
   FormWidgets *formWidgets;
   char **p;
@@ -290,16 +419,19 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
   int i;
 
   // initialize
-  this->embedType1 = embedType1;
-  this->embedTrueType = embedTrueType;
-  this->doForm = doForm;
+  embedType1 = embedType1A;
+  embedTrueType = embedTrueTypeA;
+  doForm = doFormA;
   fontIDs = NULL;
   fontFileIDs = NULL;
   fontFileNames = NULL;
   embFontList = NULL;
   f = NULL;
-  if (doForm)
+  if (doForm) {
     lastPage = firstPage;
+  }
+  processColors = 0;
+  customColors = NULL;
 
   // open file or pipe
   ok = gTrue;
@@ -351,15 +483,16 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
     writePS("%%%%Creator: xpdf/pdftops %s\n", xpdfVersion);
     writePS("%%%%LanguageLevel: %d\n",
 	    (psOutLevel1 || psOutLevel1Sep) ? 1 : 2);
-    if (psOutLevel1Sep) {
-      writePS("%%%%DocumentProcessColors: Cyan Magenta Yellow Black\n");
+    if (psOutLevel1Sep || psOutLevel2Sep) {
+      writePS("%%%%DocumentProcessColors: (atend)\n");
+      writePS("%%%%DocumentCustomColors: (atend)\n");
     }
     writePS("%%%%EndComments\n");
     page = catalog->getPage(firstPage);
+    box = page->getBox();
     writePS("32 dict dup begin\n");
     writePS("/BBox [%d %d %d %d] def\n",
-	    (int)page->getX1(), (int)page->getY1(),
-	    (int)page->getX2(), (int)page->getY2());
+	    (int)box->x1, (int)box->y1, (int)box->x2, (int)box->y2);
     writePS("/FormType 1 def\n");
     writePS("/Matrix [1 0 0 1 0 0] def\n");
   } else if (psOutEPS) {
@@ -367,20 +500,21 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
     writePS("%%%%Creator: xpdf/pdftops %s\n", xpdfVersion);
     writePS("%%%%LanguageLevel: %d\n",
 	    (psOutLevel1 || psOutLevel1Sep) ? 1 : 2);
-    if (psOutLevel1Sep) {
-      writePS("%%%%DocumentProcessColors: Cyan Magenta Yellow Black\n");
+    if (psOutLevel1Sep || psOutLevel2Sep) {
+      writePS("%%%%DocumentProcessColors: (atend)\n");
+      writePS("%%%%DocumentCustomColors: (atend)\n");
     }
     page = catalog->getPage(firstPage);
+    box = page->getBox();
     writePS("%%%%BoundingBox: %d %d %d %d\n",
-	    (int)floor(page->getX1()), (int)floor(page->getY1()),
-	    (int)ceil(page->getX2()), (int)ceil(page->getY2()));
-    if (floor(page->getX1()) != ceil(page->getX1()) ||
-	floor(page->getY1()) != ceil(page->getY1()) ||
-	floor(page->getX2()) != ceil(page->getX2()) ||
-	floor(page->getY2()) != ceil(page->getY2())) {
+	    (int)floor(box->x1), (int)floor(box->y1),
+	    (int)ceil(box->x2), (int)ceil(box->y2));
+    if (floor(box->x1) != ceil(box->x1) ||
+	floor(box->y1) != ceil(box->y1) ||
+	floor(box->x2) != ceil(box->x2) ||
+	floor(box->y2) != ceil(box->y2)) {
       writePS("%%%%HiResBoundingBox: %g %g %g %g\n",
-	      page->getX1(), page->getY1(),
-	      page->getX2(), page->getY2());
+	      box->x1, box->y1, box->x2, box->y2);
     }
     writePS("%%%%DocumentSuppliedResources: (atend)\n");
     writePS("%%%%EndComments\n");
@@ -389,8 +523,9 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
     writePS("%%%%Creator: xpdf/pdftops %s\n", xpdfVersion);
     writePS("%%%%LanguageLevel: %d\n",
 	    (psOutLevel1 || psOutLevel1Sep) ? 1 : 2);
-    if (psOutLevel1Sep) {
-      writePS("%%%%DocumentProcessColors: Cyan Magenta Yellow Black\n");
+    if (psOutLevel1Sep || psOutLevel2Sep) {
+      writePS("%%%%DocumentProcessColors: (atend)\n");
+      writePS("%%%%DocumentCustomColors: (atend)\n");
     }
     writePS("%%%%DocumentMedia: plain %d %d 0 () ()\n",
 	    paperWidth, paperHeight);
@@ -465,20 +600,45 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
 }
 
 PSOutputDev::~PSOutputDev() {
+  PSOutCustomColor *cc;
   int i;
 
   if (f) {
     if (doForm) {
       writePS("/Foo exch /Form defineresource pop\n");
-    } else if (psOutEPS) {
+    } else  {
       writePS("%%%%Trailer\n");
       writePS("end\n");
-      writePS("%%%%DocumentSuppliedResources:\n");
-      writePS("%s", embFontList->getCString());
-      writePS("%%%%EOF\n");
-    } else {
-      writePS("%%%%Trailer\n");
-      writePS("end\n");
+      if (psOutEPS) {
+	writePS("%%%%DocumentSuppliedResources:\n");
+	writePS("%s", embFontList->getCString());
+      }
+      if (psOutLevel1Sep || psOutLevel2Sep) {
+         writePS("%%%%DocumentProcessColors:");
+         if (processColors & psProcessCyan) {
+	   writePS(" Cyan");
+	 }
+         if (processColors & psProcessMagenta) {
+	   writePS(" Magenta");
+	 }
+         if (processColors & psProcessYellow) {
+	   writePS(" Yellow");
+	 }
+         if (processColors & psProcessBlack) {
+	   writePS(" Black");
+	 }
+         writePS("\n");
+         writePS("%%%%DocumentCustomColors:");
+	 for (cc = customColors; cc; cc = cc->next) {
+	   writePS(" (%s)", cc->name->getCString());
+	 }
+         writePS("\n");
+         writePS("%%%%CMYKCustomColor:\n");
+	 for (cc = customColors; cc; cc = cc->next) {
+	   writePS("%%%%+ %g %g %g %g (%s)\n",
+		   cc->c, cc->m, cc->y, cc->k, cc->name->getCString());
+	 }
+      }
       writePS("%%%%EOF\n");
     }
     if (fileType == psFile) {
@@ -510,6 +670,11 @@ PSOutputDev::~PSOutputDev() {
       delete fontFileNames[i];
     }
     gfree(fontFileNames);
+  }
+  while (customColors) {
+    cc = customColors;
+    customColors = cc->next;
+    delete cc;
   }
 }
 
@@ -603,11 +768,13 @@ void PSOutputDev::setupFont(GfxFont *font) {
     psName = font->getEmbeddedFontName();
     setupEmbeddedType1CFont(font, &fontFileID, psName);
 
+  // check for embedded TrueType font
   } else if (embedTrueType && font->getType() == fontTrueType &&
 	     font->getEmbeddedFontID(&fontFileID)) {
     psName = font->getEmbeddedFontName();
     setupEmbeddedTrueTypeFont(font, &fontFileID, psName);
 
+  // check for Japanese font
   } else if (font->is16Bit() && font->getCharSet16() == font16AdobeJapan12) {
     psName = "Ryumin-Light-RKSJ";
     do16Bit = gTrue;
@@ -677,6 +844,11 @@ void PSOutputDev::setupFont(GfxFont *font) {
       writePS((i == 0) ? "[ " : "  ");
       for (j = 0; j < 8; ++j) {
 	charName = font->getCharName(i+j);
+	// this is a kludge for broken PDF files that encode char 32
+	// as .notdef
+	if (i+j == 32 && charName && !strcmp(charName, ".notdef")) {
+	  charName = "space";
+	}
 	writePS("/%s", charName ? charName : ".notdef");
       }
       writePS((i == 256-8) ? "]\n" : "\n");
@@ -1181,9 +1353,11 @@ void PSOutputDev::updateLineWidth(GfxState *state) {
 }
 
 void PSOutputDev::updateFillColor(GfxState *state) {
+  GfxColor color;
   double gray;
   GfxRGB rgb;
   GfxCMYK cmyk;
+  GfxSeparationColorSpace *sepCS;
 
   if (psOutLevel1Sep) {
     state->getFillCMYK(&cmyk);
@@ -1191,6 +1365,21 @@ void PSOutputDev::updateFillColor(GfxState *state) {
   } else if (psOutLevel1) {
     state->getFillGray(&gray);
     writePS("%g g\n", gray);
+  } else if (psOutLevel2Sep) {
+    if (state->getFillColorSpace()->getMode() == csSeparation) {
+      sepCS = (GfxSeparationColorSpace *)state->getFillColorSpace();
+      color.c[0] = 1;
+      sepCS->getCMYK(&color, &cmyk);
+      writePS("%g %g %g %g %g (%s) ck\n",
+	      state->getFillColor()->c[0],
+	      cmyk.c, cmyk.m, cmyk.y, cmyk.k,
+	      sepCS->getName()->getCString());
+      addCustomColor(sepCS);
+    } else {
+      state->getFillCMYK(&cmyk);
+      writePS("%g %g %g %g k\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
+      addProcessColor(cmyk.c, cmyk.m, cmyk.y, cmyk.k);
+    }
   } else if (state->getFillColorSpace()->getMode() == csDeviceCMYK) {
     state->getFillCMYK(&cmyk);
     writePS("%g %g %g %g k\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
@@ -1205,9 +1394,11 @@ void PSOutputDev::updateFillColor(GfxState *state) {
 }
 
 void PSOutputDev::updateStrokeColor(GfxState *state) {
+  GfxColor color;
   double gray;
   GfxRGB rgb;
   GfxCMYK cmyk;
+  GfxSeparationColorSpace *sepCS;
 
   if (psOutLevel1Sep) {
     state->getStrokeCMYK(&cmyk);
@@ -1215,6 +1406,21 @@ void PSOutputDev::updateStrokeColor(GfxState *state) {
   } else if (psOutLevel1) {
     state->getStrokeGray(&gray);
     writePS("%g G\n", gray);
+  } else if (psOutLevel2Sep) {
+    if (state->getStrokeColorSpace()->getMode() == csSeparation) {
+      sepCS = (GfxSeparationColorSpace *)state->getStrokeColorSpace();
+      color.c[0] = 1;
+      sepCS->getCMYK(&color, &cmyk);
+      writePS("%g %g %g %g %g (%s) CK\n",
+	      state->getStrokeColor()->c[0],
+	      cmyk.c, cmyk.m, cmyk.y, cmyk.k,
+	      sepCS->getName()->getCString());
+      addCustomColor(sepCS);
+    } else {
+      state->getStrokeCMYK(&cmyk);
+      writePS("%g %g %g %g K\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
+      addProcessColor(cmyk.c, cmyk.m, cmyk.y, cmyk.k);
+    }
   } else if (state->getStrokeColorSpace()->getMode() == csDeviceCMYK) {
     state->getStrokeCMYK(&cmyk);
     writePS("%g %g %g %g K\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
@@ -1226,6 +1432,39 @@ void PSOutputDev::updateStrokeColor(GfxState *state) {
       writePS("%g %g %g RG\n", rgb.r, rgb.g, rgb.b);
     }
   }
+}
+
+void PSOutputDev::addProcessColor(double c, double m, double y, double k) {
+  if (c > 0) {
+    processColors |= psProcessCyan;
+  }
+  if (m > 0) {
+    processColors |= psProcessMagenta;
+  }
+  if (y > 0) {
+    processColors |= psProcessYellow;
+  }
+  if (k > 0) {
+    processColors |= psProcessBlack;
+  }
+}
+
+void PSOutputDev::addCustomColor(GfxSeparationColorSpace *sepCS) {
+  PSOutCustomColor *cc;
+  GfxColor color;
+  GfxCMYK cmyk;
+
+  for (cc = customColors; cc; cc = cc->next) {
+    if (!cc->name->cmp(sepCS->getName())) {
+      return;
+    }
+  }
+  color.c[0] = 1;
+  sepCS->getCMYK(&color, &cmyk);
+  cc = new PSOutCustomColor(cmyk.c, cmyk.m, cmyk.y, cmyk.k,
+			    sepCS->getName()->copy());
+  cc->next = customColors;
+  customColors = cc;
 }
 
 void PSOutputDev::updateFont(GfxState *state) {
@@ -1559,6 +1798,9 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
   GString *s;
   int n, numComps;
   GBool useRLE, useA85;
+  GfxSeparationColorSpace *sepCS;
+  GfxColor color;
+  GfxCMYK cmyk;
   int c;
   int i;
 
@@ -1647,26 +1889,32 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
       useRLE = gFalse;
       useA85 = str->isBinary();
     }
-    if (useA85)
+    if (useA85) {
       writePS("    /ASCII85Decode filter\n");
-    if (useRLE)
+    }
+    if (useRLE) {
       writePS("    /RunLengthDecode filter\n");
-    else
+    } else {
       writePS("%s", s->getCString());
-    if (s)
+    }
+    if (s) {
       delete s;
+    }
 
     // cut off inline image streams at appropriate length
-    if (inlineImg)
+    if (inlineImg) {
       str = new FixedLengthEncoder(str, len);
-    else if (!useRLE)
+    } else if (!useRLE) {
       str = str->getBaseStream();
+    }
 
     // add RunLengthEncode and ASCII85 encode filters
-    if (useRLE)
+    if (useRLE) {
       str = new RunLengthEncoder(str);
-    if (useA85)
+    }
+    if (useA85) {
       str = new ASCII85Encoder(str);
+    }
 
     // end of image dictionary
     writePS(">>\n");
@@ -1691,12 +1939,22 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
       writePS("%%%%BeginData: %d Hex Bytes\n", n);
     }
 #endif
-    writePS("%s\n", colorMap ? "pdfIm" : "pdfImM");
+    if (psOutLevel2Sep && colorMap &&
+	colorMap->getColorSpace()->getMode() == csSeparation) {
+      color.c[0] = 1;
+      sepCS = (GfxSeparationColorSpace *)colorMap->getColorSpace();
+      sepCS->getCMYK(&color, &cmyk);
+      writePS("%g %g %g %g (%s) pdfImSep\n",
+	      cmyk.c, cmyk.m, cmyk.y, cmyk.k, sepCS->getName()->getCString());
+    } else {
+      writePS("%s\n", colorMap ? "pdfIm" : "pdfImM");
+    }
 
     // copy the stream data
     str->reset();
-    while ((c = str->getChar()) != EOF)
+    while ((c = str->getChar()) != EOF) {
       fputc(c, f);
+    }
 
     // add newline and trailer to the end
     fputc('\n', f);
@@ -1708,8 +1966,9 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
 #endif
 
     // delete encoders
-    if (useRLE || useA85)
+    if (useRLE || useA85) {
       delete str;
+    }
   }
 }
 
@@ -1721,6 +1980,8 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
   GfxSeparationColorSpace *separationCS;
   Guchar *lookup;
   double x[gfxColorMaxComps], y[gfxColorMaxComps];
+  GfxColor color;
+  GfxCMYK cmyk;
   int n, numComps;
   int i, j, k;
 
@@ -1728,6 +1989,7 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
 
   case csDeviceGray:
     writePS("/DeviceGray");
+    processColors |= psProcessBlack;
     break;
 
   case csCalGray:
@@ -1744,10 +2006,12 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
 	    calGrayCS->getBlackX(), calGrayCS->getBlackY(),
 	    calGrayCS->getBlackZ());
     writePS(">>]");
+    processColors |= psProcessBlack;
     break;
 
   case csDeviceRGB:
     writePS("/DeviceRGB");
+    processColors |= psProcessCMYK;
     break;
 
   case csCalRGB:
@@ -1769,10 +2033,12 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
 	    calRGBCS->getBlackX(), calRGBCS->getBlackY(),
 	    calRGBCS->getBlackZ());
     writePS(">>]");
+    processColors |= psProcessCMYK;
     break;
 
   case csDeviceCMYK:
     writePS("/DeviceCMYK");
+    processColors |= psProcessCMYK;
     break;
 
   case csLab:
@@ -1798,6 +2064,7 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
     writePS(" /BlackPoint [%g %g %g]\n",
 	    labCS->getBlackX(), labCS->getBlackY(), labCS->getBlackZ());
     writePS(">>]");
+    processColors |= psProcessCMYK;
     break;
 
   case csICCBased:
@@ -1818,6 +2085,9 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
 	for (k = 0; k < numComps; ++k) {
 	  writePS("%02x", lookup[j * numComps + k]);
 	}
+	color.c[0] = j;
+	indexedCS->getCMYK(&color, &cmyk);
+	addProcessColor(cmyk.c, cmyk.m, cmyk.y, cmyk.k);
       }
       writePS("\n");
     }
@@ -1829,7 +2099,7 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
     //~ separation color space, with the specified alternate color
     //~ space and tint transform
     separationCS = (GfxSeparationColorSpace *)colorSpace;
-    writePS(" [/Indexed ");
+    writePS("[/Indexed ");
     dumpColorSpaceL2(separationCS->getAlt());
     writePS(" 255 <\n");
     numComps = separationCS->getAlt()->getNComps();
@@ -1845,6 +2115,7 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace) {
       writePS("\n");
     }
     writePS(">]");
+    addCustomColor(separationCS);
     break;
 
   case csDeviceN:

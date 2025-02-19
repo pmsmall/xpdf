@@ -62,7 +62,7 @@ public:
   //---------- constructor and destructor ----------
 
   // Constructor.
-  LTKWidget(char *name1, int widgetNum1);
+  LTKWidget(char *nameA, int widgetNumA);
 
   // Destructor.
   virtual ~LTKWidget();
@@ -71,9 +71,9 @@ public:
 
   virtual GBool isBox() { return gFalse; }
   char *getName() { return name; }
-  virtual void setParent(LTKWindow *parent1);
+  virtual void setParent(LTKWindow *parentA);
   LTKWindow *getParent() { return parent; }
-  virtual void setCompoundParent(LTKWidget *compParent1);
+  virtual void setCompoundParent(LTKWidget *compParentA);
   LTKWidget *getCompoundParent() { return compParent; }
   int getWidth() { return width; }
   int getHeight() { return height; }
@@ -90,7 +90,7 @@ public:
   GC getXorGC() { return parent->getXorGC(); }
   XFontStruct *getXFontStruct() { return parent->getXFontStruct(); }
   LTKWidget *getNext() { return next; }
-  LTKWidget *setNext(LTKWidget *next1) { return next = next1; }
+  LTKWidget *setNext(LTKWidget *nextA) { return next = nextA; }
 
   //---------- special access ----------
 
@@ -105,7 +105,7 @@ public:
   virtual void layout1() = 0;
 
   // Layout widget internals at specified position, with specified size.
-  virtual void layout2(int x1, int y1, int width1, int height1);
+  virtual void layout2(int xA, int yA, int widthA, int heightA);
 
   // Construct the X window(s) for widget and children.  If windows
   // are already constructed, move/resize them as necessary.

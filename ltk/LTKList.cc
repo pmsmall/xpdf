@@ -21,13 +21,13 @@
 #define horizBorder 4
 #define vertBorder  2
 
-LTKList::LTKList(char *name1, int widgetNum1,
-		 int minWidth1, int minLines1,
-		 GBool allowSelection1, char *fontName1):
-    LTKWidget(name1, widgetNum1) {
-  minWidth = minWidth1;
-  minLines = minLines1;
-  allowSelection = allowSelection1;
+LTKList::LTKList(char *nameA, int widgetNumA,
+		 int minWidthA, int minLinesA,
+		 GBool allowSelectionA, char *fontNameA):
+    LTKWidget(nameA, widgetNumA) {
+  minWidth = minWidthA;
+  minLines = minLinesA;
+  allowSelection = allowSelectionA;
   clickCbk = NULL;
   dblClickCbk = NULL;
   text = NULL;
@@ -36,7 +36,7 @@ LTKList::LTKList(char *name1, int widgetNum1,
   topLine = 0;
   horizOffset = 0;
   selection = -1;
-  fontName = fontName1;
+  fontName = fontNameA;
   fontStruct = NULL;
   textGC = None;
 }
@@ -232,54 +232,54 @@ void LTKList::layout3() {
 }
 
 void LTKList::redraw() {
-  int y;
+  int y1;
   int i;
 
   XFillRectangle(getDisplay(), xwin, getBgGC(), 0, 0, width, height);
-  y = vertBorder;
+  y1 = vertBorder;
   for (i = topLine;
-       i < numLines && y < height - vertBorder;
-       ++i, y += textHeight) {
+       i < numLines && y1 < height - vertBorder;
+       ++i, y1 += textHeight) {
     XDrawString(getDisplay(), xwin, textGC,
-		horizBorder - horizOffset, y + textBase,
+		horizBorder - horizOffset, y1 + textBase,
 		text[i]->getCString(), text[i]->getLength());
   }
   xorSelection();
 }
 
 void LTKList::redrawLine(int line) {
-  int y;
+  int y1;
 
   if (line < topLine ||
       line >= topLine +
               (height - 2*vertBorder + textHeight - 1) / textHeight)
     return;
-  y = vertBorder + (line - topLine) * textHeight;
+  y1 = vertBorder + (line - topLine) * textHeight;
   XFillRectangle(getDisplay(), xwin, getBgGC(),
-		 horizBorder, y, width - 2*horizBorder, textHeight);
+		 horizBorder, y1, width - 2*horizBorder, textHeight);
   XDrawString(getDisplay(), xwin, textGC,
-	      horizBorder - horizOffset, y + textBase,
+	      horizBorder - horizOffset, y1 + textBase,
 	      text[line]->getCString(), text[line]->getLength());
   if (selection == line)
     xorSelection();
 }
 
 void LTKList::redrawBelow(int line) {
-  int y;
+  int y1;
   int i;
 
   if (line >= topLine +
               (height - 2*vertBorder + textHeight - 1) / textHeight)
     return;
-  y = vertBorder + (line - topLine) * textHeight;
+  y1 = vertBorder + (line - topLine) * textHeight;
   XFillRectangle(getDisplay(), xwin, getBgGC(),
-		 horizBorder, y,
-		 width - 2*horizBorder, height - vertBorder - y);
+		 horizBorder, y1,
+		 width - 2*horizBorder, height - vertBorder - y1);
   for (i = line;
-       i < numLines && y < height - vertBorder;
-       ++i, y += textHeight) {
+       i < numLines && y1 < height - vertBorder;
+       ++i, y1 += textHeight) {
     XDrawString(getDisplay(), xwin, textGC,
-		horizBorder - horizOffset, y + textBase,
+		horizBorder - horizOffset, y1 + textBase,
 		text[i]->getCString(), text[i]->getLength());
   }
   if (selection >= line)

@@ -38,7 +38,7 @@ class TextString {
 public:
 
   // Constructor.
-  TextString(GfxState *state, GBool hexCodes1);
+  TextString(GfxState *state, GBool hexCodesA, double fontSize);
 
   // Destructor.
   ~TextString();
@@ -51,7 +51,7 @@ public:
   // Add a 16-bit character to the string.
   void addChar16(GfxState *state, double x, double y,
 		 double dx, double dy,
-		 int c, GfxFontCharSet16 charSet);
+		 int c, GfxFontCharSet16 charSet16);
 
 private:
 
@@ -75,13 +75,16 @@ class TextPage {
 public:
 
   // Constructor.
-  TextPage(TextOutputCharSet charSet, GBool rawOrder);
+  TextPage(TextOutputCharSet charSetA, GBool rawOrderA);
 
   // Destructor.
   ~TextPage();
 
+  // Update the current font.
+  void TextPage::updateFont(GfxState *state);
+
   // Begin a new string.
-  void beginString(GfxState *state, GString *s, GBool hex1);
+  void beginString(GfxState *state, GString *s, GBool hexCodes);
 
   // Add a character to the current string.
   void addChar(GfxState *state, double x, double y,
@@ -90,7 +93,7 @@ public:
   // Add a 16-bit character to the current string.
   void addChar16(GfxState *state, double x, double y,
 		 double dx, double dy, int c,
-		 GfxFontCharSet16 charSet);
+		 GfxFontCharSet16 charSet16);
 
   // End the current string, sorting it into the list of strings.
   void endString();
@@ -123,6 +126,7 @@ private:
   GBool rawOrder;		// keep strings in content stream order
 
   TextString *curStr;		// currently active string
+  double fontSize;		// current font size
 
   TextString *yxStrings;	// strings in y-major order
   TextString *xyStrings;	// strings in x-major order
@@ -144,7 +148,7 @@ public:
   // should be set to textOutASCII7 for Japanese (EUC-JP) text.  If
   // <rawOrder> is true, the text is kept in content stream order.
   TextOutputDev(char *fileName, TextOutputCharSet charSet,
-		GBool rawOrder, GBool append);
+		GBool rawOrderA, GBool append);
 
   // Destructor.
   virtual ~TextOutputDev();

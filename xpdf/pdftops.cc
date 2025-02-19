@@ -31,6 +31,7 @@ static int lastPage = 0;
 static GBool noEmbedFonts = gFalse;
 static GBool noEmbedTTFonts = gFalse;
 static GBool doForm = gFalse;
+static char ownerPassword[33] = "";
 static char userPassword[33] = "";
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
@@ -48,6 +49,8 @@ static ArgDesc argDesc[] = {
    "generate Level 1 PostScript"},
   {"-level1sep", argFlag,  &psOutLevel1Sep, 0,
    "generate Level 1 separable PostScript"},
+  {"-level2sep", argFlag,  &psOutLevel2Sep, 0,
+   "generate Level 2 separable PostScript"},
   {"-eps",    argFlag,     &psOutEPS,       0,
    "generate Encapsulated PostScript (EPS)"},
 #if OPI_SUPPORT
@@ -60,6 +63,8 @@ static ArgDesc argDesc[] = {
    "don't embed TrueType fonts"},
   {"-form",   argFlag,     &doForm,         0,
    "generate a PostScript form"},
+  {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
+   "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,    sizeof(userPassword),
    "user password (for encrypted files)"},
   {"-q",      argFlag,     &errQuiet,       0,
@@ -70,6 +75,10 @@ static ArgDesc argDesc[] = {
    "print usage information"},
   {"-help",   argFlag,     &printHelp,      0,
    "print usage information"},
+  {"--help",  argFlag,     &printHelp,     0,
+   "print usage information"},
+  {"-?",      argFlag,     &printHelp,     0,
+   "print usage information"},
   {NULL}
 };
 
@@ -77,7 +86,7 @@ int main(int argc, char *argv[]) {
   PDFDoc *doc;
   GString *fileName;
   GString *psFileName;
-  GString *userPW;
+  GString *ownerPW, *userPW;
   PSOutputDev *psOut;
   GBool ok;
   char *p;
@@ -92,8 +101,10 @@ int main(int argc, char *argv[]) {
     }
     exit(1);
   }
-  if (psOutLevel1 && psOutLevel1Sep) {
-    fprintf(stderr, "Error: use -level1 or -level1sep, not both.\n");
+  if ((psOutLevel1 && psOutLevel1Sep) ||
+      (psOutLevel1Sep && psOutLevel2Sep) ||
+      (psOutLevel1 && psOutLevel2Sep)) {
+    fprintf(stderr, "Error: use only one of -level1, -level1sep, and -level2sep.\n");
     exit(1);
   }
   if (doForm && (psOutLevel1 || psOutLevel1Sep)) {
@@ -106,18 +117,26 @@ int main(int argc, char *argv[]) {
   errorInit();
 
   // read config file
-  initParams(xpdfConfigFile);
+  initParams(xpdfUserConfigFile, xpdfSysConfigFile);
 
   // open PDF file
   xref = NULL;
+  if (ownerPassword[0]) {
+    ownerPW = new GString(ownerPassword);
+  } else {
+    ownerPW = NULL;
+  }
   if (userPassword[0]) {
     userPW = new GString(userPassword);
   } else {
     userPW = NULL;
   }
-  doc = new PDFDoc(fileName, userPW);
+  doc = new PDFDoc(fileName, ownerPW, userPW);
   if (userPW) {
     delete userPW;
+  }
+  if (ownerPW) {
+    delete ownerPW;
   }
   if (!doc->isOk()) {
     goto err1;

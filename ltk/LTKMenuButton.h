@@ -29,7 +29,7 @@ public:
 
   //---------- constructors and destructor ----------
 
-  LTKMenuButton(char *name, int widgetNum, LTKMenu *menu);
+  LTKMenuButton(char *nameA, int widgetNumA, LTKMenu *menAu);
 
   virtual ~LTKMenuButton();
 

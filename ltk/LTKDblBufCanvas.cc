@@ -18,11 +18,11 @@
 #include "LTKWindow.h"
 #include "LTKDblBufCanvas.h"
 
-LTKDblBufCanvas::LTKDblBufCanvas(char *name1, int widgetNum1,
-				 int minWidth1, int minHeight1):
-    LTKWidget(name1, widgetNum1) {
-  minWidth = minWidth1;
-  minHeight = minHeight1;
+LTKDblBufCanvas::LTKDblBufCanvas(char *nameA, int widgetNumA,
+				 int minWidthA, int minHeightA):
+    LTKWidget(nameA, widgetNumA) {
+  minWidth = minWidthA;
+  minHeight = minHeightA;
   pixmap = None;
 }
 

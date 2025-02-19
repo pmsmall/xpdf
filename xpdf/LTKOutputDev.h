@@ -25,7 +25,7 @@ class LTKWindow;
 class LTKOutputDev: public XOutputDev {
 public:
 
-  LTKOutputDev(LTKWindow *win1, unsigned long paperColor);
+  LTKOutputDev(LTKWindow *winA, unsigned long paperColor);
 
   ~LTKOutputDev();
 

@@ -26,8 +26,8 @@ public:
 
   //---------- constructor ----------
 
-  LTKCanvas(char *name1, int widgetNum1,
-	    int minWidth1, int minHeight1, LTKRedrawCbk redrawCbk1);
+  LTKCanvas(char *nameA, int widgetNumA,
+	    int minWidthA, int minHeightA, LTKRedrawCbk redrawCbkA);
 
   //---------- layout ----------
 

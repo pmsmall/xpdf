@@ -78,27 +78,27 @@ public:
     type(objNone) {}
 
   // Initialize an object.
-  Object *initBool(GBool booln1)
-    { initObj(objBool); booln = booln1; return this; }
-  Object *initInt(int intg1)
-    { initObj(objInt); intg = intg1; return this; }
-  Object *initReal(double real1)
-    { initObj(objReal); real = real1; return this; }
-  Object *initString(GString *string1)
-    { initObj(objString); string = string1; return this; }
-  Object *initName(char *name1)
-    { initObj(objName); name = copyString(name1); return this; }
+  Object *initBool(GBool boolnA)
+    { initObj(objBool); booln = boolnA; return this; }
+  Object *initInt(int intgA)
+    { initObj(objInt); intg = intgA; return this; }
+  Object *initReal(double realA)
+    { initObj(objReal); real = realA; return this; }
+  Object *initString(GString *stringA)
+    { initObj(objString); string = stringA; return this; }
+  Object *initName(char *nameA)
+    { initObj(objName); name = copyString(nameA); return this; }
   Object *initNull()
     { initObj(objNull); return this; }
   Object *initArray();
   Object *initDict();
-  Object *initDict(Dict *dict1)
-    { initObj(objDict); dict = dict1; return this; }
-  Object *initStream(Stream *stream1);
-  Object *initRef(int num1, int gen1)
-    { initObj(objRef); ref.num = num1; ref.gen = gen1; return this; }
-  Object *initCmd(char *cmd1)
-    { initObj(objCmd); cmd = copyString(cmd1); return this; }
+  Object *initDict(Dict *dictA)
+    { initObj(objDict); dict = dictA; return this; }
+  Object *initStream(Stream *streamA);
+  Object *initRef(int numA, int genA)
+    { initObj(objRef); ref.num = numA; ref.gen = genA; return this; }
+  Object *initCmd(char *cmdA)
+    { initObj(objCmd); cmd = copyString(cmdA); return this; }
   Object *initError()
     { initObj(objError); return this; }
   Object *initEOF()
@@ -133,12 +133,12 @@ public:
   GBool isNone() { return type == objNone; }
 
   // Special type checking.
-  GBool isName(char *name1)
-    { return type == objName && !strcmp(name, name1); }
+  GBool isName(char *nameA)
+    { return type == objName && !strcmp(name, nameA); }
   GBool isDict(char *dictType);
   GBool isStream(char *dictType);
-  GBool isCmd(char *cmd1)
-    { return type == objCmd && !strcmp(cmd, cmd1); }
+  GBool isCmd(char *cmdA)
+    { return type == objCmd && !strcmp(cmd, cmdA); }
 
   // Accessors.  NB: these assume object is of correct type.
   GBool getBool() { return booln; }

@@ -25,6 +25,12 @@ OPTIONS="$OPTIONS -DOPI_SUPPORT")
 AC_ARG_WITH(gzip,
 [  --with-gzip             use gzip instead of uncompress],
 OPTIONS="$OPTIONS -DUSE_GZIP")
+AC_ARG_WITH(appdef-dir,
+[  --with-appdef-dir       set app-defaults directory],
+OPTIONS="$OPTIONS -DAPPDEFDIR='\"$with_appdef_dir\"'")
+AC_ARG_ENABLE(freetype2,
+[  --enable-freetype2      enable use of FreeType 2 (version 2.0.5 or newer)],
+OPTIONS="$OPTIONS -DFREETYPE2")
 AC_SUBST(OPTIONS)
 
 dnl ##### Checks for programs.
@@ -209,7 +215,7 @@ AC_LANG_C
 
 dnl ##### Check for libXpm.
 if test -z "$no_x"; then
-  smr_CHECK_LIB(Xpm, Xpm, [pixmap library, used only for icon], 
+  smr_CHECK_LIB(Xpm, Xpm, [pixmap library - used only for icon], 
                 XpmCreatePixmapFromData, X11/xpm.h,
                 $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS, $X_CFLAGS)
   AC_SUBST(Xpm_LIBS)
@@ -227,16 +233,29 @@ fi
 
 dnl ##### Check for FreeType.
 if test -z "$no_x"; then
-  smr_CHECK_LIB(freetype, ttf, [FreeType font rasterizer],
-                TT_Init_FreeType, freetype/freetype.h,
-                $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
-  if test x"$freetype_LIBS" = x; then
-    smr_CHECK_LIB(freetype, ttf, [FreeType font rasterizer],
-                  TT_Init_FreeType, freetype.h,
+  if test -n "$enable_freetype2"; then
+    smr_CHECK_LIB(freetype2, freetype, [FreeType2 font rasterizer],
+                  FT_Init_FreeType, freetype/freetype.h,
                   $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+    if test x"$freetype2_LIBS" = x; then
+      smr_CHECK_LIB(freetype2, freetype, [FreeType2 font rasterizer],
+                    FT_Init_FreeType, freetype.h,
+                    $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+    fi
+    AC_SUBST(freetype2_LIBS)
+    AC_SUBST(freetype2_CFLAGS)
+  else
+    smr_CHECK_LIB(freetype, ttf, [FreeType font rasterizer],
+                  TT_Init_FreeType, freetype/freetype.h,
+                  $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+    if test x"$freetype_LIBS" = x; then
+      smr_CHECK_LIB(freetype, ttf, [FreeType font rasterizer],
+                    TT_Init_FreeType, freetype.h,
+                    $X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS -lm, $X_CFLAGS)
+    fi
+    AC_SUBST(freetype_LIBS)
+    AC_SUBST(freetype_CFLAGS)
   fi
-  AC_SUBST(freetype_LIBS)
-  AC_SUBST(freetype_CFLAGS)
 fi
 
 dnl ##### Disable X-specific stuff in top-level Makefile.

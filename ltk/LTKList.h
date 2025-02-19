@@ -27,9 +27,9 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKList(char *name1, int widgetNum1,
-	  int minWidth1, int minLines1,
-	  GBool allowSelection1, char *fontName1);
+  LTKList(char *nameA, int widgetNumA,
+	  int minWidthA, int minLinesA,
+	  GBool allowSelectionA, char *fontNameA);
 
   virtual ~LTKList();
 

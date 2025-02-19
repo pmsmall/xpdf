@@ -39,15 +39,15 @@ public:
 
   //---------- constructor and destructor ----------
 
-  LTKLabel(char *name1, int widgetNum1,
-	   LTKLabelSize size1, int maxLength1,
-	   char *fontName1, char *text1);
+  LTKLabel(char *nameA, int widgetNumA,
+	   LTKLabelSize sizeA, int maxLengthA,
+	   char *fontNameA, char *textA);
 
   virtual ~LTKLabel();
 
   //---------- special access ----------
 
-  void setText(char *text1);
+  void setText(char *textA);
 
   //---------- layout ----------
 

@@ -27,9 +27,9 @@ public:
 
   //---------- constructor ----------
 
-  LTKScrollbar(char *name1, int widgetNum1,
-	       GBool vertical1, int minPos1, int maxPos1,
-	       LTKIntValCbk moveCbk1);
+  LTKScrollbar(char *nameA, int widgetNumA,
+	       GBool verticalA, int minPosA, int maxPosA,
+	       LTKIntValCbk moveCbkA);
 
   //---------- access ----------
 
@@ -37,10 +37,10 @@ public:
 
   //---------- special access ----------
 
-  void setLimits(int minPos1, int maxPos1);
-  void setPos(int pos1, int size1);
+  void setLimits(int minPosA, int maxPosA);
+  void setPos(int posa, int sizeA);
   int getPos() { return pos; }
-  void setScrollDelta(int scrollDelta1) { scrollDelta = scrollDelta1; }
+  void setScrollDelta(int delta) { scrollDelta = delta; }
   void setRepeatPeriod(int period) { repeatPeriod = period; }
 
   //---------- layout ----------
@@ -62,7 +62,7 @@ protected:
 
   void drawUpButton();
   void drawDownButton();
-  void drawSlider(int pos1, Bool on);
+  void drawSlider(int posA, Bool on);
   void doScroll();
 
   GBool vertical;		// orientation: 1=vertical, 0=horizontal
