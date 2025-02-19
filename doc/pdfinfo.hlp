@@ -44,6 +44,17 @@
        with  the  description  of  the corresponding command line
        option.
 
+       -meta  Prints  document-level  metadata.   (This  is   the
+              "Metadata"  stream  from  the  PDF  file's  Catalog
+              object.)
+
+       -enc encoding-name
+              Sets the encoding to  use  for  text  output.   The
+              encoding-name  must  be defined with the unicodeMap
+              command (see xpdfrc(5)).  This defaults to "Latin1"
+              (which is a built-in encoding).  [config file: tex-
+              tEncoding]
+
        -opw password
               Specify the owner password for the PDF file.   Pro-
               viding  this will bypass all security restrictions.
@@ -60,14 +71,10 @@
        -h     Print  usage  information.   (-help  and --help are
               equivalent.)
 
-2 BUGS
-
-       No known bugs.
-
 2 AUTHOR
 
        The  pdfinfo  software  and  documentation  are  copyright
-       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2002 Glyph & Cog, LLC.
 
 2 SEE_ALSO
 

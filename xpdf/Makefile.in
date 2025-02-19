@@ -2,7 +2,7 @@
 #
 # Xpdf Makefile
 #
-# Copyright 1996 Derek B. Noonburg
+# Copyright 1996-2002 Glyph & Cog, LLC
 #
 #========================================================================
 
@@ -17,7 +17,7 @@ GOOLIBDIR = ../goo
 LTKSRCDIR = $(srcdir)/../ltk
 LTKLIBDIR = ../ltk
 
-CXXFLAGS = @CXXFLAGS@ @DEFS@ -I.. -I$(GOOSRCDIR) -I$(LTKSRCDIR) -I$(srcdir) @X_CFLAGS@ @Xpm_CFLAGS@ @t1_CFLAGS@ @freetype_CFLAGS@ @freetype2_CFLAGS@ @libpaper_CFLAGS@
+CXXFLAGS = @CXXFLAGS@ @DEFS@ -I.. -I$(GOOSRCDIR) -I$(LTKSRCDIR) -I$(srcdir) @X_CFLAGS@ @freetype_CFLAGS@ @freetype2_CFLAGS@ @Xpm_CFLAGS@ @t1_CFLAGS@ @libpaper_CFLAGS@
 
 LDFLAGS = @LDFLAGS@
 
@@ -40,6 +40,7 @@ EXE = @EXE@
 #------------------------------------------------------------------------
 
 CXX_SRC = \
+	$(srcdir)/Annot.cc \
 	$(srcdir)/Array.cc \
 	$(srcdir)/BuiltinFont.cc \
 	$(srcdir)/BuiltinFontTables.cc \
@@ -52,7 +53,6 @@ CXX_SRC = \
 	$(srcdir)/FTFont.cc \
 	$(srcdir)/FontEncodingTables.cc \
 	$(srcdir)/FontFile.cc \
-	$(srcdir)/FormWidget.cc \
 	$(srcdir)/Function.cc \
 	$(srcdir)/Gfx.cc \
 	$(srcdir)/GfxFont.cc \
@@ -68,6 +68,7 @@ CXX_SRC = \
 	$(srcdir)/PBMOutputDev.cc \
 	$(srcdir)/PDFDoc.cc \
 	$(srcdir)/PSOutputDev.cc \
+	$(srcdir)/PSTokenizer.cc \
 	$(srcdir)/Page.cc \
 	$(srcdir)/Parser.cc \
 	$(srcdir)/SFont.cc \
@@ -96,13 +97,13 @@ all-no-x: pdftops$(EXE) pdftotext$(EXE) pdfinfo$(EXE) pdffonts$(EXE) \
 
 #------------------------------------------------------------------------
 
-XPDF_OBJS = Array.o BuiltinFont.o BuiltinFontTables.o Catalog.o \
+XPDF_OBJS = Annot.o Array.o BuiltinFont.o BuiltinFontTables.o Catalog.o \
 	CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o FTFont.o \
-	FontEncodingTables.o FontFile.o FormWidget.o Function.o Gfx.o \
-	GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o LTKOutputDev.o \
+	FontEncodingTables.o FontFile.o Function.o Gfx.o GfxFont.o \
+	GfxState.o GlobalParams.o Lexer.o Link.o LTKOutputDev.o \
 	NameToCharCode.o Object.o OutputDev.o Page.o Parser.o PDFDoc.o \
-	PSOutputDev.o SFont.o Stream.o T1Font.o TTFont.o TextOutputDev.o \
-	UnicodeMap.o XOutputDev.o XRef.o xpdf.o
+	PSOutputDev.o PSTokenizer.o SFont.o Stream.o T1Font.o TTFont.o \
+	TextOutputDev.o UnicodeMap.o XOutputDev.o XRef.o xpdf.o
 XPDF_LIBS = -L$(LTKLIBDIR) -lLTK -L$(GOOLIBDIR) -lGoo $(XLIBS) $(OTHERLIBS) -lm
 
 xpdf$(EXE): $(XPDF_OBJS) \
@@ -116,12 +117,13 @@ xpdf-ltk.h: xpdf.ltk
 
 #------------------------------------------------------------------------
 
-PDFTOPS_OBJS = Array.o BuiltinFont.o BuiltinFontTables.o Catalog.o \
-	CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
-	FontEncodingTables.o FontFile.o FormWidget.o Function.o Gfx.o \
+PDFTOPS_OBJS = Annot.o Array.o BuiltinFont.o BuiltinFontTables.o \
+	Catalog.o CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
+	FontEncodingTables.o FontFile.o Function.o Gfx.o \
 	GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o \
 	NameToCharCode.o Object.o OutputDev.o Page.o Parser.o PDFDoc.o \
-	PSOutputDev.o Stream.o UnicodeMap.o XRef.o pdftops.o
+	PSOutputDev.o PSTokenizer.o Stream.o UnicodeMap.o XRef.o \
+	pdftops.o
 PDFTOPS_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
 pdftops$(EXE): $(PDFTOPS_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
@@ -130,12 +132,13 @@ pdftops$(EXE): $(PDFTOPS_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
 
 #------------------------------------------------------------------------
 
-PDFTOTEXT_OBJS = Array.o BuiltinFont.o BuiltinFontTables.o Catalog.o \
-	CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
-	FontEncodingTables.o FontFile.o FormWidget.o Function.o Gfx.o \
+PDFTOTEXT_OBJS = Annot.o Array.o BuiltinFont.o BuiltinFontTables.o \
+	Catalog.o CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
+	FontEncodingTables.o FontFile.o Function.o Gfx.o \
 	GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o \
 	NameToCharCode.o Object.o OutputDev.o Page.o Parser.o PDFDoc.o \
-	Stream.o TextOutputDev.o UnicodeMap.o XRef.o pdftotext.o
+	PSTokenizer.o Stream.o TextOutputDev.o UnicodeMap.o XRef.o \
+	pdftotext.o
 PDFTOTEXT_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
 pdftotext$(EXE): $(PDFTOTEXT_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
@@ -144,12 +147,12 @@ pdftotext$(EXE): $(PDFTOTEXT_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
 
 #------------------------------------------------------------------------
 
-PDFINFO_OBJS = Array.o BuiltinFont.o BuiltinFontTables.o Catalog.o \
-	CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
-	FontEncodingTables.o FontFile.o FormWidget.o Function.o Gfx.o \
+PDFINFO_OBJS = Annot.o Array.o BuiltinFont.o BuiltinFontTables.o \
+	Catalog.o CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
+	FontEncodingTables.o FontFile.o Function.o Gfx.o \
 	GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o \
 	NameToCharCode.o Object.o OutputDev.o Page.o Parser.o PDFDoc.o \
-	Stream.o UnicodeMap.o XRef.o pdfinfo.o
+	PSTokenizer.o Stream.o UnicodeMap.o XRef.o pdfinfo.o
 PDFINFO_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
 pdfinfo$(EXE): $(PDFINFO_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
@@ -158,12 +161,12 @@ pdfinfo$(EXE): $(PDFINFO_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
 
 #------------------------------------------------------------------------
 
-PDFFONTS_OBJS = Array.o BuiltinFont.o BuiltinFontTables.o Catalog.o \
-	CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
-	FontEncodingTables.o FontFile.o FormWidget.o Function.o Gfx.o \
+PDFFONTS_OBJS = Annot.o Array.o BuiltinFont.o BuiltinFontTables.o \
+	Catalog.o CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
+	FontEncodingTables.o FontFile.o Function.o Gfx.o \
 	GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o \
 	NameToCharCode.o Object.o OutputDev.o Page.o Parser.o PDFDoc.o \
-	Stream.o UnicodeMap.o XRef.o pdffonts.o
+	PSTokenizer.o Stream.o UnicodeMap.o XRef.o pdffonts.o
 PDFFONTS_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
 pdffonts$(EXE): $(PDFFONTS_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
@@ -172,13 +175,14 @@ pdffonts$(EXE): $(PDFFONTS_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
 
 #------------------------------------------------------------------------
 
-PDFTOPBM_OBJS = Array.o BuiltinFont.o BuiltinFontTables.o Catalog.o \
-	CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o FTFont.o \
-	FontEncodingTables.o FontFile.o FormWidget.o Function.o Gfx.o \
+PDFTOPBM_OBJS = Annot.o Array.o BuiltinFont.o BuiltinFontTables.o \
+	Catalog.o CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
+	FTFont.o FontEncodingTables.o FontFile.o Function.o Gfx.o \
 	GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o \
 	NameToCharCode.o Object.o OutputDev.o PBMOutputDev.o Page.o \
-	Parser.o PDFDoc.o SFont.o Stream.o T1Font.o TTFont.o \
-	TextOutputDev.o UnicodeMap.o XOutputDev.o XRef.o pdftopbm.o
+	Parser.o PDFDoc.o PSTokenizer.o SFont.o Stream.o T1Font.o \
+	TTFont.o TextOutputDev.o UnicodeMap.o XOutputDev.o XRef.o \
+	pdftopbm.o
 PDFTOPBM_LIBS = -L$(GOOLIBDIR) -lGoo $(XLIBS) $(OTHERLIBS) -lm
 
 pdftopbm$(EXE): $(PDFTOPBM_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
@@ -187,12 +191,12 @@ pdftopbm$(EXE): $(PDFTOPBM_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
 
 #------------------------------------------------------------------------
 
-PDFIMAGES_OBJS = Array.o BuiltinFont.o BuiltinFontTables.o Catalog.o \
-	CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
-	FontEncodingTables.o FontFile.o FormWidget.o Function.o Gfx.o \
+PDFIMAGES_OBJS = Annot.o Array.o BuiltinFont.o BuiltinFontTables.o \
+	Catalog.o CharCodeToUnicode.o CMap.o Decrypt.o Dict.o Error.o \
+	FontEncodingTables.o FontFile.o Function.o Gfx.o \
 	GfxFont.o GfxState.o GlobalParams.o ImageOutputDev.o Lexer.o \
 	Link.o NameToCharCode.o Object.o OutputDev.o Page.o Parser.o \
-	PDFDoc.o Stream.o UnicodeMap.o XRef.o pdfimages.o
+	PDFDoc.o PSTokenizer.o Stream.o UnicodeMap.o XRef.o pdfimages.o
 PDFIMAGES_LIBS = -L$(GOOLIBDIR) -lGoo $(OTHERLIBS) -lm
 
 pdfimages$(EXE): $(PDFIMAGES_OBJS) $(GOOLIBDIR)/$(LIBPREFIX)Goo.a
@@ -215,4 +219,4 @@ clean:
 depend:
 	$(CXX) $(CXXFLAGS) -MM $(CXX_SRC) >Makefile.dep
 
--include Makefile.dep
+include Makefile.dep

@@ -4,7 +4,7 @@
 //
 // Use gmalloc/gfree for C++ new/delete operators.
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 

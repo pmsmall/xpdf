@@ -6,7 +6,7 @@ pdfinfo(1)                                             pdfinfo(1)
 
 NAME
        pdfinfo - Portable Document Format (PDF) document informa-
-       tion extractor (version 1.00)
+       tion extractor (version 1.01)
 
 SYNOPSIS
        pdfinfo [options] [PDF-file]
@@ -48,6 +48,28 @@ OPTIONS
        with  the  description  of  the corresponding command line
        option.
 
+       -meta  Prints  document-level  metadata.   (This  is   the
+              "Metadata"  stream  from  the  PDF  file's  Catalog
+              object.)
+
+       -enc encoding-name
+              Sets the encoding to  use  for  text  output.   The
+              encoding-name  must  be defined with the unicodeMap
+              command (see xpdfrc(5)).  This defaults to "Latin1"
+              (which is a built-in encoding).  [config file: tex-
+              tEncoding]
+
+
+
+                           20 May 2002                          1
+
+
+
+
+
+pdfinfo(1)                                             pdfinfo(1)
+
+
        -opw password
               Specify the owner password for the PDF file.   Pro-
               viding  this will bypass all security restrictions.
@@ -59,28 +81,14 @@ OPTIONS
               Read config-file in place of ~/.xpdfrc or the  sys-
               tem-wide config file.
 
-
-
-                           01 Feb 2002                          1
-
-
-
-
-
-pdfinfo(1)                                             pdfinfo(1)
-
-
        -v     Print copyright and version information.
 
        -h     Print  usage  information.   (-help  and --help are
               equivalent.)
 
-BUGS
-       No known bugs.
-
 AUTHOR
        The  pdfinfo  software  and  documentation  are  copyright
-       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2002 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),     pdftops(1),     pdftotext(1),    pdffonts(1),
@@ -119,14 +127,6 @@ SEE ALSO
 
 
 
-
-
-
-
-
-
-
-
-                           01 Feb 2002                          2
+                           20 May 2002                          2
 
 

@@ -2,7 +2,7 @@
 //
 // pdftotext.cc
 //
-// Copyright 1997 Derek B. Noonburg
+// Copyright 1997-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
     if (!textFileName->cmp("-")) {
       f = stdout;
     } else {
-      if (!(f = fopen(textFileName->getCString(), "w"))) {
+      if (!(f = fopen(textFileName->getCString(), "wb"))) {
 	error(-1, "Couldn't open text file '%s'", textFileName->getCString());
 	goto err3;
       }
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
     if (!textFileName->cmp("-")) {
       f = stdout;
     } else {
-      if (!(f = fopen(textFileName->getCString(), "a"))) {
+      if (!(f = fopen(textFileName->getCString(), "ab"))) {
 	error(-1, "Couldn't open text file '%s'", textFileName->getCString());
 	goto err3;
       }

@@ -2,6 +2,8 @@
 //
 // SFont.cc
 //
+// Copyright 2001-2002 Glyph & Cog, LLC
+//
 //========================================================================
 
 #ifdef __GNUC__
@@ -71,4 +73,8 @@ SFont::SFont() {
 }
 
 SFont::~SFont() {
+}
+
+GBool SFont::getCharPath(CharCode c, Unicode u, GfxState *state) {
+  return gFalse;
 }

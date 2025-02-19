@@ -2,6 +2,8 @@
 //
 // FTFont.cc
 //
+// Copyright 2001-2002 Glyph & Cog, LLC
+//
 //========================================================================
 
 #ifdef __GNUC__
@@ -15,12 +17,14 @@
 #include <math.h>
 #include <string.h>
 #include "gmem.h"
+#include "freetype/ftoutln.h"
 #include "freetype/internal/ftobjs.h"
 #if 1 //~ cff cid->gid map
 #include "freetype/internal/cfftypes.h"
 #include "freetype/internal/tttypes.h"
 #endif
 #include "GlobalParams.h"
+#include "GfxState.h"
 #include "FTFont.h"
 
 //------------------------------------------------------------------------
@@ -260,6 +264,12 @@ FTFont::FTFont(FTFontFile *fontFileA, double *m) {
   // deal with rounding errors
   glyphW = xMax - xMin + 3;
   glyphH = yMax - yMin + 3;
+  // another kludge: some CJK TT fonts have bogus bboxes, so add more
+  // padding
+  if (face->num_glyphs > 1000) {
+    glyphW += glyphW >> 1;
+    glyphH += glyphH >> 1;
+  }
   if (engine->aa) {
     glyphSize = glyphW * glyphH;
   } else {
@@ -322,6 +332,11 @@ GBool FTFont::drawChar(Drawable d, int w, int h, GC gc,
 
   engine = fontFile->engine;
 
+  // no Unicode index for this char - don't draw anything
+  if (fontFile->mode == ftFontModeUnicode && u == 0) {
+    return gFalse;
+  }
+
   // generate the glyph pixmap
   if (!(p = getGlyphPixmap(c, u, &xOffset, &yOffset, &gw, &gh))) {
     return gFalse;
@@ -366,7 +381,7 @@ GBool FTFont::drawChar(Drawable d, int w, int h, GC gc,
   if (engine->aa) {
 
     // compute the colors
-    xcolor.pixel = XGetPixel(image, x1, y1);
+    xcolor.pixel = XGetPixel(image, x1 + w0/2, y1 + h0/2);
     XQueryColor(engine->display, engine->colormap, &xcolor);
     bgR = xcolor.red;
     bgG = xcolor.green;
@@ -456,6 +471,160 @@ Guchar *FTFont::getGlyphPixmap(CharCode c, Unicode u,
   fontFile->face->size = sizeObj;
   FT_Set_Transform(fontFile->face, &matrix, NULL);
   slot = fontFile->face->glyph;
+  idx = getGlyphIndex(c, u);
+  // if we have the FT2 bytecode interpreter, autohinting won't be used
+#ifdef TT_CONFIG_OPTION_BYTECODE_INTERPRETER
+  if (FT_Load_Glyph(fontFile->face, idx, FT_LOAD_DEFAULT)) {
+    return gFalse;
+  }
+#else
+  // FT2's autohinting doesn't always work very well (especially with
+  // font subsets), so turn it off if anti-aliasing is enabled; if
+  // anti-aliasing is disabled, this seems to be a tossup - some fonts
+  // look better with hinting, some without, so leave hinting on
+  if (FT_Load_Glyph(fontFile->face, idx,
+		    fontFile->engine->aa ? FT_LOAD_NO_HINTING
+		                         : FT_LOAD_DEFAULT)) {
+    return gFalse;
+  }
+#endif
+  if (FT_Render_Glyph(slot,
+		      fontFile->engine->aa ? ft_render_mode_normal :
+		                             ft_render_mode_mono)) {
+    return gFalse;
+  }
+  *x = -slot->bitmap_left;
+  *y = slot->bitmap_top;
+  *w = slot->bitmap.width;
+  *h = slot->bitmap.rows;
+  if (*w > glyphW || *h > glyphH) {
+#if 1 //~ debug
+    fprintf(stderr, "Weird FreeType glyph size: %d > %d or %d > %d\n",
+	    *w, glyphW, *h, glyphH);
+#endif
+    return NULL;
+  }
+
+  // store glyph pixmap in cache
+  ret = NULL;
+  for (j = 0; j < cacheAssoc; ++j) {
+    if ((cacheTags[i+j].mru & 0x7fff) == cacheAssoc - 1) {
+      cacheTags[i+j].mru = 0x8000;
+      cacheTags[i+j].code = c;
+      cacheTags[i+j].x = *x;
+      cacheTags[i+j].y = *y;
+      cacheTags[i+j].w = *w;
+      cacheTags[i+j].h = *h;
+      if (fontFile->engine->aa) {
+	gSize = *w * *h;
+      } else {
+	gSize = ((*w + 7) >> 3) * *h;
+      }
+      ret = cache + (i+j) * glyphSize;
+      memcpy(ret, slot->bitmap.buffer, gSize);
+    } else {
+      ++cacheTags[i+j].mru;
+    }
+  }
+  return ret;
+}
+
+GBool FTFont::getCharPath(CharCode c, Unicode u, GfxState *state) {
+  static FT_Outline_Funcs outlineFuncs = {
+    &charPathMoveTo,
+    &charPathLineTo,
+    &charPathConicTo,
+    &charPathCubicTo,
+    0, 0
+  };
+  FT_GlyphSlot slot;
+  FT_UInt idx;
+  FT_Glyph glyph;
+
+  fontFile->face->size = sizeObj;
+  FT_Set_Transform(fontFile->face, &matrix, NULL);
+  slot = fontFile->face->glyph;
+  idx = getGlyphIndex(c, u);
+#ifdef TT_CONFIG_OPTION_BYTECODE_INTERPRETER
+  if (FT_Load_Glyph(fontFile->face, idx, FT_LOAD_DEFAULT)) {
+    return gFalse;
+  }
+#else
+  // FT2's autohinting doesn't always work very well (especially with
+  // font subsets), so turn it off if anti-aliasing is enabled; if
+  // anti-aliasing is disabled, this seems to be a tossup - some fonts
+  // look better with hinting, some without, so leave hinting on
+  if (FT_Load_Glyph(fontFile->face, idx,
+		    fontFile->engine->aa ? FT_LOAD_NO_HINTING
+		                         : FT_LOAD_DEFAULT)) {
+    return gFalse;
+  }
+#endif
+  if (FT_Get_Glyph(slot, &glyph)) {
+    return gFalse;
+  }
+  FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
+		       &outlineFuncs, state);
+  return gTrue;
+}
+
+int FTFont::charPathMoveTo(FT_Vector *pt, void *state) {
+  ((GfxState *)state)->moveTo(pt->x / 64.0, -pt->y / 64.0);
+  return 0;
+}
+
+int FTFont::charPathLineTo(FT_Vector *pt, void *state) {
+  ((GfxState *)state)->lineTo(pt->x / 64.0, -pt->y / 64.0);
+  return 0;
+}
+
+int FTFont::charPathConicTo(FT_Vector *ctrl, FT_Vector *pt, void *state) {
+  double x0, y0, x1, y1, x2, y2, x3, y3, xc, yc;
+
+  x0 = ((GfxState *)state)->getCurX();
+  y0 = ((GfxState *)state)->getCurY();
+  xc = ctrl->x / 64.0;
+  yc = -ctrl->y / 64.0;
+  x3 = pt->x / 64.0;
+  y3 = -pt->y / 64.0;
+
+  // A second-order Bezier curve is defined by two endpoints, p0 and
+  // p3, and one control point, pc:
+  //
+  //     p(t) = (1-t)^2*p0 + t*(1-t)*pc + t^2*p3
+  //
+  // A third-order Bezier curve is defined by the same two endpoints,
+  // p0 and p3, and two control points, p1 and p2:
+  //
+  //     p(t) = (1-t)^3*p0 + 3t*(1-t)^2*p1 + 3t^2*(1-t)*p2 + t^3*p3
+  //
+  // Applying some algebra, we can convert a second-order curve to a
+  // third-order curve:
+  //
+  //     p1 = (1/3) * (p0 + 2pc)
+  //     p2 = (1/3) * (2pc + p3)
+
+  x1 = (1.0 / 3.0) * (x0 + 2 * xc);
+  y1 = (1.0 / 3.0) * (y0 + 2 * yc);
+  x2 = (1.0 / 3.0) * (2 * xc + x3);
+  y2 = (1.0 / 3.0) * (2 * yc + y3);
+
+  ((GfxState *)state)->curveTo(x1, y1, x2, y2, x3, y3);
+  return 0;
+}
+
+int FTFont::charPathCubicTo(FT_Vector *ctrl1, FT_Vector *ctrl2,
+			    FT_Vector *pt, void *state) {
+  ((GfxState *)state)->curveTo(ctrl1->x / 64.0, -ctrl1->y / 64.0,
+			       ctrl2->x / 64.0, -ctrl2->y / 64.0,
+			       pt->x / 64.0, -pt->y / 64.0);
+  return 0;
+}
+
+FT_UInt FTFont::getGlyphIndex(CharCode c, Unicode u) {
+  FT_UInt idx;
+  int j;
+
   idx = 0; // make gcc happy
   switch (fontFile->mode) {
   case ftFontModeUnicode:
@@ -495,7 +664,11 @@ Guchar *FTFont::getGlyphPixmap(CharCode c, Unicode u,
     break;
   case ftFontModeCFFCharset:
 #if 1 //~ cff cid->gid map
+#if FREETYPE_MAJOR == 2 && FREETYPE_MINOR == 0
     CFF_Font *cff = (CFF_Font *)((TT_Face)fontFile->face)->extra.data;
+#else
+    CFF_Font cff = (CFF_Font)((TT_Face)fontFile->face)->extra.data;
+#endif
     idx = 0;
     for (j = 0; j < (int)cff->num_glyphs; ++j) {
       if (cff->charset.sids[j] == c) {
@@ -506,56 +679,7 @@ Guchar *FTFont::getGlyphPixmap(CharCode c, Unicode u,
 #endif
     break;
   }
-#if 1
-  //~ the hinting in FT 2.0.6 appears to have some problems, so turn
-  //~ it off if anti-aliasing is enabled; if anti-aliasing is disabled,
-  //~ this seems to be a tossup - some fonts look better with hinting,
-  //~ some without, so leave hinting on
-  if (FT_Load_Glyph(fontFile->face, idx,
-		    fontFile->engine->aa ? FT_LOAD_NO_HINTING :
-		                           FT_LOAD_DEFAULT) ||
-#else
-  if (FT_Load_Glyph(fontFile->face, idx, FT_LOAD_DEFAULT) ||
-#endif
-      FT_Render_Glyph(slot,
-		      fontFile->engine->aa ? ft_render_mode_normal :
-		                             ft_render_mode_mono)) {
-    return gFalse;
-  }
-  *x = -slot->bitmap_left;
-  *y = slot->bitmap_top;
-  *w = slot->bitmap.width;
-  *h = slot->bitmap.rows;
-  if (*w > glyphW || *h > glyphH) {
-#if 1 //~ debug
-    fprintf(stderr, "Weird FreeType glyph size: %d > %d or %d > %d\n",
-	    *w, glyphW, *h, glyphH);
-#endif
-    return NULL;
-  }
-
-  // store glyph pixmap in cache
-  ret = NULL;
-  for (j = 0; j < cacheAssoc; ++j) {
-    if ((cacheTags[i+j].mru & 0x7fff) == cacheAssoc - 1) {
-      cacheTags[i+j].mru = 0x8000;
-      cacheTags[i+j].code = c;
-      cacheTags[i+j].x = *x;
-      cacheTags[i+j].y = *y;
-      cacheTags[i+j].w = *w;
-      cacheTags[i+j].h = *h;
-      if (fontFile->engine->aa) {
-	gSize = *w * *h;
-      } else {
-	gSize = ((*w + 7) >> 3) * *h;
-      }
-      ret = cache + (i+j) * glyphSize;
-      memcpy(ret, slot->bitmap.buffer, gSize);
-    } else {
-      ++cacheTags[i+j].mru;
-    }
-  }
-  return ret;
+  return idx;
 }
 
 #endif // FREETYPE2 && (HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H)

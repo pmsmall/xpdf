@@ -1,7 +1,7 @@
 /*
  * aconf-win32.h
  *
- * Copyright 2002 Derek B. Noonburg
+ * Copyright 2002 Glyph & Cog, LLC
  */
 
 #ifndef ACONF_H
@@ -51,6 +51,7 @@
 #undef HAVE_POPEN
 #undef HAVE_MKSTEMP
 #undef SELECT_TAKES_INT
+#undef HAVE_FSEEK64
 
 /*
  * This is defined if using libXpm.

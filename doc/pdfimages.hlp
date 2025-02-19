@@ -57,17 +57,10 @@
        -h     Print  usage  information.   (-help  and --help are
               equivalent.)
 
-2 BUGS
-
-       With  the  -j  option,  the  PDF  image streams are copied
-       directly to the output files.  DCT images in PDF files may
-       use some non-standard JPEG features, so the resulting .jpg
-       files may not be too useful.
-
 2 AUTHOR
 
        The  pdfimages  software  and  documentation are copyright
-       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
+       Glyph & Cog, LLC.
 
 2 SEE_ALSO
 

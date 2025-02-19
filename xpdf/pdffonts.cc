@@ -2,7 +2,7 @@
 //
 // pdffonts.cc
 //
-// Copyright 2001 Derek B. Noonburg
+// Copyright 2001-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -20,7 +20,7 @@
 #include "Object.h"
 #include "Dict.h"
 #include "GfxFont.h"
-#include "FormWidget.h"
+#include "Annot.h"
 #include "PDFDoc.h"
 #include "config.h"
 
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
   GBool ok;
   Page *page;
   Dict *resDict;
-  FormWidgets *formWidgets;
+  Annots *annots;
   Object obj1, obj2;
   int pg, i;
 
@@ -140,10 +140,10 @@ int main(int argc, char *argv[]) {
     if ((resDict = page->getResourceDict())) {
       scanFonts(resDict, doc);
     }
-    formWidgets = new FormWidgets(doc->getXRef(), page->getAnnots(&obj1));
+    annots = new Annots(doc->getXRef(), page->getAnnots(&obj1));
     obj1.free();
-    for (i = 0; i < formWidgets->getNumWidgets(); ++i) {
-      if (formWidgets->getWidget(i)->getAppearance(&obj1)->isStream()) {
+    for (i = 0; i < annots->getNumAnnots(); ++i) {
+      if (annots->getAnnot(i)->getAppearance(&obj1)->isStream()) {
 	obj1.streamGetDict()->lookup("Resources", &obj2);
 	if (obj2.isDict()) {
 	  scanFonts(obj2.getDict(), doc);
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
       }
       obj1.free();
     }
-    delete formWidgets;
+    delete annots;
   }
 
   // clean up

@@ -2,7 +2,7 @@
 //
 // FontFile.cc
 //
-// Copyright 1999 Derek B. Noonburg
+// Copyright 1999-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -24,14 +24,6 @@
 #include "FontFile.h"
 
 #include "CompactFontTables.h"
-
-//------------------------------------------------------------------------
-
-static Guint getWord(Guchar *ptr, int size);
-static double getNum(Guchar **ptr, GBool *fp);
-static char *getString(int sid, Guchar *stringIdxPtr,
-		       Guchar *stringStartPtr, int stringOffSize,
-		       char *buf);
 
 //------------------------------------------------------------------------
 
@@ -154,64 +146,127 @@ Type1FontFile::~Type1FontFile() {
 // Type1CFontFile
 //------------------------------------------------------------------------
 
-Type1CFontFile::Type1CFontFile(char *file, int len) {
+struct Type1CTopDict {
+  int version;
+  int notice;
+  int copyright;
+  int fullName;
+  int familyName;
+  int weight;
+  int isFixedPitch;
+  double italicAngle;
+  double underlinePosition;
+  double underlineThickness;
+  int paintType;
+  int charstringType;
+  double fontMatrix[6];
+  int uniqueID;
+  double fontBBox[4];
+  double strokeWidth;
+  int charset;
+  int encoding;
+  int charStrings;
+  int privateSize;
+  int privateOffset;
+
+  //----- CIDFont entries
+  int registry;
+  int ordering;
+  int supplement;
+  int fdArrayOffset;
+  int fdSelectOffset;
+};
+
+struct Type1CPrivateDict {
+  GString *dictData;
+  int subrsOffset;
+  double defaultWidthX;
+  GBool defaultWidthXFP;
+  double nominalWidthX;
+  GBool nominalWidthXFP;
+};
+
+Type1CFontFile::Type1CFontFile(char *fileA, int lenA) {
+  Guchar *nameIdxPtr, *idxPtr0, *idxPtr1;
+
+  file = fileA;
+  len = lenA;
+  name = NULL;
+  encoding = NULL;
+
+  // some tools embed Type 1C fonts with an extra whitespace char at
+  // the beginning
+  if (file[0] != '\x01') {
+    ++file;
+  }
+
+  // read header
+  topOffSize = file[3] & 0xff;
+
+  // read name index (first font only)
+  nameIdxPtr = (Guchar *)file + (file[2] & 0xff);
+  idxPtr0 = getIndexValPtr(nameIdxPtr, 0);
+  idxPtr1 = getIndexValPtr(nameIdxPtr, 1);
+  name = new GString((char *)idxPtr0, idxPtr1 - idxPtr0);
+
+  topDictIdxPtr = getIndexEnd(nameIdxPtr);
+  stringIdxPtr = getIndexEnd(topDictIdxPtr);
+  gsubrIdxPtr = getIndexEnd(stringIdxPtr);
+}
+
+Type1CFontFile::~Type1CFontFile() {
+  int i;
+
+  delete name;
+  if (encoding) {
+    for (i = 0; i < 256; ++i) {
+      gfree(encoding[i]);
+    }
+    gfree(encoding);
+  }
+}
+
+char *Type1CFontFile::getName() {
+  return name->getCString();
+}
+
+char **Type1CFontFile::getEncoding() {
+  if (!encoding) {
+    readNameAndEncoding();
+  }
+  return encoding;
+}
+
+void Type1CFontFile::readNameAndEncoding() {
   char buf[256];
-  Guchar *topPtr, *idxStartPtr, *idxPtr0, *idxPtr1;
-  Guchar *stringIdxPtr, *stringStartPtr;
-  int topOffSize, idxOffSize, stringOffSize;
-  int nFonts, nStrings, nGlyphs;
+  Guchar *idxPtr0, *idxPtr1, *ptr;
+  int nGlyphs;
   int nCodes, nRanges, nLeft, nSups;
   Gushort *glyphNames;
   int charset, enc, charstrings;
-  int charsetFormat, encFormat;
+  int encFormat;
   int c, sid;
-  double op[48];
   double x;
   GBool isFP;
   int key;
-  int i, j, n;
+  int i, j;
 
-  name = NULL;
   encoding = (char **)gmalloc(256 * sizeof(char *));
   for (i = 0; i < 256; ++i) {
     encoding[i] = NULL;
   }
 
-  // read header
-  topPtr = (Guchar *)file + (file[2] & 0xff);
-  topOffSize = file[3] & 0xff;
-
-  // read name index (first font only)
-  nFonts = getWord(topPtr, 2);
-  idxOffSize = topPtr[2];
-  topPtr += 3;
-  idxStartPtr = topPtr + (nFonts + 1) * idxOffSize - 1;
-  idxPtr0 = idxStartPtr + getWord(topPtr, idxOffSize);
-  idxPtr1 = idxStartPtr + getWord(topPtr + idxOffSize, idxOffSize);
-  if ((n = idxPtr1 - idxPtr0) > 255) {
-    n = 255;
-  }
-  strncpy(buf, (char *)idxPtr0, n);
-  buf[n] = '\0';
-  name = copyString(buf);
-  topPtr = idxStartPtr + getWord(topPtr + nFonts * idxOffSize, idxOffSize);
-
-  // read top dict index (first font only)
-  nFonts = getWord(topPtr, 2);
-  idxOffSize = topPtr[2];
-  topPtr += 3;
-  idxStartPtr = topPtr + (nFonts + 1) * idxOffSize - 1;
-  idxPtr0 = idxStartPtr + getWord(topPtr, idxOffSize);
-  idxPtr1 = idxStartPtr + getWord(topPtr + idxOffSize, idxOffSize);
-  charset = 0;
-  enc = 0;
-  charstrings = 0;
+  // read top dict (first font only)
+  idxPtr0 = getIndexValPtr(topDictIdxPtr, 0);
+  idxPtr1 = getIndexValPtr(topDictIdxPtr, 1);
+  charset = enc = charstrings = 0;
   i = 0;
-  while (idxPtr0 < idxPtr1) {
-    if (*idxPtr0 <= 27 || *idxPtr0 == 31) {
-      key = *idxPtr0++;
+  ptr = idxPtr0;
+  while (ptr < idxPtr1) {
+    if (*ptr <= 27 || *ptr == 31) {
+      key = *ptr++;
       if (key == 0x0c) {
-	key = (key << 8) | *idxPtr0++;
+	key = (key << 8) | *ptr++;
       }
       if (key == 0x0f) { // charset
 	charset = (int)op[0];
@@ -222,69 +277,20 @@ Type1CFontFile::Type1CFontFile(char *file, int len) {
       }
       i = 0;
     } else {
-      x = getNum(&idxPtr0, &isFP);
+      x = getNum(&ptr, &isFP);
       if (i < 48) {
 	op[i++] = x;
       }
     }
   }
-  topPtr = idxStartPtr + getWord(topPtr + nFonts * idxOffSize, idxOffSize);
-
-  // read string index
-  nStrings = getWord(topPtr, 2);
-  stringOffSize = topPtr[2];
-  topPtr += 3;
-  stringIdxPtr = topPtr;
-  stringStartPtr = topPtr + (nStrings + 1) * stringOffSize - 1;
-  topPtr = stringStartPtr + getWord(topPtr + nStrings * stringOffSize,
-				    stringOffSize);
 
   // get number of glyphs from charstrings index
-  topPtr = (Guchar *)file + charstrings;
-  nGlyphs = getWord(topPtr, 2);
+  nGlyphs = getIndexLen((Guchar *)file + charstrings);
 
-  // read charset
-  if (charset == 0) {
-    glyphNames = type1CISOAdobeCharset;
-  } else if (charset == 1) {
-    glyphNames = type1CExpertCharset;
-  } else if (charset == 2) {
-    glyphNames = type1CExpertSubsetCharset;
-  } else {
-    glyphNames = (Gushort *)gmalloc(nGlyphs * sizeof(Gushort));
-    glyphNames[0] = 0;
-    topPtr = (Guchar *)file + charset;
-    charsetFormat = *topPtr++;
-    if (charsetFormat == 0) {
-      for (i = 1; i < nGlyphs; ++i) {
-	glyphNames[i] = getWord(topPtr, 2);
-	topPtr += 2;
-      }
-    } else if (charsetFormat == 1) {
-      i = 1;
-      while (i < nGlyphs) {
-	c = getWord(topPtr, 2);
-	topPtr += 2;
-	nLeft = *topPtr++;
-	for (j = 0; j <= nLeft; ++j) {
-	  glyphNames[i++] = c++;
-	}
-      }
-    } else if (charsetFormat == 2) {
-      i = 1;
-      while (i < nGlyphs) {
-	c = getWord(topPtr, 2);
-	topPtr += 2;
-	nLeft = getWord(topPtr, 2);
-	topPtr += 2;
-	for (j = 0; j <= nLeft; ++j) {
-	  glyphNames[i++] = c++;
-	}
-      }
-    }
-  }
+  // read charset (GID -> name mapping)
+  glyphNames = readCharset(charset, nGlyphs);
 
-  // read encoding (glyph -> code mapping)
+  // read encoding (GID -> code mapping)
   if (enc == 0) {
     for (i = 0; i < 256; ++i) {
       if (standardEncoding[i]) {
@@ -298,43 +304,37 @@ Type1CFontFile::Type1CFontFile(char *file, int len) {
       }
     }
   } else {
-    topPtr = (Guchar *)file + enc;
-    encFormat = *topPtr++;
+    ptr = (Guchar *)file + enc;
+    encFormat = *ptr++;
     if ((encFormat & 0x7f) == 0) {
-      nCodes = 1 + *topPtr++;
+      nCodes = 1 + *ptr++;
       if (nCodes > nGlyphs) {
 	nCodes = nGlyphs;
       }
       for (i = 1; i < nCodes; ++i) {
-	c = *topPtr++;
-	getString(glyphNames[i], stringIdxPtr, stringStartPtr,
-		  stringOffSize, buf);
-	encoding[c] = copyString(buf);
+	c = *ptr++;
+	encoding[c] = copyString(getString(glyphNames[i], buf));
       }
     } else if ((encFormat & 0x7f) == 1) {
-      nRanges = *topPtr++;
+      nRanges = *ptr++;
       nCodes = 1;
       for (i = 0; i < nRanges; ++i) {
-	c = *topPtr++;
-	nLeft = *topPtr++;
+	c = *ptr++;
+	nLeft = *ptr++;
 	for (j = 0; j <= nLeft && nCodes < nGlyphs; ++j) {
-	  getString(glyphNames[nCodes], stringIdxPtr, stringStartPtr,
-		    stringOffSize, buf);
-	  encoding[c] = copyString(buf);
+	  encoding[c] = copyString(getString(glyphNames[nCodes], buf));
 	  ++nCodes;
 	  ++c;
 	}
       }
     }
     if (encFormat & 0x80) {
-      nSups = *topPtr++;
+      nSups = *ptr++;
       for (i = 0; i < nSups; ++i) {
-	c = *topPtr++;
-	sid = getWord(topPtr, 2);
-	topPtr += 2;
-	getString(sid, stringIdxPtr, stringStartPtr,
-		  stringOffSize, buf);
-	encoding[c] = copyString(buf);
+	c = *ptr++;
+	sid = getWord(ptr, 2);
+	ptr += 2;
+	encoding[c] = copyString(getString(sid, buf));
       }
     }
   }
@@ -344,344 +344,63 @@ Type1CFontFile::Type1CFontFile(char *file, int len) {
   }
 }
 
-Type1CFontFile::~Type1CFontFile() {
-  int i;
-
-  if (name) {
-    gfree(name);
-  }
-  for (i = 0; i < 256; ++i) {
-    gfree(encoding[i]);
-  }
-  gfree(encoding);
-}
-
-static Guint getWord(Guchar *ptr, int size) {
-  Guint x;
-  int i;
-
-  x = 0;
-  for (i = 0; i < size; ++i) {
-    x = (x << 8) + *ptr++;
-  }
-  return x;
-}
-
-static double getNum(Guchar **ptr, GBool *fp) {
-  static char nybChars[16] = "0123456789.ee -";
-  int b0, b, nyb0, nyb1;
-  double x;
-  char buf[65];
-  int i;
-
-  x = 0;
-  *fp = gFalse;
-  b0 = (*ptr)[0];
-  if (b0 < 28) {
-    x = 0;
-  } else if (b0 == 28) {
-    x = ((*ptr)[1] << 8) + (*ptr)[2];
-    *ptr += 3;
-  } else if (b0 == 29) {
-    x = ((*ptr)[1] << 24) + ((*ptr)[2] << 16) + ((*ptr)[3] << 8) + (*ptr)[4];
-    *ptr += 5;
-  } else if (b0 == 30) {
-    *ptr += 1;
-    i = 0;
-    do {
-      b = *(*ptr)++;
-      nyb0 = b >> 4;
-      nyb1 = b & 0x0f;
-      if (nyb0 == 0xf) {
-	break;
-      }
-      buf[i++] = nybChars[nyb0];
-      if (i == 64) {
-	break;
-      }
-      if (nyb0 == 0xc) {
-	buf[i++] = '-';
-      }
-      if (i == 64) {
-	break;
-      }
-      if (nyb1 == 0xf) {
-	break;
-      }
-      buf[i++] = nybChars[nyb1];
-      if (i == 64) {
-	break;
-      }
-      if (nyb1 == 0xc) {
-	buf[i++] = '-';
-      }
-    } while (i < 64);
-    buf[i] = '\0';
-    x = atof(buf);
-    *fp = gTrue;
-  } else if (b0 == 31) {
-    x = 0;
-  } else if (b0 < 247) {
-    x = b0 - 139;
-    *ptr += 1;
-  } else if (b0 < 251) {
-    x = ((b0 - 247) << 8) + (*ptr)[1] + 108;
-    *ptr += 2;
-  } else {
-    x = -((b0 - 251) << 8) - (*ptr)[1] - 108;
-    *ptr += 2;
-  }
-  return x;
-}
-
-static char *getString(int sid, Guchar *stringIdxPtr,
-		       Guchar *stringStartPtr, int stringOffSize,
-		       char *buf) {
-  Guchar *idxPtr0, *idxPtr1;
-  int len;
-
-  if (sid < 391) {
-    strcpy(buf, type1CStdStrings[sid]);
-  } else {
-    sid -= 391;
-    idxPtr0 = stringStartPtr + getWord(stringIdxPtr + sid * stringOffSize,
-				       stringOffSize);
-    idxPtr1 = stringStartPtr + getWord(stringIdxPtr + (sid+1) * stringOffSize,
-				       stringOffSize);
-    if ((len = idxPtr1 - idxPtr0) > 255) {
-      len = 255;
-    }
-    strncpy(buf, (char *)idxPtr0, len);
-    buf[len] = '\0';
-  }
-  return buf;
-}
-
-//------------------------------------------------------------------------
-// Type1CFontConverter
-//------------------------------------------------------------------------
-
-Type1CFontConverter::Type1CFontConverter(char *fileA, int lenA, FILE *outA) {
-  file = fileA;
-  len = lenA;
-  out = outA;
-  r1 = 55665;
-  line = 0;
-}
-
-Type1CFontConverter::~Type1CFontConverter() {
-}
-
-void Type1CFontConverter::convert() {
-  char *fontName;
-  struct {
-    int version;
-    int notice;
-    int copyright;
-    int fullName;
-    int familyName;
-    int weight;
-    int isFixedPitch;
-    double italicAngle;
-    double underlinePosition;
-    double underlineThickness;
-    int paintType;
-    int charstringType;
-    double fontMatrix[6];
-    int uniqueID;
-    double fontBBox[4];
-    double strokeWidth;
-    int charset;
-    int encoding;
-    int charStrings;
-    int privateSize;
-    int privateOffset;
-  } dict;
+void Type1CFontFile::convertToType1(FILE *outA) {
+  Type1CTopDict dict;
+  Type1CPrivateDict privateDict;
   char buf[256], eBuf[256];
-  Guchar *topPtr, *idxStartPtr, *idxPtr0, *idxPtr1;
-  Guchar *stringIdxPtr, *stringStartPtr;
-  int topOffSize, idxOffSize, stringOffSize;
-  int nFonts, nStrings, nGlyphs;
-  int nCodes, nRanges, nLeft, nSups;
+  Guchar *idxPtr0, *idxPtr1, *subrsIdxPtr, *charStringsIdxPtr, *ptr;
+  int nGlyphs, nCodes, nRanges, nLeft, nSups;
   Gushort *glyphNames;
-  int charsetFormat, encFormat;
-  int subrsOffset, nSubrs;
-  int nCharStrings;
+  int encFormat, nSubrs, nCharStrings;
   int c, sid;
-  double x;
-  GBool isFP;
-  int key;
   int i, j, n;
 
-  // read header
-  topPtr = (Guchar *)file + (file[2] & 0xff);
-  topOffSize = file[3] & 0xff;
-
-  // read name (first font only)
-  nFonts = getWord(topPtr, 2);
-  idxOffSize = topPtr[2];
-  topPtr += 3;
-  idxStartPtr = topPtr + (nFonts + 1) * idxOffSize - 1;
-  idxPtr0 = idxStartPtr + getWord(topPtr, idxOffSize);
-  idxPtr1 = idxStartPtr + getWord(topPtr + idxOffSize, idxOffSize);
-  if ((n = idxPtr1 - idxPtr0) > 255) {
-    n = 255;
-  }
-  strncpy(buf, (char *)idxPtr0, n);
-  buf[n] = '\0';
-  fontName = copyString(buf);
-  topPtr = idxStartPtr + getWord(topPtr + nFonts * idxOffSize, idxOffSize);
+  out = outA;
 
   // read top dict (first font only)
-  nFonts = getWord(topPtr, 2);
-  idxOffSize = topPtr[2];
-  topPtr += 3;
-  idxStartPtr = topPtr + (nFonts + 1) * idxOffSize - 1;
-  idxPtr0 = idxStartPtr + getWord(topPtr, idxOffSize);
-  idxPtr1 = idxStartPtr + getWord(topPtr + idxOffSize, idxOffSize);
-  dict.version = 0;
-  dict.notice = 0;
-  dict.copyright = 0;
-  dict.fullName = 0;
-  dict.familyName = 0;
-  dict.weight = 0;
-  dict.isFixedPitch = 0;
-  dict.italicAngle = 0;
-  dict.underlinePosition = -100;
-  dict.underlineThickness = 50;
-  dict.paintType = 0;
-  dict.charstringType = 2;
-  dict.fontMatrix[0] = 0.001;
-  dict.fontMatrix[1] = 0;
-  dict.fontMatrix[2] = 0;
-  dict.fontMatrix[3] = 0.001;
-  dict.fontMatrix[4] = 0;
-  dict.fontMatrix[5] = 0;
-  dict.uniqueID = 0;
-  dict.fontBBox[0] = 0;
-  dict.fontBBox[1] = 0;
-  dict.fontBBox[2] = 0;
-  dict.fontBBox[3] = 0;
-  dict.strokeWidth = 0;
-  dict.charset = 0;
-  dict.encoding = 0;
-  dict.charStrings = 0;
-  dict.privateSize = 0;
-  dict.privateOffset = 0;
-  i = 0;
-  while (idxPtr0 < idxPtr1) {
-    if (*idxPtr0 <= 27 || *idxPtr0 == 31) {
-      key = *idxPtr0++;
-      if (key == 0x0c) {
-	key = (key << 8) | *idxPtr0++;
-      }
-      switch (key) {
-      case 0x0000: dict.version = (int)op[0]; break;
-      case 0x0001: dict.notice = (int)op[0]; break;
-      case 0x0c00: dict.copyright = (int)op[0]; break;
-      case 0x0002: dict.fullName = (int)op[0]; break;
-      case 0x0003: dict.familyName = (int)op[0]; break;
-      case 0x0004: dict.weight = (int)op[0]; break;
-      case 0x0c01: dict.isFixedPitch = (int)op[0]; break;
-      case 0x0c02: dict.italicAngle = op[0]; break;
-      case 0x0c03: dict.underlinePosition = op[0]; break;
-      case 0x0c04: dict.underlineThickness = op[0]; break;
-      case 0x0c05: dict.paintType = (int)op[0]; break;
-      case 0x0c06: dict.charstringType = (int)op[0]; break;
-      case 0x0c07: dict.fontMatrix[0] = op[0];
-	           dict.fontMatrix[1] = op[1];
-	           dict.fontMatrix[2] = op[2];
-	           dict.fontMatrix[3] = op[3];
-	           dict.fontMatrix[4] = op[4];
-	           dict.fontMatrix[5] = op[5]; break;
-      case 0x000d: dict.uniqueID = (int)op[0]; break;
-      case 0x0005: dict.fontBBox[0] = op[0];
-	           dict.fontBBox[1] = op[1];
-	           dict.fontBBox[2] = op[2];
-	           dict.fontBBox[3] = op[3]; break;
-      case 0x0c08: dict.strokeWidth = op[0]; break;
-      case 0x000f: dict.charset = (int)op[0]; break;
-      case 0x0010: dict.encoding = (int)op[0]; break;
-      case 0x0011: dict.charStrings = (int)op[0]; break;
-      case 0x0012: dict.privateSize = (int)op[0];
-	           dict.privateOffset = (int)op[1]; break;
-      }
-      i = 0;
-    } else {
-      x = getNum(&idxPtr0, &isFP);
-      if (i < 48) {
-	op[i] = x;
-	fp[i++] = isFP;
-      }
-    }
-  }
-  topPtr = idxStartPtr + getWord(topPtr + nFonts * idxOffSize, idxOffSize);
+  readTopDict(&dict);
 
-  // read string index
-  nStrings = getWord(topPtr, 2);
-  stringOffSize = topPtr[2];
-  topPtr += 3;
-  stringIdxPtr = topPtr;
-  stringStartPtr = topPtr + (nStrings + 1) * stringOffSize - 1;
-  topPtr = stringStartPtr + getWord(topPtr + nStrings * stringOffSize,
-				    stringOffSize);
-
-#if 1 //~ global subrs are unimplemented
   // get global subrs
-  int nGSubrs;
-  int gSubrOffSize;
-
-  nGSubrs = getWord(topPtr, 2);
-  gSubrOffSize = topPtr[2];
-  topPtr += 3;
-#endif
+  //~ ... global subrs are unimplemented
 
   // write header and font dictionary, up to encoding
-  fprintf(out, "%%!FontType1-1.0: %s", fontName);
+  fprintf(out, "%%!FontType1-1.0: %s", name->getCString());
   if (dict.version != 0) {
-    fprintf(out, "%s",
-	    getString(dict.version, stringIdxPtr, stringStartPtr,
-		      stringOffSize, buf));
+    fprintf(out, "%s", getString(dict.version, buf));
   }
   fprintf(out, "\n");
   fprintf(out, "11 dict begin\n");
   fprintf(out, "/FontInfo 10 dict dup begin\n");
   if (dict.version != 0) {
     fprintf(out, "/version (%s) readonly def\n",
-	    getString(dict.version, stringIdxPtr, stringStartPtr,
-		      stringOffSize, buf));
+	    getString(dict.version, buf));
   }
   if (dict.notice != 0) {
     fprintf(out, "/Notice (%s) readonly def\n",
-	    getString(dict.notice, stringIdxPtr, stringStartPtr,
-		      stringOffSize, buf));
+	    getString(dict.notice, buf));
   }
   if (dict.copyright != 0) {
     fprintf(out, "/Copyright (%s) readonly def\n",
-	    getString(dict.copyright, stringIdxPtr, stringStartPtr,
-		      stringOffSize, buf));
+	    getString(dict.copyright, buf));
   }
   if (dict.fullName != 0) {
     fprintf(out, "/FullName (%s) readonly def\n",
-	    getString(dict.fullName, stringIdxPtr, stringStartPtr,
-		      stringOffSize, buf));
+	    getString(dict.fullName, buf));
   }
   if (dict.familyName != 0) {
     fprintf(out, "/FamilyName (%s) readonly def\n",
-	    getString(dict.familyName, stringIdxPtr, stringStartPtr,
-		      stringOffSize, buf));
+	    getString(dict.familyName, buf));
   }
   if (dict.weight != 0) {
     fprintf(out, "/Weight (%s) readonly def\n",
-	    getString(dict.weight, stringIdxPtr, stringStartPtr,
-		      stringOffSize, buf));
+	    getString(dict.weight, buf));
   }
   fprintf(out, "/isFixedPitch %s def\n", dict.isFixedPitch ? "true" : "false");
   fprintf(out, "/ItalicAngle %g def\n", dict.italicAngle);
   fprintf(out, "/UnderlinePosition %g def\n", dict.underlinePosition);
   fprintf(out, "/UnderlineThickness %g def\n", dict.underlineThickness);
   fprintf(out, "end readonly def\n");
-  fprintf(out, "/FontName /%s def\n", fontName);
+  fprintf(out, "/FontName /%s def\n", name->getCString());
   fprintf(out, "/PaintType %d def\n", dict.paintType);
   fprintf(out, "/FontType 1 def\n");
   fprintf(out, "/FontMatrix [%g %g %g %g %g %g] readonly def\n",
@@ -696,47 +415,10 @@ void Type1CFontConverter::convert() {
   }
 
   // get number of glyphs from charstrings index
-  topPtr = (Guchar *)file + dict.charStrings;
-  nGlyphs = getWord(topPtr, 2);
+  nGlyphs = getIndexLen((Guchar *)file + dict.charStrings);
 
   // read charset
-  if (dict.charset == 0) {
-    glyphNames = type1CISOAdobeCharset;
-  } else if (dict.charset == 1) {
-    glyphNames = type1CExpertCharset;
-  } else if (dict.charset == 2) {
-    glyphNames = type1CExpertSubsetCharset;
-  } else {
-    glyphNames = (Gushort *)gmalloc(nGlyphs * sizeof(Gushort));
-    glyphNames[0] = 0;
-    topPtr = (Guchar *)file + dict.charset;
-    charsetFormat = *topPtr++;
-    if (charsetFormat == 0) {
-      for (i = 1; i < nGlyphs; ++i) {
-	glyphNames[i] = getWord(topPtr, 2);
-	topPtr += 2;
-      }
-    } else if (charsetFormat == 1) {
-      i = 1;
-      while (i < nGlyphs) {
-	c = getWord(topPtr, 2);
-	topPtr += 2;
-	nLeft = *topPtr++;
-	for (j = 0; j <= nLeft; ++j)
-	  glyphNames[i++] = c++;
-      }
-    } else if (charsetFormat == 2) {
-      i = 1;
-      while (i < nGlyphs) {
-	c = getWord(topPtr, 2);
-	topPtr += 2;
-	nLeft = getWord(topPtr, 2);
-	topPtr += 2;
-	for (j = 0; j <= nLeft; ++j)
-	  glyphNames[i++] = c++;
-      }
-    }
-  }
+  glyphNames = readCharset(dict.charset, nGlyphs);
 
   // read encoding (glyph -> code mapping), write Type 1 encoding
   fprintf(out, "/Encoding ");
@@ -752,50 +434,50 @@ void Type1CFontConverter::convert() {
 	}
       }
     } else {
-      topPtr = (Guchar *)file + dict.encoding;
-      encFormat = *topPtr++;
+      ptr = (Guchar *)file + dict.encoding;
+      encFormat = *ptr++;
       if ((encFormat & 0x7f) == 0) {
-	nCodes = 1 + *topPtr++;
+	nCodes = 1 + *ptr++;
 	if (nCodes > nGlyphs) {
 	  nCodes = nGlyphs;
 	}
 	for (i = 1; i < nCodes; ++i) {
-	  c = *topPtr++;
-	  fprintf(out, "dup %d /%s put\n", c,
-		  getString(glyphNames[i], stringIdxPtr, stringStartPtr,
-			    stringOffSize, buf));
+	  c = *ptr++;
+	  fprintf(out, "dup %d /%s put\n",
+		  c, getString(glyphNames[i], buf));
 	}
       } else if ((encFormat & 0x7f) == 1) {
-	nRanges = *topPtr++;
+	nRanges = *ptr++;
 	nCodes = 1;
 	for (i = 0; i < nRanges; ++i) {
-	  c = *topPtr++;
-	  nLeft = *topPtr++;
+	  c = *ptr++;
+	  nLeft = *ptr++;
 	  for (j = 0; j <= nLeft && nCodes < nGlyphs; ++j) {
-	    fprintf(out, "dup %d /%s put\n", c,
-		    getString(glyphNames[nCodes], stringIdxPtr, stringStartPtr,
-			      stringOffSize, buf));
+	    fprintf(out, "dup %d /%s put\n",
+		    c, getString(glyphNames[nCodes], buf));
 	    ++nCodes;
 	    ++c;
 	  }
 	}
       }
       if (encFormat & 0x80) {
-	nSups = *topPtr++;
+	nSups = *ptr++;
 	for (i = 0; i < nSups; ++i) {
-	  c = *topPtr++;
-	  sid = getWord(topPtr, 2);
-	  topPtr += 2;
-	  fprintf(out, "dup %d /%s put\n", c,
-		  getString(sid, stringIdxPtr, stringStartPtr,
-			    stringOffSize, buf));
+	  c = *ptr++;
+	  sid = getWord(ptr, 2);
+	  ptr += 2;
+	  fprintf(out, "dup %d /%s put\n", c, getString(sid, buf));
 	}
       }
     }
     fprintf(out, "readonly def\n");
   }
   fprintf(out, "currentdict end\n");
+
+  // start the binary section
   fprintf(out, "currentfile eexec\n");
+  r1 = 55665;
+  line = 0;
 
   // get private dictionary
   eexecWrite("\x83\xca\x73\xd5");
@@ -804,128 +486,31 @@ void Type1CFontConverter::convert() {
   eexecWrite("/ND {noaccess def} executeonly def\n");
   eexecWrite("/NP {noaccess put} executeonly def\n");
   eexecWrite("/MinFeature {16 16} ND\n");
-  eexecWrite("/password 5839 def\n");
-  subrsOffset = 0;
-  defaultWidthX = 0;
-  nominalWidthX = 0;
-  topPtr = (Guchar *)file + dict.privateOffset;
-  idxPtr0 = topPtr;
-  idxPtr1 = idxPtr0 + dict.privateSize;
-  i = 0;
-  while (idxPtr0 < idxPtr1) {
-    if (*idxPtr0 <= 27 || *idxPtr0 == 31) {
-      key = *idxPtr0++;
-      if (key == 0x0c)
-	key = (key << 8) | *idxPtr0++;
-      switch (key) {
-      case 0x0006:
-	getDeltaInt(eBuf, "BlueValues", op, i);
-	eexecWrite(eBuf);
-	break;
-      case 0x0007:
-	getDeltaInt(eBuf, "OtherBlues", op, i);
-	eexecWrite(eBuf);
-	break;
-      case 0x0008:
-	getDeltaInt(eBuf, "FamilyBlues", op, i);
-	eexecWrite(eBuf);
-	break;
-      case 0x0009:
-	getDeltaInt(eBuf, "FamilyOtherBlues", op, i);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c09:
-	sprintf(eBuf, "/BlueScale %g def\n", op[0]);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c0a:
-	sprintf(eBuf, "/BlueShift %d def\n", (int)op[0]);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c0b:
-	sprintf(eBuf, "/BlueFuzz %d def\n", (int)op[0]);
-	eexecWrite(eBuf);
-	break;
-      case 0x000a:
-	sprintf(eBuf, "/StdHW [%g] def\n", op[0]);
-	eexecWrite(eBuf);
-	break;
-      case 0x000b:
-	sprintf(eBuf, "/StdVW [%g] def\n", op[0]);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c0c:
-	getDeltaReal(eBuf, "StemSnapH", op, i);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c0d:
-	getDeltaReal(eBuf, "StemSnapV", op, i);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c0e:
-	sprintf(eBuf, "/ForceBold %s def\n", op[0] ? "true" : "false");
-	eexecWrite(eBuf);
-	break;
-      case 0x0c0f:
-	sprintf(eBuf, "/ForceBoldThreshold %g def\n", op[0]);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c11:
-	sprintf(eBuf, "/LanguageGroup %d def\n", (int)op[0]);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c12:
-	sprintf(eBuf, "/ExpansionFactor %g def\n", op[0]);
-	eexecWrite(eBuf);
-	break;
-      case 0x0c13:
-	error(-1, "Got Type 1C InitialRandomSeed");
-	break;
-      case 0x0013:
-	subrsOffset = (int)op[0];
-	break;
-      case 0x0014:
-	defaultWidthX = op[0];
-	defaultWidthXFP = fp[0];
-	break;
-      case 0x0015:
-	nominalWidthX = op[0];
-	nominalWidthXFP = fp[0];
-	break;
-      default:
-	error(-1, "Unknown Type 1C private dict entry %04x", key);
-	break;
-      }
-      i = 0;
-    } else {
-      x = getNum(&idxPtr0, &isFP);
-      if (i < 48) {
-	op[i] = x;
-	fp[i++] = isFP;
-      }
-    }
-  }
+  readPrivateDict(&privateDict, dict.privateOffset, dict.privateSize);
+  eexecWrite(privateDict.dictData->getCString());
+  defaultWidthX = privateDict.defaultWidthX;
+  defaultWidthXFP = privateDict.defaultWidthXFP;
+  nominalWidthX = privateDict.nominalWidthX;
+  nominalWidthXFP = privateDict.nominalWidthXFP;
 
   // get subrs
-  if (subrsOffset != 0) {
-    topPtr += subrsOffset;
-    nSubrs = getWord(topPtr, 2);
-    idxOffSize = topPtr[2];
-    topPtr += 3;
+  if (privateDict.subrsOffset != 0) {
+    subrsIdxPtr = (Guchar *)file + dict.privateOffset +
+                  privateDict.subrsOffset;
+    nSubrs = getIndexLen(subrsIdxPtr);
     sprintf(eBuf, "/Subrs %d array\n", nSubrs);
     eexecWrite(eBuf);
-    idxStartPtr = topPtr + (nSubrs + 1) * idxOffSize - 1;
-    idxPtr1 = idxStartPtr + getWord(topPtr, idxOffSize);
+    idxPtr1 = getIndexValPtr(subrsIdxPtr, 0);
     for (i = 0; i < nSubrs; ++i) {
       idxPtr0 = idxPtr1;
-      idxPtr1 = idxStartPtr + getWord(topPtr + (i+1)*idxOffSize, idxOffSize);
+      idxPtr1 = getIndexValPtr(subrsIdxPtr, i+1);
       n = idxPtr1 - idxPtr0;
 #if 1 //~ Type 2 subrs are unimplemented
       error(-1, "Unimplemented Type 2 subrs");
 #else
       sprintf(eBuf, "dup %d %d RD ", i, n);
       eexecWrite(eBuf);
-      cvtGlyph(idxPtr0, n);
+      eexecCvtGlyph(idxPtr0, n);
       eexecWrite(" NP\n");
 #endif
     }
@@ -933,21 +518,16 @@ void Type1CFontConverter::convert() {
   }
 
   // get CharStrings
-  topPtr = (Guchar *)file + dict.charStrings;
-  nCharStrings = getWord(topPtr, 2);
-  idxOffSize = topPtr[2];
-  topPtr += 3;
+  charStringsIdxPtr = (Guchar *)file + dict.charStrings;
+  nCharStrings = getIndexLen(charStringsIdxPtr);
   sprintf(eBuf, "2 index /CharStrings %d dict dup begin\n", nCharStrings);
   eexecWrite(eBuf);
-  idxStartPtr = topPtr + (nCharStrings + 1) * idxOffSize - 1;
-  idxPtr1 = idxStartPtr + getWord(topPtr, idxOffSize);
+  idxPtr1 = getIndexValPtr(charStringsIdxPtr, 0);
   for (i = 0; i < nCharStrings; ++i) {
     idxPtr0 = idxPtr1;
-    idxPtr1 = idxStartPtr + getWord(topPtr + (i+1)*idxOffSize, idxOffSize);
+    idxPtr1 = getIndexValPtr(charStringsIdxPtr, i+1);
     n = idxPtr1 - idxPtr0;
-    cvtGlyph(getString(glyphNames[i], stringIdxPtr, stringStartPtr,
-		       stringOffSize, buf),
-	     idxPtr0, n);
+    eexecCvtGlyph(getString(glyphNames[i], buf), idxPtr0, n);
   }
   eexecWrite("end\n");
   eexecWrite("end\n");
@@ -957,20 +537,791 @@ void Type1CFontConverter::convert() {
   eexecWrite("mark currentfile closefile\n");
 
   // trailer
-  if (line > 0)
+  if (line > 0) {
     fputc('\n', out);
+  }
   for (i = 0; i < 8; ++i) {
     fprintf(out, "0000000000000000000000000000000000000000000000000000000000000000\n");
   }
   fprintf(out, "cleartomark\n");
 
   // clean up
-  if (dict.charset > 2)
+  delete privateDict.dictData;
+  if (dict.charset > 2) {
     gfree(glyphNames);
-  gfree(fontName);
+  }
 }
 
-void Type1CFontConverter::eexecWrite(char *s) {
+void Type1CFontFile::convertToCIDType0(char *psName, FILE *outA) {
+  Type1CTopDict dict;
+  Type1CPrivateDict *privateDicts;
+  GString *charStrings;
+  int *charStringOffsets;
+  Gushort *charset;
+  int *cidMap;
+  Guchar *fdSelect;
+  Guchar *charStringsIdxPtr, *fdArrayIdx, *idxPtr0, *idxPtr1, *ptr;
+  char buf[256];
+  int nGlyphs, nCIDs, gdBytes, nFDs;
+  int fdSelectFmt, nRanges, gid0, gid1, fd, offset;
+  int key;
+  double x;
+  GBool isFP;
+  int i, j, k, n;
+
+  out = outA;
+
+  fprintf(out, "/CIDInit /ProcSet findresource begin\n");
+
+  // read top dict (first font only)
+  readTopDict(&dict);
+
+  // read the FDArray dictionaries and Private dictionaries
+  if (dict.fdArrayOffset == 0) {
+    nFDs = 1;
+    privateDicts = (Type1CPrivateDict *)
+                     gmalloc(nFDs * sizeof(Type1CPrivateDict));
+    privateDicts[0].dictData = new GString();
+    privateDicts[0].subrsOffset = 0;
+    privateDicts[0].defaultWidthX = 0;
+    privateDicts[0].defaultWidthXFP = gFalse;
+    privateDicts[0].nominalWidthX = 0;
+    privateDicts[0].nominalWidthXFP = gFalse;
+  } else {
+    fdArrayIdx = (Guchar *)file + dict.fdArrayOffset;
+    nFDs = getIndexLen(fdArrayIdx);
+    privateDicts = (Type1CPrivateDict *)
+                     gmalloc(nFDs * sizeof(Type1CPrivateDict));
+    idxPtr1 = getIndexValPtr(fdArrayIdx, 0);
+    for (i = 0; i < nFDs; ++i) {
+      privateDicts[i].dictData = NULL;
+      idxPtr0 = idxPtr1;
+      idxPtr1 = getIndexValPtr(fdArrayIdx, i + 1);
+      ptr = idxPtr0;
+      j = 0;
+      while (ptr < idxPtr1) {
+	if (*ptr <= 27 || *ptr == 31) {
+	  key = *ptr++;
+	  if (key == 0x0c) {
+	    key = (key << 8) | *ptr++;
+	  }
+	  if (key == 0x0012) {
+	    readPrivateDict(&privateDicts[i], (int)op[1], (int)op[0]);
+	  }
+	  j = 0;
+	} else {
+	  x = getNum(&ptr, &isFP);
+	  if (j < 48) {
+	    op[j] = x;
+	    fp[j++] = isFP;
+	  }
+	}
+      }
+      if (!privateDicts[i].dictData) {
+	privateDicts[i].dictData = new GString();
+	privateDicts[i].subrsOffset = 0;
+	privateDicts[i].defaultWidthX = 0;
+	privateDicts[i].defaultWidthXFP = gFalse;
+	privateDicts[i].nominalWidthX = 0;
+	privateDicts[i].nominalWidthXFP = gFalse;
+      }
+    }
+  }
+
+  // get the glyph count
+  charStringsIdxPtr = (Guchar *)file + dict.charStrings;
+  nGlyphs = getIndexLen(charStringsIdxPtr);
+
+  // read the FDSelect table
+  fdSelect = (Guchar *)gmalloc(nGlyphs);
+  if (dict.fdSelectOffset == 0) {
+    for (i = 0; i < nGlyphs; ++i) {
+      fdSelect[i] = 0;
+    }
+  } else {
+    ptr = (Guchar *)file + dict.fdSelectOffset;
+    fdSelectFmt = *ptr++;
+    if (fdSelectFmt == 0) {
+      memcpy(fdSelect, ptr, nGlyphs);
+    } else if (fdSelectFmt == 3) {
+      nRanges = getWord(ptr, 2);
+      ptr += 2;
+      gid0 = getWord(ptr, 2);
+      ptr += 2;
+      for (i = 1; i <= nRanges; ++i) {
+	fd = *ptr++;
+	gid1 = getWord(ptr, 2);
+	ptr += 2;
+	for (j = gid0; j < gid1; ++j) {
+	  fdSelect[j] = fd;
+	}
+	gid0 = gid1;
+      }
+    } else {
+      error(-1, "Unknown FDSelect table format in CID font");
+      for (i = 0; i < nGlyphs; ++i) {
+	fdSelect[i] = 0;
+      }
+    }
+  }
+
+  // read the charset, compute the CID-to-GID mapping
+  charset = readCharset(dict.charset, nGlyphs);
+  nCIDs = 0;
+  for (i = 0; i < nGlyphs; ++i) {
+    if (charset[i] >= nCIDs) {
+      nCIDs = charset[i] + 1;
+    }
+  }
+  cidMap = (int *)gmalloc(nCIDs * sizeof(int));
+  for (i = 0; i < nCIDs; ++i) {
+    cidMap[i] = -1;
+  }
+  for (i = 0; i < nGlyphs; ++i) {
+    cidMap[charset[i]] = i;
+  }
+
+  // build the charstrings
+  charStrings = new GString();
+  charStringOffsets = (int *)gmalloc((nCIDs + 1) * sizeof(int));
+  for (i = 0; i < nCIDs; ++i) {
+    charStringOffsets[i] = charStrings->getLength();
+    if (cidMap[i] >= 0) {
+      idxPtr0 = getIndexValPtr(charStringsIdxPtr, cidMap[i]);
+      idxPtr1 = getIndexValPtr(charStringsIdxPtr, cidMap[i]+1);
+      n = idxPtr1 - idxPtr0;
+      j = fdSelect[cidMap[i]];
+      defaultWidthX = privateDicts[j].defaultWidthX;
+      defaultWidthXFP = privateDicts[j].defaultWidthXFP;
+      nominalWidthX = privateDicts[j].nominalWidthX;
+      nominalWidthXFP = privateDicts[j].nominalWidthXFP;
+      cvtGlyph(idxPtr0, n);
+      charStrings->append(charBuf);
+      delete charBuf;
+    }
+  }
+  charStringOffsets[nCIDs] = charStrings->getLength();
+
+  // compute gdBytes = number of bytes needed for charstring offsets
+  // (offset size needs to account for the charstring offset table,
+  // with a worst case of five bytes per entry, plus the charstrings
+  // themselves)
+  i = (nCIDs + 1) * 5 + charStrings->getLength();
+  if (i < 0x100) {
+    gdBytes = 1;
+  } else if (i < 0x10000) {
+    gdBytes = 2;
+  } else if (i < 0x1000000) {
+    gdBytes = 3;
+  } else {
+    gdBytes = 4;
+  }
+
+  // begin the font dictionary
+  fprintf(out, "20 dict begin\n");
+  fprintf(out, "/CIDFontName /%s def\n", psName);
+  fprintf(out, "/CIDFontType 0 def\n");
+  fprintf(out, "/CIDSystemInfo 3 dict dup begin\n");
+  if (dict.registry > 0 && dict.ordering > 0) {
+    fprintf(out, "  /Registry (%s) def\n", getString(dict.registry, buf));
+    fprintf(out, "  /Ordering (%s) def\n", getString(dict.ordering, buf));
+  } else {
+    fprintf(out, "  /Registry (Adobe) def\n");
+    fprintf(out, "  /Ordering (Identity) def\n");
+  }
+  fprintf(out, "  /Supplement %d def\n", dict.supplement);
+  fprintf(out, "end def\n");
+  fprintf(out, "/FontMatrix [%g %g %g %g %g %g] def\n",
+	  dict.fontMatrix[0], dict.fontMatrix[1], dict.fontMatrix[2],
+	  dict.fontMatrix[3], dict.fontMatrix[4], dict.fontMatrix[5]);
+  fprintf(out, "/FontBBox [%g %g %g %g] def\n",
+	  dict.fontBBox[0], dict.fontBBox[1],
+	  dict.fontBBox[2], dict.fontBBox[3]);
+  fprintf(out, "/FontInfo 1 dict dup begin\n");
+  fprintf(out, "  /FSType 8 def\n");
+  fprintf(out, "end def\n");
+
+  // CIDFont-specific entries
+  fprintf(out, "/CIDCount %d def\n", nCIDs);
+  fprintf(out, "/FDBytes 1 def\n");
+  fprintf(out, "/GDBytes %d def\n", gdBytes);
+  fprintf(out, "/CIDMapOffset 0 def\n");
+  if (dict.paintType != 0) {
+    fprintf(out, "/PaintType %d def\n", dict.paintType);
+    fprintf(out, "/StrokeWidth %g def\n", dict.strokeWidth);
+  }
+
+  // FDArray entry
+  fprintf(out, "/FDArray %d array\n", nFDs);
+  for (i = 0; i < nFDs; ++i) {
+    fprintf(out, "dup %d 10 dict begin\n", i);
+    fprintf(out, "/FontType 1 def\n");
+    fprintf(out, "/FontMatrix [1 0 0 1 0 0] def\n");
+    fprintf(out, "/PaintType %d def\n", dict.paintType);
+    fprintf(out, "/Private 32 dict begin\n");
+    fwrite(privateDicts[i].dictData->getCString(), 1,
+	   privateDicts[i].dictData->getLength(), out);
+    fprintf(out, "currentdict end def\n");
+    fprintf(out, "currentdict end put\n");
+  }
+  fprintf(out, "def\n");
+
+  //~ need to deal with subrs
+  
+  // start the binary section
+  offset = (nCIDs + 1) * (1 + gdBytes);
+  fprintf(out, "(Hex) %d StartData\n",
+	  offset + charStrings->getLength());
+
+  // write the charstring offset (CIDMap) table
+  for (i = 0; i <= nCIDs; i += 6) {
+    for (j = 0; j < 6 && i+j <= nCIDs; ++j) {
+      if (cidMap[i+j] >= 0) {
+	buf[0] = (char)fdSelect[cidMap[i+j]];
+      } else {
+	buf[0] = (char)0;
+      }
+      n = offset + charStringOffsets[i+j];
+      for (k = gdBytes; k >= 1; --k) {
+	buf[k] = (char)(n & 0xff);
+	n >>= 8;
+      }
+      for (k = 0; k <= gdBytes; ++k) {
+	fprintf(out, "%02x", buf[k] & 0xff);
+      }
+    }
+    fputc('\n', out);
+  }
+
+  // write the charstring data
+  n = charStrings->getLength();
+  for (i = 0; i < n; i += 32) {
+    for (j = 0; j < 32 && i+j < n; ++j) {
+      fprintf(out, "%02x", charStrings->getChar(i+j) & 0xff);
+    }
+    if (i + 32 >= n) {
+      fputc('>', out);
+    }
+    fputc('\n', out);
+  }
+
+  for (i = 0; i < nFDs; ++i) {
+    delete privateDicts[i].dictData;
+  }
+  gfree(privateDicts);
+  gfree(cidMap);
+  gfree(charset);
+  gfree(charStringOffsets);
+  delete charStrings;
+  gfree(fdSelect);
+}
+
+void Type1CFontFile::convertToType0(char *psName, FILE *outA) {
+  Type1CTopDict dict;
+  Type1CPrivateDict *privateDicts;
+  Gushort *charset;
+  int *cidMap;
+  Guchar *fdSelect;
+  Guchar *charStringsIdxPtr, *fdArrayIdx, *idxPtr0, *idxPtr1, *ptr;
+  char buf[256];
+  char eBuf[256];
+  int nGlyphs, nCIDs, nFDs;
+  int fdSelectFmt, nRanges, gid0, gid1, fd;
+  int key;
+  double x;
+  GBool isFP;
+  int i, j, n;
+
+  out = outA;
+
+  // read top dict (first font only)
+  readTopDict(&dict);
+
+  // read the FDArray dictionaries and Private dictionaries
+  if (dict.fdArrayOffset == 0) {
+    nFDs = 1;
+    privateDicts = (Type1CPrivateDict *)
+                     gmalloc(nFDs * sizeof(Type1CPrivateDict));
+    privateDicts[0].dictData = new GString();
+    privateDicts[0].subrsOffset = 0;
+    privateDicts[0].defaultWidthX = 0;
+    privateDicts[0].defaultWidthXFP = gFalse;
+    privateDicts[0].nominalWidthX = 0;
+    privateDicts[0].nominalWidthXFP = gFalse;
+  } else {
+    fdArrayIdx = (Guchar *)file + dict.fdArrayOffset;
+    nFDs = getIndexLen(fdArrayIdx);
+    privateDicts = (Type1CPrivateDict *)
+                     gmalloc(nFDs * sizeof(Type1CPrivateDict));
+    idxPtr1 = getIndexValPtr(fdArrayIdx, 0);
+    for (i = 0; i < nFDs; ++i) {
+      privateDicts[i].dictData = NULL;
+      idxPtr0 = idxPtr1;
+      idxPtr1 = getIndexValPtr(fdArrayIdx, i + 1);
+      ptr = idxPtr0;
+      j = 0;
+      while (ptr < idxPtr1) {
+	if (*ptr <= 27 || *ptr == 31) {
+	  key = *ptr++;
+	  if (key == 0x0c) {
+	    key = (key << 8) | *ptr++;
+	  }
+	  if (key == 0x0012) {
+	    readPrivateDict(&privateDicts[i], (int)op[1], (int)op[0]);
+	  }
+	  j = 0;
+	} else {
+	  x = getNum(&ptr, &isFP);
+	  if (j < 48) {
+	    op[j] = x;
+	    fp[j++] = isFP;
+	  }
+	}
+      }
+      if (!privateDicts[i].dictData) {
+	privateDicts[i].dictData = new GString();
+	privateDicts[i].subrsOffset = 0;
+	privateDicts[i].defaultWidthX = 0;
+	privateDicts[i].defaultWidthXFP = gFalse;
+	privateDicts[i].nominalWidthX = 0;
+	privateDicts[i].nominalWidthXFP = gFalse;
+      }
+    }
+  }
+
+  // get the glyph count
+  charStringsIdxPtr = (Guchar *)file + dict.charStrings;
+  nGlyphs = getIndexLen(charStringsIdxPtr);
+
+  // read the FDSelect table
+  fdSelect = (Guchar *)gmalloc(nGlyphs);
+  if (dict.fdSelectOffset == 0) {
+    for (i = 0; i < nGlyphs; ++i) {
+      fdSelect[i] = 0;
+    }
+  } else {
+    ptr = (Guchar *)file + dict.fdSelectOffset;
+    fdSelectFmt = *ptr++;
+    if (fdSelectFmt == 0) {
+      memcpy(fdSelect, ptr, nGlyphs);
+    } else if (fdSelectFmt == 3) {
+      nRanges = getWord(ptr, 2);
+      ptr += 2;
+      gid0 = getWord(ptr, 2);
+      ptr += 2;
+      for (i = 1; i <= nRanges; ++i) {
+	fd = *ptr++;
+	gid1 = getWord(ptr, 2);
+	ptr += 2;
+	for (j = gid0; j < gid1; ++j) {
+	  fdSelect[j] = fd;
+	}
+	gid0 = gid1;
+      }
+    } else {
+      error(-1, "Unknown FDSelect table format in CID font");
+      for (i = 0; i < nGlyphs; ++i) {
+	fdSelect[i] = 0;
+      }
+    }
+  }
+
+  // read the charset, compute the CID-to-GID mapping
+  charset = readCharset(dict.charset, nGlyphs);
+  nCIDs = 0;
+  for (i = 0; i < nGlyphs; ++i) {
+    if (charset[i] >= nCIDs) {
+      nCIDs = charset[i] + 1;
+    }
+  }
+  cidMap = (int *)gmalloc(nCIDs * sizeof(int));
+  for (i = 0; i < nCIDs; ++i) {
+    cidMap[i] = -1;
+  }
+  for (i = 0; i < nGlyphs; ++i) {
+    cidMap[charset[i]] = i;
+  }
+
+  // write the descendant Type 1 fonts
+  for (i = 0; i < nCIDs; i += 256) {
+
+    //~ this assumes that all CIDs in this block have the same FD --
+    //~ to handle multiple FDs correctly, need to somehow divide the
+    //~ font up by FD
+    fd = 0;
+    for (j = 0; j < 256 && i+j < nCIDs; ++j) {
+      if (cidMap[i+j] >= 0) {
+	fd = fdSelect[cidMap[i+j]];
+	break;
+      }
+    }
+
+    // font dictionary (unencrypted section)
+    fprintf(out, "16 dict begin\n");
+    fprintf(out, "/FontName /%s_%02x def\n", psName, i >> 8);
+    fprintf(out, "/FontType 1 def\n");
+    fprintf(out, "/FontMatrix [%g %g %g %g %g %g] def\n",
+	    dict.fontMatrix[0], dict.fontMatrix[1], dict.fontMatrix[2],
+	    dict.fontMatrix[3], dict.fontMatrix[4], dict.fontMatrix[5]);
+    fprintf(out, "/FontBBox [%g %g %g %g] def\n",
+	    dict.fontBBox[0], dict.fontBBox[1],
+	    dict.fontBBox[2], dict.fontBBox[3]);
+    fprintf(out, "/PaintType %d def\n", dict.paintType);
+    if (dict.paintType != 0) {
+      fprintf(out, "/StrokeWidth %g def\n", dict.strokeWidth);
+    }
+    fprintf(out, "/Encoding 256 array\n");
+    for (j = 0; j < 256 && i+j < nCIDs; ++j) {
+      fprintf(out, "dup %d /c%02x put\n", j, j);
+    }
+    fprintf(out, "readonly def\n");
+    fprintf(out, "currentdict end\n");
+
+    // start the binary section
+    fprintf(out, "currentfile eexec\n");
+    r1 = 55665;
+    line = 0;
+
+    // start the private dictionary
+    eexecWrite("\x83\xca\x73\xd5");
+    eexecWrite("dup /Private 32 dict dup begin\n");
+    eexecWrite("/RD {string currentfile exch readstring pop} executeonly def\n");
+    eexecWrite("/ND {noaccess def} executeonly def\n");
+    eexecWrite("/NP {noaccess put} executeonly def\n");
+    eexecWrite("/MinFeature {16 16} ND\n");
+    eexecWrite(privateDicts[fd].dictData->getCString());
+    defaultWidthX = privateDicts[fd].defaultWidthX;
+    defaultWidthXFP = privateDicts[fd].defaultWidthXFP;
+    nominalWidthX = privateDicts[fd].nominalWidthX;
+    nominalWidthXFP = privateDicts[fd].nominalWidthXFP;
+
+    // start the CharStrings
+    sprintf(eBuf, "2 index /CharStrings 256 dict dup begin\n");
+    eexecWrite(eBuf);
+
+    // write the .notdef CharString
+    idxPtr0 = getIndexValPtr(charStringsIdxPtr, 0);
+    idxPtr1 = getIndexValPtr(charStringsIdxPtr, 1);
+    n = idxPtr1 - idxPtr0;
+    eexecCvtGlyph(".notdef", idxPtr0, n);
+
+    // write the CharStrings
+    for (j = 0; j < 256 && i+j < nCIDs; ++j) {
+      if (cidMap[i+j] >= 0) {
+	idxPtr0 = getIndexValPtr(charStringsIdxPtr, cidMap[i+j]);
+	idxPtr1 = getIndexValPtr(charStringsIdxPtr, cidMap[i+j]+1);
+	n = idxPtr1 - idxPtr0;
+	sprintf(buf, "c%02x", j);
+	eexecCvtGlyph(buf, idxPtr0, n);
+      }
+    }
+    eexecWrite("end\n");
+    eexecWrite("end\n");
+    eexecWrite("readonly put\n");
+    eexecWrite("noaccess put\n");
+    eexecWrite("dup /FontName get exch definefont pop\n");
+    eexecWrite("mark currentfile closefile\n");
+
+    // trailer
+    if (line > 0) {
+      fputc('\n', out);
+    }
+    for (j = 0; j < 8; ++j) {
+      fprintf(out, "0000000000000000000000000000000000000000000000000000000000000000\n");
+    }
+    fprintf(out, "cleartomark\n");
+  }
+
+  // write the Type 0 parent font
+  fprintf(out, "16 dict begin\n");
+  fprintf(out, "/FontName /%s def\n", psName);
+  fprintf(out, "/FontType 0 def\n");
+  fprintf(out, "/FontMatrix [1 0 0 1 0 0] def\n");
+  fprintf(out, "/FMapType 2 def\n");
+  fprintf(out, "/Encoding [\n");
+  for (i = 0; i < nCIDs; i += 256) {
+    fprintf(out, "%d\n", i >> 8);
+  }
+  fprintf(out, "] def\n");
+  fprintf(out, "/FDepVector [\n");
+  for (i = 0; i < nCIDs; i += 256) {
+    fprintf(out, "/%s_%02x findfont\n", psName, i >> 8);
+  }
+  fprintf(out, "] def\n");
+  fprintf(out, "FontName currentdict end definefont pop\n");
+
+  // clean up
+  for (i = 0; i < nFDs; ++i) {
+    delete privateDicts[i].dictData;
+  }
+  gfree(privateDicts);
+  gfree(cidMap);
+  gfree(charset);
+  gfree(fdSelect);
+}
+
+void Type1CFontFile::readTopDict(Type1CTopDict *dict) {
+  Guchar *idxPtr0, *idxPtr1, *ptr;
+  double x;
+  GBool isFP;
+  int key;
+  int i;
+
+  idxPtr0 = getIndexValPtr(topDictIdxPtr, 0);
+  idxPtr1 = getIndexValPtr(topDictIdxPtr, 1);
+  dict->version = 0;
+  dict->notice = 0;
+  dict->copyright = 0;
+  dict->fullName = 0;
+  dict->familyName = 0;
+  dict->weight = 0;
+  dict->isFixedPitch = 0;
+  dict->italicAngle = 0;
+  dict->underlinePosition = -100;
+  dict->underlineThickness = 50;
+  dict->paintType = 0;
+  dict->charstringType = 2;
+  dict->fontMatrix[0] = 0.001;
+  dict->fontMatrix[1] = 0;
+  dict->fontMatrix[2] = 0;
+  dict->fontMatrix[3] = 0.001;
+  dict->fontMatrix[4] = 0;
+  dict->fontMatrix[5] = 0;
+  dict->uniqueID = 0;
+  dict->fontBBox[0] = 0;
+  dict->fontBBox[1] = 0;
+  dict->fontBBox[2] = 0;
+  dict->fontBBox[3] = 0;
+  dict->strokeWidth = 0;
+  dict->charset = 0;
+  dict->encoding = 0;
+  dict->charStrings = 0;
+  dict->privateSize = 0;
+  dict->privateOffset = 0;
+  dict->registry = 0;
+  dict->ordering = 0;
+  dict->supplement = 0;
+  dict->fdArrayOffset = 0;
+  dict->fdSelectOffset = 0;
+  i = 0;
+  ptr = idxPtr0;
+  while (ptr < idxPtr1) {
+    if (*ptr <= 27 || *ptr == 31) {
+      key = *ptr++;
+      if (key == 0x0c) {
+	key = (key << 8) | *ptr++;
+      }
+      switch (key) {
+      case 0x0000: dict->version = (int)op[0]; break;
+      case 0x0001: dict->notice = (int)op[0]; break;
+      case 0x0c00: dict->copyright = (int)op[0]; break;
+      case 0x0002: dict->fullName = (int)op[0]; break;
+      case 0x0003: dict->familyName = (int)op[0]; break;
+      case 0x0004: dict->weight = (int)op[0]; break;
+      case 0x0c01: dict->isFixedPitch = (int)op[0]; break;
+      case 0x0c02: dict->italicAngle = op[0]; break;
+      case 0x0c03: dict->underlinePosition = op[0]; break;
+      case 0x0c04: dict->underlineThickness = op[0]; break;
+      case 0x0c05: dict->paintType = (int)op[0]; break;
+      case 0x0c06: dict->charstringType = (int)op[0]; break;
+      case 0x0c07: dict->fontMatrix[0] = op[0];
+	           dict->fontMatrix[1] = op[1];
+	           dict->fontMatrix[2] = op[2];
+	           dict->fontMatrix[3] = op[3];
+	           dict->fontMatrix[4] = op[4];
+	           dict->fontMatrix[5] = op[5]; break;
+      case 0x000d: dict->uniqueID = (int)op[0]; break;
+      case 0x0005: dict->fontBBox[0] = op[0];
+	           dict->fontBBox[1] = op[1];
+	           dict->fontBBox[2] = op[2];
+	           dict->fontBBox[3] = op[3]; break;
+      case 0x0c08: dict->strokeWidth = op[0]; break;
+      case 0x000f: dict->charset = (int)op[0]; break;
+      case 0x0010: dict->encoding = (int)op[0]; break;
+      case 0x0011: dict->charStrings = (int)op[0]; break;
+      case 0x0012: dict->privateSize = (int)op[0];
+	           dict->privateOffset = (int)op[1]; break;
+      case 0x0c1e: dict->registry = (int)op[0];
+	           dict->ordering = (int)op[1];
+		   dict->supplement = (int)op[2]; break;
+      case 0x0c24: dict->fdArrayOffset = (int)op[0]; break;
+      case 0x0c25: dict->fdSelectOffset = (int)op[0]; break;
+      }
+      i = 0;
+    } else {
+      x = getNum(&ptr, &isFP);
+      if (i < 48) {
+	op[i] = x;
+	fp[i++] = isFP;
+      }
+    }
+  }
+}
+
+void Type1CFontFile::readPrivateDict(Type1CPrivateDict *privateDict,
+				     int offset, int size) {
+  Guchar *idxPtr0, *idxPtr1, *ptr;
+  char eBuf[256];
+  int key;
+  double x;
+  GBool isFP;
+  int i;
+
+  privateDict->dictData = new GString();
+  privateDict->subrsOffset = 0;
+  privateDict->defaultWidthX = 0;
+  privateDict->defaultWidthXFP = gFalse;
+  privateDict->nominalWidthX = 0;
+  privateDict->nominalWidthXFP = gFalse;
+  idxPtr0 = (Guchar *)file + offset;
+  idxPtr1 = idxPtr0 + size;
+  ptr = idxPtr0;
+  i = 0;
+  while (ptr < idxPtr1) {
+    if (*ptr <= 27 || *ptr == 31) {
+      key = *ptr++;
+      if (key == 0x0c) {
+	key = (key << 8) | *ptr++;
+      }
+      switch (key) {
+      case 0x0006:
+	getDeltaInt(eBuf, "BlueValues", op, i);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0007:
+	getDeltaInt(eBuf, "OtherBlues", op, i);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0008:
+	getDeltaInt(eBuf, "FamilyBlues", op, i);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0009:
+	getDeltaInt(eBuf, "FamilyOtherBlues", op, i);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c09:
+	sprintf(eBuf, "/BlueScale %g def\n", op[0]);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c0a:
+	sprintf(eBuf, "/BlueShift %d def\n", (int)op[0]);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c0b:
+	sprintf(eBuf, "/BlueFuzz %d def\n", (int)op[0]);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x000a:
+	sprintf(eBuf, "/StdHW [%g] def\n", op[0]);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x000b:
+	sprintf(eBuf, "/StdVW [%g] def\n", op[0]);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c0c:
+	getDeltaReal(eBuf, "StemSnapH", op, i);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c0d:
+	getDeltaReal(eBuf, "StemSnapV", op, i);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c0e:
+	sprintf(eBuf, "/ForceBold %s def\n", op[0] ? "true" : "false");
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c0f:
+	sprintf(eBuf, "/ForceBoldThreshold %g def\n", op[0]);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c11:
+	sprintf(eBuf, "/LanguageGroup %d def\n", (int)op[0]);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c12:
+	sprintf(eBuf, "/ExpansionFactor %g def\n", op[0]);
+	privateDict->dictData->append(eBuf);
+	break;
+      case 0x0c13:
+	error(-1, "Got Type 1C InitialRandomSeed");
+	break;
+      case 0x0013:
+	privateDict->subrsOffset = (int)op[0];
+	break;
+      case 0x0014:
+	privateDict->defaultWidthX = op[0];
+	privateDict->defaultWidthXFP = fp[0];
+	break;
+      case 0x0015:
+	privateDict->nominalWidthX = op[0];
+	privateDict->nominalWidthXFP = fp[0];
+	break;
+      default:
+	error(-1, "Unknown Type 1C private dict entry %04x", key);
+	break;
+      }
+      i = 0;
+    } else {
+      x = getNum(&ptr, &isFP);
+      if (i < 48) {
+	op[i] = x;
+	fp[i++] = isFP;
+      }
+    }
+  }
+}
+
+Gushort *Type1CFontFile::readCharset(int charset, int nGlyphs) {
+  Gushort *glyphNames;
+  Guchar *ptr;
+  int charsetFormat, c;
+  int nLeft, i, j;
+
+  if (charset == 0) {
+    glyphNames = type1CISOAdobeCharset;
+  } else if (charset == 1) {
+    glyphNames = type1CExpertCharset;
+  } else if (charset == 2) {
+    glyphNames = type1CExpertSubsetCharset;
+  } else {
+    glyphNames = (Gushort *)gmalloc(nGlyphs * sizeof(Gushort));
+    glyphNames[0] = 0;
+    ptr = (Guchar *)file + charset;
+    charsetFormat = *ptr++;
+    if (charsetFormat == 0) {
+      for (i = 1; i < nGlyphs; ++i) {
+	glyphNames[i] = getWord(ptr, 2);
+	ptr += 2;
+      }
+    } else if (charsetFormat == 1) {
+      i = 1;
+      while (i < nGlyphs) {
+	c = getWord(ptr, 2);
+	ptr += 2;
+	nLeft = *ptr++;
+	for (j = 0; j <= nLeft && i < nGlyphs; ++j) {
+	  glyphNames[i++] = c++;
+	}
+      }
+    } else if (charsetFormat == 2) {
+      i = 1;
+      while (i < nGlyphs) {
+	c = getWord(ptr, 2);
+	ptr += 2;
+	nLeft = getWord(ptr, 2);
+	ptr += 2;
+	for (j = 0; j <= nLeft && i < nGlyphs; ++j) {
+	  glyphNames[i++] = c++;
+	}
+      }
+    }
+  }
+  return glyphNames;
+}
+
+void Type1CFontFile::eexecWrite(char *s) {
   Guchar *p;
   Guchar x;
 
@@ -987,13 +1338,25 @@ void Type1CFontConverter::eexecWrite(char *s) {
   }
 }
 
-void Type1CFontConverter::cvtGlyph(char *name, Guchar *s, int n) {
+void Type1CFontFile::eexecCvtGlyph(char *glyphName, Guchar *s, int n) {
+  char eBuf[256];
+
+  cvtGlyph(s, n);
+  sprintf(eBuf, "/%s %d RD ", glyphName, charBuf->getLength());
+  eexecWrite(eBuf);
+  eexecWriteCharstring((Guchar *)charBuf->getCString(), charBuf->getLength());
+  eexecWrite(" ND\n");
+  delete charBuf;
+}
+
+void Type1CFontFile::cvtGlyph(Guchar *s, int n) {
   int nHints;
   int x;
   GBool first = gTrue;
-  char eBuf[256];
   double d, dx, dy;
   GBool dFP;
+  Gushort r2;
+  Guchar byte;
   int i, k;
 
   charBuf = new GString();
@@ -1542,14 +1905,16 @@ void Type1CFontConverter::cvtGlyph(char *name, Guchar *s, int n) {
     }
   }
 
-  sprintf(eBuf, "/%s %d RD ", name, charBuf->getLength());
-  eexecWrite(eBuf);
-  eexecWriteCharstring((Guchar *)charBuf->getCString(), charBuf->getLength());
-  eexecWrite(" ND\n");
-  delete charBuf;
+  // charstring encryption
+  r2 = 4330;
+  for (i = 0; i < charBuf->getLength(); ++i) {
+    byte = charBuf->getChar(i) ^ (r2 >> 8);
+    charBuf->setChar(i, byte);
+    r2 = (byte + r2) * 52845 + 22719;
+  }
 }
 
-void Type1CFontConverter::cvtGlyphWidth(GBool useOp) {
+void Type1CFontFile::cvtGlyphWidth(GBool useOp) {
   double w;
   GBool wFP;
   int i;
@@ -1571,7 +1936,7 @@ void Type1CFontConverter::cvtGlyphWidth(GBool useOp) {
   eexecDumpOp1(13);
 }
 
-void Type1CFontConverter::eexecDumpNum(double x, GBool fpA) {
+void Type1CFontFile::eexecDumpNum(double x, GBool fpA) {
   Guchar buf[12];
   int y, n;
 
@@ -1622,30 +1987,22 @@ void Type1CFontConverter::eexecDumpNum(double x, GBool fpA) {
   charBuf->append((char *)buf, n);
 }
 
-void Type1CFontConverter::eexecDumpOp1(int opA) {
+void Type1CFontFile::eexecDumpOp1(int opA) {
   charBuf->append((char)opA);
 }
 
-void Type1CFontConverter::eexecDumpOp2(int opA) {
+void Type1CFontFile::eexecDumpOp2(int opA) {
   charBuf->append((char)12);
   charBuf->append((char)opA);
 }
 
-void Type1CFontConverter::eexecWriteCharstring(Guchar *s, int n) {
-  Gushort r2;
+void Type1CFontFile::eexecWriteCharstring(Guchar *s, int n) {
   Guchar x;
   int i;
 
-  r2 = 4330;
-
+  // eexec encryption
   for (i = 0; i < n; ++i) {
-    // charstring encryption
-    x = s[i];
-    x ^= (r2 >> 8);
-    r2 = (x + r2) * 52845 + 22719;
-
-    // eexec encryption
-    x ^= (r1 >> 8);
+    x = s[i] ^ (r1 >> 8);
     r1 = (x + r1) * 52845 + 22719;
     fputc(hexChars[x >> 4], out);
     fputc(hexChars[x & 0x0f], out);
@@ -1657,11 +2014,11 @@ void Type1CFontConverter::eexecWriteCharstring(Guchar *s, int n) {
   }
 }
 
-void Type1CFontConverter::getDeltaInt(char *buf, char *name, double *opA,
-				      int n) {
+void Type1CFontFile::getDeltaInt(char *buf, char *key, double *opA,
+				 int n) {
   int x, i;
 
-  sprintf(buf, "/%s [", name);
+  sprintf(buf, "/%s [", key);
   buf += strlen(buf);
   x = 0;
   for (i = 0; i < n; ++i) {
@@ -1672,12 +2029,12 @@ void Type1CFontConverter::getDeltaInt(char *buf, char *name, double *opA,
   sprintf(buf, "] def\n");
 }
 
-void Type1CFontConverter::getDeltaReal(char *buf, char *name, double *opA,
-				       int n) {
+void Type1CFontFile::getDeltaReal(char *buf, char *key, double *opA,
+				  int n) {
   double x;
   int i;
 
-  sprintf(buf, "/%s [", name);
+  sprintf(buf, "/%s [", key);
   buf += strlen(buf);
   x = 0;
   for (i = 0; i < n; ++i) {
@@ -1686,6 +2043,127 @@ void Type1CFontConverter::getDeltaReal(char *buf, char *name, double *opA,
     buf += strlen(buf);
   }
   sprintf(buf, "] def\n");
+}
+
+int Type1CFontFile::getIndexLen(Guchar *indexPtr) {
+  return (int)getWord(indexPtr, 2);
+}
+
+Guchar *Type1CFontFile::getIndexValPtr(Guchar *indexPtr, int i) {
+  int n, offSize;
+  Guchar *idxStartPtr;
+
+  n = (int)getWord(indexPtr, 2);
+  offSize = indexPtr[2];
+  idxStartPtr = indexPtr + 3 + (n + 1) * offSize - 1;
+  return idxStartPtr + getWord(indexPtr + 3 + i * offSize, offSize);
+}
+
+Guchar *Type1CFontFile::getIndexEnd(Guchar *indexPtr) {
+  int n, offSize;
+  Guchar *idxStartPtr;
+
+  n = (int)getWord(indexPtr, 2);
+  offSize = indexPtr[2];
+  idxStartPtr = indexPtr + 3 + (n + 1) * offSize - 1;
+  return idxStartPtr + getWord(indexPtr + 3 + n * offSize, offSize);
+}
+
+Guint Type1CFontFile::getWord(Guchar *ptr, int size) {
+  Guint x;
+  int i;
+
+  x = 0;
+  for (i = 0; i < size; ++i) {
+    x = (x << 8) + *ptr++;
+  }
+  return x;
+}
+
+double Type1CFontFile::getNum(Guchar **ptr, GBool *isFP) {
+  static char nybChars[16] = "0123456789.ee -";
+  int b0, b, nyb0, nyb1;
+  double x;
+  char buf[65];
+  int i;
+
+  x = 0;
+  *isFP = gFalse;
+  b0 = (*ptr)[0];
+  if (b0 < 28) {
+    x = 0;
+  } else if (b0 == 28) {
+    x = ((*ptr)[1] << 8) + (*ptr)[2];
+    *ptr += 3;
+  } else if (b0 == 29) {
+    x = ((*ptr)[1] << 24) + ((*ptr)[2] << 16) + ((*ptr)[3] << 8) + (*ptr)[4];
+    *ptr += 5;
+  } else if (b0 == 30) {
+    *ptr += 1;
+    i = 0;
+    do {
+      b = *(*ptr)++;
+      nyb0 = b >> 4;
+      nyb1 = b & 0x0f;
+      if (nyb0 == 0xf) {
+	break;
+      }
+      buf[i++] = nybChars[nyb0];
+      if (i == 64) {
+	break;
+      }
+      if (nyb0 == 0xc) {
+	buf[i++] = '-';
+      }
+      if (i == 64) {
+	break;
+      }
+      if (nyb1 == 0xf) {
+	break;
+      }
+      buf[i++] = nybChars[nyb1];
+      if (i == 64) {
+	break;
+      }
+      if (nyb1 == 0xc) {
+	buf[i++] = '-';
+      }
+    } while (i < 64);
+    buf[i] = '\0';
+    x = atof(buf);
+    *isFP = gTrue;
+  } else if (b0 == 31) {
+    x = 0;
+  } else if (b0 < 247) {
+    x = b0 - 139;
+    *ptr += 1;
+  } else if (b0 < 251) {
+    x = ((b0 - 247) << 8) + (*ptr)[1] + 108;
+    *ptr += 2;
+  } else {
+    x = -((b0 - 251) << 8) - (*ptr)[1] - 108;
+    *ptr += 2;
+  }
+  return x;
+}
+
+char *Type1CFontFile::getString(int sid, char *buf) {
+  Guchar *idxPtr0, *idxPtr1;
+  int n;
+
+  if (sid < 391) {
+    strcpy(buf, type1CStdStrings[sid]);
+  } else {
+    sid -= 391;
+    idxPtr0 = getIndexValPtr(stringIdxPtr, sid);
+    idxPtr1 = getIndexValPtr(stringIdxPtr, sid + 1);
+    if ((n = idxPtr1 - idxPtr0) > 255) {
+      n = 255;
+    }
+    strncpy(buf, (char *)idxPtr0, n);
+    buf[n] = '\0';
+  }
+  return buf;
 }
 
 //------------------------------------------------------------------------
@@ -1755,19 +2233,26 @@ struct TTFontTableHdr {
   Guint length;
 };
 
-// TrueType tables required by the Type 42 spec.
-// (NB: the table names must be in alphabetical order here.)
-#define nT42ReqTables 9
-static char *t42ReqTables[nT42ReqTables] = {
-  "cvt ",
-  "fpgm",
-  "glyf",
-  "head",
-  "hhea",
-  "hmtx",
-  "loca",
-  "maxp",
-  "prep"
+struct T42Table {
+  char *tag;			// 4-byte tag
+  GBool required;		// required by the TrueType spec?
+};
+
+// TrueType tables to be embedded in Type 42 fonts.
+// NB: the table names must be in alphabetical order here.
+#define nT42Tables 11
+static T42Table t42Tables[nT42Tables] = {
+  { "cvt ", gTrue  },
+  { "fpgm", gTrue  },
+  { "glyf", gTrue  },
+  { "head", gTrue  },
+  { "hhea", gTrue  },
+  { "hmtx", gTrue  },
+  { "loca", gTrue  },
+  { "maxp", gTrue  },
+  { "prep", gTrue  },
+  { "vhea", gFalse },
+  { "vmtx", gFalse }
 };
 #define t42HeadTable 3
 #define t42LocaTable 6
@@ -2297,19 +2782,167 @@ void TrueTypeFontFile::convertToType42(char *name, char **encodingA,
   // write the guts of the dictionary
   cvtEncoding(encodingA, out);
   cvtCharStrings(encodingA, toUnicode, pdfFontHasEncoding, out);
-  cvtSfnts(out);
+  cvtSfnts(out, NULL);
 
   // end the dictionary and define the font
   fprintf(out, "FontName currentdict end definefont pop\n");
 }
 
+void TrueTypeFontFile::convertToCIDType2(char *name, Gushort *cidMap,
+					 int nCIDs, FILE *out) {
+  Gushort cid;
+  int i, j, k;
+
+  // write the header
+  fprintf(out, "%%!PS-TrueTypeFont-%g\n", getFixed(0));
+
+  // begin the font dictionary
+  fprintf(out, "20 dict begin\n");
+  fprintf(out, "/CIDFontName /%s def\n", name);
+  fprintf(out, "/CIDFontType 2 def\n");
+  fprintf(out, "/FontType 42 def\n");
+  fprintf(out, "/CIDSystemInfo 3 dict dup begin\n");
+  fprintf(out, "  /Registry (Adobe) def\n");
+  fprintf(out, "  /Ordering (Identity) def\n");
+  fprintf(out, "  /Supplement 0 def\n");
+  fprintf(out, "  end def\n");
+  fprintf(out, "/GDBytes 2 def\n");
+  if (cidMap) {
+    fprintf(out, "/CIDCount %d def\n", nCIDs);
+    if (nCIDs > 32767) {
+      fprintf(out, "/CIDMap [");
+      for (i = 0; i < nCIDs; i += 32768 - 16) {
+	fprintf(out, "<\n");
+	for (j = 0; j < 32768 - 16 && i+j < nCIDs; j += 16) {
+	  fprintf(out, "  ");
+	  for (k = 0; k < 16 && i+j+k < nCIDs; ++k) {
+	    cid = cidMap[i+j+k];
+	    fprintf(out, "%02x%02x", (cid >> 8) & 0xff, cid & 0xff);
+	  }
+	  fprintf(out, "\n");
+	}
+	fprintf(out, "  >");
+      }
+      fprintf(out, "\n");
+      fprintf(out, "] def\n");
+    } else {
+      fprintf(out, "/CIDMap <\n");
+      for (i = 0; i < nCIDs; i += 16) {
+	fprintf(out, "  ");
+	for (j = 0; j < 16 && i+j < nCIDs; ++j) {
+	  cid = cidMap[i+j];
+	  fprintf(out, "%02x%02x", (cid >> 8) & 0xff, cid & 0xff);
+	}
+	fprintf(out, "\n");
+      }
+      fprintf(out, "> def\n");
+    }
+  } else {
+    // direct mapping - just fill the string(s) with s[i]=i
+    fprintf(out, "/CIDCount %d def\n", nGlyphs);
+    if (nGlyphs > 32767) {
+      fprintf(out, "/CIDMap [\n");
+      for (i = 0; i < nGlyphs; i += 32767) {
+	j = nGlyphs - i < 32767 ? nGlyphs - i : 32767;
+	fprintf(out, "  %d string 0 1 %d {\n", 2 * j, j - 1);
+	fprintf(out, "    2 copy dup 2 mul exch %d add -8 bitshift put\n", i);
+	fprintf(out, "    1 index exch dup 2 mul 1 add exch %d add"
+		" 255 and put\n", i);
+	fprintf(out, "  } for\n");
+      }
+      fprintf(out, "] def\n");
+    } else {
+      fprintf(out, "/CIDMap %d string\n", 2 * nGlyphs);
+      fprintf(out, "  0 1 %d {\n", nGlyphs - 1);
+      fprintf(out, "    2 copy dup 2 mul exch -8 bitshift put\n");
+      fprintf(out, "    1 index exch dup 2 mul 1 add exch 255 and put\n");
+      fprintf(out, "  } for\n");
+      fprintf(out, "def\n");
+    }
+  }
+  fprintf(out, "/FontMatrix [1 0 0 1 0 0] def\n");
+  fprintf(out, "/FontBBox [%d %d %d %d] def\n",
+	  bbox[0], bbox[1], bbox[2], bbox[3]);
+  fprintf(out, "/PaintType 0 def\n");
+  fprintf(out, "/Encoding [] readonly def\n");
+  fprintf(out, "/CharStrings 1 dict dup begin\n");
+  fprintf(out, "  /.notdef 0 def\n");
+  fprintf(out, "  end readonly def\n");
+
+  // write the guts of the dictionary
+  cvtSfnts(out, NULL);
+
+  // end the dictionary and define the font
+  fprintf(out, "CIDFontName currentdict end /CIDFont defineresource pop\n");
+}
+
+void TrueTypeFontFile::convertToType0(char *name, Gushort *cidMap,
+				      int nCIDs, FILE *out) {
+  GString *sfntsName;
+  int n, i, j;
+
+  // write the Type 42 sfnts array
+  sfntsName = (new GString(name))->append("_sfnts");
+  cvtSfnts(out, sfntsName);
+  delete sfntsName;
+
+  // write the descendant Type 42 fonts
+  n = cidMap ? nCIDs : nGlyphs;
+  for (i = 0; i < n; i += 256) {
+    fprintf(out, "10 dict begin\n");
+    fprintf(out, "/FontName /%s_%02x def\n", name, i >> 8);
+    fprintf(out, "/FontType 42 def\n");
+    fprintf(out, "/FontMatrix [1 0 0 1 0 0] def\n");
+    fprintf(out, "/FontBBox [%d %d %d %d] def\n",
+	    bbox[0], bbox[1], bbox[2], bbox[3]);
+    fprintf(out, "/PaintType 0 def\n");
+    fprintf(out, "/sfnts %s_sfnts def\n", name);
+    fprintf(out, "/Encoding 256 array\n");
+    for (j = 0; j < 256 && i+j < n; ++j) {
+      fprintf(out, "dup %d /c%02x put\n", j, j);
+    }
+    fprintf(out, "readonly def\n");
+    fprintf(out, "/CharStrings 257 dict dup begin\n");
+    fprintf(out, "/.notdef 0 def\n");
+    for (j = 0; j < 256 && i+j < n; ++j) {
+      fprintf(out, "/c%02x %d def\n", j, cidMap ? cidMap[i+j] : i+j);
+    }
+    fprintf(out, "end readonly def\n");
+    fprintf(out, "FontName currentdict end definefont pop\n");
+  }
+
+  // write the Type 0 parent font
+  fprintf(out, "16 dict begin\n");
+  fprintf(out, "/FontName /%s def\n", name);
+  fprintf(out, "/FontType 0 def\n");
+  fprintf(out, "/FontMatrix [1 0 0 1 0 0] def\n");
+  fprintf(out, "/FMapType 2 def\n");
+  fprintf(out, "/Encoding [\n");
+  for (i = 0; i < n; i += 256) {
+    fprintf(out, "%d\n", i >> 8);
+  }
+  fprintf(out, "] def\n");
+  fprintf(out, "/FDepVector [\n");
+  for (i = 0; i < n; i += 256) {
+    fprintf(out, "/%s_%02x findfont\n", name, i >> 8);
+  }
+  fprintf(out, "] def\n");
+  fprintf(out, "FontName currentdict end definefont pop\n");
+}
+
 int TrueTypeFontFile::getByte(int pos) {
+  if (pos < 0 || pos >= len) {
+    return 0;
+  }
   return file[pos] & 0xff;
 }
 
 int TrueTypeFontFile::getChar(int pos) {
   int x;
 
+  if (pos < 0 || pos >= len) {
+    return 0;
+  }
   x = file[pos] & 0xff;
   if (x & 0x80)
     x |= 0xffffff00;
@@ -2319,6 +2952,9 @@ int TrueTypeFontFile::getChar(int pos) {
 int TrueTypeFontFile::getUShort(int pos) {
   int x;
 
+  if (pos < 0 || pos+1 >= len) {
+    return 0;
+  }
   x = file[pos] & 0xff;
   x = (x << 8) + (file[pos+1] & 0xff);
   return x;
@@ -2327,6 +2963,9 @@ int TrueTypeFontFile::getUShort(int pos) {
 int TrueTypeFontFile::getShort(int pos) {
   int x;
 
+  if (pos < 0 || pos+1 >= len) {
+    return 0;
+  }
   x = file[pos] & 0xff;
   x = (x << 8) + (file[pos+1] & 0xff);
   if (x & 0x8000)
@@ -2337,6 +2976,9 @@ int TrueTypeFontFile::getShort(int pos) {
 Guint TrueTypeFontFile::getULong(int pos) {
   int x;
 
+  if (pos < 0 || pos+3 >= len) {
+    return 0;
+  }
   x = file[pos] & 0xff;
   x = (x << 8) + (file[pos+1] & 0xff);
   x = (x << 8) + (file[pos+2] & 0xff);
@@ -2565,15 +3207,16 @@ int TrueTypeFontFile::getCmapEntry(int cmapFmt, int pos, int code) {
   return 0;
 }
 
-void TrueTypeFontFile::cvtSfnts(FILE *out) {
-  TTFontTableHdr newTableHdrs[nT42ReqTables];
-  char tableDir[12 + nT42ReqTables*16];
+void TrueTypeFontFile::cvtSfnts(FILE *out, GString *name) {
+  TTFontTableHdr newTableHdrs[nT42Tables];
+  char tableDir[12 + nT42Tables*16];
   char headTable[54];
   int *origLocaTable;
   char *locaTable;
+  int nNewTables;
   Guint checksum;
   int pos, glyfPos, length, glyphLength, pad;
-  int i, j;
+  int i, j, k;
 
   // construct the 'head' table, zero out the font checksum
   memcpy(headTable, file + seekTable("head"), 54);
@@ -2614,10 +3257,22 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
     }
   }
 
+  // count the number of tables
+  nNewTables = 0;
+  for (i = 0; i < nT42Tables; ++i) {
+    if (t42Tables[i].required ||
+	seekTable(t42Tables[i].tag) >= 0) {
+      ++nNewTables;
+    }
+  }
+
   // construct the new table headers, including table checksums
   // (pad each table out to a multiple of 4 bytes)
-  pos = 12 + nT42ReqTables*16;
-  for (i = 0; i < nT42ReqTables; ++i) {
+  pos = 12 + nNewTables*16;
+  k = 0;
+  for (i = 0; i < nT42Tables; ++i) {
+    length = -1;
+    checksum = 0; // make gcc happy
     if (i == t42HeadTable) {
       length = 54;
       checksum = computeTableChecksum(headTable, 54);
@@ -2636,22 +3291,25 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
 					 glyphLength);
       }
     } else {
-      if ((j = seekTableIdx(t42ReqTables[i])) >= 0) {
+      if ((j = seekTableIdx(t42Tables[i].tag)) >= 0) {
 	length = tableHdrs[j].length;
 	checksum = computeTableChecksum(file + tableHdrs[j].offset, length);
-      } else {
+      } else if (t42Tables[i].required) {
 	error(-1, "Embedded TrueType font is missing a required table ('%s')",
-	      t42ReqTables[i]);
+	      t42Tables[i].tag);
 	length = 0;
 	checksum = 0;
       }
     }
-    strncpy(newTableHdrs[i].tag, t42ReqTables[i], 4);
-    newTableHdrs[i].checksum = checksum;
-    newTableHdrs[i].offset = pos;
-    newTableHdrs[i].length = length;
-    pad = (length & 3) ? 4 - (length & 3) : 0;
-    pos += length + pad;
+    if (length >= 0) {
+      strncpy(newTableHdrs[k].tag, t42Tables[i].tag, 4);
+      newTableHdrs[k].checksum = checksum;
+      newTableHdrs[k].offset = pos;
+      newTableHdrs[k].length = length;
+      pad = (length & 3) ? 4 - (length & 3) : 0;
+      pos += length + pad;
+      ++k;
+    }
   }
 
   // construct the table directory
@@ -2660,15 +3318,15 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
   tableDir[2] = 0x00;
   tableDir[3] = 0x00;
   tableDir[4] = 0;		// numTables
-  tableDir[5] = nT42ReqTables;
+  tableDir[5] = nNewTables;
   tableDir[6] = 0;		// searchRange
   tableDir[7] = (char)128;
   tableDir[8] = 0;		// entrySelector
   tableDir[9] = 3;
   tableDir[10] = 0;		// rangeShift
-  tableDir[11] = (char)(16 * nT42ReqTables - 128);
+  tableDir[11] = (char)(16 * nNewTables - 128);
   pos = 12;
-  for (i = 0; i < nT42ReqTables; ++i) {
+  for (i = 0; i < nNewTables; ++i) {
     tableDir[pos   ] = newTableHdrs[i].tag[0];
     tableDir[pos+ 1] = newTableHdrs[i].tag[1];
     tableDir[pos+ 2] = newTableHdrs[i].tag[2];
@@ -2689,8 +3347,8 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
   }
 
   // compute the font checksum and store it in the head table
-  checksum = computeTableChecksum(tableDir, 12 + nT42ReqTables*16);
-  for (i = 0; i < nT42ReqTables; ++i) {
+  checksum = computeTableChecksum(tableDir, 12 + nNewTables*16);
+  for (i = 0; i < nNewTables; ++i) {
     checksum += newTableHdrs[i].checksum;
   }
   checksum = 0xb1b0afba - checksum; // because the TrueType spec says so
@@ -2700,13 +3358,17 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
   headTable[11] = (char) checksum;
 
   // start the sfnts array
-  fprintf(out, "/sfnts [\n");
+  if (name) {
+    fprintf(out, "/%s [\n", name->getCString());
+  } else {
+    fprintf(out, "/sfnts [\n");
+  }
 
   // write the table directory
-  dumpString(tableDir, 12 + nT42ReqTables*16, out);
+  dumpString(tableDir, 12 + nNewTables*16, out);
 
   // write the tables
-  for (i = 0; i < nT42ReqTables; ++i) {
+  for (i = 0; i < nNewTables; ++i) {
     if (i == t42HeadTable) {
       dumpString(headTable, 54, out);
     } else if (i == t42LocaTable) {
@@ -2725,7 +3387,7 @@ void TrueTypeFontFile::cvtSfnts(FILE *out) {
       // already reported during the construction of the table
       // headers
       if ((length = newTableHdrs[i].length) > 0) {
-	dumpString(file + seekTable(t42ReqTables[i]), length, out);
+	dumpString(file + seekTable(t42Tables[i].tag), length, out);
       }
     }
   }
@@ -2745,7 +3407,9 @@ void TrueTypeFontFile::dumpString(char *s, int length, FILE *out) {
     for (j = 0; j < 32 && i+j < length; ++j) {
       fprintf(out, "%02X", s[i+j] & 0xff);
     }
-    if (i+32 < length) {
+    if (i % (65536 - 32) == 65536 - 64) {
+      fprintf(out, ">\n<");
+    } else if (i+32 < length) {
       fprintf(out, "\n");
     }
   }

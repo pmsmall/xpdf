@@ -2,7 +2,7 @@
 //
 // LTKTextIn.cc
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -280,6 +280,20 @@ void LTKTextIn::clearSelection() {
   selectionEnd = cursor;
   if (active)
     xorCursor();
+}
+
+void LTKTextIn::selectAll() {
+  if (active) {
+    xorCursor();
+  }
+  cursor = 0;
+  selectionEnd = text->getLength();
+  if (active) {
+    xorCursor();
+  }
+  if (selectionEnd != cursor) {
+    parent->setSelection(this, text->copy());
+  }
 }
 
 void LTKTextIn::paste(GString *str) {

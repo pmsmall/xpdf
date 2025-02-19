@@ -2,7 +2,7 @@
 //
 // LTKOutputDev.cc
 //
-// Copyright 1998 Derek B. Noonburg
+// Copyright 1998-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -28,12 +28,12 @@
 
 //------------------------------------------------------------------------
 
-LTKOutputDev::LTKOutputDev(LTKWindow *winA, unsigned long paperColor,
-			   GBool installCmap, GBool rgbCubeSize,
-			   GBool incrementalUpdateA):
+LTKOutputDev::LTKOutputDev(LTKWindow *winA, GBool reverseVideoA,
+			   unsigned long paperColor, GBool installCmap,
+			   GBool rgbCubeSize, GBool incrementalUpdateA):
   XOutputDev(winA->getDisplay(),
 	     ((LTKScrollingCanvas *)winA->findWidget("canvas"))->getPixmap(),
-	     0, winA->getColormap(), paperColor,
+	     0, winA->getColormap(), reverseVideoA, paperColor,
 	     installCmap, rgbCubeSize)
 {
   win = winA;

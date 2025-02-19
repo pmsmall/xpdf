@@ -2,7 +2,7 @@
 //
 // pdftops.cc
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -31,7 +31,10 @@ static int firstPage = 1;
 static int lastPage = 0;
 static GBool level1 = gFalse;
 static GBool level1Sep = gFalse;
+static GBool level2 = gFalse;
 static GBool level2Sep = gFalse;
+static GBool level3 = gFalse;
+static GBool level3Sep = gFalse;
 static GBool doEPS = gFalse;
 static GBool doForm = gFalse;
 #if OPI_SUPPORT
@@ -39,6 +42,8 @@ static GBool doOPI = gFalse;
 #endif
 static GBool noEmbedT1Fonts = gFalse;
 static GBool noEmbedTTFonts = gFalse;
+static GBool noEmbedCIDPSFonts = gFalse;
+static GBool noEmbedCIDTTFonts = gFalse;
 static char paperSize[15] = "";
 static int paperWidth = 0;
 static int paperHeight = 0;
@@ -59,8 +64,14 @@ static ArgDesc argDesc[] = {
    "generate Level 1 PostScript"},
   {"-level1sep", argFlag,  &level1Sep,      0,
    "generate Level 1 separable PostScript"},
+  {"-level2", argFlag,     &level2,         0,
+   "generate Level 2 PostScript"},
   {"-level2sep", argFlag,  &level2Sep,      0,
    "generate Level 2 separable PostScript"},
+  {"-level3", argFlag,     &level3,         0,
+   "generate Level 3 PostScript"},
+  {"-level3sep", argFlag,  &level3Sep,      0,
+   "generate Level 3 separable PostScript"},
   {"-eps",    argFlag,     &doEPS,          0,
    "generate Encapsulated PostScript (EPS)"},
   {"-form",   argFlag,     &doForm,         0,
@@ -73,6 +84,10 @@ static ArgDesc argDesc[] = {
    "don't embed Type 1 fonts"},
   {"-noembtt", argFlag,    &noEmbedTTFonts, 0,
    "don't embed TrueType fonts"},
+  {"-noembcidps", argFlag, &noEmbedCIDPSFonts, 0,
+   "don't embed CID PostScript fonts"},
+  {"-noembcidtt", argFlag, &noEmbedCIDTTFonts, 0,
+   "don't embed CID TrueType fonts"},
   {"-paper",  argString,   paperSize,       sizeof(paperSize),
    "paper size (letter, legal, A4, A3)"},
   {"-paperw", argInt,      &paperWidth,     0,
@@ -123,28 +138,40 @@ int main(int argc, char *argv[]) {
     }
     exit(1);
   }
-  if ((level1 && level1Sep) ||
-      (level1Sep && level2Sep) ||
-      (level1 && level2Sep)) {
-    fprintf(stderr, "Error: use only one of -level1, -level1sep, and -level2sep.\n");
+  if ((level1 ? 1 : 0) +
+      (level1Sep ? 1 : 0) +
+      (level2 ? 1 : 0) +
+      (level2Sep ? 1 : 0) +
+      (level3 ? 1 : 0) +
+      (level3Sep ? 1 : 0) > 1) {
+    fprintf(stderr, "Error: use only one of the 'level' options.\n");
     exit(1);
   }
   if (doEPS && doForm) {
     fprintf(stderr, "Error: use only one of -eps and -form\n");
     exit(1);
   }
-  if (doForm && (level1 || level1Sep)) {
+  if (level1) {
+    level = psLevel1;
+  } else if (level1Sep) {
+    level = psLevel1Sep;
+  } else if (level2Sep) {
+    level = psLevel2Sep;
+  } else if (level3) {
+    level = psLevel3;
+  } else if (level3Sep) {
+    level = psLevel3Sep;
+  } else {
+    level = psLevel2;
+  }
+  if (doForm && level < psLevel2) {
     fprintf(stderr, "Error: forms are only available with Level 2 output.\n");
     exit(1);
   }
-  fileName = new GString(argv[1]);
-  level = level1 ? psLevel1
-                 : level1Sep ? psLevel1Sep
-                             : level2Sep ? psLevel2Sep
-                                         : psLevel2;
   mode = doEPS ? psModeEPS
                : doForm ? psModeForm
                         : psModePS;
+  fileName = new GString(argv[1]);
 
   // read config file
   globalParams = new GlobalParams(cfgFileName);
@@ -164,7 +191,7 @@ int main(int argc, char *argv[]) {
   if (duplex) {
     globalParams->setPSDuplex(duplex);
   }
-  if (level1 || level1Sep || level2Sep) {
+  if (level1 || level1Sep || level2 || level2Sep || level3 || level3Sep) {
     globalParams->setPSLevel(level);
   }
   if (noEmbedT1Fonts) {
@@ -172,6 +199,12 @@ int main(int argc, char *argv[]) {
   }
   if (noEmbedTTFonts) {
     globalParams->setPSEmbedTrueType(!noEmbedTTFonts);
+  }
+  if (noEmbedCIDPSFonts) {
+    globalParams->setPSEmbedCIDPostScript(!noEmbedCIDPSFonts);
+  }
+  if (noEmbedCIDTTFonts) {
+    globalParams->setPSEmbedCIDTrueType(!noEmbedCIDTTFonts);
   }
 #if OPI_SUPPORT
   if (doOPI) {

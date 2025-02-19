@@ -2,7 +2,7 @@
 //
 // LTKMenuButton.h
 //
-// Copyright 1999 Derek B. Noonburg
+// Copyright 1999-2002 Glyph & Cog, LLC
 //
 //========================================================================
 

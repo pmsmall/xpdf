@@ -2,7 +2,7 @@
 //
 // LTKOutputDev.h
 //
-// Copyright 1998 Derek B. Noonburg
+// Copyright 1998-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -25,9 +25,9 @@ class LTKWindow;
 class LTKOutputDev: public XOutputDev {
 public:
 
-  LTKOutputDev(LTKWindow *winA, unsigned long paperColor,
-	       GBool installCmap, GBool rgbCubeSize,
-	       GBool incrementalUpdateA);
+  LTKOutputDev(LTKWindow *winA, GBool reverseVideoA,
+	       unsigned long paperColor, GBool installCmap,
+	       GBool rgbCubeSize, GBool incrementalUpdateA);
 
   ~LTKOutputDev();
 

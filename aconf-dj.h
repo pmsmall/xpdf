@@ -1,7 +1,7 @@
 /*
  * aconf-dj.h
  *
- * Copyright 2002 Derek B. Noonburg
+ * Copyright 2002 Glyph & Cog, LLC
  */
 
 #ifndef ACONF_H
@@ -51,6 +51,7 @@
 #define HAVE_POPEN 1
 #undef HAVE_MKSTEMP
 #undef SELECT_TAKES_INT
+#undef HAVE_FSEEK64
 
 /*
  * This is defined if using libXpm.

@@ -2,7 +2,7 @@
 1 xpdf
 
        xpdf  -  Portable  Document Format (PDF) file viewer for X
-       (version 1.00)
+       (version 1.01)
 
        xpdf [options] [PDF-file [page | +dest]]
 
@@ -63,33 +63,41 @@
               and    on    TrueColor   visuals.    [X   resource:
               xpdf.rgbCubeSize]
 
+       -rv    Set reverse video mode.  This reverses  the  colors
+              of  everything  except  images.   It may not always
+              produce great results for PDF files which do  weird
+              things  with  color.   This  also  causes the paper
+              color  to   default   to   black.    [X   resource:
+              xpdf.reverseVideo]
+
        -papercolor color
-              Set the "paper color", i.e., the background of  the
+              Set  the "paper color", i.e., the background of the
               page display.  This will not work too well with PDF
-              files that do things like filling in  white  behind
+              files  that  do things like filling in white behind
               the text.  [X resource: xpdf.paperColor]
 
        -z zoom
-              Set  the  initial  zoom factor.  A number (-5 .. 5)
+              Set the initial zoom factor.  A number  (-5  ..  5)
               specifies a zoom factor, where 0 means 72 dpi.  You
-              may  also  specify  'page',  to fit the page to the
-              window size, or 'width', to fit the page  width  to
-              the window width.  [X resource: xpdf.initialZoom]
+              may also specify 'page', to fit  the  page  to  the
+              window  size,  or 'width', to fit the page width to
+              the window width.  [config file: initialZoom]
 
        -t1lib font-type
-              Set  the type of font rendering for t1lib (the Type
-              1 rasterizer) to use.  Options  are  'none'  (don't
-              use  t1lib  at  all), 'plain' (use non-anti-aliased
-              fonts), 'low' or 'high'  (use  low-level  or  high-
+              Set the type of font rendering for t1lib (the  Type
+              1  rasterizer)  to  use.  Options are 'none' (don't
+              use t1lib at all),  'plain'  (use  non-anti-aliased
+              fonts),  'low'  or  'high'  (use low-level or high-
               level anti-aliased fonts).  [config file: t1libCon-
               trol]
 
        -freetype font-type
-              Set the type of font rendering  for  FreeType  (the
-              TrueType  rasterizer)  to  use.  Options are 'none'
+              Set  the  type  of font rendering for FreeType (the
+              TrueType rasterizer) to use.   Options  are  'none'
               (don't use FreeType at all), 'plain' (use non-anti-
-              aliased  fonts),  or 'aa' (use anti-aliased fonts).
-              [config file: freetypeControl]
+              aliased fonts), 'low' or 'high'  (use  anti-aliased
+              fonts;  these  two  are  identical).  [config file:
+              freetypeControl]
 
        -ps PS-file
               Set the default file name  for  PostScript  output.
@@ -137,6 +145,7 @@
        -fullscreen
               Open xpdf in a full-screen mode, useful for presen-
               tations.  You may also want to specify '-bg  black'
+
               (or similar) with this.  (There is currently no way
               to switch between window and full-screen  modes  on
               the fly.)
@@ -310,6 +319,8 @@
 
        arrows Scroll the current page.
 
+       g      Activate the page number text field.
+
        0      Set the zoom factor to zero (72 dpi).
 
        +      Zoom in (increment the zoom factor by 1).
@@ -380,14 +391,10 @@
        The  -quit option tells the server to close its window and
        exit.
 
-2 BUGS
-
-       No support for Type 3 fonts.
-
 2 AUTHOR
 
        The   xpdf   software   and  documentation  are  copyright
-       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2002 Glyph & Cog, LLC.
 
 2 SEE_ALSO
 

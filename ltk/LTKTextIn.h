@@ -2,7 +2,7 @@
 //
 // LTKTextIn.h
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -40,6 +40,7 @@ public:
 
   GString *getText() { return text; }
   void setText(char *s);
+  void selectAll();
 
   //---------- layout ----------
 

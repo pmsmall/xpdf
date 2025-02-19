@@ -1,6 +1,6 @@
 set CC=gcc
 set CFLAGS=-g -O2 -I.. -I..\goo
-set CXX=gcc
+set CXX=gpp
 set CXXFLAGS=%CFLAGS%
 set LIBPROG=ar
 
@@ -19,6 +19,7 @@ del libGoo.a
 
 cd ..\xpdf
 del *.o
+%CXX% %CXXFLAGS% -c Annot.cc
 %CXX% %CXXFLAGS% -c Array.cc
 %CXX% %CXXFLAGS% -c BuiltinFont.cc
 %CXX% %CXXFLAGS% -c BuiltinFontTables.cc
@@ -30,7 +31,6 @@ del *.o
 %CXX% %CXXFLAGS% -c Error.cc
 %CXX% %CXXFLAGS% -c FontEncodingTables.cc
 %CXX% %CXXFLAGS% -c FontFile.cc
-%CXX% %CXXFLAGS% -c FormWidget.cc
 %CXX% %CXXFLAGS% -c Function.cc
 %CXX% %CXXFLAGS% -c Gfx.cc
 %CXX% %CXXFLAGS% -c GfxFont.cc
@@ -44,6 +44,7 @@ del *.o
 %CXX% %CXXFLAGS% -c OutputDev.cc
 %CXX% %CXXFLAGS% -c PDFDoc.cc
 %CXX% %CXXFLAGS% -c PSOutputDev.cc
+%CXX% %CXXFLAGS% -c PSTokenizer.cc
 %CXX% %CXXFLAGS% -c Page.cc
 %CXX% %CXXFLAGS% -c Parser.cc
 %CXX% %CXXFLAGS% -c Stream.cc

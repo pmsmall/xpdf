@@ -2,7 +2,7 @@
 //
 // ImageOutputDev.h
 //
-// Copyright 1998 Derek B. Noonburg
+// Copyright 1998-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -37,6 +37,13 @@ public:
 
   // Check if file was successfully created.
   virtual GBool isOk() { return ok; }
+
+  // Does this device use beginType3Char/endType3Char?  Otherwise,
+  // text in Type 3 fonts will be drawn with drawChar/drawString.
+  virtual GBool interpretType3Chars() { return gFalse; }
+
+  // Does this device need non-text content?
+  virtual GBool needNonText() { return gFalse; }
 
   //---- get info about output device
 

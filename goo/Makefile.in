@@ -2,7 +2,7 @@
 #
 # Goo library Makefile
 #
-# Copyright 1996 Derek B. Noonburg
+# Copyright 1996-2002 Glyph & Cog, LLC
 #
 #========================================================================
 
@@ -63,4 +63,4 @@ depend:
 	$(CXX) $(CXXFLAGS) -MM $(CXX_SRC) >Makefile.dep
 	$(CC) $(CFLAGS) -MM $(C_SRC) >>Makefile.dep
 
--include Makefile.dep
+include Makefile.dep

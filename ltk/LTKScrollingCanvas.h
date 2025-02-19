@@ -2,7 +2,7 @@
 //
 // LTKScrollingCanvas.h
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -40,6 +40,7 @@ public:
   int getRealHeight() { return realHeight; }
   int getMaxX() { return realWidth >= width ? realWidth - width : 0; }
   int getMaxY() { return realHeight >= height ? realHeight - height : 0; }
+  void setScrollPos(int xA, int yA);
   void scroll(int xA, int yA);
   void redrawRect(int x1, int y1, int x2, int y2);
 

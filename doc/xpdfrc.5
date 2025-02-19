@@ -1,7 +1,7 @@
-.\" Copyright 2002 Derek B. Noonburg
-.TH xpdfrc 5 "01 Feb 2002"
+.\" Copyright 2002 Glyph & Cog, LLC
+.TH xpdfrc 5 "20 May 2002"
 .SH NAME
-xpdfrc \- configuration file for Xpdf tools (version 1.00)
+xpdfrc \- configuration file for Xpdf tools (version 1.01)
 .SH DESCRIPTION
 All of the Xpdf tools read a single configuration file.  If you have a
 .I .xpdfrc
@@ -19,6 +19,15 @@ ignored.
 .PP
 The following sections list all of the configuration options, sorted
 into functional groups.  There is an examples section at the end.
+.SH INCLUDE FILES
+.TP
+.BI include " config\-file"
+Includes the specified config file.  The effect of this is equivalent
+to inserting the contents of
+.I config\-file
+directly into the parent config file in place of the
+.I include
+command.  Config files can be nested arbitrarily deep.
 .SH CHARACTER MAPPING
 .TP
 .BI nameToUnicode " map\-file"
@@ -92,8 +101,9 @@ file is allowed per encoding; the last specified file is used.  The
 .IR ASCII7 ,
 .IR Symbol ,
 .IR ZapfDingbats ,
+.IR UTF-8 ,
 and
-.I UTF-8
+.I UCS-2
 encodings are predefined.
 .TP
 .BI cMapDir " registry\-ordering dir"
@@ -144,12 +154,24 @@ to a TrueType font for display.  The TrueType font file,
 .IR TT\-file ,
 should be a standard .ttf file.
 .TP
+.BI displayNamedCIDFontX " PDF\-font\-name XLFD encoding\-name"
+Maps a PDF CID (16-bit) font,
+.IR PDF\-font\-name ,
+to the X font,
+.IR XLFD ,
+for display.  The encoding given by
+.I encoding\-name
+must be defined with the unicodeMap command.  There are no default
+display CID font mappings.
+.TP
 .BI displayCIDFontX " registry\-ordering XLFD encoding\-name"
 Maps the
 .I registry\-ordering
 character collection to the X font,
 .IR XLFD ,
-for display.  The encoding given by
+for display.  This mapping is used if the font name doesn't match any
+of the fonts declared with displayNamedCIDFontX commands.  The
+encoding given by
 .I encoding\-name
 must be defined with the unicodeMap command.  There are no default
 display CID font mappings.
@@ -182,7 +204,7 @@ If set to "yes", the generated PostScript will set the "Duplex"
 pagedevice entry.  This tells duplex-capable printers to enable
 duplexing.  This defaults to "no".
 .TP
-.BR psLevel " level1 | level1sep | level2 | level2sep"
+.BR psLevel " level1 | level1sep | level2 | level2sep | level3 | level3Sep"
 Sets the PostScript level to generate.  This defaults to "level2".
 .TP
 .BI psFont " PDF\-font\-name PS\-font\-name"
@@ -198,6 +220,34 @@ and
 are the same.  By default, only the Base-14 fonts are assumed to be
 resident.
 .TP
+.BI psNamedFont16 " PDF\-font\-name wMode PS\-font\-name encoding"
+When the 16-bit font
+.I PDF\-font\-name
+is used in a PDF file with the
+.I wMode
+writing mode and is not embedded, the
+.I PS\-font\-name
+font is substituted for it.  The writing mode must be either \'H' for
+horizontal or \'V' for vertical.  The
+.I PS\-font\-name
+font is assumed to be resident in the printer and to use the specified
+encoding (which must have been defined with the unicodeMap command).
+.TP
+.BI psFont16 " registry\-ordering wMode PS\-font\-name encoding"
+When a 16-bit font using the
+.I registry\-ordering
+character collection and 
+.I wMode
+writing mode is not embedded and does not match any of the fonts
+declared in psNamedFont16 commands, the
+.I PS\-font\-name
+font is substituted for it.  The writing mode must be either \'H' for
+horizontal or \'V' for vertical.  The
+.I PS\-font\-name
+font is assumed to be resident in the printer and to use the specified
+writing mode and encoding (which must have been defined with the
+unicodeMap command).
+.TP
 .BR psEmbedType1Fonts " yes | no"
 If set to "no", prevents embedding of Type 1 fonts in generated
 PostScript.  This defaults to "yes".
@@ -206,10 +256,24 @@ PostScript.  This defaults to "yes".
 If set to "no", prevents embedding of TrueType fonts in generated
 PostScript.  This defaults to "yes".
 .TP
+.BR psEmbedCIDTrueTypeFonts " yes | no"
+If set to "no", prevents embedding of CID TrueType fonts in generated
+PostScript.  For Level 3 PostScript, this generates a CID font, for
+lower levels it generates a non-CID composite font.
+.TP
+.BR psEmbedCIDPostScriptFonts " yes | no"
+If set to "no", prevents embedding of CID PostScript fonts in
+generated PostScript.  For Level 3 PostScript, this generates a CID
+font, for lower levels it generates a non-CID composite font.
+.TP
 .BR psOPI " yes | no"
 If set to "yes", generates PostScript OPI comments for all images and
 forms which have OPI information.  This option is only available if
 the Xpdf tools were compiled with OPI support.  This defaults to "no".
+.TP
+.BR psASCIIHex " yes | no"
+If set to "yes", the ASCIIHexEncode filter will be used instead of
+ASCII85Encode for binary data.  This defaults to "no".
 .TP
 .BI psFile " file\-or\-command"
 Sets the default PostScript file or print command for xpdf.  Commands
@@ -243,6 +307,12 @@ are:
 The default value is based on the OS where xpdf and pdftotext were
 built.
 .SH MISCELLANEOUS SETTINGS
+.TP
+.BR initialZoom " -5..5 | page | width"
+Sets the initial zoom factor.  A number (-5 .. 5) specifies a zoom
+factor, where 0 means 72 dpi.  You may also specify \'page', to fit
+the page to the window size, or \'width', to fit the page width to the
+window width.
 .TP
 .BR t1libControl " none | plain | low | high"
 Sets the type of font rendering for t1lib (the Type 1 rasterizer) to
@@ -343,8 +413,8 @@ Depending on build options, it may be placed elsewhere.
 This is the user's configuration file.  If it exists, it will be read
 in place of the system-wide file.
 .SH AUTHOR
-The Xpdf software and documentation are copyright 1996-2002 Derek
-B. Noonburg (derekn@foolabs.com).
+The Xpdf software and documentation are copyright 1996-2002 Glyph &
+Cog, LLC.
 .SH "SEE ALSO"
 .BR xpdf (1),
 .BR pdftops (1),

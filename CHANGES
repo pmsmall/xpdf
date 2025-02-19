@@ -901,3 +901,120 @@ Generate PostScript DSC resource comments for PS (not just EPS)
   files.
 The save and restore (q/Q) operators shouldn't save/restore the path.
 Performance optimization: disable pattern drawing in TextOutputDev.
+
+1.00a (2002-feb-25)
+-------------------
+Added an optimized special case for one-bit images in XOutputDev.
+Implemented CID TrueType font embedding; added a psEmbedCIDTrueType
+  option.
+The initialZoom X resource was broken.
+The reverse MacRoman encoding should return 32 for "space" (not 202,
+  which is an alternate encoding).
+Tweaks to the FreeType 2 support: only disable hinting if the bytecode
+  interpreter is disabled (i.e., disable autohinting but not bytecode
+  hinting); add some padding to the glyph cache for CJK fonts.
+Added level3 and level3Sep options for the psLevel setting and
+  corresponding -level3 and -level3Sep options to pdftops.
+Added a -level2 option to pdftops for consistency.
+Avoid a divide by zero in pdftotext.  [Thanks to William Bader.]
+Added a Greek language support package.  [Thanks to Alexandros
+  Diamantidis and Maria Adaloglou.]
+Don't bother trying to extract a "builtin" encoding from a TrueType
+  font.
+Accept either a page number or a page reference in a link
+  destination.
+Update the fontFixedWidth flag in GfxFont after reading the char
+  widths (used by the Acorn RiscOS port).
+Removed yet another (illegal but not caught by gcc) class specified
+  from a .h file.
+Avoid using snprintf - it's not available everywhere.
+Improved the CMYK->RGB transform.
+Use mkstemps where available.
+
+1.01 (2002-may-20)
+------------------
+Implemented Type 3 fonts.
+Implemented PostScript CID font embedding; added a
+  psEmbedCIDPostScriptFonts option.
+Implemented PostScript 16-bit font substitution; added psNamedFont16
+  and psFont16 options.
+Moved the initialZoom setting from X resources to the xpdfrc file.
+Implemented the radial shading type in the sh (shaded fill) operator.
+  [Thanks to Mike Sweet.]
+Added an 'include' command to the xpdfrc format.
+Added the displayNamedCIDFontX option so different fonts can be used
+  within one character collection.
+Added a simple reverse video mode (-rv switch, xpdf.reverseVideo
+  resource).
+Implemented stroked text in XOutputDev (with t1lib and FreeType2).
+  [Thanks to Leonard Rosenthol.]
+Implemented stroked text in PSOutputDev.
+Added a built-in Unicode map for UCS-2.
+New key binding in xpdf: 'g' activates the page number text field.
+PSOutputDev will now embed external TrueType fonts in addition to
+  external Type 1 fonts.
+The psEmbedType1Fonts and psEmbedTrueTypeFonts options were missing
+  the "Fonts" suffix.
+Documentation in xpdf.1 for -freetype option was wrong.
+Added the Big5ascii Unicode map to the Chinese-traditional support
+  package (maps 7-bit ASCII straight through).  [Thanks to Lawrence
+  Lai.]
+Modified the EUC-CN and EUC-JP encodings to pass 7-bit ASCII straight
+  through.  [Thanks to Lawrence Lai.]
+Avoid a divide by zero in XOutputDev.  [Thanks to Simon Burge.]
+Remove old code in openTempFile that removed an extension from the
+  name returned by tmpnam.
+Tweak the scrolling behavior when switching pages.  [Thanks to Case
+  Jones.]
+In the code that guesses character names (for font subsets), also
+  handle names of the form 'ABnnn'.  [Thanks to Colin Granville.]
+Fix the transform code for annotations.
+Improved the CMap file parser to handle more general PostScript
+  lexical conventions.
+Added '-enc' option to pdfinfo.
+Added the small caps and oldstyle numbers from Adobe's Unicode
+  corporate use area to the Latin1 and ASCII7 Unicode maps.
+The code in TextOutputDev that guesses Type 3 font size could generate
+  a zero size, which resulted in div-by-zero errors.
+Various tools (including Adobe's) occasionally embed Type 1 fonts but
+  label them Type 1C - so check for a '%!' at the start.
+Some tools embed Type 1C fonts with an extra whitespace char at the
+  beginning - just skip over it.
+Fixed a typo in the Simplified Chinese add-to-xpdfrc file.
+Updates to dj_make.bat and the djgpp build instructions.
+Added a Turkish language support package.
+Updated VMS build scripts.  [Thanks to Martin Zinser.]
+Modify the incremental display update code to redraw less often if
+  most of the commands are vector graphics, as opposed to text and
+  images.
+Tweak the Type 1 font bbox code to look at the bboxes in both the PDF
+  font object and the embedded font file.
+Fixed the ETenms-B5-H CMap file (for traditional Chinese) to map the
+  Latin characters to their proportional versions.
+Added an optional displayCIDFontX entry for one of the Arphic TrueType
+  fonts in the traditional Chinese 'add-to-xpdfrc' file.
+Remove leading '-' on include statements in Makefiles.
+Added psASCIIHex parameter.
+Added the GBK Unicode map to the simplified Chinese language pack.
+Pdftotext now opens the text file in binary mode to avoid Microsoft's
+  annoying automatic end-of-line translation stuff.
+Added an executeCommand function in goo/gfile.cc.  [Thanks to Mikhail
+  Kruk.]
+The %ALDImagePosition OPI comment was wrong if the page was scaled to
+  a different paper size.
+The OPI code was saving the default transform matrix before calling
+  setpagedevice, which can change the matrix.
+Fixed a crash when an inline image dictionary contains garbage.
+Upgraded to autoconf 2.53.
+Use unsigned int file offsets, to allow access to PDF files in the 2-4
+  GB size range; use fseek64/ftell64 if available.
+Fixed two floating point exception cases that came up with broken PDF
+  files.
+Avoid a crash when printing an error message regarding an unnamed
+  font.
+Default link border width should be 1.  [Thanks to Michael Pfeiffer.]
+Minor tweak to build with FreeType 2.1.0.
+Handle "weird" characters in PostScript font names.
+PSOutputDev now handles PostScript XObjects.
+Added several more page attributes for the pdftex project.
+Transferred the copyright to Glyph & Cog, LLC.

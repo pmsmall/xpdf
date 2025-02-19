@@ -1,8 +1,17 @@
 ! Generated automatically by mantohlp
 1 xpdfrc
-2 HARACTER_MAPPIN
+2 NCLUDE_FILE
 
-       xpdfrc - configuration file for Xpdf tools (version 1.00)
+       xpdfrc - configuration file for Xpdf tools (version 1.01)
+
+       include config-file
+              Includes  the specified config file.  The effect of
+              this is equivalent to  inserting  the  contents  of
+              config-file directly into the parent config file in
+              place of the include command.  Config files can  be
+              nested arbitrarily deep.
+
+2 HARACTER_MAPPIN
 
        nameToUnicode map-file
               Specifies  a  file  with the mapping from character
@@ -62,18 +71,19 @@
               must be given in increasing  Unicode  order.   Only
               one  file  is allowed per encoding; the last speci-
               fied file is used.   The  Latin1,  ASCII7,  Symbol,
-              ZapfDingbats, and UTF-8 encodings are predefined.
+              ZapfDingbats, UTF-8, and UCS-2 encodings are prede-
+              fined.
 
        cMapDir registry-ordering dir
-              Specifies  a  search  directory, dir, for CMaps for
-              the registry-ordering character collection.   There
-              can  be  multiple directories for a particular col-
+              Specifies a search directory, dir,  for  CMaps  for
+              the  registry-ordering character collection.  There
+              can be multiple directories for a  particular  col-
               lection.  There are no default CMap directories.
 
        toUnicodeDir dir
-              Specifies a search directory,  dir,  for  ToUnicode
-              CMaps.   There  can  be multiple ToUnicode directo-
-              ries.  There are no default ToUnicode  directories.
+              Specifies  a  search  directory, dir, for ToUnicode
+              CMaps.  There can be  multiple  ToUnicode  directo-
+              ries.   There are no default ToUnicode directories.
 
 2 ISPLAY_FONT
 
@@ -98,12 +108,21 @@
               for display.   The  TrueType  font  file,  TT-file,
               should be a standard .ttf file.
 
+       displayNamedCIDFontX PDF-font-name XLFD encoding-name
+              Maps a PDF CID (16-bit) font, PDF-font-name, to the
+              X font, XLFD, for display.  The encoding  given  by
+              encoding-name  must  be defined with the unicodeMap
+              command.  There are no  default  display  CID  font
+              mappings.
+
        displayCIDFontX registry-ordering XLFD encoding-name
               Maps  the registry-ordering character collection to
-              the X font, XLFD, for display.  The encoding  given
-              by  encoding-name  must  be  defined  with the uni-
-              codeMap command.  There are no default display  CID
-              font mappings.
+              the X font, XLFD, for  display.   This  mapping  is
+              used  if  the  font  name  doesn't match any of the
+              fonts declared with displayNamedCIDFontX  commands.
+              The encoding given by encoding-name must be defined
+              with the unicodeMap command.  There are no  default
+              display CID font mappings.
 
        fontDir dir
               Specifies  a  search  directory  for  external font
@@ -136,7 +155,8 @@
               capable  printers  to   enable   duplexing.    This
               defaults to "no".
 
-       psLevel level1 | level1sep | level2 | level2sep
+       psLevel  level1  |  level1sep  |  level2  |  level2sep |
+              level3 | level3Sep
               Sets   the  PostScript  level  to  generate.   This
               defaults to "level2".
 
@@ -148,6 +168,28 @@
               PS-font-name are the same.  By  default,  only  the
               Base-14 fonts are assumed to be resident.
 
+       psNamedFont16 PDF-font-name wMode PS-font-name encoding
+              When the 16-bit font PDF-font-name is used in a PDF
+              file with the wMode writing mode and is not  embed-
+              ded,  the  PS-font-name font is substituted for it.
+              The writing mode must be either 'H' for  horizontal
+              or  'V'  for  vertical.   The  PS-font-name font is
+              assumed to be resident in the printer  and  to  use
+              the   specified  encoding  (which  must  have  been
+              defined with the unicodeMap command).
+
+       psFont16 registry-ordering wMode PS-font-name encoding
+              When a  16-bit  font  using  the  registry-ordering
+              character  collection and wMode writing mode is not
+              embedded and  does  not  match  any  of  the  fonts
+              declared    in    psNamedFont16    commands,    the
+              PS-font-name font is substituted for it.  The writ-
+              ing  mode  must be either 'H' for horizontal or 'V'
+              for vertical.  The PS-font-name font is assumed  to
+              be resident in the printer and to use the specified
+              writing mode and encoding  (which  must  have  been
+              defined with the unicodeMap command).
+
        psEmbedType1Fonts yes | no
               If  set to "no", prevents embedding of Type 1 fonts
               in generated PostScript.  This defaults to "yes".
@@ -157,24 +199,41 @@
               fonts  in  generated  PostScript.  This defaults to
               "yes".
 
+       psEmbedCIDTrueTypeFonts yes | no
+              If set to "no", prevents embedding of CID  TrueType
+              fonts   in   generated  PostScript.   For  Level  3
+              PostScript, this generates a CID  font,  for  lower
+              levels it generates a non-CID composite font.
+
+       psEmbedCIDPostScriptFonts yes | no
+              If   set   to   "no",  prevents  embedding  of  CID
+              PostScript  fonts  in  generated  PostScript.   For
+              Level  3 PostScript, this generates a CID font, for
+              lower levels it generates a non-CID composite font.
+
        psOPI yes | no
-              If set to "yes", generates PostScript OPI  comments
-              for  all  images  and forms which have OPI informa-
-              tion.  This option is only available  if  the  Xpdf
-              tools   were   compiled  with  OPI  support.   This
+              If  set to "yes", generates PostScript OPI comments
+              for all images and forms which  have  OPI  informa-
+              tion.   This  option  is only available if the Xpdf
+              tools  were  compiled  with  OPI   support.    This
               defaults to "no".
 
+       psASCIIHex yes | no
+              If  set to "yes", the ASCIIHexEncode filter will be
+              used instead  of  ASCII85Encode  for  binary  data.
+              This defaults to "no".
+
        psFile file-or-command
-              Sets the default PostScript file or  print  command
-              for  xpdf.   Commands  start  with a '|' character;
-              anything else is a file.  If the file name or  com-
-              mand  contains  spaces  it  must  be  quoted.  This
-              defaults to unset, which tells xpdf to  generate  a
-              name   of   the  form  <file>.ps  for  a  PDF  file
+              Sets  the  default PostScript file or print command
+              for xpdf.  Commands start  with  a  '|'  character;
+              anything  else is a file.  If the file name or com-
+              mand contains  spaces  it  must  be  quoted.   This
+              defaults  to  unset, which tells xpdf to generate a
+              name  of  the  form  <file>.ps  for  a   PDF   file
               <file>.pdf.
 
        fontDir dir
-              See the description above,  in  the  DISPLAY  FONTS
+              See  the  description  above,  in the DISPLAY FONTS
               section.
 
 2 EXT_CONTRO
@@ -199,6 +258,13 @@
               the OS where xpdf and pdftotext were built.
 
 2 ISCELLANEOUS_SETTING
+
+       initialZoom -5..5 | page | width
+              Sets  the  initial zoom factor.  A number (-5 .. 5)
+              specifies a zoom factor, where 0 means 72 dpi.  You
+              may  also  specify  'page',  to fit the page to the
+              window size, or 'width', to fit the page  width  to
+              the window width.
 
        t1libControl none | plain | low | high
               Sets the type of font rendering for t1lib (the Type
@@ -312,7 +378,7 @@
 2 AUTHOR
 
        The   Xpdf   software   and  documentation  are  copyright
-       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2002 Glyph & Cog, LLC.
 
 2 SEE_ALSO
 

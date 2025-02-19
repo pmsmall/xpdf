@@ -2,6 +2,8 @@
 //
 // T1Font.cc
 //
+// Copyright 2001-2002 Glyph & Cog, LLC
+//
 //========================================================================
 
 #ifdef __GNUC__
@@ -16,6 +18,7 @@
 #include <string.h>
 #include <X11/Xlib.h>
 #include "gmem.h"
+#include "GfxState.h"
 #include "T1Font.h"
 
 //------------------------------------------------------------------------
@@ -131,26 +134,30 @@ T1Font::T1Font(T1FontFile *fontFileA, double *m) {
 
   // transform the four corners of the font bounding box -- the min
   // and max values form the bounding box of the transformed font
-  if (fontFile->bbox[0] != 0 || fontFile->bbox[1] != 0 ||
-      fontFile->bbox[2] != 0 || fontFile->bbox[3] != 0) {
-    bbx0 = fontFile->bbox[0];
-    bby0 = fontFile->bbox[1];
-    bbx1 = fontFile->bbox[2];
-    bby1 = fontFile->bbox[3];
-  } else {
-    bbox = T1_GetFontBBox(id);
-    if (bbox.llx != 0 || bbox.lly != 0 &&
-	bbox.urx != 0 || bbox.ury != 0) {
-      bbx0 = 0.001 * bbox.llx;
-      bby0 = 0.001 * bbox.lly;
-      bbx1 = 0.001 * bbox.urx;
-      bby1 = 0.001 * bbox.ury;
-    } else {
-      // broken font, so we fake it (with values large enough that most
-      // glyphs should fit)
-      bbx0 = bby0 = -0.5;
-      bbx1 = bby1 = 1.5;
-    }
+  bbx0 = fontFile->bbox[0];
+  bby0 = fontFile->bbox[1];
+  bbx1 = fontFile->bbox[2];
+  bby1 = fontFile->bbox[3];
+  // some fonts in PDF files have bboxes which are just plain wrong,
+  // so we check the font file's bbox too
+  bbox = T1_GetFontBBox(id);
+  if (0.001 * bbox.llx < bbx0) {
+    bbx0 = 0.001 * bbox.llx;
+  }
+  if (0.001 * bbox.lly < bby0) {
+    bby0 = 0.001 * bbox.lly;
+  }
+  if (0.001 * bbox.urx > bbx1) {
+    bbx1 = 0.001 * bbox.urx;
+  }
+  if (0.001 * bbox.ury > bby1) {
+    bby1 = 0.001 * bbox.ury;
+  }
+  // some fonts are completely broken, so we fake it (with values
+  // large enough that most glyphs should fit)
+  if (bbx0 == 0 && bby0 == 0 && bbx1 == 0 && bby1 == 0) {
+    bbx0 = bby0 = -0.5;
+    bbx1 = bby1 = 1.5;
   }
   x = (int)(m[0] * bbx0 + m[2] * bby0);
   xMin = xMax = x;
@@ -475,6 +482,43 @@ Guchar *T1Font::getGlyphPixmap(CharCode c, int *x, int *y, int *w, int *h) {
     }
   }
   return ret;
+}
+
+GBool T1Font::getCharPath(CharCode c, Unicode u, GfxState *state) {
+  T1_OUTLINE *outline;
+  T1_PATHSEGMENT *seg;
+  T1_BEZIERSEGMENT *bez;
+  double x, y, x1, y1;
+
+  outline = T1_GetCharOutline(id, c, size, NULL);
+  x = 0;
+  y = 0;
+  for (seg = outline; seg; seg = seg->link) {
+    switch (seg->type) {
+    case T1_PATHTYPE_MOVE:
+      x += seg->dest.x / 65536.0;
+      y += seg->dest.y / 65536.0;
+      state->moveTo(x, y);
+      break;
+    case T1_PATHTYPE_LINE:
+      x += seg->dest.x / 65536.0;
+      y += seg->dest.y / 65536.0;
+      state->lineTo(x, y);
+      break;
+    case T1_PATHTYPE_BEZIER:
+      bez = (T1_BEZIERSEGMENT *)seg;
+      x1 = x + bez->dest.x / 65536.0;
+      y1 = y + bez->dest.y / 65536.0;
+      state->curveTo(x + bez->B.x / 65536.0, y + bez->B.y / 65536.0,
+		     x + bez->C.x / 65536.0, y + bez->C.y / 65536.0,
+		     x1, y1);
+      x = x1;
+      y = y1;
+      break;
+    }
+  }
+  T1_FreeOutline(outline);
+  return gTrue;
 }
 
 #endif // HAVE_T1LIB_H

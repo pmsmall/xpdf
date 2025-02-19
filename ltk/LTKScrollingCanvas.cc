@@ -2,7 +2,7 @@
 //
 // LTKScrollingCanvas.cc
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -99,6 +99,24 @@ void LTKScrollingCanvas::resize(int realWidthA, int realHeightA) {
     XFillRectangle(getDisplay(), pixmap, getBgGC(),
 		   0, 0, realWidth, realHeight);
     XClearWindow(getDisplay(), getXWindow());
+  }
+}
+
+void LTKScrollingCanvas::setScrollPos(int xA, int yA) {
+  // compute new position
+  left = xA;
+  if (left + width > realWidth) {
+    left = realWidth - width;
+    if (left < 0) {
+      left = 0;
+    }
+  }
+  top = yA;
+  if (top + height > realHeight) {
+    top = realHeight - height;
+    if (top < 0) {
+      top = 0;
+    }
   }
 }
 

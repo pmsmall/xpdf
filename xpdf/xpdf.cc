@@ -2,7 +2,7 @@
 //
 // xpdf.cc
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -252,24 +252,7 @@ static char *aboutWinText[] = {
 // command line options
 //------------------------------------------------------------------------
 
-static XrmOptionDescRec opts[] = {
-  {"-display",       ".display",         XrmoptionSepArg,  NULL},
-  {"-foreground",    ".foreground",      XrmoptionSepArg,  NULL},
-  {"-fg",            ".foreground",      XrmoptionSepArg,  NULL},
-  {"-background",    ".background",      XrmoptionSepArg,  NULL},
-  {"-bg",            ".background",      XrmoptionSepArg,  NULL},
-  {"-geometry",      ".geometry",        XrmoptionSepArg,  NULL},
-  {"-g",             ".geometry",        XrmoptionSepArg,  NULL},
-  {"-font",          ".font",            XrmoptionSepArg,  NULL},
-  {"-fn",            ".font",            XrmoptionSepArg,  NULL},
-  {"-title",         ".title",           XrmoptionSepArg,  NULL},
-  {"-cmap",          ".installCmap",     XrmoptionNoArg,   (XPointer)"on"},
-  {"-rgb",           ".rgbCubeSize",     XrmoptionSepArg,  NULL},
-  {"-papercolor",    ".paperColor",      XrmoptionSepArg,  NULL},
-  {NULL}
-};
-
-static char zoomStr[16] = "";
+static char initialZoomStr[32] = "";
 static char t1libControlStr[16] = "";
 static char freetypeControlStr[16] = "";
 static char psFileArg[256];
@@ -303,9 +286,11 @@ static ArgDesc argDesc[] = {
    "install a private colormap"},
   {"-rgb",        argIntDummy,    NULL,           0,
    "biggest RGB cube to allocate (default is 5)"},
+  {"-rv",         argFlagDummy,   NULL,           0,
+   "reverse video"},
   {"-papercolor", argStringDummy, NULL,           0,
    "color of paper background"},
-  {"-z",          argString,      zoomStr,        sizeof(zoomStr),
+  {"-z",          argString,      initialZoomStr, sizeof(initialZoomStr),
    "initial zoom level (-5..5, page, width)"},
 #if HAVE_T1LIB_H
   {"-t1lib",      argString,      t1libControlStr, sizeof(t1libControlStr),
@@ -360,6 +345,24 @@ static ArgDesc argDesc[] = {
   {NULL}
 };
 
+static XrmOptionDescRec opts[] = {
+  {"-display",       ".display",         XrmoptionSepArg,  NULL},
+  {"-foreground",    ".foreground",      XrmoptionSepArg,  NULL},
+  {"-fg",            ".foreground",      XrmoptionSepArg,  NULL},
+  {"-background",    ".background",      XrmoptionSepArg,  NULL},
+  {"-bg",            ".background",      XrmoptionSepArg,  NULL},
+  {"-geometry",      ".geometry",        XrmoptionSepArg,  NULL},
+  {"-g",             ".geometry",        XrmoptionSepArg,  NULL},
+  {"-font",          ".font",            XrmoptionSepArg,  NULL},
+  {"-fn",            ".font",            XrmoptionSepArg,  NULL},
+  {"-title",         ".title",           XrmoptionSepArg,  NULL},
+  {"-cmap",          ".installCmap",     XrmoptionNoArg,   (XPointer)"on"},
+  {"-rgb",           ".rgbCubeSize",     XrmoptionSepArg,  NULL},
+  {"-rv",            ".reverseVideo",    XrmoptionNoArg,   (XPointer)"true"},
+  {"-papercolor",    ".paperColor",      XrmoptionSepArg,  NULL},
+  {NULL}
+};
+
 //------------------------------------------------------------------------
 // global variables
 //------------------------------------------------------------------------
@@ -369,13 +372,12 @@ static ArgDesc argDesc[] = {
 #define maxZoom     5
 #define zoomPage  100
 #define zoomWidth 101
+#define defZoom     1
 static int zoomDPI[maxZoom - minZoom + 1] = {
   29, 35, 42, 50, 60,
   72,
   86, 104, 124, 149, 179
 };
-#define defZoom     1
-#define defZoomStr "1"
 
 static PDFDoc *doc;
 
@@ -466,6 +468,8 @@ int main(int argc, char *argv[]) {
   LTKMenu *menu;
   GString *name;
   GString *title;
+  GString *initialZoom;
+  GBool reverseVideo;
   unsigned long paperColor;
   GBool installCmap;
   int rgbCubeSize;
@@ -520,6 +524,9 @@ int main(int argc, char *argv[]) {
     if (!globalParams->setTextEOL(textEOL)) {
       fprintf(stderr, "Bad '-eol' value on command line\n");
     }
+  }
+  if (initialZoomStr[0]) {
+    globalParams->setInitialZoom(initialZoomStr);
   }
   if (t1libControlStr[0]) {
     if (!globalParams->setT1libControl(t1libControlStr)) {
@@ -665,27 +672,30 @@ int main(int argc, char *argv[]) {
     win->setInstallCmap(gTrue);
   }
   rgbCubeSize = app->getIntResource("rgbCubeSize", defaultRGBCube);
-  paperColor = app->getColorResource("paperColor", "white",
-				     WhitePixel(display, app->getScreenNum()),
-				     NULL);
+  reverseVideo = app->getBoolResource("reverseVideo", gFalse);
+  paperColor = app->getColorResource(
+		  "paperColor",
+		  reverseVideo ? (char *)"black" : (char *)"white",
+		  reverseVideo ? BlackPixel(display, app->getScreenNum())
+			       : WhitePixel(display, app->getScreenNum()),
+		  NULL);
   if (fullScreen) {
     zoom = zoomPage;
   } else {
-    if (!zoomStr[0]) {
-      strcpy(zoomStr, defZoomStr);
-    }
-    if (!strcmp(zoomStr, "page")) {
+    initialZoom = globalParams->getInitialZoom();
+    if (!initialZoom->cmp("page")) {
       zoom = zoomPage;
       i = maxZoom - minZoom + 2;
-    } else if (!strcmp(zoomStr, "width")) {
+    } else if (!initialZoom->cmp("width")) {
       zoom = zoomWidth;
       i = maxZoom - minZoom + 3;
     } else {
-      zoom = atoi(zoomStr);
-      if (zoom < minZoom)
+      zoom = atoi(initialZoom->getCString());
+      if (zoom < minZoom) {
 	zoom = minZoom;
-      else if (zoom > maxZoom)
+      } else if (zoom > maxZoom) {
 	zoom = maxZoom;
+      }
       i = zoom - minZoom;
     }
     zoomMenuBtn->setInitialMenuItem(zoomMenu->getItem(i));
@@ -766,8 +776,8 @@ int main(int argc, char *argv[]) {
   }
 
   // create output device
-  out = new LTKOutputDev(win, paperColor, installCmap, rgbCubeSize,
-			 !fullScreen);
+  out = new LTKOutputDev(win, reverseVideo, paperColor,
+			 installCmap, rgbCubeSize, !fullScreen);
   out->startDoc(doc ? doc->getXRef() : (XRef *)NULL);
 
   // display first page
@@ -1155,6 +1165,13 @@ static void keyPressCbk(LTKWindow *win1, KeySym key, Guint modifiers,
       break;
     case 'b':
       backCbk(NULL, 0, gTrue);
+      break;
+    case 'g':
+      if (fullScreen) {
+	break;
+      }
+      pageNumText->selectAll();
+      pageNumText->activate(gTrue);
       break;
     case 'h':			// vi-style left
       if (fullScreen) {
@@ -1765,7 +1782,7 @@ static void gotoNextPage(int inc, GBool top) {
   if (page < doc->getNumPages()) {
     if (top && !fullScreen) {
       vScrollbar->setPos(0, canvas->getHeight());
-      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      canvas->setScrollPos(hScrollbar->getPos(), vScrollbar->getPos());
     }
     if ((pg = page + inc) > doc->getNumPages()) {
       pg = doc->getNumPages();
@@ -1793,7 +1810,7 @@ static void gotoPrevPage(int dec, GBool top, GBool bottom) {
   if (page > 1) {
     if (top && !fullScreen) {
       vScrollbar->setPos(0, canvas->getHeight());
-      canvas->scroll(hScrollbar->getPos(), vScrollbar->getPos());
+      canvas->setScrollPos(hScrollbar->getPos(), vScrollbar->getPos());
     } else if (bottom && !fullScreen) {
       vScrollbar->setPos(canvas->getRealHeight() - canvas->getHeight(),
 			 canvas->getHeight());

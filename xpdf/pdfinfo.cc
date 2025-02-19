@@ -2,7 +2,7 @@
 //
 // pdfinfo.cc
 //
-// Copyright 1998 Derek B. Noonburg
+// Copyright 1998-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -35,6 +35,7 @@ static void printInfoString(Dict *infoDict, char *key, char *text,
 static void printInfoDate(Dict *infoDict, char *key, char *text);
 
 static GBool printMetadata = gFalse;
+static char textEncName[128] = "";
 static char ownerPassword[33] = "";
 static char userPassword[33] = "";
 static char cfgFileName[256] = "";
@@ -44,6 +45,8 @@ static GBool printHelp = gFalse;
 static ArgDesc argDesc[] = {
   {"-meta",   argFlag,     &printMetadata,    0,
    "print the document metadata (XML)"},
+  {"-enc",    argString,   textEncName,    sizeof(textEncName),
+   "output text encoding name"},
   {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
    "owner password (for encrypted files)"},
   {"-upw",    argString,   userPassword,   sizeof(userPassword),
@@ -88,6 +91,9 @@ int main(int argc, char *argv[]) {
 
   // read config file
   globalParams = new GlobalParams(cfgFileName);
+  if (textEncName[0]) {
+    globalParams->setTextEncoding(textEncName);
+  }
 
   // get mapping to output encoding
   if (!(uMap = globalParams->getTextEncoding())) {
@@ -173,8 +179,13 @@ int main(int argc, char *argv[]) {
   f = fopen(fileName->getCString(), "rb");
 #endif
   if (f) {
+#if HAVE_FSEEK64
+    fseek64(f, 0, SEEK_END);
+    printf("File size:    %u bytes\n", (Guint)ftell64(f));
+#else
     fseek(f, 0, SEEK_END);
     printf("File size:    %d bytes\n", (int)ftell(f));
+#endif
     fclose(f);
   }
 

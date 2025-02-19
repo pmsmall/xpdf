@@ -5,11 +5,11 @@
 // Read an LTKbuild file from stdin and write C++ window construction
 // function(s) to stdout.
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
-#define VERSION "1.00"
+#define VERSION "1.01"
 
 #include <aconf.h>
 #include <stdio.h>

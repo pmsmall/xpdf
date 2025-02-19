@@ -4,6 +4,8 @@
 //
 // An X wrapper for the FreeType font rasterizer.
 //
+// Copyright 2001-2002 Glyph & Cog, LLC
+//
 //========================================================================
 
 #ifndef FTFONT_H
@@ -100,11 +102,18 @@ public:
   virtual GBool drawChar(Drawable d, int w, int h, GC gc,
 			 int x, int y, int r, int g, int b,
 			 CharCode c, Unicode u);
+  virtual GBool getCharPath(CharCode c, Unicode u, GfxState *state);
 
 private:
 
   Guchar *getGlyphPixmap(CharCode c, Unicode u,
 			 int *x, int *y, int *w, int *h);
+  static int charPathMoveTo(FT_Vector *pt, void *state);
+  static int charPathLineTo(FT_Vector *pt, void *state);
+  static int charPathConicTo(FT_Vector *ctrl, FT_Vector *pt, void *state);
+  static int charPathCubicTo(FT_Vector *ctrl1, FT_Vector *ctrl2,
+			     FT_Vector *pt, void *state);
+  FT_UInt getGlyphIndex(CharCode c, Unicode u);
 
   FTFontFile *fontFile;
   FT_Size sizeObj;

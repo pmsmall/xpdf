@@ -2,7 +2,7 @@
 //
 // LTKFileReq.cc
 //
-// Copyright 1997 Derek B. Noonburg
+// Copyright 1997-2002 Glyph & Cog, LLC
 //
 //========================================================================
 

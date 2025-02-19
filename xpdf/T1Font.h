@@ -4,6 +4,8 @@
 //
 // An X wrapper for the t1lib Type 1 font rasterizer.
 //
+// Copyright 2001-2002 Glyph & Cog, LLC
+//
 //========================================================================
 
 #ifndef T1FONT_H
@@ -18,6 +20,8 @@
 #include <X11/Xlib.h>
 #include <t1lib.h>
 #include "SFont.h"
+
+class GfxState;
 
 //------------------------------------------------------------------------
 
@@ -78,6 +82,7 @@ public:
   virtual GBool drawChar(Drawable d, int w, int h, GC gc,
 			 int x, int y, int r, int g, int b,
 			 CharCode c, Unicode u);
+  virtual GBool getCharPath(CharCode c, Unicode u, GfxState *state);
 
 private:
 

@@ -2,7 +2,7 @@
 //
 // PBMOutputDev.cc
 //
-// Copyright 1998 Derek B. Noonburg
+// Copyright 1998-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -83,7 +83,7 @@ PBMOutputDev::PBMOutputDev(Display *displayA, int screenA,
 			   Pixmap pixmapA, Window dummyWinA,
 			   int invertA, char *fileRootA):
   XOutputDev(displayA, pixmapA, 1,
-	     DefaultColormap(displayA, screenA),
+	     DefaultColormap(displayA, screenA), gFalse,
 	     WhitePixel(displayA, DefaultScreen(displayA)),
 	     gFalse, 1)
 {

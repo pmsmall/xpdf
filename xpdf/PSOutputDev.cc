@@ -2,7 +2,7 @@
 //
 // PSOutputDev.cc
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -22,14 +22,16 @@
 #include "Object.h"
 #include "Error.h"
 #include "Function.h"
+#include "Gfx.h"
 #include "GfxState.h"
 #include "GfxFont.h"
 #include "CharCodeToUnicode.h"
+#include "UnicodeMap.h"
 #include "FontFile.h"
 #include "Catalog.h"
 #include "Page.h"
 #include "Stream.h"
-#include "FormWidget.h"
+#include "Annot.h"
 #include "PSOutputDev.h"
 
 #ifdef MACOS
@@ -55,7 +57,7 @@ static char *prolog[] = {
   "      /Duplex exch def",
   "    currentdict end setpagedevice",
   "  } {",
-  "    pop",
+  "    pop pop",
   "  } ifelse",
   "} def",
   "/pdfStartPage {",
@@ -164,7 +166,28 @@ static char *prolog[] = {
   "  end",
   "  definefont pop",
   "} def",
-  "/pdfMakeFont16 { findfont definefont pop } def",
+  "/pdfMakeFont16 {",
+  "  exch findfont",
+  "  dup length dict begin",
+  "    { 1 index /FID ne { def } { pop pop } ifelse } forall",
+  "    /WMode exch def",
+  "    currentdict",
+  "  end",
+  "  definefont pop",
+  "} def",
+  "/pdfMakeFont16L3 {",
+  "  1 index /CIDFont resourcestatus {",
+  "    pop pop 1 index /CIDFont findresource /CIDFontType known",
+  "  } {",
+  "    false",
+  "  } ifelse",
+  "  {",
+  "    0 eq { /Identity-H } { /Identity-V } ifelse",
+  "    exch 1 array astore composefont pop",
+  "  } {",
+  "    pdfMakeFont16",
+  "  } ifelse",
+  "} def",
   "% graphics state operators",
   "/q { gsave pdfDictSize dict begin } def",
   "/Q { end grestore } def",
@@ -203,6 +226,7 @@ static char *prolog[] = {
   "/h { closepath } def",
   "% path painting operators",
   "/S { sCol stroke } def",
+  "/Sf { fCol stroke } def",
   "/f { fCol fill } def",
   "/f* { fCol eofill } def",
   "% clipping operators",
@@ -222,17 +246,55 @@ static char *prolog[] = {
   "/Td { pdfTextMat transform moveto } def",
   "/Tm { /pdfTextMat exch def } def",
   "% text string operators",
-  "/Tj { pdfTextRender 1 and 0 eq { fCol } { sCol } ifelse",
+  "/awcp { % awidthcharpath",
+  "  exch {",
+  "    1 string dup 0 3 index put 2 index charpath",
+  "    3 index 3 index rmoveto",
+  "    4 index eq { 5 index 5 index rmoveto } if",
+  "  } forall",
+  "  6 {pop} repeat",
+  "} def",
+  "/Tj { fCol",  // because stringwidth has to draw Type 3 chars
   "      0 pdfTextRise pdfTextMat dtransform rmoveto",
   "      1 index stringwidth pdfTextMat idtransform pop",
   "      sub 1 index length dup 0 ne { div } { pop pop 0 } ifelse",
   "      pdfWordSpacing pdfHorizScaling mul 0 pdfTextMat dtransform 32",
   "      4 3 roll pdfCharSpacing pdfHorizScaling mul add 0",
   "      pdfTextMat dtransform",
-  "      6 5 roll awidthshow",
+  "      6 5 roll",
+  "      currentpoint 8 2 roll",
+  "      pdfTextRender 1 and 0 eq {",
+  "        6 copy awidthshow",
+  "      } if",
+  "      pdfTextRender 3 and dup 1 eq exch 2 eq or {",
+  "        8 6 roll moveto",
+  "        sCol false awcp currentpoint stroke moveto",
+  "      } {",
+  "        8 {pop} repeat",
+  "      } ifelse",
   "      0 pdfTextRise neg pdfTextMat dtransform rmoveto } def",
+  "/Tj16 { pdfTextRender 1 and 0 eq { fCol } { sCol } ifelse",
+  "        0 pdfTextRise pdfTextMat dtransform rmoveto",
+  "        2 index stringwidth pdfTextMat idtransform pop",
+  "        sub exch div",
+  "        pdfWordSpacing pdfHorizScaling mul 0 pdfTextMat dtransform 32",
+  "        4 3 roll pdfCharSpacing pdfHorizScaling mul add 0",
+  "        pdfTextMat dtransform",
+  "        6 5 roll awidthshow",
+  "        0 pdfTextRise neg pdfTextMat dtransform rmoveto } def",
+  "/Tj16V { pdfTextRender 1 and 0 eq { fCol } { sCol } ifelse",
+  "         0 pdfTextRise pdfTextMat dtransform rmoveto",
+  "         2 index stringwidth pdfTextMat idtransform exch pop",
+  "         sub exch div",
+  "         0 pdfWordSpacing pdfTextMat dtransform 32",
+  "         4 3 roll pdfCharSpacing add 0 exch",
+  "         pdfTextMat dtransform",
+  "         6 5 roll awidthshow",
+  "         0 pdfTextRise neg pdfTextMat dtransform rmoveto } def",
   "/TJm { pdfFontSize 0.001 mul mul neg 0",
   "       pdfTextMat dtransform rmoveto } def",
+  "/TJmV { pdfFontSize 0.001 mul mul neg 0 exch",
+  "        pdfTextMat dtransform rmoveto } def",
   "% Level 1 image operators",
   "/pdfIm1 {",
   "  /pdfImBuf1 4 index string def",
@@ -285,14 +347,54 @@ static char *prolog[] = {
   NULL
 };
 
+static char *cmapProlog[] = {
+  "/CIDInit /ProcSet findresource begin",
+  "10 dict begin",
+  "  begincmap",
+  "  /CMapType 1 def",
+  "  /CMapName /Identity-H def",
+  "  /CIDSystemInfo 3 dict dup begin",
+  "    /Registry (Adobe) def",
+  "    /Ordering (Identity) def",
+  "    /Supplement 0 def",
+  "  end def",
+  "  1 begincodespacerange",
+  "    <0000> <ffff>",
+  "  endcodespacerange",
+  "  0 usefont",
+  "  1 begincidrange",
+  "    <0000> <ffff> 0",
+  "  endcidrange",
+  "  endcmap",
+  "  currentdict CMapName exch /CMap defineresource pop",
+  "end",
+  "10 dict begin",
+  "  begincmap",
+  "  /CMapType 1 def",
+  "  /CMapName /Identity-V def",
+  "  /CIDSystemInfo 3 dict dup begin",
+  "    /Registry (Adobe) def",
+  "    /Ordering (Identity) def",
+  "    /Supplement 0 def",
+  "  end def",
+  "  /WMode 1 def",
+  "  1 begincodespacerange",
+  "    <0000> <ffff>",
+  "  endcodespacerange",
+  "  0 usefont",
+  "  1 begincidrange",
+  "    <0000> <ffff> 0",
+  "  endcidrange",
+  "  endcmap",
+  "  currentdict CMapName exch /CMap defineresource pop",
+  "end",
+  "end",
+  NULL
+};
+
 //------------------------------------------------------------------------
 // Fonts
 //------------------------------------------------------------------------
-
-struct PSFont {
-  char *name;			// PDF name
-  char *psName;			// PostScript name
-};
 
 struct PSSubstFont {
   char *psName;			// PostScript name
@@ -330,6 +432,12 @@ static PSSubstFont psSubstFonts[] = {
   {"Courier-Oblique",       0.600},
   {"Courier-Bold",          0.600},
   {"Courier-BoldOblique",   0.600}
+};
+
+// Encoding info for substitute 16-bit font
+struct PSFont16Enc {
+  Ref fontID;
+  GString *enc;
 };
 
 //------------------------------------------------------------------------
@@ -385,7 +493,7 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
   Page *page;
   PDFRectangle *box;
   Dict *resDict;
-  FormWidgets *formWidgets;
+  Annots *annots;
   char **p;
   int pg;
   Object obj1, obj2;
@@ -400,6 +508,7 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
   fontIDs = NULL;
   fontFileIDs = NULL;
   fontFileNames = NULL;
+  font16Enc = NULL;
   embFontList = NULL;
   f = NULL;
   if (mode == psModeForm) {
@@ -407,6 +516,14 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
   }
   processColors = 0;
   customColors = NULL;
+  inType3Char = gFalse;
+  t3String = NULL;
+
+#if OPI_SUPPORT
+  // initialize OPI nesting levels
+  opi13Nest = 0;
+  opi20Nest = 0;
+#endif
 
   // open file or pipe
   ok = gTrue;
@@ -448,6 +565,8 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
   fontFileNameSize = 64;
   fontFileNameLen = 0;
   fontFileNames = (GString **)gmalloc(fontFileNameSize * sizeof(GString *));
+  font16EncLen = 0;
+  font16EncSize = 0;
 
   // initialize embedded font resource comment list
   embFontList = new GString();
@@ -458,8 +577,9 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
     writePS("%%!PS-Adobe-3.0\n");
     writePS("%%%%Creator: xpdf/pdftops %s\n", xpdfVersion);
     writePS("%%%%LanguageLevel: %d\n",
-	    (level == psLevel1 || level == psLevel1Sep) ? 1 : 2);
-    if (level == psLevel1Sep || level == psLevel2Sep) {
+	    (level == psLevel1 || level == psLevel1Sep) ? 1 :
+	    (level == psLevel2 || level == psLevel2Sep) ? 2 : 3);
+    if (level == psLevel1Sep || level == psLevel2Sep || level == psLevel3Sep) {
       writePS("%%%%DocumentProcessColors: (atend)\n");
       writePS("%%%%DocumentCustomColors: (atend)\n");
     }
@@ -476,8 +596,9 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
     writePS("%%!PS-Adobe-3.0 EPSF-3.0\n");
     writePS("%%%%Creator: xpdf/pdftops %s\n", xpdfVersion);
     writePS("%%%%LanguageLevel: %d\n",
-	    (level == psLevel1 || level == psLevel1Sep) ? 1 : 2);
-    if (level == psLevel1Sep || level == psLevel2Sep) {
+	    (level == psLevel1 || level == psLevel1Sep) ? 1 :
+	    (level == psLevel2 || level == psLevel2Sep) ? 2 : 3);
+    if (level == psLevel1Sep || level == psLevel2Sep || level == psLevel3Sep) {
       writePS("%%%%DocumentProcessColors: (atend)\n");
       writePS("%%%%DocumentCustomColors: (atend)\n");
     }
@@ -500,8 +621,9 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
     writePS("%%!PS-Adobe-3.0 Resource-Form\n");
     writePS("%%%%Creator: xpdf/pdftops %s\n", xpdfVersion);
     writePS("%%%%LanguageLevel: %d\n",
-	    (level == psLevel1 || level == psLevel1Sep) ? 1 : 2);
-    if (level == psLevel1Sep || level == psLevel2Sep) {
+	    (level == psLevel1 || level == psLevel1Sep) ? 1 :
+	    (level == psLevel2 || level == psLevel2Sep) ? 2 : 3);
+    if (level == psLevel1Sep || level == psLevel2Sep || level == psLevel3Sep) {
       writePS("%%%%DocumentProcessColors: (atend)\n");
       writePS("%%%%DocumentCustomColors: (atend)\n");
     }
@@ -526,12 +648,16 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
     writePS("%s\n", *p);
   }
   writePS("%%%%EndResource\n");
+  if (level >= psLevel3) {
+    for (p = cmapProlog; *p; ++p) {
+      writePS("%s\n", *p);
+    }
+  }
   if (mode != psModeForm) {
     writePS("%%%%EndProlog\n");
   }
 
   // set up fonts and images
-  type3Warning = gFalse;
   if (mode == psModeForm) {
     // swap the form and xpdf dicts
     writePS("xpdf end begin dup begin\n");
@@ -544,10 +670,10 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
     if ((resDict = page->getResourceDict())) {
       setupResources(resDict);
     }
-    formWidgets = new FormWidgets(xref, page->getAnnots(&obj1));
+    annots = new Annots(xref, page->getAnnots(&obj1));
     obj1.free();
-    for (i = 0; i < formWidgets->getNumWidgets(); ++i) {
-      if (formWidgets->getWidget(i)->getAppearance(&obj1)->isStream()) {
+    for (i = 0; i < annots->getNumAnnots(); ++i) {
+      if (annots->getAnnot(i)->getAppearance(&obj1)->isStream()) {
 	obj1.streamGetDict()->lookup("Resources", &obj2);
 	if (obj2.isDict()) {
 	  setupResources(obj2.getDict());
@@ -556,30 +682,24 @@ PSOutputDev::PSOutputDev(char *fileName, XRef *xrefA, Catalog *catalog,
       }
       obj1.free();
     }
-    delete formWidgets;
+    delete annots;
   }
   if (mode != psModeForm) {
-#if OPI_SUPPORT
-    if (globalParams->getPSOPI()) {
-      writePS("/opiMatrix matrix currentmatrix def\n");
-    }
-#endif
     if (mode != psModeEPS) {
       writePS("%d %d %s pdfSetup\n",
 	      paperWidth, paperHeight,
 	      globalParams->getPSDuplex() ? "true" : "false");
     }
+#if OPI_SUPPORT
+    if (globalParams->getPSOPI()) {
+      writePS("/opiMatrix matrix currentmatrix def\n");
+    }
+#endif
     writePS("%%%%EndSetup\n");
   }
 
   // initialize sequential page number
   seqPage = 1;
-
-#if OPI_SUPPORT
-  // initialize OPI nesting levels
-  opi13Nest = 0;
-  opi20Nest = 0;
-#endif
 }
 
 PSOutputDev::~PSOutputDev() {
@@ -589,12 +709,13 @@ PSOutputDev::~PSOutputDev() {
   if (f) {
     if (mode == psModeForm) {
       writePS("/Foo exch /Form defineresource pop\n");
-    } else  {
+    } else {
       writePS("%%%%Trailer\n");
       writePS("end\n");
       writePS("%%%%DocumentSuppliedResources:\n");
       writePS("%s", embFontList->getCString());
-      if (level == psLevel1Sep || level == psLevel2Sep) {
+      if (level == psLevel1Sep || level == psLevel2Sep ||
+	  level == psLevel3Sep) {
          writePS("%%%%DocumentProcessColors:");
          if (processColors & psProcessCyan) {
 	   writePS(" Cyan");
@@ -652,6 +773,12 @@ PSOutputDev::~PSOutputDev() {
     }
     gfree(fontFileNames);
   }
+  if (font16Enc) {
+    for (i = 0; i < font16EncLen; ++i) {
+      delete font16Enc[i].enc;
+    }
+    gfree(font16Enc);
+  }
   while (customColors) {
     cc = customColors;
     customColors = cc->next;
@@ -694,18 +821,21 @@ void PSOutputDev::setupFonts(Dict *resDict) {
     gfxFontDict = new GfxFontDict(xref, fontDict.getDict());
     for (i = 0; i < gfxFontDict->getNumFonts(); ++i) {
       font = gfxFontDict->getFont(i);
-      setupFont(font);
+      setupFont(font, resDict);
     }
     delete gfxFontDict;
   }
   fontDict.free();
 }
 
-void PSOutputDev::setupFont(GfxFont *font) {
+void PSOutputDev::setupFont(GfxFont *font, Dict *parentResDict) {
   Ref fontFileID;
   GString *name;
   PSFontParam *fontParam;
+  GString *psNameStr;
   char *psName;
+  char type3Name[64];
+  UnicodeMap *uMap;
   char *charName;
   double xs, ys;
   int code;
@@ -721,12 +851,6 @@ void PSOutputDev::setupFont(GfxFont *font) {
     }
   }
 
-#if 1 //~ add support for 16-bit fonts
-  if (font->isCIDFont()) {
-    return;
-  }
-#endif
-
   // add entry to fontIDs list
   if (fontIDLen >= fontIDSize) {
     fontIDSize += 64;
@@ -735,18 +859,28 @@ void PSOutputDev::setupFont(GfxFont *font) {
   fontIDs[fontIDLen++] = *font->getID();
 
   xs = ys = 1;
+  psNameStr = NULL;
 
-  // check for resident font
+  // check for resident 8-bit font
   if (font->getName() &&
       (fontParam = globalParams->getPSFont(font->getName()))) {
     psName = fontParam->psFontName->getCString();
 
   // check for embedded Type 1 font
   } else if (globalParams->getPSEmbedType1() &&
-      font->getType() == fontType1 &&
-      font->getEmbeddedFontID(&fontFileID)) {
-    psName = font->getEmbeddedFontName();
+	     font->getType() == fontType1 &&
+	     font->getEmbeddedFontID(&fontFileID)) {
+    psNameStr = filterPSName(font->getEmbeddedFontName());
+    psName = psNameStr->getCString();
     setupEmbeddedType1Font(&fontFileID, psName);
+
+  // check for embedded Type 1C font
+  } else if (globalParams->getPSEmbedType1() &&
+	     font->getType() == fontType1C &&
+	     font->getEmbeddedFontID(&fontFileID)) {
+    psNameStr = filterPSName(font->getEmbeddedFontName());
+    psName = psNameStr->getCString();
+    setupEmbeddedType1CFont(font, &fontFileID, psName);
 
   // check for external Type 1 font file
   } else if (globalParams->getPSEmbedType1() &&
@@ -754,28 +888,48 @@ void PSOutputDev::setupFont(GfxFont *font) {
 	     font->getExtFontFile()) {
     // this assumes that the PS font name matches the PDF font name
     psName = font->getName()->getCString();
-    setupEmbeddedType1Font(font->getExtFontFile(), psName);
-
-  // check for embedded Type 1C font
-  } else if (globalParams->getPSEmbedType1() &&
-	     font->getType() == fontType1C &&
-	     font->getEmbeddedFontID(&fontFileID)) {
-    psName = font->getEmbeddedFontName();
-    setupEmbeddedType1CFont(font, &fontFileID, psName);
+    setupExternalType1Font(font->getExtFontFile(), psName);
 
   // check for embedded TrueType font
   } else if (globalParams->getPSEmbedTrueType() &&
 	     font->getType() == fontTrueType &&
 	     font->getEmbeddedFontID(&fontFileID)) {
-    psName = font->getEmbeddedFontName();
+    psNameStr = filterPSName(font->getEmbeddedFontName());
+    psName = psNameStr->getCString();
     setupEmbeddedTrueTypeFont(font, &fontFileID, psName);
 
-  // do font substitution
-  } else {
-    if (!type3Warning && font->getType() == fontType3) {
-      error(-1, "This document uses Type 3 fonts - some text may not be correctly printed");
-      type3Warning = gTrue;
-    }
+  // check for external TrueType font file
+  } else if (globalParams->getPSEmbedTrueType() &&
+	     font->getType() == fontTrueType &&
+	     font->getExtFontFile()) {
+    psNameStr = filterPSName(font->getName());
+    psName = psNameStr->getCString();
+    setupExternalTrueTypeFont(font, psName);
+
+  // check for embedded CID PostScript font
+  } else if (globalParams->getPSEmbedCIDPostScript() &&
+	     font->getType() == fontCIDType0C &&
+	     font->getEmbeddedFontID(&fontFileID)) {
+    psNameStr = filterPSName(font->getEmbeddedFontName());
+    psName = psNameStr->getCString();
+    setupEmbeddedCIDType0Font(font, &fontFileID, psName);
+
+  // check for embedded CID TrueType font
+  } else if (globalParams->getPSEmbedCIDTrueType() &&
+	     font->getType() == fontCIDType2 &&
+	     font->getEmbeddedFontID(&fontFileID)) {
+    psNameStr = filterPSName(font->getEmbeddedFontName());
+    psName = psNameStr->getCString();
+    setupEmbeddedCIDTrueTypeFont(font, &fontFileID, psName);
+
+  } else if (font->getType() == fontType3) {
+    sprintf(type3Name, "T3_%d_%d",
+	    font->getID()->num, font->getID()->gen);
+    psName = type3Name;
+    setupType3Font(font, psName, parentResDict);
+
+  // do 8-bit font substitution
+  } else if (!font->isCIDFont()) {
     name = font->getName();
     psName = NULL;
     if (name) {
@@ -831,25 +985,71 @@ void PSOutputDev::setupFont(GfxFont *font) {
 	ys = 1;
       }
     }
+
+  // do 16-bit font substitution
+  } else if ((fontParam = globalParams->
+	        getPSFont16(font->getName(),
+			    ((GfxCIDFont *)font)->getCollection(),
+			    font->getWMode()))) {
+    psName = fontParam->psFontName->getCString();
+    if (font16EncLen >= font16EncSize) {
+      font16EncSize += 16;
+      font16Enc = (PSFont16Enc *)grealloc(font16Enc,
+					  font16EncSize * sizeof(PSFont16Enc));
+    }
+    font16Enc[font16EncLen].fontID = *font->getID();
+    font16Enc[font16EncLen].enc = fontParam->encoding->copy();
+    if ((uMap = globalParams->getUnicodeMap(font16Enc[font16EncLen].enc))) {
+      uMap->decRefCnt();
+      ++font16EncLen;
+    } else {
+      error(-1, "Couldn't find Unicode map for 16-bit font encoding '%s'",
+	    font16Enc[font16EncLen].enc->getCString());
+    }
+
+  // give up - can't do anything with this font
+  } else {
+    error(-1, "Couldn't find a font to substitute for '%s' ('%s' character collection)",
+	  font->getName() ? font->getName()->getCString() : "(unnamed)",
+	  ((GfxCIDFont *)font)->getCollection()
+	    ? ((GfxCIDFont *)font)->getCollection()->getCString()
+	    : "(unknown)");
+    return;
   }
 
   // generate PostScript code to set up the font
-  writePS("/F%d_%d /%s %g %g\n",
-	  font->getID()->num, font->getID()->gen, psName, xs, ys);
-  for (i = 0; i < 256; i += 8) {
-    writePS((i == 0) ? "[ " : "  ");
-    for (j = 0; j < 8; ++j) {
-      charName = ((Gfx8BitFont *)font)->getCharName(i+j);
-      // this is a kludge for broken PDF files that encode char 32
-      // as .notdef
-      if (i+j == 32 && charName && !strcmp(charName, ".notdef")) {
-	charName = "space";
-      }
-      writePS("/%s", charName ? charName : ".notdef");
+  if (font->isCIDFont()) {
+    if (level == psLevel3 || level == psLevel3Sep) {
+      writePS("/F%d_%d /%s %d pdfMakeFont16L3\n",
+	      font->getID()->num, font->getID()->gen, psName,
+	      font->getWMode());
+    } else {
+      writePS("/F%d_%d /%s %d pdfMakeFont16\n",
+	      font->getID()->num, font->getID()->gen, psName,
+	      font->getWMode());
     }
-    writePS((i == 256-8) ? "]\n" : "\n");
+  } else {
+    writePS("/F%d_%d /%s %g %g\n",
+	    font->getID()->num, font->getID()->gen, psName, xs, ys);
+    for (i = 0; i < 256; i += 8) {
+      writePS((i == 0) ? "[ " : "  ");
+      for (j = 0; j < 8; ++j) {
+	charName = ((Gfx8BitFont *)font)->getCharName(i+j);
+	// this is a kludge for broken PDF files that encode char 32
+	// as .notdef
+	if (i+j == 32 && charName && !strcmp(charName, ".notdef")) {
+	  charName = "space";
+	}
+	writePS("/%s", charName ? charName : ".notdef");
+      }
+      writePS((i == 256-8) ? "]\n" : "\n");
+    }
+    writePS("pdfMakeFont\n");
   }
-  writePS("pdfMakeFont\n");
+
+  if (psNameStr) {
+    delete psNameStr;
+  }
 }
 
 void PSOutputDev::setupEmbeddedType1Font(Ref *id, char *psName) {
@@ -909,8 +1109,9 @@ void PSOutputDev::setupEmbeddedType1Font(Ref *id, char *psName) {
 
   // copy ASCII portion of font
   strObj.streamReset();
-  for (i = 0; i < length1 && (c = strObj.streamGetChar()) != EOF; ++i)
-    fputc(c, f);
+  for (i = 0; i < length1 && (c = strObj.streamGetChar()) != EOF; ++i) {
+    writePSChar(c);
+  }
 
   // figure out if encrypted portion is binary or ASCII
   binMode = gFalse;
@@ -929,35 +1130,41 @@ void PSOutputDev::setupEmbeddedType1Font(Ref *id, char *psName) {
   // convert binary data to ASCII
   if (binMode) {
     for (i = 0; i < 4; ++i) {
-      fputc(hexChar[(start[i] >> 4) & 0x0f], f);
-      fputc(hexChar[start[i] & 0x0f], f);
+      writePSChar(hexChar[(start[i] >> 4) & 0x0f]);
+      writePSChar(hexChar[start[i] & 0x0f]);
     }
     while (i < length2) {
-      if ((c = strObj.streamGetChar()) == EOF)
+      if ((c = strObj.streamGetChar()) == EOF) {
 	break;
-      fputc(hexChar[(c >> 4) & 0x0f], f);
-      fputc(hexChar[c & 0x0f], f);
-      if (++i % 32 == 0)
-	fputc('\n', f);
+      }
+      writePSChar(hexChar[(c >> 4) & 0x0f]);
+      writePSChar(hexChar[c & 0x0f]);
+      if (++i % 32 == 0) {
+	writePSChar('\n');
+      }
     }
-    if (i % 32 > 0)
-      fputc('\n', f);
+    if (i % 32 > 0) {
+      writePSChar('\n');
+    }
 
   // already in ASCII format -- just copy it
   } else {
-    for (i = 0; i < 4; ++i)
-      fputc(start[i], f);
+    for (i = 0; i < 4; ++i) {
+      writePSChar(start[i]);
+    }
     for (i = 4; i < length2; ++i) {
-      if ((c = strObj.streamGetChar()) == EOF)
+      if ((c = strObj.streamGetChar()) == EOF) {
 	break;
-      fputc(c, f);
+      }
+      writePSChar(c);
     }
   }
 
   // write padding and "cleartomark"
-  for (i = 0; i < 8; ++i)
+  for (i = 0; i < 8; ++i) {
     writePS("00000000000000000000000000000000"
 	    "00000000000000000000000000000000\n");
+  }
   writePS("cleartomark\n");
 
   // ending comment
@@ -970,7 +1177,7 @@ void PSOutputDev::setupEmbeddedType1Font(Ref *id, char *psName) {
 
 //~ This doesn't handle .pfb files or binary eexec data (which only
 //~ happens in pfb files?).
-void PSOutputDev::setupEmbeddedType1Font(GString *fileName, char *psName) {
+void PSOutputDev::setupExternalType1Font(GString *fileName, char *psName) {
   FILE *fontFile;
   int c;
   int i;
@@ -1001,8 +1208,9 @@ void PSOutputDev::setupEmbeddedType1Font(GString *fileName, char *psName) {
     error(-1, "Couldn't open external font file");
     return;
   }
-  while ((c = fgetc(fontFile)) != EOF)
-    fputc(c, f);
+  while ((c = fgetc(fontFile)) != EOF) {
+    writePSChar(c);
+  }
   fclose(fontFile);
 
   // ending comment
@@ -1013,7 +1221,7 @@ void PSOutputDev::setupEmbeddedType1CFont(GfxFont *font, Ref *id,
 					  char *psName) {
   char *fontBuf;
   int fontLen;
-  Type1CFontConverter *cvt;
+  Type1CFontFile *t1cFile;
   int i;
 
   // check if font is already embedded
@@ -1038,9 +1246,9 @@ void PSOutputDev::setupEmbeddedType1CFont(GfxFont *font, Ref *id,
 
   // convert it to a Type 1 font
   fontBuf = font->readEmbFontFile(xref, &fontLen);
-  cvt = new Type1CFontConverter(fontBuf, fontLen, f);
-  cvt->convert();
-  delete cvt;
+  t1cFile = new Type1CFontFile(fontBuf, fontLen);
+  t1cFile->convertToType1(f);
+  delete t1cFile;
   gfree(fontBuf);
 
   // ending comment
@@ -1089,6 +1297,221 @@ void PSOutputDev::setupEmbeddedTrueTypeFont(GfxFont *font, Ref *id,
   writePS("%%%%EndResource\n");
 }
 
+void PSOutputDev::setupExternalTrueTypeFont(GfxFont *font, char *psName) {
+  GString *fileName;
+  char *fontBuf;
+  int fontLen;
+  TrueTypeFontFile *ttFile;
+  CharCodeToUnicode *ctu;
+  int i;
+
+  // check if font is already embedded
+  fileName = font->getExtFontFile();
+  for (i = 0; i < fontFileNameLen; ++i) {
+    if (!fontFileNames[i]->cmp(fileName)) {
+      return;
+    }
+  }
+
+  // add entry to fontFileNames list
+  if (fontFileNameLen >= fontFileNameSize) {
+    fontFileNameSize += 64;
+    fontFileNames = (GString **)grealloc(fontFileNames,
+					 fontFileNameSize * sizeof(GString *));
+  }
+  fontFileNames[fontFileNameLen++] = fileName->copy();
+
+  // beginning comment
+  writePS("%%%%BeginResource: font %s\n", psName);
+  embFontList->append("%%+ font ");
+  embFontList->append(psName);
+  embFontList->append("\n");
+
+  // convert it to a Type 42 font
+  fontBuf = font->readExtFontFile(&fontLen);
+  ttFile = new TrueTypeFontFile(fontBuf, fontLen);
+  ctu = ((Gfx8BitFont *)font)->getToUnicode();
+  ttFile->convertToType42(psName, ((Gfx8BitFont *)font)->getEncoding(),
+			  ctu, ((Gfx8BitFont *)font)->getHasEncoding(), f);
+  ctu->decRefCnt();
+  delete ttFile;
+  gfree(fontBuf);
+
+  // ending comment
+  writePS("%%%%EndResource\n");
+}
+
+void PSOutputDev::setupEmbeddedCIDType0Font(GfxFont *font, Ref *id,
+					    char *psName) {
+  char *fontBuf;
+  int fontLen;
+  Type1CFontFile *t1cFile;
+  int i;
+
+  // check if font is already embedded
+  for (i = 0; i < fontFileIDLen; ++i) {
+    if (fontFileIDs[i].num == id->num &&
+	fontFileIDs[i].gen == id->gen)
+      return;
+  }
+
+  // add entry to fontFileIDs list
+  if (fontFileIDLen >= fontFileIDSize) {
+    fontFileIDSize += 64;
+    fontFileIDs = (Ref *)grealloc(fontFileIDs, fontFileIDSize * sizeof(Ref));
+  }
+  fontFileIDs[fontFileIDLen++] = *id;
+
+  // beginning comment
+  writePS("%%%%BeginResource: font %s\n", psName);
+  embFontList->append("%%+ font ");
+  embFontList->append(psName);
+  embFontList->append("\n");
+
+  // convert it to a Type 0 font
+  fontBuf = font->readEmbFontFile(xref, &fontLen);
+  t1cFile = new Type1CFontFile(fontBuf, fontLen);
+  if (globalParams->getPSLevel() >= psLevel3) {
+    // Level 3: use a CID font
+    t1cFile->convertToCIDType0(psName, f);
+  } else {
+    // otherwise: use a non-CID composite font
+    t1cFile->convertToType0(psName, f);
+  }
+  delete t1cFile;
+  gfree(fontBuf);
+
+  // ending comment
+  writePS("%%%%EndResource\n");
+}
+
+void PSOutputDev::setupEmbeddedCIDTrueTypeFont(GfxFont *font, Ref *id,
+					       char *psName) {
+  char *fontBuf;
+  int fontLen;
+  TrueTypeFontFile *ttFile;
+  int i;
+
+  // check if font is already embedded
+  for (i = 0; i < fontFileIDLen; ++i) {
+    if (fontFileIDs[i].num == id->num &&
+	fontFileIDs[i].gen == id->gen)
+      return;
+  }
+
+  // add entry to fontFileIDs list
+  if (fontFileIDLen >= fontFileIDSize) {
+    fontFileIDSize += 64;
+    fontFileIDs = (Ref *)grealloc(fontFileIDs, fontFileIDSize * sizeof(Ref));
+  }
+  fontFileIDs[fontFileIDLen++] = *id;
+
+  // beginning comment
+  writePS("%%%%BeginResource: font %s\n", psName);
+  embFontList->append("%%+ font ");
+  embFontList->append(psName);
+  embFontList->append("\n");
+
+  // convert it to a Type 0 font
+  fontBuf = font->readEmbFontFile(xref, &fontLen);
+  ttFile = new TrueTypeFontFile(fontBuf, fontLen);
+  if (globalParams->getPSLevel() >= psLevel3) {
+    ttFile->convertToCIDType2(psName,
+			      ((GfxCIDFont *)font)->getCIDToGID(),
+			      ((GfxCIDFont *)font)->getCIDToGIDLen(), f);
+  } else {
+    // otherwise: use a non-CID composite font
+    ttFile->convertToType0(psName, ((GfxCIDFont *)font)->getCIDToGID(),
+			   ((GfxCIDFont *)font)->getCIDToGIDLen(), f);
+  }
+  delete ttFile;
+  gfree(fontBuf);
+
+  // ending comment
+  writePS("%%%%EndResource\n");
+}
+
+void PSOutputDev::setupType3Font(GfxFont *font, char *psName,
+				 Dict *parentResDict) {
+  Dict *resDict;
+  Dict *charProcs;
+  Object charProc;
+  Gfx *gfx;
+  PDFRectangle box;
+  double *m;
+  int i;
+
+  // set up resources used by font
+  if ((resDict = ((Gfx8BitFont *)font)->getResources())) {
+    setupResources(resDict);
+  } else {
+    resDict = parentResDict;
+  }
+
+  // beginning comment
+  writePS("%%%%BeginResource: font %s\n", psName);
+  embFontList->append("%%+ font ");
+  embFontList->append(psName);
+  embFontList->append("\n");
+
+  // font dictionary
+  writePS("7 dict begin\n");
+  writePS("/FontType 3 def\n");
+  m = font->getFontMatrix();
+  writePS("/FontMatrix [%g %g %g %g %g %g] def\n",
+	  m[0], m[1], m[2], m[3], m[4], m[5]);
+  m = font->getFontBBox();
+  writePS("/FontBBox [%g %g %g %g] def\n",
+	  m[0], m[1], m[2], m[3]);
+  writePS("/Encoding 256 array def\n");
+  writePS("  0 1 255 { Encoding exch /.notdef put } for\n");
+  writePS("/BuildGlyph {\n");
+  writePS("  exch /CharProcs get exch\n");
+  writePS("  2 copy known not { pop /.notdef } if\n");
+  writePS("  get exec\n");
+  writePS("} bind def\n");
+  writePS("/BuildChar {\n");
+  writePS("  1 index /Encoding get exch get\n");
+  writePS("  1 index /BuildGlyph get exec\n");
+  writePS("} bind def\n");
+  if ((charProcs = ((Gfx8BitFont *)font)->getCharProcs())) {
+    writePS("/CharProcs %d dict def\n", charProcs->getLength());
+    writePS("CharProcs begin\n");
+    box.x1 = m[0];
+    box.y1 = m[1];
+    box.x2 = m[2];
+    box.y2 = m[3];
+    gfx = new Gfx(xref, this, resDict, &box, gFalse, NULL);
+    inType3Char = gTrue;
+    for (i = 0; i < charProcs->getLength(); ++i) {
+      writePS("/%s {\n", charProcs->getKey(i));
+      gfx->display(charProcs->getVal(i, &charProc));
+      charProc.free();
+      if (t3String) {
+	if (t3Cacheable) {
+	  fprintf(f, "%g %g %g %g %g %g setcachedevice\n",
+		  t3WX, t3WY, t3LLX, t3LLY, t3URX, t3URY);
+	} else {
+	  fprintf(f, "%g %g setcharwidth\n", t3WX, t3WY);
+	}
+	fputs(t3String->getCString(), f);
+	delete t3String;
+	t3String = NULL;
+      }
+      fputs("Q\n", f);
+      writePS("} def\n");
+    }
+    inType3Char = gFalse;
+    delete gfx;
+    writePS("end\n");
+  }
+  writePS("currentdict end\n");
+  writePS("/%s exch definefont pop\n", psName);
+
+  // ending comment
+  writePS("%%%%EndResource\n");
+}
+
 void PSOutputDev::setupImages(Dict *resDict) {
   Object xObjDict, xObj, xObjRef, subtypeObj;
   int i;
@@ -1125,7 +1548,11 @@ void PSOutputDev::setupImage(Ref id, Stream *str) {
   int size, line, col, i;
 
   // construct an encoder stream
-  str = new ASCII85Encoder(str);
+  if (globalParams->getPSASCIIHex()) {
+    str = new ASCIIHexEncoder(str);
+  } else {
+    str = new ASCII85Encoder(str);
+  }
 
   // compute image data size
   str->reset();
@@ -1171,10 +1598,10 @@ void PSOutputDev::setupImage(Ref id, Stream *str) {
       break;
     }
     if (c == 'z') {
-      fputc(c, f);
+      writePSChar(c);
       ++col;
     } else {
-      fputc(c, f);
+      writePSChar(c);
       ++col;
       for (i = 1; i <= 4; ++i) {
 	do {
@@ -1183,7 +1610,7 @@ void PSOutputDev::setupImage(Ref id, Stream *str) {
 	if (c == '~' || c == EOF) {
 	  break;
 	}
-	fputc(c, f);
+	writePSChar(c);
 	++col;
       }
     }
@@ -1253,6 +1680,8 @@ void PSOutputDev::startPage(int pageNum, GfxState *state) {
       yScale = (double)paperHeight / (double)height;
       if (yScale < xScale) {
 	xScale = yScale;
+      } else {
+	yScale = xScale;
       }
       writePS("%0.4f %0.4f scale\n", xScale, xScale);
     } else {
@@ -1356,6 +1785,7 @@ void PSOutputDev::updateFillColor(GfxState *state) {
     writePS("%g %g %g %g k\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
     break;
   case psLevel2:
+  case psLevel3:
     if (state->getFillColorSpace()->getMode() == csDeviceCMYK) {
       state->getFillCMYK(&cmyk);
       writePS("%g %g %g %g k\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
@@ -1369,6 +1799,7 @@ void PSOutputDev::updateFillColor(GfxState *state) {
     }
     break;
   case psLevel2Sep:
+  case psLevel3Sep:
     if (state->getFillColorSpace()->getMode() == csSeparation) {
       sepCS = (GfxSeparationColorSpace *)state->getFillColorSpace();
       color.c[0] = 1;
@@ -1385,6 +1816,7 @@ void PSOutputDev::updateFillColor(GfxState *state) {
     }
     break;
   }
+  t3Cacheable = gFalse;
 }
 
 void PSOutputDev::updateStrokeColor(GfxState *state) {
@@ -1404,6 +1836,7 @@ void PSOutputDev::updateStrokeColor(GfxState *state) {
     writePS("%g %g %g %g K\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
     break;
   case psLevel2:
+  case psLevel3:
     if (state->getStrokeColorSpace()->getMode() == csDeviceCMYK) {
       state->getStrokeCMYK(&cmyk);
       writePS("%g %g %g %g K\n", cmyk.c, cmyk.m, cmyk.y, cmyk.k);
@@ -1417,6 +1850,7 @@ void PSOutputDev::updateStrokeColor(GfxState *state) {
     }
     break;
   case psLevel2Sep:
+  case psLevel3Sep:
     if (state->getStrokeColorSpace()->getMode() == csSeparation) {
       sepCS = (GfxSeparationColorSpace *)state->getStrokeColorSpace();
       color.c[0] = 1;
@@ -1433,6 +1867,7 @@ void PSOutputDev::updateStrokeColor(GfxState *state) {
     }
     break;
   }
+  t3Cacheable = gFalse;
 }
 
 void PSOutputDev::addProcessColor(double c, double m, double y, double k) {
@@ -1489,7 +1924,14 @@ void PSOutputDev::updateCharSpace(GfxState *state) {
 }
 
 void PSOutputDev::updateRender(GfxState *state) {
-  writePS("%d Tr\n", state->getRender());
+  int rm;
+
+  rm = state->getRender();
+  writePS("%d Tr\n", rm);
+  rm &= 3;
+  if (rm != 0 && rm != 3) {
+    t3Cacheable = gFalse;
+  }
 }
 
 void PSOutputDev::updateRise(GfxState *state) {
@@ -1509,12 +1951,22 @@ void PSOutputDev::updateTextPos(GfxState *state) {
 }
 
 void PSOutputDev::updateTextShift(GfxState *state, double shift) {
-  writePS("%g TJm\n", shift);
+  if (state->getFont()->getWMode()) {
+    writePS("%g TJmV\n", shift);
+  } else {
+    writePS("%g TJm\n", shift);
+  }
 }
 
 void PSOutputDev::stroke(GfxState *state) {
   doPath(state->getPath());
-  writePS("S\n");
+  if (t3String) {
+    // if we're construct a cacheable Type 3 glyph, we need to do
+    // everything in the fill color
+    writePS("Sf\n");
+  } else {
+    writePS("S\n");
+  }
 }
 
 void PSOutputDev::fill(GfxState *state) {
@@ -1595,11 +2047,15 @@ void PSOutputDev::doPath(GfxPath *path) {
 
 void PSOutputDev::drawString(GfxState *state, GString *s) {
   GfxFont *font;
-  double dx, dx2, dy2, originX, originY;
+  int wMode;
+  GString *s2;
+  double dx, dy, dx2, dy2, originX, originY;
   char *p;
+  UnicodeMap *uMap;
   CharCode code;
-  Unicode u;
-  int len, uLen, n;
+  Unicode u[8];
+  char buf[8];
+  int len, nChars, uLen, n, m, i, j;
 
   // check for invisible text -- this is used by Acrobat Capture
   if ((state->getRender() & 3) == 3) {
@@ -1615,25 +2071,80 @@ void PSOutputDev::drawString(GfxState *state, GString *s) {
   if (!(font = state->getFont())) {
     return;
   }
+  wMode = font->getWMode();
+
+  // check for a subtitute 16-bit font
+  uMap = NULL;
+  if (font->isCIDFont()) {
+    for (i = 0; i < font16EncLen; ++i) {
+      if (font->getID()->num == font16Enc[i].fontID.num &&
+	  font->getID()->gen == font16Enc[i].fontID.gen) {
+	uMap = globalParams->getUnicodeMap(font16Enc[i].enc);
+	break;
+      }
+    }
+  }
 
   // compute width of chars in string, ignoring char spacing and word
   // spacing -- the Tj operator will adjust for the metrics of the
   // font that's actually used
-  dx = 0;
+  dx = dy = 0;
+  nChars = 0;
   p = s->getCString();
   len = s->getLength();
+  if (font->isCIDFont()) {
+    s2 = new GString();
+  } else {
+    s2 = s;
+  }
   while (len > 0) {
     n = font->getNextChar(p, len, &code,
-			  &u, 1, &uLen,
+			  u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
 			  &dx2, &dy2, &originX, &originY);
+    if (font->isCIDFont()) {
+      if (uMap) {
+	for (i = 0; i < uLen; ++i) {
+	  m = uMap->mapUnicode(u[i], buf, (int)sizeof(buf));
+	  for (j = 0; j < m; ++j) {
+	    s2->append(buf[j]);
+	  }
+	}
+	//~ this really needs to get the number of chars in the target
+	//~ encoding - which may be more than the number of Unicode
+	//~ chars
+	nChars += uLen;
+      } else {
+	s2->append((char)((code >> 8) & 0xff));
+	s2->append((char)(code & 0xff));
+	++nChars;
+      }
+    }
     dx += dx2;
+    dy += dy2;
     p += n;
     len -= n;
   }
   dx *= state->getFontSize() * state->getHorizScaling();
+  dy *= state->getFontSize();
+  if (uMap) {
+    uMap->decRefCnt();
+  }
 
-  writePSString(s);
-  writePS(" %g Tj\n", dx);
+  if (s2->getLength() > 0) {
+    writePSString(s2);
+    if (font->isCIDFont()) {
+      if (wMode) {
+	writePS(" %d %g Tj16V\n", nChars, dy);
+      } else {
+	writePS(" %d %g Tj16\n", nChars, dx);
+      }
+    } else {
+      writePS(" %g Tj\n", dx);
+    }
+  }
+  if (font->isCIDFont()) {
+    delete s2;
+  }
 }
 
 void PSOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
@@ -1666,9 +2177,12 @@ void PSOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     break;
   case psLevel2:
   case psLevel2Sep:
+  case psLevel3:
+  case psLevel3Sep:
     doImageL2(ref, colorMap, gFalse, inlineImg, str, width, height, len);
     break;
   }
+  t3Cacheable = gFalse;
 }
 
 void PSOutputDev::doImageL1(GfxImageColorMap *colorMap,
@@ -1706,15 +2220,16 @@ void PSOutputDev::doImageL1(GfxImageColorMap *colorMap,
       for (x = 0; x < width; ++x) {
 	imgStr->getPixel(pixBuf);
 	colorMap->getGray(pixBuf, &gray);
-	fprintf(f, "%02x", (int)(gray * 255 + 0.5));
+	writePS("%02x", (int)(gray * 255 + 0.5));
 	if (++i == 32) {
-	  fputc('\n', f);
+	  writePSChar('\n');
 	  i = 0;
 	}
       }
     }
-    if (i != 0)
-      fputc('\n', f);
+    if (i != 0) {
+      writePSChar('\n');
+    }
     delete imgStr;
 
   // imagemask
@@ -1723,15 +2238,16 @@ void PSOutputDev::doImageL1(GfxImageColorMap *colorMap,
     i = 0;
     for (y = 0; y < height; ++y) {
       for (x = 0; x < width; x += 8) {
-	fprintf(f, "%02x", str->getChar() & 0xff);
+	writePS("%02x", str->getChar() & 0xff);
 	if (++i == 32) {
-	  fputc('\n', f);
+	  writePSChar('\n');
 	  i = 0;
 	}
       }
     }
-    if (i != 0)
-      fputc('\n', f);
+    if (i != 0) {
+      writePSChar('\n');
+    }
     str->close();
   }
 }
@@ -1775,9 +2291,9 @@ void PSOutputDev::doImageL1Sep(GfxImageColorMap *colorMap,
     // write one line of each color component
     for (comp = 0; comp < 4; ++comp) {
       for (x = 0; x < width; ++x) {
-	fprintf(f, "%02x", lineBuf[4*x + comp]);
+	writePS("%02x", lineBuf[4*x + comp]);
 	if (++i == 32) {
-	  fputc('\n', f);
+	  writePSChar('\n');
 	  i = 0;
 	}
       }
@@ -1785,7 +2301,7 @@ void PSOutputDev::doImageL1Sep(GfxImageColorMap *colorMap,
   }
 
   if (i != 0) {
-    fputc('\n', f);
+    writePSChar('\n');
   }
 
   delete imgStr;
@@ -1797,7 +2313,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
 			    Stream *str, int width, int height, int len) {
   GString *s;
   int n, numComps;
-  GBool useRLE, useA85;
+  GBool useRLE, useASCII, useCompressed;
   GfxSeparationColorSpace *sepCS;
   GfxColor color;
   GfxCMYK cmyk;
@@ -1811,7 +2327,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
   }
 
   // set up to use the array created by setupImages()
-  if (mode == psModeForm && !inlineImg) {
+  if ((mode == psModeForm || inType3Char) && !inlineImg) {
     writePS("ImData_%d_%d 0\n", ref->getRefNum(), ref->getRefGen());
   }
 
@@ -1848,7 +2364,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
     writePS("  /Decode [%d %d]\n", invert ? 1 : 0, invert ? 0 : 1);
   }
 
-  if (mode == psModeForm) {
+  if (mode == psModeForm || inType3Char) {
 
     if (inlineImg) {
 
@@ -1857,12 +2373,16 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
 
       // write image data stream, using ASCII85 encode filter
       str = new FixedLengthEncoder(str, len);
-      str = new ASCII85Encoder(str);
+      if (globalParams->getPSASCIIHex()) {
+	str = new ASCIIHexEncoder(str);
+      } else {
+	str = new ASCII85Encoder(str);
+      }
       str->reset();
       while ((c = str->getChar()) != EOF) {
-	fputc(c, f);
+	writePSChar(c);
       }
-      fputc('\n', f);
+      writePSChar('\n');
       delete str;
 
     } else {
@@ -1884,17 +2404,21 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
     s = str->getPSFilter("    ");
     if (inlineImg || !s) {
       useRLE = gTrue;
-      useA85 = gTrue;
+      useASCII = gTrue;
+      useCompressed = gFalse;
     } else {
       useRLE = gFalse;
-      useA85 = str->isBinary();
+      useASCII = str->isBinary();
+      useCompressed = gTrue;
     }
-    if (useA85) {
-      writePS("    /ASCII85Decode filter\n");
+    if (useASCII) {
+      writePS("    /ASCII%sDecode filter\n",
+	      globalParams->getPSASCIIHex() ? "Hex" : "85");
     }
     if (useRLE) {
       writePS("    /RunLengthDecode filter\n");
-    } else {
+    }
+    if (useCompressed) {
       writePS("%s", s->getCString());
     }
     if (s) {
@@ -1904,16 +2428,20 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
     // cut off inline image streams at appropriate length
     if (inlineImg) {
       str = new FixedLengthEncoder(str, len);
-    } else if (!useRLE) {
+    } else if (useCompressed) {
       str = str->getBaseStream();
     }
 
-    // add RunLengthEncode and ASCII85 encode filters
+    // add RunLengthEncode and ASCIIHex/85 encode filters
     if (useRLE) {
       str = new RunLengthEncoder(str);
     }
-    if (useA85) {
-      str = new ASCII85Encoder(str);
+    if (useASCII) {
+      if (globalParams->getPSASCIIHex()) {
+	str = new ASCIIHexEncoder(str);
+      } else {
+	str = new ASCII85Encoder(str);
+      }
     }
 
     // end of image dictionary
@@ -1926,7 +2454,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
 	n = 0;
       } else {
 	// need to read the stream to count characters -- the length
-	// is data-dependent (because of A85 and RLE filters)
+	// is data-dependent (because of ASCII and RLE filters)
 	str->reset();
 	n = 0;
 	while ((c = str->getChar()) != EOF) {
@@ -1940,7 +2468,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
       writePS("%%%%BeginData: %d Hex Bytes\n", n);
     }
 #endif
-    if (level == psLevel2Sep && colorMap &&
+    if ((level == psLevel2Sep || level == psLevel3Sep) && colorMap &&
 	colorMap->getColorSpace()->getMode() == csSeparation) {
       color.c[0] = 1;
       sepCS = (GfxSeparationColorSpace *)colorMap->getColorSpace();
@@ -1954,13 +2482,13 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
     // copy the stream data
     str->reset();
     while ((c = str->getChar()) != EOF) {
-      fputc(c, f);
+      writePSChar(c);
     }
     str->close();
 
     // add newline and trailer to the end
-    fputc('\n', f);
-    fputs("%-EOD-\n", f);
+    writePSChar('\n');
+    writePS("%%-EOD-\n");
 #if OPI_SUPPORT
     if (opi13Nest) {
       writePS("%%%%EndData\n");
@@ -1968,7 +2496,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
 #endif
 
     // delete encoders
-    if (useRLE || useA85) {
+    if (useRLE || useASCII || inlineImg) {
       delete str;
     }
   }
@@ -2550,26 +3078,104 @@ GBool PSOutputDev::getFileSpec(Object *fileSpec, Object *fileName) {
 }
 #endif // OPI_SUPPORT
 
+void PSOutputDev::type3D0(GfxState *state, double wx, double wy) {
+  writePS("%g %g setcharwidth\n", wx, wy);
+  writePS("q\n");
+}
+
+void PSOutputDev::type3D1(GfxState *state, double wx, double wy,
+			  double llx, double lly, double urx, double ury) {
+  t3WX = wx;
+  t3WY = wy;
+  t3LLX = llx;
+  t3LLY = lly;
+  t3URX = urx;
+  t3URY = ury;
+  t3String = new GString();
+  writePS("q\n");
+  t3Cacheable = gTrue;
+}
+
+void PSOutputDev::psXObject(Stream *psStream, Stream *level1Stream) {
+  Stream *str;
+  int c;
+
+  if ((level == psLevel1 || level == psLevel1Sep) && level1Stream) {
+    str = level1Stream;
+  } else {
+    str = psStream;
+  }
+  str->reset();
+  while ((c = str->getChar()) != EOF) {
+    writePSChar(c);
+  }
+  str->close();
+}
+
 void PSOutputDev::writePS(const char *fmt, ...) {
   va_list args;
+  char buf[512];
 
   va_start(args, fmt);
-  vfprintf(f, fmt, args);
+  if (t3String) {
+    vsprintf(buf, fmt, args);
+    t3String->append(buf);
+  } else {
+    vfprintf(f, fmt, args);
+  }
   va_end(args);
 }
 
 void PSOutputDev::writePSString(GString *s) {
   Guchar *p;
   int n;
+  char buf[8];
 
-  fputc('(', f);
+  writePSChar('(');
   for (p = (Guchar *)s->getCString(), n = s->getLength(); n; ++p, --n) {
-    if (*p == '(' || *p == ')' || *p == '\\')
-      fprintf(f, "\\%c", *p);
-    else if (*p < 0x20 || *p >= 0x80)
-      fprintf(f, "\\%03o", *p);
-    else
-      fputc(*p, f);
+    if (*p == '(' || *p == ')' || *p == '\\') {
+      writePSChar('\\');
+      writePSChar((char)*p);
+    } else if (*p < 0x20 || *p >= 0x80) {
+      if (t3String) {
+	sprintf(buf, "\\%03o", *p);
+	t3String->append(buf);
+      } else {
+	fprintf(f, "\\%03o", *p);
+      }
+    } else {
+      writePSChar((char)*p);
+    }
   }
-  fputc(')', f);
+  writePSChar(')');
+}
+
+void PSOutputDev::writePSChar(char c) {
+  if (t3String) {
+    t3String->append(c);
+  } else {
+    fputc(c, f);
+  }
+}
+
+GString *PSOutputDev::filterPSName(GString *name) {
+  GString *name2;
+  char buf[8];
+  int i;
+  char c;
+
+  name2 = new GString();
+  for (i = 0; i < name->getLength(); ++i) {
+    c = name->getChar(i);
+    if (c <= (char)0x20 || c >= (char)0x7f ||
+	c == '(' || c == ')' || c == '<' || c == '>' ||
+	c == '[' || c == ']' || c == '{' || c == '}' ||
+	c == '/' || c == '%') {
+      sprintf(buf, "#%02x", c & 0xff);
+      name2->append(buf);
+    } else {
+      name2->append(c);
+    }
+  }
+  return name2;
 }

@@ -6,7 +6,7 @@ pdftopbm(1)                                           pdftopbm(1)
 
 NAME
        pdftopbm  -  Portable  Document  Format  (PDF) to Portable
-       Bitmap (PBM) converter (version 1.00)
+       Bitmap (PBM) converter (version 1.01)
 
 SYNOPSIS
        pdftopbm [options] PDF-file PBM-root
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           01 Feb 2002                          1
+                           20 May 2002                          1
 
 
 
@@ -78,7 +78,7 @@ BUGS
 
 AUTHOR
        The pdftopbm  software  and  documentation  are  copyright
-       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
+       1996-2002 Glyph & Cog, LLC.
 
 SEE ALSO
        xpdf(1),   pdftops(1),   pdftotext(1),   pdfinfo(1),  pdf-
@@ -127,6 +127,6 @@ SEE ALSO
 
 
 
-                           01 Feb 2002                          2
+                           20 May 2002                          2
 
 

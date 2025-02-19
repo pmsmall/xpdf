@@ -2,7 +2,7 @@
 #
 # LTK library Makefile
 #
-# Copyright 1996 Derek B. Noonburg
+# Copyright 1996-2002 Glyph & Cog, LLC
 #
 #========================================================================
 
@@ -113,4 +113,4 @@ clean:
 depend:
 	$(CXX) $(CXXFLAGS) -MM $(CXX_SRC) >Makefile.dep
 
--include Makefile.dep
+include Makefile.dep

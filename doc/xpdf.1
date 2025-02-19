@@ -1,7 +1,7 @@
-.\" Copyright 1996 Derek B. Noonburg
-.TH xpdf 1 "01 Feb 2002"
+.\" Copyright 1996-2002 Glyph & Cog, LLC
+.TH xpdf 1 "20 May 2002"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 1.00)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 1.01)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -70,6 +70,13 @@ color table entries.  This is ignored with private colormaps and on
 TrueColor visuals.
 .RB "[X resource: " xpdf.rgbCubeSize ]
 .TP
+.B \-rv
+Set reverse video mode.  This reverses the colors of everything except
+images.  It may not always produce great results for PDF files which
+do weird things with color.  This also causes the paper color to
+default to black.
+.RB "[X resource: " xpdf.reverseVideo ]
+.TP
 .BI \-papercolor " color"
 Set the "paper color", i.e., the background of the page display.  This
 will not work too well with PDF files that do things like filling in
@@ -81,7 +88,7 @@ Set the initial zoom factor.  A number (-5 .. 5) specifies a zoom
 factor, where 0 means 72 dpi.  You may also specify \'page', to fit
 the page to the window size, or \'width', to fit the page width to the
 window width.
-.RB "[X resource: " xpdf.initialZoom ]
+.RB "[config file: " initialZoom ]
 .TP
 .BI \-t1lib " font-type"
 Set the type of font rendering for t1lib (the Type 1 rasterizer) to
@@ -93,7 +100,8 @@ high-level anti-aliased fonts).
 .BI \-freetype " font-type"
 Set the type of font rendering for FreeType (the TrueType rasterizer)
 to use.  Options are \'none' (don't use FreeType at all), \'plain'
-(use non-anti-aliased fonts), or \'aa' (use anti-aliased fonts).
+(use non-anti-aliased fonts), \'low' or \'high' (use anti-aliased
+fonts; these two are identical).
 .RB "[config file: " freetypeControl ]
 .TP
 .BI \-ps " PS-file"
@@ -331,6 +339,9 @@ Scroll to bottom of current page.
 .B arrows
 Scroll the current page.
 .TP
+.B g
+Activate the page number text field.
+.TP
 .B 0
 Set the zoom factor to zero (72 dpi).
 .TP
@@ -417,11 +428,9 @@ The -raise option tells the server to raise its window; it can be
 specified with or without a file name and page number.
 .PP
 The -quit option tells the server to close its window and exit.
-.SH BUGS
-No support for Type 3 fonts.
 .SH AUTHOR
-The xpdf software and documentation are copyright 1996-2002 Derek
-B. Noonburg (derekn@foolabs.com).
+The xpdf software and documentation are copyright 1996-2002 Glyph &
+Cog, LLC.
 .SH "SEE ALSO"
 .BR pdftops (1),
 .BR pdftotext (1),

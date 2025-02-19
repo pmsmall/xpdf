@@ -4,6 +4,8 @@
 //
 // An X wrapper for the FreeType TrueType font rasterizer.
 //
+// Copyright 2001-2002 Glyph & Cog, LLC
+//
 //========================================================================
 
 #ifndef TTFONT_H

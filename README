@@ -1,11 +1,11 @@
 Xpdf
 ====
 
-version 1.00
-2002-feb-01
+version 1.01
+2002-may-20
 
 The Xpdf software and documentation are
-copyright 1996-2002 Derek B. Noonburg.
+copyright 1996-2002 Glyph & Cog, LLC.
 
 Email: derekn@foolabs.com
 WWW: http://www.foolabs.com/xpdf/
@@ -17,12 +17,15 @@ copyright 1985-2001 Adobe Systems Inc.
 What is Xpdf?
 -------------
 
-Xpdf is a viewer for Portable Document Format (PDF) files.  (These are
-also sometimes also called 'Acrobat' files, from the name of Adobe's
-PDF software.)  Xpdf runs under the X Window System on UNIX, VMS, and
-OS/2.  The non-X components of the package (pdftops, pdftotext, etc.)
-also run on Win32 systems and should run on pretty much any system
-with a decent C++ compiler.
+Xpdf is an open source viewer for Portable Document Format (PDF)
+files.  (These are also sometimes also called 'Acrobat' files, from
+the name of Adobe's PDF software.)  The Xpdf project also includes a
+PDF text extractor, PDF-to-PostScript converter, and various other
+utilities.
+
+Xpdf runs under the X Window System on UNIX, VMS, and OS/2.  The non-X
+components (pdftops, pdftotext, etc.) also run on Win32 systems and
+should run on pretty much any system with a decent C++ compiler.
 
 Xpdf is designed to be small and efficient.  It can use Type 1,
 TrueType, or standard X fonts.
@@ -51,8 +54,10 @@ informal clarifications:
 - If you make useful changes to Xpdf, please make the source code
   available -- post it on a web site, email it to me, whatever.
 
-If you're interested in commercial licensing, please contact me by
-email: derekn@foolabs.com .
+If you're interested in commercial licensing, please see the Glyph &
+Cog web site:
+
+    http://www.glyphandcog.com/
 
 
 Compatibility
@@ -225,7 +230,7 @@ software patent which is owned by Unisys Corporation.  Unisys refuses
 to license this patent for PDF-related use in software such as Xpdf
 which is released for free and which may be freely redistributed.
 (This is same algorithm which is used by GIF.  However, Unisys is not
-doing licensing for free PDF viwers in the same way as for free GIF
+doing licensing for free PDF viewers in the same way as for free GIF
 viewers.)
 
 As a workaround, Xpdf converts PDF-format LZW data to compress-format
@@ -253,8 +258,6 @@ See the separate file, INSTALL.
 
 Bugs
 ----
-
-Type 3 fonts are still not well supported by Xpdf.
 
 If you find a bug in Xpdf, i.e., if it prints an error message,
 crashes, or incorrectly displays a document, and you don't see that
@@ -286,8 +289,11 @@ Thanks to:
   the FreeType team.
 * Theppitak Karoonboonyanan for help with Thai support.
 * Leonard Rosenthol for help and contributions on a bunch of things.
+* Alexandros Diamantidis and Maria Adaloglou for help with Greek
+  support.
+* Lawrence Lai for help with the CJK Unicode maps.
 
-Various prople have contributed modifications made for use by the
+Various people have contributed modifications made for use by the
 pdftex project:
 
 * Han The Thanh

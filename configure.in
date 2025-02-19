@@ -1,4 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
+dnl Copyright 1998-2002 Glyph & Cog, LLC
+
 AC_INIT(xpdf/xpdf.cc)
 AC_CONFIG_HEADER(aconf.h)
 
@@ -37,7 +39,7 @@ AC_DEFINE_UNQUOTED(SYSTEM_XPDFRC, "$system_xpdfrc")
 dnl ##### Checks for programs.
 AC_PROG_CC
 AC_ISC_POSIX
-AM_PROG_CC_STDC
+AC_PROG_CC_STDC
 #if test -z "$CXX" -a "$CC" = "gcc"; then
 #  CXX="gcc"
 #fi
@@ -193,6 +195,16 @@ xpdf_cv_func_mkstemp=yes, xpdf_cv_func_mkstemp=no)])
 if test "$xpdf_cv_func_mkstemp" = yes; then
   AC_DEFINE(HAVE_MKSTEMP)
 fi
+dnl # Check for mkstemps, just like mkstemp.
+AC_CACHE_CHECK([for mkstemps],
+xpdf_cv_func_mkstemps,
+[AC_TRY_LINK([#include <stdlib.h>
+#include <unistd.h>],
+[mkstemps("foo", 0);],
+xpdf_cv_func_mkstemps=yes, xpdf_cv_func_mkstemps=no)])
+if test "$xpdf_cv_func_mkstemps" = yes; then
+  AC_DEFINE(HAVE_MKSTEMPS)
+fi
 
 dnl ##### Check select argument type: on HP-UX before version 10, select
 dnl ##### takes (int *) instead of (fd_set *).
@@ -209,6 +221,13 @@ select(1, &fds, &fds, &fds, 0);],
 xpdf_cv_func_select_arg=yes, xpdf_cv_func_select_arg=no)])
 if test "$xpdf_cv_func_select_arg" != yes; then
   AC_DEFINE(SELECT_TAKES_INT)
+fi
+
+dnl ##### Check for fseek64 and ftell64
+AC_CHECK_FUNCS(fseek64, xpdf_cv_func_fseek64=yes, xpdf_cv_func_fseek64=no)
+AC_CHECK_FUNCS(ftell64, xpdf_cv_func_ftell64=yes, xpdf_cv_func_ftell64=no)
+if test "$xpdf_cv_func_fseek64" = yes -a "$xpdf_cv_func_ftell64" = yes; then
+  AC_DEFINE(HAVE_FSEEK64)
 fi
 
 dnl ##### Back to C for the library tests.

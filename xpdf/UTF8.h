@@ -2,7 +2,7 @@
 //
 // UTF8.h
 //
-// Copyright 2001 Derek B. Noonburg
+// Copyright 2001-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -37,6 +37,19 @@ static int mapUTF8(Unicode u, char *buf, int bufSize) {
     buf[2] = (char)(0x80 + ((u >> 6) & 0x3f));
     buf[3] = (char)(0x80 + (u & 0x3f));
     return 4;
+  } else {
+    return 0;
+  }
+}
+
+static int mapUCS2(Unicode u, char *buf, int bufSize) {
+  if (u <= 0xffff) {
+    if (bufSize < 2) {
+      return 0;
+    }
+    buf[0] = (char)((u >> 8) & 0xff);
+    buf[1] = (char)(u & 0xff);
+    return 2;
   } else {
     return 0;
   }

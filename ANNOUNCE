@@ -1,35 +1,24 @@
-Subject: ANNOUNCE: Xpdf 1.00 - a PDF viewer for X
+Subject: ANNOUNCE: Xpdf 1.01 - a PDF viewer for X
 
 
-I've just released a new version of Xpdf, my Portable Document Format
-(PDF) viewer for X.
+Glyph & Cog, LLC is pleased to announce a new version of Xpdf, the
+open source Portable Document Format (PDF) viewer for X.  The Xpdf
+project also includes a PDF text extractor, PDF-to-PostScript
+converter, and various other utilities.
 
 Xpdf runs under the X Window System on Unix, VMS, and OS/2.  The non-X
-components of the package (pdftops, pdftotext, etc.) also run on Win32
-systems.
-
-WARNING: Xpdf 1.x uses a completely different config file setup than
-Xpdf 0.9x.  Please see the "Upgrading from Xpdf 0.9x" section in the
-README file.
+components (pdftops, pdftotext, etc.) also run on Win32 systems and
+should run on pretty much any system with a decent C++ compiler.
 
 Noticeable changes:
-* Completely rewrote the code that handles font encodings:
-  - everything is Unicode-based
-  - 16-bit fonts are handled much more cleanly
-  - text output encoding can be set more flexibly
-* New .xpdfrc config files.
-* Implemented the sh (shaded fill) operator for the axial shading
-  type.
-* Added a duplex option to PSOutputDev and a -duplex switch to
-  pdftops.
-* Added key bindings for forward ('v') and backward ('b').
-* Added the pdffonts program which lists the fonts used in a PDF
-  file.
-* Fixed several problems in the TrueType font embedding code (for
-  PostScript output).
-* Accept named destination on command line.
-* Added several new items to pdfinfo: file size, PDF version, tagged
-  (yes or no), XML metadata (with the -meta option).
+* Glyph & Cog, LLC formed to handle all commercial licensing of Xpdf.
+* Optimized the 1-bit image code and the incremental display update
+  code.
+* Implemented 16-bit font embedding for PostScript output.
+* Implemented Type 3 fonts (viewer and PostScript conversion).
+* Added a simple reverse video mode (-rv switch, xpdf.reverseVideo
+  resource).
+* Many minor enhancements and bug fixes.
 
 See the `CHANGES' file for a complete list.
 
@@ -42,7 +31,7 @@ xpdf web page and ftp site:
     http://www.foolabs.com/xpdf/
     ftp://ftp.foolabs.com/pub/xpdf/
 
-Source and Linux binaries are on sunsite.unc.edu, currently in
-the incoming directory, but they will be moved to:
+For information on commercial licensing and consulting, please see the
+Glyph & Cog web site:
 
-    ftp://ftp.ibiblio.org/pub/Linux/apps/graphics/viewers/X
+    http://www.glyphandcog.com/

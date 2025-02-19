@@ -6,7 +6,7 @@ pdfimages(1)                                         pdfimages(1)
 
 NAME
        pdfimages - Portable Document Format (PDF) image extractor
-       (version 1.00)
+       (version 1.01)
 
 SYNOPSIS
        pdfimages [options] PDF-file image-root
@@ -61,7 +61,7 @@ OPTIONS
 
 
 
-                           01 Feb 2002                          1
+                           20 May 2002                          1
 
 
 
@@ -73,18 +73,12 @@ pdfimages(1)                                         pdfimages(1)
        -h     Print usage information.   (-help  and  --help  are
               equivalent.)
 
-BUGS
-       With  the  -j  option,  the  PDF  image streams are copied
-       directly to the output files.  DCT images in PDF files may
-       use some non-standard JPEG features, so the resulting .jpg
-       files may not be too useful.
-
 AUTHOR
-       The pdfimages software  and  documentation  are  copyright
-       1996-2002 Derek B. Noonburg (derekn@foolabs.com).
+       The  pdfimages  software  and  documentation are copyright
+       Glyph & Cog, LLC.
 
 SEE ALSO
-       xpdf(1),   pdftops(1),   pdftotext(1),   pdfinfo(1),  pdf-
+       xpdf(1),  pdftops(1),   pdftotext(1),   pdfinfo(1),   pdf-
        fonts(1), pdftopbm(1), xpdfrc(5)
        http://www.foolabs.com/xpdf/
 
@@ -127,6 +121,12 @@ SEE ALSO
 
 
 
-                           01 Feb 2002                          2
+
+
+
+
+
+
+                           20 May 2002                          2
 
 

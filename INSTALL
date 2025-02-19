@@ -1,11 +1,11 @@
 Xpdf
 ====
 
-version 1.00
-2002-feb-01
+version 1.01
+2002-may-20
 
 The Xpdf software and documentation are
-copyright 1996-2002 Derek B. Noonburg.
+copyright 1996-2002 Glyph & Cog, LLC.
 
 Email: derekn@foolabs.com
 WWW: http://www.foolabs.com/xpdf/
@@ -170,27 +170,34 @@ With cygwin, the build procedure is the same as for Unix:
 
 With djgpp:
 
-  * You'll need several of the Unix tool ports (cat, sed, etc.)
-    available from http://www.delorie.com/ .
-
   * Open a DOS window.
 
   * ./dj_make
+
+  * djgpp is a DOS/Windows port of gcc, available from
+    http://www.delorie.com/
 
 With djgpp, for DOS 6 (instead of Win32):
 
   * ./dj_make
 
-  * EXE2COFF pdftops.exe
+  * cd xpdf
 
-  * COPY /B CWSDSTUB.EXE+pdftops pdftops.exe
+  * strip pdftops.exe
+
+  * exe2coff pdftops.exe
+
+  * copy /B c:\djgpp\bin\cwsdstub.exe+pdftops pdftops.exe
+
+  * upx pdftops.exe
+    - if you want compressed executables
 
   * and similarly for the other executables
 
-  * CWSDSTUB.EXE comes from:
-        ftp://ftp.simtel.net/pub/simtelnet/gnu/djgpp/v2misc/csdpmi5b.zip
-    EXE2COFF comes from:
-        ftp://ftp.simtel.net/pub/simtelnet/gnu/djgpp/v2/djdev203.zip
+  * cwsdstub.exe comes from djgpp/v2misc/csdpmi5b.zip on any of the
+    djgpp ftp mirrors; exe2coff is part of the standard djgpp install
+
+  * upx comes from http://upx.sourceforge.net/
 
 With the Microsoft tools:
 

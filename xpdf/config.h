@@ -2,7 +2,7 @@
 //
 // config.h
 //
-// Copyright 1996-2002 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -14,14 +14,15 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-#define xpdfVersion "1.00"
+
+#define xpdfVersion "1.01"
 
 // supported PDF version
 #define supportedPDFVersionStr "1.4"
 #define supportedPDFVersionNum 1.4
 
 // copyright notice
-#define xpdfCopyright "Copyright 1996-2002 Derek B. Noonburg"
+#define xpdfCopyright "Copyright 1996-2002 Glyph & Cog, LLC"
 
 //------------------------------------------------------------------------
 // paper size
@@ -65,6 +66,9 @@
 
 // number of fonts (combined t1lib, FreeType, X server) to cache
 #define xOutFontCacheSize 64
+
+// number of Type 3 fonts to cache
+#define xOutT3FontCacheSize 8
 
 //------------------------------------------------------------------------
 // popen

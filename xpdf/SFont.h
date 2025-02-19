@@ -4,6 +4,8 @@
 //
 // Base class for font rasterizers.
 //
+// Copyright 2001-2002 Glyph & Cog, LLC
+//
 //========================================================================
 
 #ifndef SFONT_H
@@ -17,6 +19,8 @@
 #include <X11/Xutil.h>
 #include "gtypes.h"
 #include "CharTypes.h"
+
+class GfxState;
 
 //------------------------------------------------------------------------
 
@@ -122,6 +126,13 @@ public:
   virtual GBool drawChar(Drawable d, int w, int h, GC gc,
 			 int x, int y, int r, int g, int b,
 			 CharCode c, Unicode u) = 0;
+
+  // Add the outline of the specified character to the current path by
+  // calling state->moveTo, lineTo, and curveTo.  Returns true if
+  // successful.  If this SFont subclass doesn't implement character
+  // paths, returns false immediately without modifying the current
+  // path.
+  virtual GBool getCharPath(CharCode c, Unicode u, GfxState *state);
 
 protected:
 };
