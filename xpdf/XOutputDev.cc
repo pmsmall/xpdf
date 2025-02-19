@@ -24,6 +24,7 @@
 #include "GfxFont.h"
 #include "Error.h"
 #include "Params.h"
+#include "TextOutputDev.h"
 #include "XOutputDev.h"
 
 #include "XOutputFontInfo.h"
@@ -507,6 +508,9 @@ XOutputDev::XOutputDev(LTKWindow *win1) {
 
   // empty state stack
   save = NULL;
+
+  // create text object
+  text = new TextPage(gFalse);
 }
 
 XOutputDev::~XOutputDev() {
@@ -517,6 +521,7 @@ XOutputDev::~XOutputDev() {
   XFreeGC(display, paperGC);
   if (clipRegion)
     XDestroyRegion(clipRegion);
+  delete text;
 }
 
 void XOutputDev::startPage(int pageNum, GfxState *state) {
@@ -573,6 +578,13 @@ void XOutputDev::startPage(int pageNum, GfxState *state) {
   XFillRectangle(display, pixmap, paperGC,
 		 0, 0, canvas->getRealWidth(), canvas->getRealHeight());
   canvas->redraw();
+
+  // clear text object
+  text->clear();
+}
+
+void XOutputDev::endPage() {
+  text->coalesce();
 }
 
 void XOutputDev::dump() {
@@ -655,6 +667,7 @@ void XOutputDev::restoreState(GfxState *state) {
 
 void XOutputDev::updateAll(GfxState *state) {
   updateLineAttrs(state, gTrue);
+  updateFlatness(state);
   updateMiterLimit(state);
   updateFillColor(state);
   updateStrokeColor(state);
@@ -750,6 +763,8 @@ void XOutputDev::updateFont(GfxState *state) {
     return;
   }
   state->getFontTransMat(&m11, &m12, &m21, &m22);
+  m11 *= state->getHorizScaling();
+  m21 *= state->getHorizScaling();
   font = fontCache->getFont(gfxFont, m11, m12, m21, m22);
   if (font) {
     XSetFont(display, fillGC, font->getXFont()->fid);
@@ -1133,7 +1148,16 @@ void XOutputDev::addPoint(XPoint **points, int *size, int *k, int x, int y) {
   ++(*k);
 }
 
-void XOutputDev::drawChar(GfxState *state, double x, double y, Guchar c) {
+void XOutputDev::beginString(GfxState *state, GString *s) {
+  text->beginString(state, s);
+}
+
+void XOutputDev::endString(GfxState *state) {
+  text->endString();
+}
+
+void XOutputDev::drawChar(GfxState *state, double x, double y,
+			  double dx, double dy, Guchar c) {
   Gushort c1;
   char buf;
   char *p;
@@ -1200,6 +1224,7 @@ void XOutputDev::drawChar(GfxState *state, double x, double y, Guchar c) {
       x1 += tx;
     }
   }
+  text->addChar(state, x, y, dx, dy, c);
 }
 
 void XOutputDev::drawImageMask(GfxState *state, Stream *str,
@@ -1208,6 +1233,7 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   XImage *image;
   int x0, y0;			// top left corner of image
   int w0, h0, w1, h1;		// size of image
+  int x2, y2;
   int w2, h2;
   Guint depth;
   double xt, yt, wt, ht;
@@ -1220,7 +1246,6 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   Gulong color;
   Gulong buf;
   int i, j;
-  int c1, c2;
 
   // get image position and size
   state->transform(0, 0, &xt, &yt);
@@ -1262,7 +1287,7 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
     j = height * ((width + 7) / 8);
     for (i = 0; i < j; ++i)
       str->getChar();
-    goto done;
+    return;
   }
 
   // Bresenham parameters
@@ -1280,12 +1305,26 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
     w2 = canvas->getRealWidth() - x0;
   else
     w2 = w0;
+  if (x0 < 0) {
+    x2 = -x0;
+    w2 += x0;
+    x0 = 0;
+  } else {
+    x2 = 0;
+  }
   if (y0 + h0 > canvas->getRealHeight())
     h2 = canvas->getRealHeight() - y0;
   else
     h2 = h0;
+  if (y0 < 0) {
+    y2 = -y0;
+    h2 += y0;
+    y0 = 0;
+  } else {
+    y2 = 0;
+  }
   XGetSubImage(display, pixmap, x0, y0, w2, h2, (1 << depth) - 1, ZPixmap,
-	       image, 0, 0);
+	       image, x2, y2);
 
   // allocate line buffer
   pixLine = (Guchar *)gmalloc(((width + 7) & ~7) * sizeof(Guchar));
@@ -1380,24 +1419,13 @@ void XOutputDev::drawImageMask(GfxState *state, Stream *str,
   }
 
   // blit the image into the pixmap
-  XPutImage(display, pixmap, fillGC, image, 0, 0, x0, y0, w2, h2);
+  XPutImage(display, pixmap, fillGC, image, x2, y2, x0, y0, w2, h2);
 
   // free memory
   gfree(image->data);
   image->data = NULL;
   XDestroyImage(image);
   gfree(pixLine);
-
-  // if it was an inline image, skip the 'EI' tag
- done:
-  if (inlineImg) {
-    c1 = str->getBaseStream()->getChar();
-    c2 = str->getBaseStream()->getChar();
-    while (!(c1 == 'E' && c2 == 'I') && c2 != EOF) {
-      c1 = c2;
-      c2 = str->getBaseStream()->getChar();
-    }
-  }
 }
 
 inline Gulong XOutputDev::findColor(RGBColor *x, RGBColor *err) {
@@ -1453,7 +1481,6 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   RGBColor color2, err;
   RGBColor *errRight, *errDown;
   int i, j, k;
-  int c1, c2;
 
   // get image position and size
   state->transform(0, 0, &xt, &yt);
@@ -1498,7 +1525,7 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
     k = height * ((nVals * nBits + 7) / 8);
     for (i = 0; i < k; ++i)
       str->getChar();
-    goto done;
+    return;
   }
 
   // Bresenham parameters
@@ -1695,17 +1722,6 @@ void XOutputDev::drawImage(GfxState *state, Stream *str, int width,
   gfree(pixLine);
   gfree(errRight);
   gfree(errDown);
-
-  // if it was an inline image, skip the 'EI' tag
- done:
-  if (inlineImg) {
-    c1 = str->getBaseStream()->getChar();
-    c2 = str->getBaseStream()->getChar();
-    while (!(c1 == 'E' && c2 == 'I') && c2 != EOF) {
-      c1 = c2;
-      c2 = str->getBaseStream()->getChar();
-    }
-  }
 }
 
 Gulong XOutputDev::findColor(GfxColor *color) {
@@ -1725,14 +1741,37 @@ Gulong XOutputDev::findColor(GfxColor *color) {
     b = xoutRound(color->getB() * (numColors - 1));
     // even a very light color shouldn't map to white
     if (r == numColors - 1 && g == numColors - 1 && b == numColors - 1) {
-      if (color->getR() < 0.99)
+      if (color->getR() < 0.95)
 	--r;
-      if (color->getG() < 0.99)
+      if (color->getG() < 0.95)
 	--g;
-      if (color->getB() < 0.99)
+      if (color->getB() < 0.95)
 	--b;
     }
     pixel = colors[(r * numColors + g) * numColors + b];
   }
   return pixel;
+}
+
+GBool XOutputDev::findText(char *s, GBool top, GBool bottom,
+			   int *xMin, int *yMin, int *xMax, int *yMax) {
+  double xMin1, yMin1, xMax1, yMax1;
+  
+  xMin1 = (double)*xMin;
+  yMin1 = (double)*yMin;
+  xMax1 = (double)*xMax;
+  yMax1 = (double)*yMax;
+  if (text->findText(s, top, bottom, &xMin1, &yMin1, &xMax1, &yMax1)) {
+    *xMin = xoutRound(xMin1);
+    *xMax = xoutRound(xMax1);
+    *yMin = xoutRound(yMin1);
+    *yMax = xoutRound(yMax1);
+    return gTrue;
+  }
+  return gFalse;
+}
+
+GString *XOutputDev::getText(int xMin, int yMin, int xMax, int yMax) {
+  return text->getText((double)xMin, (double)yMin,
+		       (double)xMax, (double)yMax);
 }

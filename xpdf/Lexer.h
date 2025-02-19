@@ -25,8 +25,13 @@
 class Lexer {
 public:
 
-  // Constructor.
-  Lexer(Stream *str1, GBool freeStream1 = gTrue);
+  // Construct a lexer for a single stream.  Deletes the stream when
+  // lexer is deleted.
+  Lexer(Stream *str);
+
+  // Construct a lexer for a stream or array of streams (assumes obj
+  // is either a stream or array of streams).
+  Lexer(Object *obj);
 
   // Destructor.
   ~Lexer();
@@ -38,21 +43,26 @@ public:
   void skipToNextLine();
 
   // Skip over one character.
-  void skipChar() { str->getChar(); }
+  void skipChar() { getChar(); }
 
   // Get stream.
-  Stream *getStream() { return str; }
+  Stream *getStream() { return curStr.getStream(); }
 
   // Get current position in file.
-  int getPos() { return str->getPos(); }
+  int getPos() { return curStr.isNone() ? -1 : curStr.streamGetPos(); }
 
   // Set position in file.
-  void setPos(int pos) { str->setPos(pos); }
+  void setPos(int pos) { curStr.streamSetPos(pos); }
 
 private:
 
-  Stream *str;			// input stream
-  GBool freeStream;		// should Lexer free the Stream?
+  int getChar();
+  int lookChar();
+
+  Array *streams;		// array of input streams
+  int strPtr;			// index of current stream
+  Object curStr;		// current stream
+  GBool freeArray;		// should lexer free the streams array?
   char tokBuf[tokBufSize];	// temporary token buffer
 };
 

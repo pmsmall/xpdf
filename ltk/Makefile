@@ -12,7 +12,7 @@ GOODIR = ../goo
 
 CXXFLAGS = $(CXXFLAGS2) -I$(GOODIR) -I.
 
-all: libLTK.a ltkbuild
+all: $(LIBPREFIX)LTK.a ltkbuild
 
 #------------------------------------------------------------------------
 
@@ -20,10 +20,15 @@ LTK_OBJS =	LTKApp.o \
 		LTKBorder.o \
 		LTKBox.o \
 		LTKButton.o \
+		LTKButtonDialog.o \
 		LTKCanvas.o \
+		LTKCompoundWidget.o \
 		LTKDblBufCanvas.o \
 		LTKEmpty.o \
+		LTKFileReq.o \
 		LTKLabel.o \
+		LTKList.o \
+		LTKMenu.o \
 		LTKMisc.o \
 		LTKResources.o \
 		LTKScrollbar.o \
@@ -32,10 +37,10 @@ LTK_OBJS =	LTKApp.o \
 		LTKWidget.o \
 		LTKWindow.o
 
-libLTK.a: $(LTK_OBJS)
-	rm -f libLTK.a
-	$(AR) libLTK.a $(LTK_OBJS)
-	$(RANLIB) libLTK.a
+$(LIBPREFIX)LTK.a: $(LTK_OBJS)
+	rm -f $(LIBPREFIX)LTK.a
+	$(AR) $(LIBPREFIX)LTK.a $(LTK_OBJS)
+	$(RANLIB) $(LIBPREFIX)LTK.a
 
 #------------------------------------------------------------------------
 
@@ -48,7 +53,7 @@ ltkbuild: $(LTKBUILD_OBJS)
 #------------------------------------------------------------------------
 
 clean:
-	rm -f $(LTK_OBJS) libLTK.a
+	rm -f $(LTK_OBJS) $(LIBPREFIX)LTK.a
 	rm -f $(LTKBUILD_OBJS) ltkbuild
 	rm -f Makefile.bak
 
@@ -59,17 +64,18 @@ depend:
 	sed '/^#----- dependences -----/q' Makefile.bak >Makefile
 	echo >>Makefile
 	$(CXX) $(CXXFLAGS) -M $(LTK_OBJS:.o=.cc) |\
-	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' >>Makefile
+	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
+	  grep -v '^ \\$$' >>Makefile
 	$(CXX) $(CXXFLAGS) -M $(LTKBUILD_OBJS:.o=.cc) |\
-	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' >>Makefile
+	  sed 's/\/usr\/[^ ]* *//g;/^  \\$$/d' |\
+	  grep -v '^ \\$$' >>Makefile
 
 #----- dependences -----
 
 LTKApp.o: LTKApp.cc \
  ../goo/gtypes.h LTKApp.h \
- ../goo/GString.h \
- LTKResources.h LTKWindow.h LTKMisc.h \
- LTKWidget.h
+ ../goo/GString.h LTKResources.h LTKWindow.h \
+ LTKMenu.h LTKMisc.h LTKWidget.h
 LTKBorder.o: LTKBorder.cc \
  ../goo/gtypes.h \
  LTKBorder.h
@@ -81,25 +87,52 @@ LTKButton.o: LTKButton.cc \
  LTKWindow.h ../goo/gtypes.h \
  ../goo/GString.h LTKButton.h LTKWidget.h \
  LTKBorder.h
+LTKButtonDialog.o: LTKButtonDialog.cc \
+ LTKApp.h \
+ ../goo/gtypes.h ../goo/GString.h LTKLabel.h \
+ LTKWidget.h LTKWindow.h LTKButton.h LTKEmpty.h LTKBox.h LTKBorder.h \
+ LTKButtonDialog.h LTKCompoundWidget.h
 LTKCanvas.o: LTKCanvas.cc \
  LTKWindow.h ../goo/gtypes.h \
  ../goo/GString.h LTKCanvas.h LTKWidget.h
+LTKCompoundWidget.o: LTKCompoundWidget.cc \
+ LTKApp.h \
+ ../goo/gtypes.h ../goo/GString.h \
+ LTKWindow.h LTKBox.h LTKBorder.h LTKWidget.h \
+ LTKCompoundWidget.h
 LTKDblBufCanvas.o: LTKDblBufCanvas.cc \
  LTKWindow.h ../goo/gtypes.h \
  ../goo/GString.h LTKDblBufCanvas.h LTKWidget.h
 LTKEmpty.o: LTKEmpty.cc \
  LTKWindow.h ../goo/gtypes.h \
  ../goo/GString.h LTKEmpty.h LTKWidget.h
+LTKFileReq.o: LTKFileReq.cc \
+ ../goo/GString.h \
+ ../goo/gfile.h \
+ ../goo/gtypes.h \
+ LTKBox.h LTKBorder.h LTKWidget.h LTKWindow.h LTKLabel.h LTKList.h \
+ LTKScrollbar.h LTKTextIn.h LTKEmpty.h LTKFileReq.h \
+ LTKCompoundWidget.h
 LTKLabel.o: LTKLabel.cc \
  LTKLabel.h ../goo/GString.h \
  LTKWidget.h ../goo/gtypes.h LTKWindow.h
+LTKList.o: LTKList.cc \
+ ../goo/gmem.h \
+ LTKList.h ../goo/GString.h \
+ LTKWidget.h ../goo/gtypes.h LTKWindow.h
+LTKMenu.o: LTKMenu.cc \
+ ../goo/gmem.h \
+ LTKConfig.h LTKApp.h \
+ ../goo/gtypes.h ../goo/GString.h \
+ LTKWindow.h LTKBorder.h LTKMenu.h
 LTKMisc.o: LTKMisc.cc \
  LTKMisc.h \
  ../goo/GString.h LTKWindow.h \
  ../goo/gtypes.h LTKWidget.h
 LTKResources.o: LTKResources.cc \
- ../goo/gtypes.h ../goo/GString.h \
- ../goo/fileNames.h LTKConfig.h LTKMisc.h LTKResources.h
+ ../goo/gtypes.h ../goo/GString.h ../goo/gfile.h \
+ LTKConfig.h \
+ LTKMisc.h LTKResources.h
 LTKScrollbar.o: LTKScrollbar.cc \
  LTKApp.h \
  ../goo/gtypes.h ../goo/GString.h \
@@ -117,8 +150,5 @@ LTKWidget.o: LTKWidget.cc \
  ../goo/GString.h LTKWidget.h
 LTKWindow.o: LTKWindow.cc \
  LTKConfig.h LTKApp.h \
- ../goo/gtypes.h ../goo/GString.h LTKWindow.h LTKWidget.h LTKBox.h \
- LTKBorder.h
-ltkbuild.o: ltkbuild.cc \
- ../goo/gtypes.h \
- ../goo/gmem.h ../goo/GString.h ltkbuild-widgets.h
+ ../goo/gtypes.h ../goo/GString.h \
+ LTKMenu.h LTKWindow.h LTKWidget.h LTKBox.h LTKBorder.h

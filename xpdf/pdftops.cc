@@ -12,6 +12,7 @@
 #include <string.h>
 #include <parseargs.h>
 #include <GString.h>
+#include <gmem.h>
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -27,6 +28,7 @@
 
 static int firstPage = 1;
 static int lastPage = 0;
+static GBool noEmbedFonts = gFalse;
 GBool printCommands = gFalse;
 static GBool printHelp = gFalse;
 
@@ -35,6 +37,8 @@ static ArgDesc argDesc[] = {
    "first page to print"},
   {"-l",      argInt,      &lastPage,      0,
    "last page to print"},
+  {"-noemb",  argFlag,     &noEmbedFonts,  0,
+   "don't embed Type 1 fonts"},
   {"-h",      argFlag,     &printHelp,     0,
    "print usage information"},
   {"-help",   argFlag,     &printHelp,     0,
@@ -53,6 +57,8 @@ int main(int argc, char *argv[]) {
   // parse args
   ok = parseArgs(argDesc, &argc, argv);
   if (!ok || argc < 2 || argc > 3 || printHelp) {
+    fprintf(stderr, "pdftops version %s\n", xpdfVersion);
+    fprintf(stderr, "%s\n", xpdfCopyright);
     printUsage("pdftops", "<PDF-file> [<PS-file>]", argDesc);
     exit(1);
   }
@@ -92,7 +98,7 @@ int main(int argc, char *argv[]) {
   // write PostScript file
   if (doc->okToPrint()) {
     psOut = new PSOutputDev(psFileName->getCString(), doc->getCatalog(),
-			    firstPage, lastPage);
+			    firstPage, lastPage, !noEmbedFonts);
     if (psOut->isOk())
       doc->displayPages(psOut, firstPage, lastPage, 72, 0);
     delete psOut;
@@ -105,6 +111,7 @@ int main(int argc, char *argv[]) {
 
   // check for memory leaks
   Object::memCheck(errFile);
+  gMemReport(errFile);
 
   return 0;
 }

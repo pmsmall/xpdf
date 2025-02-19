@@ -24,14 +24,12 @@
 class LTKDblBufCanvas: public LTKWidget {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor and destructor ----------
 
   LTKDblBufCanvas(char *name1, int widgetNum1,
 		  int minWidth1, int minHeight1);
 
   virtual ~LTKDblBufCanvas();
-
-  virtual LTKWidget *copy() { return new LTKDblBufCanvas(this); }
 
   //---------- special access ----------
 
@@ -47,8 +45,6 @@ public:
   virtual void redraw();
 
 protected:
-
-  LTKDblBufCanvas(LTKDblBufCanvas *canvas);
 
   int minWidth, minHeight;	// minimum size
   Pixmap pixmap;		// the off-screen drawable

@@ -6,10 +6,16 @@
 //
 //========================================================================
 
+#define windowType "LTKWindow"
+#define menuType   "LTKMenu"
+#define boxType    "LTKBox"
+
 ArgDesc windowArgs[] = {
   {"func",           argVal,     gTrue,  "missingFunc"},
   {"dialog",         argVal,     gFalse, "gFalse"},
   {"title",          argVal,     gTrue,  "missingTitle"},
+  {"icon",           argVal,     gFalse, "NULL"},
+  {"defWidget",      argVal,     gFalse, "NULL"},
   {NULL}
 };
 
@@ -93,12 +99,30 @@ ArgDesc emptyArgs[] = {
   {NULL}
 };
 
+ArgDesc fileReqArgs[] = {
+  {"name",           argVal,     gFalse, "NULL"},
+  {"num",            argVal,     gFalse, "0"},
+  {"select",         argVal,     gFalse, "NULL"},
+  {"font",           argVal,     gFalse, "NULL"},
+  {NULL}
+};
+
 ArgDesc labelArgs[] = {
   {"name",           argVal,     gFalse, "NULL"},
   {"num",            argVal,     gFalse, "0"},
   {"length",         argVal,     gFalse, "-1"},
   {"font",           argVal,     gFalse, "NULL"},
   {"text",           argVal,     gFalse, "NULL"},
+  {NULL}
+};
+
+ArgDesc listArgs[] = {
+  {"name",           argVal,     gFalse, "NULL"},
+  {"num",            argVal,     gFalse, "0"},
+  {"w",              argVal,     gFalse, "64"},
+  {"h",              argVal,     gFalse, "4"},
+  {"selection",      argVal,     gFalse, "gFalse"},
+  {"font",           argVal,     gFalse, "NULL"},
   {NULL}
 };
 
@@ -133,8 +157,27 @@ ArgDesc textInArgs[] = {
   {NULL}
 };
 
-BlockDesc windowTab[] = {
+ArgDesc menuArgs[] = {
+  {"func",           argVal,     gTrue,  "missingFunc"},
+  {"title",          argVal,     gFalse, "NULL"},
+  {"n",              argVal,     gTrue,  "0"},
+  {NULL}
+};
+
+#define menuArgN 2
+
+ArgDesc menuItemArgs[] = {
+  {"subitems",       argVal,     gFalse, "-1"},
+  {"text",           argVal,     gTrue,  "missingText"},
+  {"shortcut",       argVal,     gFalse, "NULL"},
+  {"num",            argVal,     gFalse, "0"},
+  {"select",         argVal,     gFalse, "NULL"},
+  {NULL}
+};
+
+BlockDesc topLevelTab[] = {
   {"Window",              "LTKWindow",              windowArgs},
+  {"Menu",                "LTKMenu",                menuArgs},
   {NULL}
 };
 
@@ -152,9 +195,16 @@ BlockDesc widgetTab[] = {
   {"DblBufCanvas",        "LTKDblBufCanvas",        dblBufCanvasArgs},
   {"Empty",               "LTKEmpty",               emptyArgs},
   {"IconButton",          "LTKButton",              iconButtonArgs},
+  {"FileReq",             "LTKFileReq",             fileReqArgs},
   {"Label",               "LTKLabel",               labelArgs},
+  {"List",                "LTKList",                listArgs},
   {"Scrollbar",           "LTKScrollbar",           scrollbarArgs},
   {"ScrollingCanvas",     "LTKScrollingCanvas",     scrollingCanvasArgs},
   {"TextIn",              "LTKTextIn",              textInArgs},
+  {NULL}
+};
+
+BlockDesc menuItemTab[] = {
+  {"MenuItem",            "LTKMenuItem",            menuItemArgs},
   {NULL}
 };

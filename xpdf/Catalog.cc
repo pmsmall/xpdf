@@ -17,6 +17,7 @@
 #include "Dict.h"
 #include "Page.h"
 #include "Error.h"
+#include "Link.h"
 #include "Catalog.h"
 
 //------------------------------------------------------------------------
@@ -66,6 +67,13 @@ Catalog::Catalog(Object *catDict) {
   // read named destination dictionary
   catDict->dictLookup("Dests", &dests);
 
+  // read root of named destination tree
+  if (catDict->dictLookup("Names", &obj)->isDict())
+    obj.dictLookup("Dests", &nameTree);
+  else
+    nameTree.initNull();
+  obj.free();
+
   return;
 
  err3:
@@ -74,6 +82,7 @@ Catalog::Catalog(Object *catDict) {
   pagesDict.free();
  err1:
   dests.initNull();
+  nameTree.initNull();
   ok = gFalse;
 }
 
@@ -89,6 +98,7 @@ Catalog::~Catalog() {
     gfree(pageRefs);
   }
   dests.free();
+  nameTree.free();
 }
 
 int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
@@ -160,8 +170,102 @@ int Catalog::findPage(int num, int gen) {
   return 0;
 }
 
-Object *Catalog::findDest(GString *name, Object *obj) {
-  if (dests.isDict())
-    return dests.dictLookup(name->getCString(), obj);
-  return obj->initNull();
+LinkDest *Catalog::findDest(GString *name) {
+  LinkDest *dest;
+  Object obj1, obj2;
+  GBool found;
+
+  // try named destination dictionary then name tree
+  found = gFalse;
+  if (dests.isDict()) {
+    if (!dests.dictLookup(name->getCString(), &obj1)->isNull())
+      found = gTrue;
+    else
+      obj1.free();
+  }
+  if (!found) {
+    if (!findDestInTree(&nameTree, name, &obj1)->isNull())
+      found = gTrue;
+    else
+      obj1.free();
+  }
+  if (!found)
+    return NULL;
+
+  // construct LinkDest
+  dest = NULL;
+  if (obj1.isArray()) {
+    dest = new LinkDest(obj1.getArray(), gTrue);
+  } else if (obj1.isDict()) {
+    if (obj1.dictLookup("D", &obj2)->isArray())
+      dest = new LinkDest(obj2.getArray(), gTrue);
+    else
+      error(-1, "Bad named destination value");
+    obj2.free();
+  } else {
+    error(-1, "Bad named destination value");
+  }
+  obj1.free();
+
+  return dest;
+}
+
+Object *Catalog::findDestInTree(Object *tree, GString *name, Object *obj) {
+  Object names, name1;
+  Object kids, kid, limits, low, high;
+  GBool done, found;
+  int cmp, i;
+
+  // leaf node
+  if (tree->dictLookup("Names", &names)->isArray()) {
+    done = found = gFalse;
+    for (i = 0; !done && i < names.arrayGetLength(); i += 2) {
+      if (names.arrayGet(i, &name1)->isString()) {
+	cmp = name->cmp(name1.getString());
+	if (cmp == 0) {
+	  names.arrayGet(i+1, obj);
+	  found = gTrue;
+	  done = gTrue;
+	} else if (cmp < 0) {
+	  done = gTrue;
+	}
+	name1.free();
+      }
+    }
+    names.free();
+    if (!found)
+      obj->initNull();
+    return obj;
+  }
+  names.free();
+
+  // root or intermediate node
+  done = gFalse;
+  if (tree->dictLookup("Kids", &kids)->isArray()) {
+    for (i = 0; !done && i < kids.arrayGetLength(); ++i) {
+      if (kids.arrayGet(i, &kid)->isDict()) {
+	if (kid.dictLookup("Limits", &limits)->isArray()) {
+	  if (limits.arrayGet(0, &low)->isString() &&
+	      name->cmp(low.getString()) >= 0) {
+	    if (limits.arrayGet(1, &high)->isString() &&
+		name->cmp(high.getString()) <= 0) {
+	      findDestInTree(&kid, name, obj);
+	      done = gTrue;
+	    }
+	    high.free();
+	  }
+	  low.free();
+	}
+	limits.free();
+      }
+      kid.free();
+    }
+  }
+  kids.free();
+
+  // name was outside of ranges of all kids
+  if (!done)
+    obj->initNull();
+
+  return obj;
 }

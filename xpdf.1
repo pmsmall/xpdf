@@ -1,7 +1,7 @@
 .\" Copyright 1996 Derek B. Noonburg
-.TH xpdf 1 "12 Nov 1996"
+.TH xpdf 1 "28 May 1997"
 .SH NAME
-xpdf \- Portable Document Format (PDF) file viewer for X (version 0.6)
+xpdf \- Portable Document Format (PDF) file viewer for X (version 0.7)
 .SH SYNOPSIS
 .B xpdf
 [options]
@@ -11,7 +11,8 @@ xpdf \- Portable Document Format (PDF) file viewer for X (version 0.6)
 .B Xpdf
 is a viewer for Portable Document Format (PDF) files.  (These are also
 sometimes also called \'Acrobat' files, from the name of Adobe's PDF
-software.)  Xpdf runs under UNIX or VMS and the X Window System.
+software.)  Xpdf runs under the X Window System on UNIX, VMS, and
+OS/2.
 .PP
 To run xpdf, simply type:
 .PP
@@ -26,6 +27,12 @@ specifying the page which should be displayed first, e.g.:
 .PP
 .RS
 xpdf file.pdf 18
+.RE
+.PP
+You can also start xpdf without opening any files:
+.PP
+.RS
+xpdf
 .RE
 .SH OPTIONS
 X resources are listed in square brackets with the corresponding
@@ -119,17 +126,41 @@ options to set the pages to be printed and the PostScript file name.
 The file name can be \'-' for stdout or \'|command' to pipe the
 PostScript through a command, e.g., \'|lpr'.
 .TP
-.B "curved arrow buttons"
-Rotate the page clockwise and counterclockwise.  These are intended
-primarily for PDF files where the rotation isn't correctly specified
-in the file, but they're also useful if your X server doesn't support
-font rotation.
-.TP
 .B "\'?' button"
 Bring up the \'about xpdf' window.
 .TP
 .B "\'Quit' button"
 Quit xpdf.
+.PP
+.SS Menu
+Pressing the right mouse button will post a popup menu with the
+following commands:
+.TP
+.B "Open..."
+Open a new PDF file via a file requester.
+.TP
+.B "Save PDF..."
+Save the current file via a file requester.
+.TP
+.B "Find"
+Find a text string.
+.TP
+.B "Rotate left"
+Rotate the page 90 degrees counterclockwise.
+.TP
+.B "Rotate right"
+Rotate the page 90 degrees clockwise.  The two rotate commands are
+intended primarily for PDF files where the rotation isn't correctly
+specified in the file, but they're also useful if your X server
+doesn't support font rotation.
+.TP
+.B "Quit"
+Quit xpdf.
+.PP
+.SS Text selection
+Dragging the mouse with the left button held down will highlight an
+arbitrary rectangle.  Any text inside this rectangle will be copied to
+the X selection buffer.
 .PP
 .SS Links
 Clicking on a hyperlink will jump to the link's destination.
@@ -139,6 +170,12 @@ any other type of link (e.g., links to executable programs) prints an
 error message.
 .PP
 .SS Key bindings
+.TP
+.B o
+Open a new PDF file via a file requester.
+.TP
+.B f
+Find a text string.
 .TP
 .B n
 Move to the next page.
@@ -280,9 +317,10 @@ features which I have yet to implement.
 At this point, the biggest problem is that embedded fonts are not
 handled properly.
 .SH AUTHOR
-The xpdf software and documentation are copyright 1996 Derek
+The xpdf software and documentation are copyright 1996, 1997 Derek
 B. Noonburg (derekn@ece.cmu.edu).
 .SH "SEE ALSO"
-.BR pdftops (1)
+.BR pdftops (1),
+.BR pdftotext (1)
 .br
 .B http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html

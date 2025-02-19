@@ -22,6 +22,7 @@
 #include "GfxFont.h"
 #include "Catalog.h"
 #include "Page.h"
+#include "Stream.h"
 #include "PSOutputDev.h"
 
 //------------------------------------------------------------------------
@@ -44,7 +45,7 @@ static char *prolog[] = {
   "  /pdfTextRender 0 def",
   "  /pdfTextRise 0 def",
   "  /pdfWordSpacing 0 def",
-  "  /pdfHorizScaling 100 def",
+  "  /pdfHorizScaling 1 def",
   "} def",
   "/pdfEndPage { end } def",
   "/sCol { pdfLastStroke not {",
@@ -101,7 +102,7 @@ static char *prolog[] = {
   "% text state operators",
   "/Tc { /pdfCharSpacing exch def } def",
   "/Tf { dup /pdfFontSize exch def",
-  "      dup pdfHorizScaling 100 div mul exch matrix scale",
+  "      dup pdfHorizScaling mul exch matrix scale",
   "      pdfTextMat matrix concatmatrix dup 4 0 put dup 5 0 put",
   "      exch findfont exch makefont setfont } def",
   "/Tr { /pdfTextRender exch def } def",
@@ -114,9 +115,9 @@ static char *prolog[] = {
   "% text string operators",
   "/Tj { pdfTextRender 1 and 0 eq { fCol } { sCol } ifelse",
   "      0 pdfTextRise pdfTextMat dtransform rmoveto",
-  "      pdfFontSize mul",
+  "      pdfFontSize mul pdfHorizScaling mul",
   "      1 index stringwidth pdfTextMat idtransform pop",
-  "      sub 1 index length div",
+  "      sub 1 index length dup 0 ne { div } { pop pop 0 } ifelse",
   "      pdfWordSpacing 0 pdfTextMat dtransform 32",
   "      4 3 roll pdfCharSpacing add 0 pdfTextMat dtransform",
   "      6 5 roll awidthshow",
@@ -132,7 +133,7 @@ static char *prolog[] = {
   "    (%-EOD-) eq { exit } if } loop",
   "} def",
   "/pdfImM {",
-  "  imagemask",
+  "  fCol imagemask",
   "  { currentfile pdfImBuf readline",
   "    not { pop exit } if",
   "    (%-EOD-) eq { exit } if } loop",
@@ -193,14 +194,17 @@ static PSSubstFont psSubstFonts[] = {
 //------------------------------------------------------------------------
 
 PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
-			 int firstPage, int lastPage) {
-  Dict *fontDict;
+			 int firstPage, int lastPage, GBool embedType11) {
+  Object fontDict;
   GfxFontDict *gfxFontDict;
   GfxFont *font;
-  Ref *ids;
-  int numIDs;
   char **p;
-  int pg, i, j, k;
+  int pg, i;
+
+  // initialize
+  embedType1 = embedType11;
+  fontIDs = NULL;
+  fontFileIDs = NULL;
 
   // open file or pipe
   ok = gTrue;
@@ -240,33 +244,27 @@ PSOutputDev::PSOutputDev(char *fileName, Catalog *catalog,
   for (p = prolog; *p; ++p)
     writePS("%s\n", *p);
 
+  // initialize fontIDs and fontFileIDs lists
+  fontIDSize = 64;
+  fontIDLen = 0;
+  fontIDs = (Ref *)gmalloc(fontIDSize * sizeof(Ref));
+  fontFileIDSize = 64;
+  fontFileIDLen = 0;
+  fontFileIDs = (Ref *)gmalloc(fontFileIDSize * sizeof(Ref));
+
   // write document setup
   writePS("%%%%BeginSetup\n");
-  numIDs = 64;
-  ids = (Ref *)gmalloc(numIDs * sizeof(Ref));
-  j = 0;
   for (pg = firstPage; pg <= lastPage; ++pg) {
-    fontDict = catalog->getPage(pg)->getFontDict();
-    if (fontDict) {
-      gfxFontDict = new GfxFontDict(fontDict);
+    catalog->getPage(pg)->getFontDict(&fontDict);
+    if (fontDict.isDict()) {
+      gfxFontDict = new GfxFontDict(fontDict.getDict());
       for (i = 0; i < gfxFontDict->getNumFonts(); ++i) {
 	font = gfxFontDict->getFont(i);
-	for (k = 0; k < j; ++k) {
-	  if (ids[j].num == font->getID().num &&
-	      ids[j].gen == font->getID().gen)
-	    break;
-	}
-	if (k >= j) {
-	  if (j >= numIDs) {
-	    numIDs += 64;
-	    ids = (Ref *)grealloc(ids, numIDs * sizeof(Ref));
-	  }
-	  ids[j++] = font->getID();
-	  setupFont(font);
-	}
+	setupFont(font);
       }
       delete gfxFontDict;
     }
+    fontDict.free();
   }
   writePS("%%%%EndSetup\n");
 
@@ -288,48 +286,189 @@ PSOutputDev::~PSOutputDev() {
     }
 #endif
   }
+  if (fontIDs)
+    gfree(fontIDs);
+  if (fontFileIDs)
+    gfree(fontFileIDs);
 }
 
 void PSOutputDev::setupFont(GfxFont *font) {
+  Ref fontFileID;
   GString *name;
   char *psName;
+  char *charName;
   double scale;
-  int i;
+  int i, j;
 
-  name = font->getName();
-  psName = NULL;
-  scale = 1.0;
-  if (name) {
-    for (i = 0; psFonts[i].name; ++i) {
-      if (name->cmp(psFonts[i].name) == 0) {
-	psName = psFonts[i].psName;
-	break;
+  // check if font is already set up
+  for (i = 0; i < fontIDLen; ++i) {
+    if (fontIDs[i].num == font->getID().num &&
+	fontIDs[i].gen == font->getID().gen)
+      return;
+  }
+
+  // add entry to fontIDs list
+  if (fontIDLen >= fontIDSize) {
+    fontIDSize += 64;
+    fontIDs = (Ref *)grealloc(fontIDs, fontIDSize * sizeof(Ref));
+  }
+  fontIDs[fontIDLen++] = font->getID();
+
+  // check for embedded font
+  if (embedType1 && font->getEmbeddedFontID(&fontFileID)) {
+    setupEmbeddedFont(&fontFileID);
+    psName = font->getEmbeddedFontName();
+    scale = 1;
+
+  // do font substitution
+  } else {
+    name = font->getName();
+    psName = NULL;
+    scale = 1.0;
+    if (name) {
+      for (i = 0; psFonts[i].name; ++i) {
+	if (name->cmp(psFonts[i].name) == 0) {
+	  psName = psFonts[i].psName;
+	  break;
+	}
       }
     }
-  }
-  if (!psName) {
-    if (font->isFixedWidth())
-      i = 8;
-    else if (font->isSerif())
-      i = 4;
-    else
-      i = 0;
-    if (font->isBold())
-      i += 2;
-    if (font->isItalic())
-      i += 1;
-    psName = psSubstFonts[i].psName;
-    scale = font->getWidth('m') / psSubstFonts[i].mWidth;
-    if (scale < 0.1)
-      scale = 1;
+    if (!psName) {
+      if (font->isFixedWidth())
+	i = 8;
+      else if (font->isSerif())
+	i = 4;
+      else
+	i = 0;
+      if (font->isBold())
+	i += 2;
+      if (font->isItalic())
+	i += 1;
+      psName = psSubstFonts[i].psName;
+      scale = font->getWidth('m') / psSubstFonts[i].mWidth;
+      if (scale < 0.1)
+	scale = 1;
+    }
   }
 
+  // generate PostScript code to set up the font
   writePS("/F%d_%d /%s %g\n",
 	  font->getID().num, font->getID().gen, psName, scale);
-  for (i = 0; i < 256; ++i)
-    writePS("%s/%s\n", (i == 0) ? "[ " : "  ", font->getCharName(i));
-  writePS("]\n");
+  for (i = 0; i < 256; i += 8) {
+    writePS((i == 0) ? "[ " : "  ");
+    for (j = 0; j < 8; ++j) {
+      charName = font->getCharName(i+j);
+      writePS("/%s", charName ? charName : ".notdef");
+    }
+    writePS((i == 256-8) ? "]\n" : "\n");
+  }
   writePS("pdfMakeFont\n");
+}
+
+void PSOutputDev::setupEmbeddedFont(Ref *id) {
+  static char hexChar[17] = "0123456789abcdef";
+  Object refObj, strObj, obj1, obj2;
+  Dict *dict;
+  int length1, length2;
+  int c;
+  int start[4];
+  GBool binMode;
+  int i;
+
+  // check if font is already embedded
+  for (i = 0; i < fontFileIDLen; ++i) {
+    if (fontFileIDs[i].num == id->num &&
+	fontFileIDs[i].gen == id->gen)
+      return;
+  }
+
+  // add entry to fontFileIDs list
+  if (fontFileIDLen >= fontFileIDSize) {
+    fontFileIDSize += 64;
+    fontFileIDs = (Ref *)grealloc(fontFileIDs, fontFileIDSize * sizeof(Ref));
+  }
+  fontFileIDs[fontFileIDLen++] = *id;
+
+  // get the font stream and info
+  refObj.initRef(id->num, id->gen);
+  refObj.fetch(&strObj);
+  refObj.free();
+  if (!strObj.isStream()) {
+    error(-1, "Embedded font file object is not a stream");
+    goto err1;
+  }
+  if (!(dict = strObj.streamGetDict())) {
+    error(-1, "Embedded font stream is missing its dictionary");
+    goto err1;
+  }
+  dict->lookup("Length1", &obj1);
+  dict->lookup("Length2", &obj2);
+  if (!obj1.isInt() || !obj2.isInt()) {
+    error(-1, "Missing length fields in embedded font stream dictionary");
+    obj1.free();
+    obj2.free();
+    goto err1;
+  }
+  length1 = obj1.getInt();
+  length2 = obj2.getInt();
+  obj1.free();
+  obj2.free();
+
+  // copy ASCII portion of font
+  strObj.streamReset();
+  for (i = 0; i < length1 && (c = strObj.streamGetChar()) != EOF; ++i)
+    fputc(c, f);
+
+  // figure out if encrypted portion is binary or ASCII
+  binMode = gFalse;
+  for (i = 0; i < 4; ++i) {
+    start[i] = strObj.streamGetChar();
+    if (start[i] == EOF) {
+      error(-1, "Unexpected end of file in embedded font stream");
+      goto err1;
+    }
+    if (!((start[i] >= '0' && start[i] <= '9') ||
+	  (start[i] >= 'A' && start[i] <= 'F') ||
+	  (start[i] >= 'a' && start[i] <= 'f')))
+      binMode = gTrue;
+  }
+
+  // convert binary data to ASCII
+  if (binMode) {
+    for (i = 0; i < 4; ++i) {
+      fputc(hexChar[(start[i] >> 4) & 0x0f], f);
+      fputc(hexChar[start[i] & 0x0f], f);
+    }
+    while (i < length2) {
+      if ((c = strObj.streamGetChar()) == EOF)
+	break;
+      fputc(hexChar[(c >> 4) & 0x0f], f);
+      fputc(hexChar[c & 0x0f], f);
+      if (++i % 32 == 0)
+	fputc('\n', f);
+    }
+    if (i % 32 > 0)
+      fputc('\n', f);
+
+  // already in ASCII format -- just copy it
+  } else {
+    for (i = 0; i < 4; ++i)
+      fputc(start[i], f);
+    for (i = 4; i < length2; ++i) {
+      if ((c = strObj.streamGetChar()) == EOF)
+	break;
+      fputc(c, f);
+    }
+  }
+
+  // write padding and "cleartomark"
+  for (i = 0; i < 8; ++i)
+    writePS("00000000000000000000000000000000"
+	    "00000000000000000000000000000000\n");
+  writePS("cleartomark\n");
+
+ err1:
+  strObj.free();
 }
 
 void PSOutputDev::startPage(int pageNum, GfxState *state) {
@@ -438,7 +577,7 @@ void PSOutputDev::updateStrokeColor(GfxState *state) {
   GfxColor *color;
   double r, g, b;
 
-  color = state->getFillColor();
+  color = state->getStrokeColor();
   r = color->getR();
   g = color->getG();
   b = color->getB();
@@ -449,9 +588,11 @@ void PSOutputDev::updateStrokeColor(GfxState *state) {
 }
 
 void PSOutputDev::updateFont(GfxState *state) {
-  writePS("/F%d_%d %g Tf\n",
-	  state->getFont()->getID().num, state->getFont()->getID().gen,
-	  state->getFontSize());
+  if (state->getFont()) {
+    writePS("/F%d_%d %g Tf\n",
+	    state->getFont()->getID().num, state->getFont()->getID().gen,
+	    state->getFontSize());
+  }
 }
 
 void PSOutputDev::updateTextMat(GfxState *state) {
@@ -547,23 +688,31 @@ void PSOutputDev::drawString(GfxState *state, GString *s) {
 void PSOutputDev::drawImageMask(GfxState *state, Stream *str,
 				int width, int height, GBool invert,
 				GBool inlineImg) {
-  doImage(gTrue, inlineImg, str, width, height);
+  int len;
+
+  len = height * ((width + 7) / 8);
+  doImage(gTrue, inlineImg, str, width, height, len);
 }
 
 void PSOutputDev::drawImage(GfxState *state, Stream *str, int width,
 			    int height, GfxColorSpace *colorSpace,
 			    GBool inlineImg) {
-  doImage(gFalse, inlineImg, str, width, height);
+  int len;
+
+  len = height * ((width * colorSpace->getNumComponents() *
+		   colorSpace->getBits() + 7) / 8);
+  doImage(gFalse, inlineImg, str, width, height, len);
 }
 
 void PSOutputDev::doImage(GBool mask, GBool inlineImg, Stream *str,
-			  int width, int height) {
+			  int width, int height, int len) {
   Dict *dict;
   GBool indexed;
   Object obj1, obj2;
   char *s;
   GString *s1;
   int numComps, bits;
+  GBool useRLE, useA85;
   int c;
   int n, i;
 
@@ -590,10 +739,12 @@ void PSOutputDev::doImage(GBool mask, GBool inlineImg, Stream *str,
       numComps = 4;
     } else if (obj1.isArray()) {
       obj1.arrayGet(0, &obj2);
-      if (obj2.isName("DeviceGray") || obj2.isName("G")) {
+      if (obj2.isName("DeviceGray") || obj2.isName("G") ||
+	  obj2.isName("CalGray")) {
 	writePS("/DeviceGray setcolorspace\n");
 	numComps = 1;
-      } else if (obj2.isName("DeviceRGB") || obj2.isName("RGB")) {
+      } else if (obj2.isName("DeviceRGB") || obj2.isName("RGB") ||
+		 obj2.isName("CalRGB")) {
 	writePS("/DeviceRGB setcolorspace\n");
 	numComps = 3;
       } else if (obj2.isName("DeviceCMYK") || obj2.isName("CMYK")) {
@@ -685,18 +836,52 @@ void PSOutputDev::doImage(GBool mask, GBool inlineImg, Stream *str,
 
   // data source
   writePS("  /DataSource currentfile\n");
-  if (str->isBinary())
-    writePS("    /ASCII85Decode filter\n");
   s1 = str->getPSFilter("    ");
-  writePS("%s", s1->getCString());
-  delete s1;
+  if (inlineImg || !s1) {
+    useRLE = gTrue;
+    useA85 = gTrue;
+  } else {
+    useRLE = gFalse;
+    useA85 = str->isBinary();
+  }
+  if (useA85)
+    writePS("    /ASCII85Decode filter\n");
+  if (useRLE)
+    writePS("    /RunLengthDecode filter\n");
+  else
+    writePS("%s", s1->getCString());
+  if (s1)
+    delete s1;
 
   // end of image dictionary
   writePS(">>\n%s\n", mask ? "pdfImM" : "pdfIm");
 
-  // image data
-  writeStream(str->getBaseStream(), inlineImg, str->isBinary());
-  writePS("%%-EOD-\n");
+  // write image data stream
+
+  // cut off inline image streams at appropriate length
+  if (inlineImg)
+    str = new FixedLengthEncoder(str, len);
+  else if (!useRLE)
+    str = str->getBaseStream();
+
+  // add RunLengthEncode and ASCII85 encode filters
+  if (useRLE)
+    str = new RunLengthEncoder(str);
+  if (useA85)
+    str = new ASCII85Encoder(str);
+
+  // copy the stream data
+  str->reset();
+  while ((c = str->getChar()) != EOF)
+    fputc(c, f);
+
+  // add newline and trailer to the end
+  fputc('\n', f);
+  fputs("%-EOD-\n", f);
+
+  // delete encoders
+  if (useRLE || useA85)
+    delete str;
 }
 
 void PSOutputDev::writePS(char *fmt, ...) {
@@ -721,87 +906,4 @@ void PSOutputDev::writePSString(GString *s) {
       fputc(*p, f);
   }
   fputc(')', f);
-}
-
-void PSOutputDev::writeStream(Stream *str, GBool inlineImg, GBool needA85) {
-  int c1, c2, c3;
-  int a85[5];
-  Gulong t;
-  int n, m, i;
-
-  // back to start of stream
-  str->reset();
-
-  // for inline image: need to read three chars ahead to check for
-  // 'EI' tag
-  if (inlineImg) {
-    c1 = str->getChar();
-    c2 = str->getChar();
-  } else {
-    c1 = c2 = '\0';
-  }
-
-  // do ASCII85 re-encoded stream
-  if (needA85) {
-    m = 0;
-    do {
-      t = 0;
-      for (n = 0; n < 4; ++n) {
-	if (inlineImg) {
-	  c3 = str->getChar();
-	  if ((c1 == '\n' || c1 == '\r') && c2 == 'E' && c3 == 'I')
-	    break;
-	  t = (t << 8) + c1;
-	  c1 = c2;
-	  c2 = c3;
-	} else {
-	  if ((c1 = str->getChar()) == EOF)
-	    break;
-	  t = (t << 8) + c1;
-	}
-      }
-      if (n > 0) {
-	if (n == 4 && t == 0) {
-	  fputc('z', f);
-	  if (++m == 65) {
-	    fputc('\n', f);
-	    m = 0;
-	  }
-	} else {
-	  if (n < 4)
-	    t <<= 8 * (4 - n);
-	  for (i = 4; i >= 0; --i) {
-	    a85[i] = t % 85;
-	    t /= 85;
-	  }
-	  for (i = 0; i <= n; ++i) {
-	    fputc((char)(a85[i] + 0x21), f);
-	    if (++m == 65) {
-	      fputc('\n', f);
-	      m = 0;
-	    }
-	  }
-	}
-      }
-    } while (n == 4);
-    fputc('~', f);
-    fputc('>', f);
-
-  // stream is already ASCII, just copy it
-  } else {
-    while (1) {
-      if (inlineImg) {
-	c3 = str->getChar();
-	if ((c1 == '\n' || c1 == '\r') && c2 == 'E' && c3 == 'I')
-	  break;
-      } else {
-	if ((c1 = str->getChar()) == EOF)
-	  break;
-      }
-      fputc(c1, f);
-    }
-  }
-
-  // add a newline to the end
-  fputc('\n', f);
 }

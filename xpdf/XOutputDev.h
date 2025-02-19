@@ -25,6 +25,7 @@ class LTKWindow;
 class GfxColor;
 class GfxFont;
 class GfxSubpath;
+class TextPage;
 struct RGBColor;
 
 //------------------------------------------------------------------------
@@ -152,7 +153,7 @@ public:
   virtual void startPage(int pageNum, GfxState *state);
 
   // End a page.
-  virtual void endPage() {}
+  virtual void endPage();
 
   // Dump page contents to display.
   virtual void dump();
@@ -191,7 +192,10 @@ public:
   virtual void eoClip(GfxState *state);
 
   //----- text drawing
-  virtual void drawChar(GfxState *state, double x, double y, Guchar c);
+  virtual void beginString(GfxState *state, GString *s);
+  virtual void endString(GfxState *state);
+  virtual void drawChar(GfxState *state, double x, double y,
+			double dx, double dy, Guchar c);
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Stream *str,
@@ -200,6 +204,19 @@ public:
   virtual void drawImage(GfxState *state, Stream *str, int width,
 			 int height, GfxColorSpace *colorSpace,
 			 GBool inlineImg);
+
+  //----- special access
+
+  // Find a string.  If <top> is true, starts looking at <xMin>,<yMin>;
+  // otherwise starts looking at top of page.  If <bottom> is true,
+  // stops looking at <xMax>,<yMax>; otherwise stops looking at bottom
+  // of page.  If found, sets the text bounding rectange and returns
+  // true; otherwise returns false.
+  GBool findText(char *s, GBool top, GBool bottom,
+		 int *xMin, int *yMin, int *xMax, int *yMax);
+
+  // Get the text which is inside the specified rectangle.
+  GString *getText(int xMin, int yMin, int xMax, int yMax);
 
 private:
 
@@ -226,6 +243,7 @@ private:
   XOutputFont *font;		// current font
   XOutputFontCache *fontCache;	// font cache
   XOutputState *save;		// stack of saved states
+  TextPage *text;		// text from the current page
 
   void updateLineAttrs(GfxState *state, GBool updateDash);
   void doFill(GfxState *state, int rule);

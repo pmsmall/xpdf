@@ -34,19 +34,37 @@ enum LTKTriangle {
   ltkTriDown
 };
 
+// Compute bright/dark color and allocate X pixel color.
 extern Gulong ltkGetBrightColor(Display *display, int screenNum,
 				XColor *bg, Gulong def);
 extern Gulong ltkGetDarkColor(Display *display, int screenNum,
 			      XColor *bg, Gulong def);
 
+// Draw a rectangular border.
 extern void ltkDrawBorder(Display *display, Window xwin,
 			  GC bright, GC dark, GC background,
 			  int x, int y, int width, int height,
 			  LTKBorder border);
 
+// Draw a triangular border.
 extern void ltkDrawTriBorder(Display *display, Window xwin,
 			     GC bright, GC dark, GC background,
 			     int x, int y, int width, int height,
 			     LTKTriangle orient, LTKBorder border);
+
+// Draw a divider line.  Divider is horizontal if width > 0, vertical
+// otherwise.
+extern void ltkDrawDivider(Display *display, Window xwin,
+			   GC bright, GC dark, GC background,
+			   int x, int y, int width, int height,
+			   LTKBorder border);
+
+// Draw a border which splits a rectangle into two pieces.
+// Border is horizontal if width > 0, vertical otherwise.
+// This border has width 2*ltkBorderWidth.
+extern void ltkDrawSplitBorder(Display *display, Window xwin,
+			       GC bright, GC dark, GC background,
+			       int x, int y, int width, int height,
+			       LTKBorder border);
 
 #endif

@@ -18,7 +18,7 @@
 #include <X11/Xutil.h>
 #include <gtypes.h>
 #include <GString.h>
-#include <fileNames.h>
+#include <gfile.h>
 #include <LTKConfig.h>
 #include <LTKMisc.h>
 #include <LTKResources.h>

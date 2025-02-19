@@ -1,18 +1,18 @@
 xpdf
 ====
-and pdftops
+and: pdftops, pdftotext
 
-version 0.6 (beta)
-96-nov-12
+version 0.7 (beta)
+97-may-28
 
-The xpdf and pdftops software and documentation are
-copyright 1996 Derek B. Noonburg.
+The xpdf, pdftops, and pdftotext software and documentation are
+copyright 1996, 1997 Derek B. Noonburg.
 
 Email: derekn@ece.cmu.edu
 WWW: http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
 
-The PDF data structures, operators, and specification
-are copyright 1995 Adobe Systems Inc.
+The PDF data structures, operators, and specification are
+copyright 1995 Adobe Systems Inc.
 
 
 What is xpdf?
@@ -20,7 +20,8 @@ What is xpdf?
 
 Xpdf is a viewer for Portable Document Format (PDF) files.  (These are
 also sometimes also called 'Acrobat' files, from the name of Adobe's
-PDF software.)  Xpdf runs under UNIX or VMS and the X Window System.
+PDF software.)  Xpdf runs under the X Window System on UNIX, VMS, and
+OS/2.
 
 Xpdf is designed to be small and efficient.  It does not use the Motif
 or Xt libraries.  It uses standard X fonts.  Xpdf is quite usable on a
@@ -30,20 +31,22 @@ or Xt libraries.  It uses standard X fonts.  Xpdf is quite usable on a
 Compatibility
 -------------
 
-Xpdf is known to work on the following systems:
+I have compiled xpdf on the following systems:
 
-* x86, Linux 2.0 ELF, gcc 2.7.2
-* PowerPC, AIX 4.1, gcc 2.7.0
-* SPARC, Solaris 2.5, gcc 2.7.2
-* Alpha, OSF/1 3.2, gcc 2.7.2
-* HP-PA, HP-UX 9.05, gcc 2.7.2
+* x86, Linux 2.0 ELF
+* PowerPC, AIX 4.1
+* SPARC, Solaris 2.5
+* Alpha, OSF/1 3.2
+* HP-PA, HP-UX 9.05
 
-It should work on pretty much any UNIX or VMS system which runs X11.
-You'll need ANSI C++ and C compilers to compile it.  If you compile it
-for a system not listed on the xpdf web page, please let me know.  If
-you're willing to make your binary available by ftp or on the web,
-I'll add a pointer to the web page.  If you can't get it to compile on
-your system, I'll try to help.
+In addition, it has been compiled by others on Solaris, SCO UnixWare,
+Digital Unix, Irix, and numerous other Unix implementations, as well
+as VMS, and OS/2.  It should work on pretty much any system which runs
+X11 and has Unix-like libraries.  You'll need ANSI C++ and C compilers
+to compile it.  If you compile it for a system not listed on the xpdf
+web page, please let me know.  If you're willing to make your binary
+available by ftp or on the web, I'll add a pointer to the web page.
+If you can't get it to compile on your system, I'll try to help.
 
 
 Getting xpdf
@@ -77,9 +80,13 @@ pdftops:
 
   pdftops file.pdf
 
+To generate a plain text file, run pdftotext:
+
+  pdftotext file.pdf
+
 Command line options and many other details are described in the man
-pages (xpdf.1 and pdftops.1) and the VMS help files (xpdf.hlp and
-pdftops.hlp).
+pages (xpdf.1, pdftops.1, and pdftotext.1) and the VMS help files
+(xpdf.hlp, pdftops.hlp, and pdftotext.hlp).
 
 
 Fonts
@@ -108,7 +115,7 @@ automatically take advantage of this.  There are two types of scaling.
 The first type uses standard bitmap fonts: if a font doesn't exist in
 the requested size, the server will scale the bitmapped characters.
 This is reasonably fast, and the results are readable but not very
-pretty.  X servers can also handle true scalable, e.g., Type-1, fonts.
+pretty.  X servers can also handle true scalable, e.g., Type 1, fonts.
 (See the mkfontdir(1) man page for details on setting these up.)
 Scalable fonts are slower, especially since PDF documents tend to use
 lots of fonts, but they look much nicer.
@@ -161,7 +168,10 @@ To compile xpdf for UNIX:
 * Edit Makefile.config in the top-level directory.  Set the compilers
   you want to use (e.g., gcc and g++) and add any necessary switches
   and options (e.g., include and library directories).  You can also
-  set the installation directory here (the PREFIX variable).
+  set the installation directory here (the PREFIX variable).  If you
+  have the Xpm (pixmap) library, remove '-DNO-XPM' from CFLAGS2 and
+  uncomment the XPMLIB definition (the only thing this adds to xpdf is
+  a nifty color icon).
 
 * If neither 'uncompress -c file.Z' nor 'gzip -d -c file.Z' decompress
   a standard UNIX .Z file to stdout on your system, you'll need to
@@ -178,6 +188,10 @@ To compile xpdf for UNIX:
 
 * If desired, type 'make install' to install the binaries and man
   pages.
+
+The above instructions will also work for OS/2 with the EMX runtime
+environment and XFree86.  If you have trouble with this, contact Peter
+Ganten (j09g@zfn.uni-bremen.de).
 
 To compile xpdf for VMS:
 
@@ -250,6 +264,9 @@ Thanks to:
 * Patrick Voigt for help with the remote server code.
 * Patrick Moreau for the VMS port.
 * David Boldt and Rick Rodgers for sample man pages.
+* Brendan Miller for the icon idea.
+* Olly Betts for help testing pdftotext.
+* Peter Ganten for the OS/2 port.
 
 
 References
@@ -257,19 +274,13 @@ References
 
 Adobe Systems Inc., _Portable Document Format Reference Manual_.
 Addison-Wesley, 1993, ISBN 0-201-62628-4.
-[The manual for PDF version 1.0.  The updated version (for PDF 1.1) is
-available on the net from http://www.adobe.com/Support/TechNotes.html
-or ftp://ftp.adobe.com/pub/adobe/Acrobat/SDK/TECHDOC/PDFSPEC.PDF.]
+[The printed manual for PDF version 1.0.]
 
-Adobe Systems Inc., _Updates to the Portable Document Format Reference
-Manual_, Adobe Developer Support Technical Note #5156.  1995.
-[Updates for PDF version 1.1.  Available on the WWW as
-http://www.adobe.com/PDFs/TN/5156.PDF_UPD.PDF.]
-
-Adobe Systems Inc., _Updates to the Portable Document Format Reference
-Manual_.
-[Update for Sections 5.7 and 6.12 (encryption), emailed to developers
-July 24, 1996.]
+Adobe Systems Inc., _Portable Document Format Reference Manual_,
+Version 1.2.  November 12, 1996.
+[Updated manual for PDF 1.2.  Also includes the encryption spec.
+Available on the WWW as
+http://www.adobe.com/supportservice/devrelations/PDFS/TN/PDFSPEC.PDF .]
 
 Adobe Systems Inc., _PostScript Language Reference Manual_, 2nd ed.
 Addison-Wesley, 1990, ISBN 0-201-18127-4.
@@ -282,13 +293,28 @@ Adobe Systems Inc., _Supporting the DCT Filters in PostScript Level
 Anonymous, RC4 source code.
 [This is the algorithm used to encrypt PDF files.  Available on
 various ftp sites, e.g., ftp://ftp.ox.ac.uk/pub/crypto/misc/rc4.tar.gz
-or ftp://idea.sec.dsi.unimi.it/pub/crypt/code/rc4.tar.gz.]
+or ftp://idea.sec.dsi.unimi.it/pub/crypt/code/rc4.tar.gz .]
 
 CCITT, _Blue Book_, Volume VII Fascicle 3: "Terminal Equipment and
 Protocols for Telematic Services", Recommendations T.4 and T.6.
 [The official Group 3 and 4 fax standards.  These are available on the
 net (but misformatted) as
-ftp://ftp.uu.net/doc/standards/ccitt/1988/7_3_01.ps and 7_3_02.ps.]
+ftp://ftp.uu.net/doc/standards/ccitt/1988/7_3_01.ps and 7_3_02.ps .]
+
+L. Peter Deutsch, "ZLIB Compressed Data Format Specification version
+3.3".  RFC 1950.
+[Information on the general format used in FlateDecode streams.]
+
+L. Peter Deutsch, "DEFLATE Compressed Data Format Specification
+version 1.3".  RFC 1951.
+[The definition of the compression algorithm used in FlateDecode
+streams.]
+
+Jim Flowers, "X Logical Font Description Conventions", Version 1.5, X
+Consortium Standard, X Version 11, Release 6.1.
+[The official specification of X font descriptors, including font
+transformation matrices.  Available on the net as
+ftp://ftp.x.org/pub/R6.1/xc/doc/hardcopy/XLFD/xlfd.PS.Z .]
 
 Foley, van Dam, Feiner, and Hughes, _Computer Graphics: Principles and
 Practice_, 2nd ed.  Addison-Wesley, 1990, ISBN 0-201-12110-7.
@@ -308,6 +334,11 @@ R. Rivest, "The MD5 Message-Digest Algorithm".  RFC 1321.
 
 Gregory K. Wallace, "The JPEG Still Picture Compression Standard".
 [Good description of the JPEG standard.  Available on the net as
-ftp://ftp.uu.net/graphics/jpeg/wallace.ps.gz.  Also published in CACM,
-April 1991, and submitted to IEEE Transactions on Consumer
+ftp://ftp.uu.net/graphics/jpeg/wallace.ps.gz .  Also published in
+CACM, April 1991, and submitted to IEEE Transactions on Consumer
 Electronics.]
+
+"ISO 8859-2 (Latin 2) Resources".
+[This is a web page with all sorts of useful Latin-2 character set and
+font information:
+http://sizif.mf.uni-lj.si/linux/cee/iso8859-2.html .]

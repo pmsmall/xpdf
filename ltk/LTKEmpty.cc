@@ -22,9 +22,6 @@ LTKEmpty::LTKEmpty():
     LTKWidget(NULL, 0) {
 }
 
-LTKEmpty::~LTKEmpty() {
-}
-
 void LTKEmpty::layout1() {
   width = 1;
   height = 1;

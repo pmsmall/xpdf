@@ -26,20 +26,19 @@
 class LTKBox: public LTKWidget {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor and destructor ----------
 
   LTKBox(char *name1, int cols1, int rows1,
 	 int left1, int right1, int top1, int bottom1,
 	 LTKBorder border1, int xfill1, int yfill1, ...);
 
-  ~LTKBox();
-
-  virtual LTKWidget *copy() { return new LTKBox(this); }
+  virtual ~LTKBox();
 
   //---------- access ----------
 
   virtual GBool isBox() { return gTrue; }
   virtual void setParent(LTKWindow *parent1);
+  virtual void setCompoundParent(LTKWidget *compParent1);
   int getXFill() { return xfill; }
   int getYFill() { return yfill; }
 
@@ -58,10 +57,10 @@ public:
   //---------- drawing ----------
 
   virtual void redraw();
+  virtual void redrawBackground();
 
 protected:
 
-  LTKBox(LTKBox *box);
   LTKWidget *&get(int col, int row) { return contents[row*cols + col]; }
   LTKBox *getBox(int col, int row)
     { return (LTKBox *)contents[row*cols + col]; }

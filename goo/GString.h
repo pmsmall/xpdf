@@ -49,6 +49,9 @@ public:
   // Get <i>th character.
   char getChar(int i) { return s[i]; }
 
+  // Change <i>th character.
+  void setChar(int i, char c) { s[i] = c; }
+
   // Clear string to zero length.
   GString *clear();
 
@@ -62,14 +65,21 @@ public:
   GString *insert(int i, char c);
   GString *insert(int i, GString *str);
   GString *insert(int i, char *str);
+  GString *insert(int i, char *str, int length1);
 
   // Delete a character or range of characters.
   GString *del(int i, int n = 1);
 
+  // Convert string to all-upper/all-lower case.
+  GString *upperCase();
+  GString *lowerCase();
+
   // Compare two strings:  -1:<  0:=  +1:>
-  // These function assume the strings do not contain null characters.
+  // These functions assume the strings do not contain null characters.
   int cmp(GString *str) { return strcmp(s, str->getCString()); }
+  int cmpN(GString *str, int n) { return strncmp(s, str->getCString(), n); }
   int cmp(char *s1) { return strcmp(s, s1); }
+  int cmpN(char *s1, int n) { return strncmp(s, s1, n); }
 
 private:
 

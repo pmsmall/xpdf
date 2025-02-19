@@ -1,33 +1,35 @@
-Subject: ANNOUNCE: xpdf 0.6 - a PDF viewer for X
+Subject: ANNOUNCE: xpdf 0.7 - a PDF viewer for X
 
 
 I've just released a new version of xpdf, my Portable Document Format
 (PDF) viewer for X.
 
-If you've wanted to look at PDF files, but couldn't because Adobe
-didn't have a viewer for your system, you'll want to check out xpdf.
+Xpdf runs under the X Window System on Unix, VMS, and OS/2.
 
-Changes in version 0.6:
+Changes in version 0.7:
 
-* Basic support for PDF 1.2 files
-* Better font support
-* Print directly from xpdf -- '|lpr'
-* Fixed links between files
-* Fixed several bugs in PostScript output
+* Implemented FlateDecode filter (for PDF 1.2)
+* Basic xref table reconstruction for damaged files
+* New pdftotext program converts PDF to plain text
+* Added open and save functions; allow xpdf to start without any PDF
+  file.
+* Implemented text find.
+* Implemented text select/copy.
+* Change mouse cursor when it's over a link.
+* Embed Type 1 fonts in PostScript output.
 * Lots of other little things (see the `CHANGES' file) 
 
 (I have decryption code, but I'm not releasing it until I figure out
 how to get around the U.S. export restrictions.)
 
 Source (C++ and C) is available, and it should be fairly easy to
-compile for UNIX or VMS.
+compile for UNIX, VMS, or OS/2.
 
 Binaries are available for:
 
 * Linux 2.0 ELF (x86)
 * AIX 4.1 (PowerPC)
 * SunOS 4.1 (SPARC)
-* Ultrix 4.4 (MIPS)
 * OSF/1 3.2 (Alpha)
 * HP-UX 9.05 (HP-PA)
 

@@ -29,16 +29,6 @@
 				//   to look for 'startxref'
 
 //------------------------------------------------------------------------
-// Permission bits
-//------------------------------------------------------------------------
-
-#define permPrint    (1<<2)
-#define permChange   (1<<3)
-#define permCopy     (1<<4)
-#define permNotes    (1<<5)
-#define defPermFlags 0xfffc
-
-//------------------------------------------------------------------------
 // The global xref table
 //------------------------------------------------------------------------
 
@@ -54,25 +44,53 @@ XRef::XRef(FileStream *str) {
   int i;
 
   ok = gTrue;
+  size = 0;
+  entries = NULL;
 
   // get rid of old xref (otherwise it will try to fetch the Root object
   // in the new document, using the old xref)
   oldXref = xref;
   xref = NULL;
 
-  entries = NULL;
+  // read the trailer
   file = str->getFile();
   start = str->getStart();
   pos = readTrailer(str);
+
+  // if there was a problem with the trailer,
+  // try to reconstruct the xref table
   if (pos == 0) {
-    ok = gFalse;
-    return;
+    if (!(ok = constructXRef(str))) {
+      xref = oldXref;
+      return;
+    }
+
+  // trailer is ok - read the xref table
+  } else {
+    entries = (XRefEntry *)gmalloc(size * sizeof(XRefEntry));
+    for (i = 0; i < size; ++i) {
+      entries[i].offset = -1;
+      entries[i].used = gFalse;
+    }
+    while (readXRef(str, &pos)) ;
+
+    // if there was a problem with the xref table,
+    // try to reconstruct it
+    if (!ok) {
+      gfree(entries);
+      size = 0;
+      entries = NULL;
+      if (!(ok = constructXRef(str))) {
+	xref = oldXref;
+	return;
+      }
+    }
   }
-  entries = (XRefEntry *)gmalloc(size * sizeof(XRefEntry));
-  for (i = 0; i < size; ++i)
-    entries[i].offset = -1;
-  while (readXRef(str, &pos)) ;
+
+  // set up new xref table
   xref = this;
+
+  // check for encryption
   if (checkEncrypted()) {
     ok = gFalse;
     xref = oldXref;
@@ -116,8 +134,8 @@ int XRef::readTrailer(FileStream *str) {
   pos = atoi(p);
 
   // find trailer dict by looking after first xref table
-  //~ there should be a better way to do this -- I need to look
-  //~ at the PDF 1.2 docs
+  // (NB: we can't just use the trailer dict at the end of the file --
+  // this won't work for linearized files.)
   str->setPos(start + pos);
   for (i = 0; i < 4; ++i)
     buf[i] = str->getChar();
@@ -140,6 +158,8 @@ int XRef::readTrailer(FileStream *str) {
     n = atoi(p);
     while ('0' <= *p && *p <= '9') ++p;
     while (isspace(*p)) ++p;
+    if (p == buf)
+      return 0;
     pos1 += (p - buf) + n * 20;
   }
   pos1 += 7;
@@ -259,6 +279,98 @@ GBool XRef::readXRef(FileStream *str, int *pos) {
   return gFalse;
 }
 
+// Attempt to construct an xref table for a damaged file.
+GBool XRef::constructXRef(FileStream *str) {
+  Parser *parser;
+  Object obj;
+  char buf[256];
+  int pos;
+  int num, gen;
+  int newSize;
+  char *p;
+  int i;
+  GBool gotRoot;
+
+  error(0, "PDF file is damaged - attempting to reconstruct xref table...");
+  gotRoot = gFalse;
+
+  str->reset();
+  while (1) {
+    pos = str->getPos();
+    if (!str->getLine(buf, 256))
+      break;
+    p = buf;
+
+    // got trailer dictionary
+    if (!strncmp(p, "trailer", 7)) {
+      obj.initNull();
+      parser = new Parser(new Lexer(
+		 new FileStream(file, start + pos + 8, -1, &obj)));
+      if (!trailerDict.isNone())
+	trailerDict.free();
+      parser->getObj(&trailerDict);
+      if (trailerDict.isDict()) {
+	trailerDict.dictLookup("Root", &obj);
+	if (obj.isRef()) {
+	  rootNum = obj.getRefNum();
+	  rootGen = obj.getRefGen();
+	  gotRoot = gTrue;
+	}
+	obj.free();
+      } else {
+	pos = 0;
+      }
+      delete parser;
+
+    // look for object
+    } else if (isdigit(*p)) {
+      num = atoi(p);
+      do {
+	++p;
+      } while (*p && isdigit(*p));
+      if (isspace(*p)) {
+	do {
+	  ++p;
+	} while (*p && isspace(*p));
+	if (isdigit(*p)) {
+	  gen = atoi(p);
+	  do {
+	    ++p;
+	  } while (*p && isdigit(*p));
+	  if (isspace(*p)) {
+	    do {
+	      ++p;
+	    } while (*p && isspace(*p));
+	    if (!strncmp(p, "obj", 3)) {
+	      if (num >= size) {
+		newSize = (num + 1 + 255) & ~255;
+		entries = (XRefEntry *)
+		            grealloc(entries, newSize * sizeof(XRefEntry));
+		for (i = size; i < newSize; ++i) {
+		  entries[i].offset = -1;
+		  entries[i].used = gFalse;
+		}
+		size = newSize;
+	      }
+	      if (!entries[num].used || gen >= entries[num].gen) {
+		entries[num].offset = pos - start;
+		entries[num].gen = gen;
+		entries[num].used = gTrue;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+  if (gotRoot)
+    return gTrue;
+
+  error(-1, "Couldn't find trailer dictionary");
+  return gFalse;
+}
+
 GBool XRef::checkEncrypted() {
   Object obj;
   GBool encrypted;
@@ -275,6 +387,10 @@ GBool XRef::checkEncrypted() {
 }
 
 GBool XRef::okToPrint() {
+  return gTrue;
+}
+
+GBool XRef::okToCopy() {
   return gTrue;
 }
 

@@ -26,13 +26,6 @@ LTKDblBufCanvas::LTKDblBufCanvas(char *name1, int widgetNum1,
   pixmap = None;
 }
 
-LTKDblBufCanvas::LTKDblBufCanvas(LTKDblBufCanvas *canvas):
-    LTKWidget(canvas) {
-  minWidth = canvas->minWidth;
-  minHeight = canvas->minHeight;
-  pixmap = None;
-}
-
 LTKDblBufCanvas::~LTKDblBufCanvas() {
   if (pixmap != None)
     XFreePixmap(getDisplay(), pixmap);

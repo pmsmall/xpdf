@@ -69,6 +69,30 @@ PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
   }
   obj1.free();
 
+  // crop box
+  dict->lookup("CropBox", &obj1);
+  if (obj1.isArray() && obj1.arrayGetLength() == 4) {
+    obj1.arrayGet(0, &obj2);
+    if (obj2.isInt())
+      cropX1 = obj2.getInt();
+    obj2.free();
+    obj1.arrayGet(1, &obj2);
+    if (obj2.isInt())
+      cropY1 = obj2.getInt();
+    obj2.free();
+    obj1.arrayGet(2, &obj2);
+    if (obj2.isInt())
+      cropX2 = obj2.getInt();
+    obj2.free();
+    obj1.arrayGet(3, &obj2);
+    if (obj2.isInt())
+      cropY2 = obj2.getInt();
+    obj2.free();
+  } else {
+    cropX1 = cropX2 = cropY1 = cropY2 = 0;
+  }
+  obj1.free();
+
   // rotate
   dict->lookup("Rotate", &obj1);
   if (obj1.isInt())
@@ -97,34 +121,12 @@ PageAttrs::~PageAttrs() {
 //------------------------------------------------------------------------
 
 Page::Page(int num1, Dict *pageDict, PageAttrs *attrs1) {
-  Dict *resourceDict;
 
   ok = gTrue;
   num = num1;
 
   // get attributes
   attrs = attrs1;
-
-  // resources
-  if ((resourceDict = attrs->getResourceDict())) {
-    resourceDict->lookup("Font", &fontDict);
-    if (!(fontDict.isDict() || fontDict.isNull())) {
-      error(-1, "Font resources object (page %d) is wrong type (%s)",
-	    num, fontDict.getTypeName());
-      fontDict.free();
-      goto err4;
-    }
-    resourceDict->lookup("XObject", &xObjDict);
-    if (!(xObjDict.isDict() || xObjDict.isNull())) {
-      error(-1, "XObject resources object (page %d) is wrong type (%s)",
-	    num, xObjDict.getTypeName());
-      xObjDict.free();
-      goto err3;
-    }
-  } else {
-    fontDict.initNull();
-    xObjDict.initNull();
-  }
 
   // annotations
   pageDict->lookupNF("Annots", &annots);
@@ -147,10 +149,6 @@ Page::Page(int num1, Dict *pageDict, PageAttrs *attrs1) {
 
   return;
 
- err4:
-  fontDict.initNull();
- err3:
-  xObjDict.initNull();
  err2:
   annots.initNull();
  err1:
@@ -160,54 +158,44 @@ Page::Page(int num1, Dict *pageDict, PageAttrs *attrs1) {
 
 Page::~Page() {
   delete attrs;
-  fontDict.free();
-  xObjDict.free();
   annots.free();
   contents.free();
 }
 
+Object *Page::getFontDict(Object *obj) {
+  Dict *resDict;
+
+  if ((resDict = attrs->getResourceDict()))
+    resDict->lookup("Font", obj);
+  else
+    obj->initNull();
+  return obj;
+}
+
 void Page::display(OutputDev *out, int dpi, int rotate) {
   Gfx *gfx;
-  Dict *fonts;
-  Dict *xObjects;
-  Object obj1, obj2;
-  int i;
+  Object obj;
 
   if (printCommands) {
     printf("***** MediaBox = ll:%d,%d ur:%d,%d\n",
-	   attrs->getX1(), attrs->getY1(), attrs->getX2(), attrs->getY2());
+	   getX2(), getY2(), getX2(), getY2());
+    if (isCropped()) {
+      printf("***** CropBox = ll:%d,%d ur:%d,%d\n",
+	     getCropX1(), getCropY1(), getCropX2(), getCropY2());
+    }
     printf("***** Rotate = %d\n", attrs->getRotate());
   }
-  if (fontDict.isDict())
-    fonts = fontDict.getDict();
-  else
-    fonts = NULL;
-  if (xObjDict.isDict())
-    xObjects = xObjDict.getDict();
-  else
-    xObjects = NULL;
   rotate += attrs->getRotate();
   if (rotate >= 360)
     rotate -= 360;
   else if (rotate < 0)
     rotate += 360;
-  gfx = new Gfx(out, num, fonts, xObjects, dpi, attrs->getX1(), attrs->getY1(),
-		attrs->getX2(), attrs->getY2(), rotate);
-  contents.fetch(&obj1);
-  if (obj1.isArray()) {
-    for (i = 0; i < obj1.arrayGetLength(); ++i) {
-      obj1.arrayGet(i, &obj2);
-      if (obj2.isStream())
-	gfx->display(obj2.getStream());
-      else
-	error(-1, "Weird page contents");
-      obj2.free();
-    }
-  } else if (obj1.isStream()) {
-    gfx->display(obj1.getStream());
-  } else {
-    error(-1, "Weird page contents");
-  }
-  obj1.free();
+  gfx = new Gfx(out, num, attrs->getResourceDict(),
+		dpi, getX1(), getY1(), getX2(), getY2(), isCropped(),
+		getCropX1(), getCropY1(), getCropX2(), getCropY2(), rotate);
+  contents.fetch(&obj);
+  if (!obj.isNull())
+    gfx->display(&obj);
+  obj.free();
   delete gfx;
 }

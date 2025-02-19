@@ -11,23 +11,29 @@ $!! CCOMP = "GCC /NOCASE /DEFINE=VMS /INCLUDE=([],[-.GOO])"
 $!! CXXCOMP = "GCC /PLUSPLUS /NOCASE /DEFINE=VMS /INCLUDE=([],[-.GOO])"
 $!
 $! for Alpha with DEC compilers
-$ CCOMP = "CC /DECC /PREFIX=ALL /DEFINE=VMS /INCLUDE=([],[-.GOO])"
-$ CXXCOMP = "CXX /PREFIX=ALL /DEFINE=VMS /INCLUDE=([],[-.GOO])"
+$ CCOMP = "CC /DECC /PREFIX=ALL /DEFINE=(VMS,NO_XPM) /INCLUDE=([],[-.GOO])"
+$ CXXCOMP = "CXX /PREFIX=ALL /DEFINE=(VMS,NO_XPM) /INCLUDE=([],[-.GOO])"
 $!
 $ LTK_OBJS = "LTKApp.obj,LTKBorder.obj,LTKBox.obj,LTKButton.obj," + -
-             "LTKCanvas.obj,LTKDblBufCanvas.obj,LTKEmpty.obj," + -
-             "LTKLabel.obj,LTKMisc.obj,LTKResources.obj," + -
-             "LTKScrollbar.obj,LTKScrollingCanvas.obj,LTKTextIn.obj," + -
-             "LTKWidget.obj,LTKWindow.obj"
+             "LTKButtonDialog.obj,LTKCanvas.obj,LTKCompoundWidget.obj," + -
+             "LTKDblBufCanvas.obj,LTKEmpty.obj,LTKFileReq.obj," + -
+             "LTKLabel.obj,LTKList.obj,LTKMenu.obj,LTKMisc.obj," + -
+             "LTKResources.obj,LTKScrollbar.obj,LTKScrollingCanvas.obj," + -
+             "LTKTextIn.obj,LTKWidget.obj,LTKWindow.obj"
 $!
 $ CXXCOMP LTKApp.cc
 $ CXXCOMP LTKBorder.cc
 $ CXXCOMP LTKBox.cc
 $ CXXCOMP LTKButton.cc
+$ CXXCOMP LTKButtonDialog.cc
 $ CXXCOMP LTKCanvas.cc
+$ CXXCOMP LTKCompoundWidget.cc
 $ CXXCOMP LTKDblBufCanvas.cc
 $ CXXCOMP LTKEmpty.cc
+$ CXXCOMP LTKFileReq.cc
 $ CXXCOMP LTKLabel.cc
+$ CXXCOMP LTKList.cc
+$ CXXCOMP LTKMenu.cc
 $ CXXCOMP LTKMisc.cc
 $ CXXCOMP LTKResources.cc
 $ CXXCOMP LTKScrollbar.cc

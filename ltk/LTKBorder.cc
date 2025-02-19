@@ -15,7 +15,7 @@
 #include <LTKBorder.h>
 
 Gulong ltkGetBrightColor(Display *display, int screenNum,
-				XColor *bg, Gulong def) {
+			 XColor *bg, Gulong def) {
   XColor bright;
   Gulong ret;
   Gulong t;
@@ -39,7 +39,7 @@ Gulong ltkGetBrightColor(Display *display, int screenNum,
 }
 
 Gulong ltkGetDarkColor(Display *display, int screenNum,
-			      XColor *bg, Gulong def) {
+		       XColor *bg, Gulong def) {
   XColor dark;
   Gulong ret;
   long t;
@@ -150,5 +150,67 @@ void ltkDrawTriBorder(Display *display, Window xwin,
     XDrawLine(display, xwin, gc2, x2, y+height-1, x+width-1, y);
     XDrawLine(display, xwin, gc2, x2, y+height-2, x+width-2, y+1);
     break;
+  }
+}
+
+void ltkDrawDivider(Display *display, Window xwin,
+		    GC bright, GC dark, GC background,
+		    int x, int y, int width, int height,
+		    LTKBorder border) {
+  GC gc1 = None;
+  GC gc2 = None;
+
+  switch (border) {
+  case ltkBorderNone:
+    gc1 = gc2 = background;
+    break;
+  case ltkBorderRaised:
+    gc1 = bright;
+    gc2 = dark;
+    break;
+  case ltkBorderSunken:
+    gc1 = dark;
+    gc2 = bright;
+    break;
+  }
+  if (width > 0) {
+    XDrawLine(display, xwin, gc1, x, y, x+width-1, y);
+    XDrawLine(display, xwin, gc2, x, y+1, x+width-1, y+1);
+  } else {
+    XDrawLine(display, xwin, gc1, x, y, x, y+height-1);
+    XDrawLine(display, xwin, gc2, x+1, y, x+1, y+height-1);
+  }
+}
+
+void ltkDrawSplitBorder(Display *display, Window xwin,
+			GC bright, GC dark, GC background,
+			int x, int y, int width, int height,
+			LTKBorder border) {
+  GC gc1 = None;
+  GC gc2 = None;
+
+  switch (border) {
+  case ltkBorderNone:
+    gc1 = gc2 = background;
+    break;
+  case ltkBorderRaised:
+    gc1 = bright;
+    gc2 = dark;
+    break;
+  case ltkBorderSunken:
+    gc1 = dark;
+    gc2 = bright;
+    break;
+  }
+  if (width > 0) {
+    XDrawLine(display, xwin, gc1, x+1, y,   x+width-2, y);
+    XDrawLine(display, xwin, gc1, x,   y+1, x+width-1, y+1);
+    XDrawLine(display, xwin, gc2, x,   y+2, x+width-1, y+2);
+    XDrawLine(display, xwin, gc2, x+1, y+3, x+width-2, y+3);
+  } else {
+    XDrawLine(display, xwin, gc1, x,   y+1, x,   y+height-2);
+    XDrawLine(display, xwin, gc1, x+1, y,   x+1, y+height-1);
+    XDrawLine(display, xwin, gc2, x+2, y,   x+2, y+height-1);
+    XDrawLine(display, xwin, gc2, x+3, y+1, x+3, y+height-2);
   }
 }

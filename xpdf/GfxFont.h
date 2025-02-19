@@ -88,6 +88,16 @@ public:
   // Get base font name.
   GString *getName() { return name; }
 
+  // Get embedded font ID, i.e., a ref for the font file stream.
+  // Returns false if there is no embedded font.
+  GBool getEmbeddedFontID(Ref *id)
+    { *id = embFontID; return embFontName != NULL; }
+
+  // Get the PostScript font name for the embedded font.  Returns
+  // NULL if there is no embedded font.
+  char *getEmbeddedFontName()
+    { return embFontName ? embFontName->getCString() : (char *)NULL; }
+
   // Get font descriptor flags.
   GBool isFixedWidth() { return flags & fontFixedWidth; }
   GBool isSerif() { return flags & fontSerif; }
@@ -118,6 +128,8 @@ private:
   Ref id;			// reference (used as unique ID)
   GString *name;		// font name
   int flags;			// font descriptor flags
+  GString *embFontName;		// name of embedded font
+  Ref embFontID;		// ref to embedded font file stream
   double widths[256];		// width of each char
   GfxFontEncoding *encoding;	// font encoding
 };

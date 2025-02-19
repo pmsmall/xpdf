@@ -24,15 +24,13 @@
 class LTKScrollingCanvas: public LTKWidget {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor and destructor ----------
 
   LTKScrollingCanvas(char *name1, int widgetNum1,
 		     int realWidth1, int realHeight1,
 		     int minWidth1, int minHeight1);
 
   virtual ~LTKScrollingCanvas();
-
-  virtual LTKWidget *copy() { return new LTKScrollingCanvas(this); }
 
   //---------- special access ----------
 
@@ -43,7 +41,7 @@ public:
   int getMaxX() { return realWidth >= width ? realWidth - width : 0; }
   int getMaxY() { return realHeight >= height ? realHeight - height : 0; }
   void scroll(int x, int y);
-
+  void redrawRect(int x1, int y1, int x2, int y2);
 
   //---------- layout ----------
 
@@ -56,11 +54,11 @@ public:
 
   //---------- callbacks and event handlers ----------
 
-  virtual void buttonPress(int mx, int my, int button);
+  virtual void buttonPress(int mx, int my, int button, GBool dblClick);
+  virtual void buttonRelease(int mx, int my, int button, GBool click);
+  virtual void mouseMove(int mx, int my, int pressedBtn);
 
 protected:
-
-  LTKScrollingCanvas(LTKScrollingCanvas *canvas);
 
   int realWidth, realHeight;	// size of "real" canvas, i.e., backdrop
   int minWidth, minHeight;	// minimum size

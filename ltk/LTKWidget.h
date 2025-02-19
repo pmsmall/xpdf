@@ -26,8 +26,18 @@
 //------------------------------------------------------------------------
 
 // Mouse button press/release.
-typedef void (*LTKMouseCbk)(LTKWidget *widget, int widgetNum,
-			    int mx, int my, int button);
+typedef void (*LTKButtonPressCbk)(LTKWidget *widget, int widgetNum,
+				  int mx, int my, int button, GBool dblClick);
+typedef void (*LTKButtonReleaseCbk)(LTKWidget *widget, int widgetNum,
+				    int mx, int my, int button, GBool click);
+
+// Mouse move.
+typedef void (*LTKMouseMoveCbk)(LTKWidget *widget, int widgetNum,
+				int mx, int my);
+
+// Mouse drag.
+typedef void (*LTKMouseDragCbk)(LTKWidget *widget, int widgetNum,
+				int mx, int my, int button);
 
 // Boolean value change.
 typedef void (*LTKBoolValCbk)(LTKWidget *widget, int widgetNum, GBool on);
@@ -49,7 +59,7 @@ typedef void (*LTKRedrawCbk)(LTKWidget *widget, int widgetNum);
 class LTKWidget {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor and destructor ----------
 
   // Constructor.
   LTKWidget(char *name1, int widgetNum1);
@@ -57,15 +67,14 @@ public:
   // Destructor.
   virtual ~LTKWidget();
 
-  // Copy a widget.  Does not do any layout.
-  virtual LTKWidget *copy() = 0;
-
   //---------- access ----------
 
   virtual GBool isBox() { return gFalse; }
   char *getName() { return name; }
   virtual void setParent(LTKWindow *parent1);
   LTKWindow *getParent() { return parent; }
+  virtual void setCompoundParent(LTKWidget *compParent1);
+  LTKWidget *getCompoundParent() { return compParent; }
   int getWidth() { return width; }
   int getHeight() { return height; }
   Window getXWindow() { return xwin; }
@@ -78,14 +87,17 @@ public:
   GC getBgGC() { return parent->getBgGC(); }
   GC getBrightGC() { return parent->getBrightGC(); }
   GC getDarkGC() { return parent->getDarkGC(); }
+  GC getXorGC() { return parent->getXorGC(); }
   XFontStruct *getXFontStruct() { return parent->getXFontStruct(); }
   LTKWidget *getNext() { return next; }
   LTKWidget *setNext(LTKWidget *next1) { return next = next1; }
 
   //---------- special access ----------
 
-  void setButtonPressCbk(LTKMouseCbk cbk) { btnPressCbk = cbk; }
-  void setButtonReleaseCbk(LTKMouseCbk cbk) { btnReleaseCbk = cbk; }
+  void setButtonPressCbk(LTKButtonPressCbk cbk) { btnPressCbk = cbk; }
+  void setButtonReleaseCbk(LTKButtonReleaseCbk cbk) { btnReleaseCbk = cbk; }
+  void setMouseMoveCbk(LTKMouseMoveCbk cbk) { mouseMoveCbk = cbk; }
+  void setMouseDragCbk(LTKMouseDragCbk cbk) { mouseDragCbk = cbk; }
 
   //---------- layout ----------
 
@@ -110,30 +122,39 @@ public:
   // Draw the widget and its children.
   virtual void redraw() = 0;
 
+  // Draw the window background (only used by boxes, compound widgets,
+  // etc., which draw directly in the window).
+  virtual void redrawBackground() {}
+
   //---------- callbacks and event handlers ----------
 
-  virtual void buttonPress(int mx, int my, int button);
-  virtual void buttonRelease(int mx, int my, int button);
+  virtual void buttonPress(int mx, int my, int button, GBool dblClick);
+  virtual void buttonRelease(int mx, int my, int button, GBool click);
   virtual void activate(GBool on) {}
-  virtual void mouseMove(int mx, int my) {}
-  virtual void keyPress(KeySym key, char *s, int n) {}
+  virtual void activateDefault() {}
+  virtual void mouseMove(int mx, int my, int pressedBtn);
+  virtual void keyPress(KeySym key, Guint modifiers, char *s, int n) {}
   virtual void repeatEvent() {}
+  virtual void clearSelection() {}
+  virtual void paste(GString *str) {}
 
 protected:
-
-  // Make a copy of Widget fields only.
-  LTKWidget(LTKWidget *widget);
 
   char *name;			// name (for lookup within window)
   int widgetNum;		// widget number (for callbacks)
   LTKWindow *parent;		// parent window
+  LTKWidget *compParent;	// parent compound widget
   int x, y;			// current position (in window)
   int width, height;		// current size
 
-  LTKMouseCbk btnPressCbk;	// mouse button press callback
-  LTKMouseCbk btnReleaseCbk;	// mouse button release callback
+  int pressedBtn;		// currently pressed button
+  LTKButtonPressCbk btnPressCbk;     // mouse button press callback
+  LTKButtonReleaseCbk btnReleaseCbk; // mouse button release callback
+  LTKMouseMoveCbk mouseMoveCbk;	     // mouse move callback
+  LTKMouseDragCbk mouseDragCbk;	     // mouse drag callback
 
   Window xwin;			// X window (not used for Boxes)
+  GBool mapped;			// set when mapped
 
   LTKWidget *next;		// LTKWindow keeps a list of widgets
 };

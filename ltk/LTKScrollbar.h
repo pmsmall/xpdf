@@ -25,13 +25,13 @@
 class LTKScrollbar: public LTKWidget {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor ----------
 
   LTKScrollbar(char *name1, int widgetNum1,
 	       GBool vertical1, int minPos1, int maxPos1,
 	       LTKIntValCbk moveCbk1);
 
-  virtual LTKWidget *copy() { return new LTKScrollbar(this); }
+  //---------- access ----------
 
   virtual long getEventMask();
 
@@ -41,6 +41,7 @@ public:
   void setPos(int pos1, int size1);
   int getPos() { return pos; }
   void setScrollDelta(int scrollDelta1) { scrollDelta = scrollDelta1; }
+  void setRepeatPeriod(int period) { repeatPeriod = period; }
 
   //---------- layout ----------
 
@@ -52,14 +53,13 @@ public:
 
   //---------- callbacks and event handlers ----------
 
-  virtual void buttonPress(int mx, int my, int button);
-  virtual void buttonRelease(int mx, int my, int button);
-  virtual void mouseMove(int mx, int my);
+  virtual void buttonPress(int mx, int my, int button, GBool dblClick);
+  virtual void buttonRelease(int mx, int my, int button, GBool click);
+  virtual void mouseMove(int mx, int my, int pressedBtn);
   virtual void repeatEvent();
 
 protected:
 
-  LTKScrollbar(LTKScrollbar *scrollbar);
   void drawUpButton();
   void drawDownButton();
   void drawSlider(int pos1, Bool on);
@@ -71,6 +71,7 @@ protected:
 
   int pos, size;		// slider position and size
   int scrollDelta;		// scroll amount
+  int repeatPeriod;		// time (us) between repeats
   int pixelPos, pixelSize;	// slider pos and size in pixels
   int pushPos;			// slider pos when pressed
   int pushPixel;		// mouse coord when pressed

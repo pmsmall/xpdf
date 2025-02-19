@@ -42,8 +42,9 @@ public:
   // Is xref table valid?
   GBool isOk() { return ok; }
 
-  // Is printing allowed?  If not, print an error message.
+  // Are printing and copying allowed?  If not, print an error message.
   GBool okToPrint();
+  GBool okToCopy();
 
   // Get catalog object.
   Object *getCatalog(Object *obj) { return fetch(rootNum, rootGen, obj); }
@@ -64,6 +65,7 @@ private:
 
   int readTrailer(FileStream *str);
   GBool readXRef(FileStream *str, int *pos);
+  GBool constructXRef(FileStream *str);
   GBool checkEncrypted();
 };
 

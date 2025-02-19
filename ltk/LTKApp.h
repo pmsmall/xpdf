@@ -14,6 +14,7 @@
 #endif
 
 #include <stddef.h>
+#include <sys/time.h>
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
 #include <gtypes.h>
@@ -21,6 +22,7 @@
 
 class LTKWindow;
 class LTKWidget;
+class LTKMenu;
 
 //------------------------------------------------------------------------
 // LTKApp
@@ -29,7 +31,7 @@ class LTKWidget;
 class LTKApp {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor and destructor ----------
 
   LTKApp(char *appName1, XrmOptionDescRec *opts, int *argc, char *argv[]);
 
@@ -63,8 +65,9 @@ public:
   //---------- special access ----------
 
   void setGrabWin(LTKWindow *win) { grabWin = win; }
-  void setRepeatEvent(LTKWidget *repeatWidget1)
-    { repeatWidget = repeatWidget1; }
+  void setMenu(LTKMenu *menu) { activeMenu = menu; }
+  void setRepeatEvent(LTKWidget *repeatWidget1, int repeatDelay1,
+		      int repeatPeriod1);
 
   //---------- event handler ----------
 
@@ -76,11 +79,20 @@ private:
   LTKWindow *windows;		// list of windows
 
   LTKWindow *grabWin;		// do events only for this window
+  LTKMenu *activeMenu;		// currently posted menu
+
   LTKWidget *repeatWidget;	// do repeat events for this widget
+  int repeatDelay;		// microseconds before first repeat event
+  int repeatPeriod;		// microseconds between repeat events
+  GBool firstRepeat;		// set before first repeat event
+  struct timeval lastRepeat;	// time of last repeat
 
   Display *display;		// X display
   int screenNum;		// X screen number
   XrmDatabase resourceDB;	// X resource database;
+
+  int pressedBtn;		// button currently pressed
+  Time buttonPressTime;		// time of last button press
 };
 
 #endif

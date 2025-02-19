@@ -20,6 +20,17 @@
 #include <LTKScrollbar.h>
 #include <LTKBorder.h>
 
+//------------------------------------------------------------------------
+
+#define ltkScrollbarRepeatDelay  400000  // delay (us) before first repeat
+
+#define ltkScrollbarRepeatPeriod  30000  // default time (us) between
+				         //   repeats
+
+//------------------------------------------------------------------------
+// LTKScrollbar
+//------------------------------------------------------------------------
+
 LTKScrollbar::LTKScrollbar(char *name1, int widgetNum1,
 			   GBool vertical1, int minPos1, int maxPos1,
 			   LTKIntValCbk moveCbk1):
@@ -33,28 +44,15 @@ LTKScrollbar::LTKScrollbar(char *name1, int widgetNum1,
   if ((size = (maxPos - minPos) / 8) == 0)
     size = 1;
   scrollDelta = -1;
-  sliderPressed = gFalse;
-  upPressed = downPressed = gFalse;
-}
-
-LTKScrollbar::LTKScrollbar(LTKScrollbar *scrollbar):
-    LTKWidget(scrollbar) {
-  vertical = scrollbar->vertical;
-  minPos = scrollbar->minPos;
-  maxPos = scrollbar->maxPos;
-  moveCbk = scrollbar->moveCbk;
-
-  pos = minPos;
-  if ((size = (maxPos - minPos) / 8) == 0)
-    size = 1;
-  scrollDelta = -1;
+  repeatPeriod = ltkScrollbarRepeatPeriod;
   sliderPressed = gFalse;
   upPressed = downPressed = gFalse;
 }
 
 long LTKScrollbar::getEventMask() {
   return LTKWidget::getEventMask() |
-         ButtonPressMask | ButtonReleaseMask | ButtonMotionMask;
+         ButtonPressMask | ButtonReleaseMask | ButtonMotionMask |
+         PointerMotionHintMask;
 }
 
 void LTKScrollbar::layout1() {
@@ -80,6 +78,8 @@ void LTKScrollbar::setLimits(int minPos1, int maxPos1) {
     drawSlider(pos, gFalse);
   minPos = minPos1;
   maxPos = maxPos1;
+  if (maxPos < minPos)
+    maxPos = minPos;
   if (size > maxPos - minPos + 1)
     size = maxPos - minPos + 1;
   if (pos < minPos)
@@ -175,7 +175,7 @@ void LTKScrollbar::drawSlider(int pos1, Bool on) {
 		tx, ty, tw, th, border);
 }
 
-void LTKScrollbar::buttonPress(int mx, int my, int button) {
+void LTKScrollbar::buttonPress(int mx, int my, int button, GBool dblClick) {
   int oldPos;
 
   // scroll up/left
@@ -184,7 +184,9 @@ void LTKScrollbar::buttonPress(int mx, int my, int button) {
     upPressed = gTrue;
     drawUpButton();
     doScroll();
-    parent->getApp()->setRepeatEvent(this);
+    //~ user-settable period
+    parent->getApp()->setRepeatEvent(this, ltkScrollbarRepeatDelay,
+				     repeatPeriod);
 
   // page up/left
   } else if ((vertical && my < pixelPos) ||
@@ -223,38 +225,37 @@ void LTKScrollbar::buttonPress(int mx, int my, int button) {
     downPressed = gTrue;
     drawDownButton();
     doScroll();
-    parent->getApp()->setRepeatEvent(this);
+    //~ user-settable period
+    parent->getApp()->setRepeatEvent(this, ltkScrollbarRepeatDelay,
+				     repeatPeriod);
   }
 }
 
-void LTKScrollbar::buttonRelease(int mx, int my, int button) {
+void LTKScrollbar::buttonRelease(int mx, int my, int button, GBool click) {
   if (sliderPressed) {
     sliderPressed = gFalse;
     drawSlider(pos, gTrue);
   } else if (upPressed) {
     upPressed = gFalse;
     drawUpButton();
-    parent->getApp()->setRepeatEvent(NULL);
+    parent->getApp()->setRepeatEvent(NULL, 0, 0);
   } else if (downPressed) {
     downPressed = gFalse;
     drawDownButton();
-    parent->getApp()->setRepeatEvent(NULL);
+    parent->getApp()->setRepeatEvent(NULL, 0, 0);
   }
 }
 
-void LTKScrollbar::mouseMove(int mx, int my) {
+void LTKScrollbar::mouseMove(int mx, int my, int pressedBtn) {
   int oldPos = pos;
   int w1, h1;
-  int tw, th;
 
   if (sliderPressed) {
     if (vertical) {
       h1 = height - 2 * ltkBorderWidth - 24;
-      th = (size * h1) / (maxPos - minPos + 1);
       pos = pushPos + ((my - pushPixel) * (maxPos - minPos + 1)) / h1;
     } else {
       w1 = width - 2 * ltkBorderWidth - 24;
-      tw = (size * w1) / (maxPos - minPos + 1);
       pos = pushPos + ((mx - pushPixel) * (maxPos - minPos + 1)) / w1;
     }
     if (pos < minPos)

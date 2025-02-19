@@ -24,7 +24,9 @@ class Dict;
 //------------------------------------------------------------------------
 
 enum LinkActionKind {
-  actionGoto,			// GoTo and GoToR
+  actionGoTo,			// go to destination
+  actionGoToR,			// go to destination in new file
+  actionLaunch,			// launch app (or open document)
   actionURI,			// URI
   actionUnknown			// anything else
 };
@@ -60,14 +62,20 @@ enum LinkDestKind {
 class LinkDest {
 public:
 
-  // Build a LinkDest from the array.
-  LinkDest(Array *a, GBool remote);
+  // Build a LinkDest from the array.  If <pageIsRef> is true, the
+  // page is specified by an object reference; otherwise the page is
+  // specified by a (zero-relative) page number.
+  LinkDest(Array *a, GBool pageIsRef1);
+
+  // Copy a LinkDest.
+  LinkDest *copy() { return new LinkDest(this); }
 
   // Was the LinkDest created successfully?
   GBool isOk() { return ok; }
 
   // Accessors.
   LinkDestKind getKind() { return kind; }
+  GBool isPageRef() { return pageIsRef; }
   int getPageNum() { return pageNum; }
   Ref getPageRef() { return pageRef; }
   double getLeft() { return left; }
@@ -82,47 +90,107 @@ public:
 private:
 
   LinkDestKind kind;		// destination type
-  int pageNum;			// remote page number
-  Ref pageRef;			// reference to page
+  GBool pageIsRef;		// is the page a reference or number?
+  union {
+    Ref pageRef;		// reference to page
+    int pageNum;		// zero-relative page number
+  };
   double left, bottom;		// position
   double right, top;
   double zoom;			// zoom factor
   GBool changeLeft, changeTop;	// for destXYZ links, which position
   GBool changeZoom;		//   components to change
   GBool ok;			// set if created successfully
+
+  LinkDest(LinkDest *dest);
 };
 
 //------------------------------------------------------------------------
-// LinkGoto
+// LinkGoTo
 //------------------------------------------------------------------------
 
-class LinkGoto: public LinkAction {
+class LinkGoTo: public LinkAction {
 public:
 
-  // Build a LinkGoto from a destination array, named destination string,
-  // or action dictionary.  The <subtype> string is "GoTo", "GoToR",
-  // "Launch", or NULL (if there was no dictionary).
-  LinkGoto(char *subtype, Object *obj);
+  // Build a LinkGoTo from a destination (dictionary, name, or string).
+  LinkGoTo(Object *destObj);
 
   // Destructor.
-  virtual ~LinkGoto();
+  virtual ~LinkGoTo();
 
-  // Was the LinkGoto created successfully?
-  virtual GBool isOk() { return fileName || dest || namedDest; }
+  // Was the LinkGoTo created successfully?
+  virtual GBool isOk() { return dest || namedDest; }
 
   // Accessors.
-  virtual LinkActionKind getKind() { return actionGoto; }
+  virtual LinkActionKind getKind() { return actionGoTo; }
+  LinkDest *getDest() { return dest; }
+  GString *getNamedDest() { return namedDest; }
+
+private:
+
+  LinkDest *dest;		// regular destination (NULL for remote
+				//   link with bad destination)
+  GString *namedDest;		// named destination (only one of dest and
+				//   and namedDest may be non-NULL)
+};
+
+//------------------------------------------------------------------------
+// LinkGoToR
+//------------------------------------------------------------------------
+
+class LinkGoToR: public LinkAction {
+public:
+
+  // Build a LinkGoToR from a file spec (dictionary) and destination
+  // (dictionary, name, or string).
+  LinkGoToR(Object *fileSpecObj, Object *destObj);
+
+  // Destructor.
+  virtual ~LinkGoToR();
+
+  // Was the LinkGoToR created successfully?
+  virtual GBool isOk() { return fileName && (dest || namedDest); }
+
+  // Accessors.
+  virtual LinkActionKind getKind() { return actionGoToR; }
   GString *getFileName() { return fileName; }
   LinkDest *getDest() { return dest; }
   GString *getNamedDest() { return namedDest; }
 
 private:
 
-  GString *fileName;		// file name (NULL for local link)
+  GString *fileName;		// file name
   LinkDest *dest;		// regular destination (NULL for remote
 				//   link with bad destination)
   GString *namedDest;		// named destination (only one of dest and
 				//   and namedDest may be non-NULL)
+};
+
+//------------------------------------------------------------------------
+// LinkLaunch
+//------------------------------------------------------------------------
+
+class LinkLaunch: public LinkAction {
+public:
+
+  // Build a LinkLaunch from an action dictionary.
+  LinkLaunch(Object *actionObj);
+
+  // Destructor.
+  virtual ~LinkLaunch();
+
+  // Was the LinkLaunch created successfully?
+  virtual GBool isOk() { return fileName != NULL; }
+
+  // Accessors.
+  virtual LinkActionKind getKind() { return actionLaunch; }
+  GString *getFileName() { return fileName; }
+  GString *getParams() { return params; }
+
+private:
+
+  GString *fileName;		// file name
+  GString *params;		// parameters
 };
 
 //------------------------------------------------------------------------
@@ -132,14 +200,14 @@ private:
 class LinkURI: public LinkAction {
 public:
 
-  // Build a LinkURI given the URI.
-  LinkURI(GString *uri1);
+  // Build a LinkURI given the URI (string).
+  LinkURI(Object *uriObj);
 
   // Destructor.
   virtual ~LinkURI();
 
   // Was the LinkURI created successfully?
-  virtual GBool isOk() { return gTrue; }
+  virtual GBool isOk() { return uri != NULL; }
 
   // Accessors.
   virtual LinkActionKind getKind() { return actionURI; }
@@ -157,14 +225,14 @@ private:
 class LinkUnknown: public LinkAction {
 public:
 
-  // Build a LinkUnknown given the action subtype.
+  // Build a LinkUnknown with the specified action type.
   LinkUnknown(char *action1);
 
   // Destructor.
   virtual ~LinkUnknown();
 
   // Was the LinkUnknown create successfully?
-  virtual GBool isOk() { return gTrue; }
+  virtual GBool isOk() { return action != NULL; }
 
   // Accessors.
   virtual LinkActionKind getKind() { return actionUnknown; }
@@ -189,20 +257,21 @@ public:
   ~Link();
 
   // Check if point is inside the link rectangle.
-  GBool inRect(int x, int y)
+  GBool inRect(double x, double y)
     { return x1 <= x && x <= x2 && y1 <= y && y <= y2; }
 
   // Get action.
   LinkAction *getAction() { return action; }
 
   // Get border corners and width.
-  void getBorder(int *xa1, int *ya1, int *xa2, int *ya2, double *wa)
+  void getBorder(double *xa1, double *ya1, double *xa2, double *ya2,
+		 double *wa)
     { *xa1 = x1; *ya1 = y1; *xa2 = x2; *ya2 = y2; *wa = borderW; }
 
 private:
 
-  int x1, y1;			// lower left corner
-  int x2, y2;			// upper right corner
+  double x1, y1;		// lower left corner
+  double x2, y2;		// upper right corner
   double borderW;		// border width
   LinkAction *action;		// action
 };
@@ -226,7 +295,10 @@ public:
 
   // If point <x>,<y> is in a link, return the associated action;
   // else return NULL.
-  LinkAction *find(int x, int y);
+  LinkAction *find(double x, double y);
+
+  // Return true if <x>,<y> is in a link.
+  GBool onLink(double x, double y);
 
 private:
 

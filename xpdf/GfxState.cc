@@ -34,8 +34,18 @@ void GfxColor::setCMYK(double c, double m, double y, double k) {
 // GfxColorSpace
 //------------------------------------------------------------------------
 
+GfxColorSpace::GfxColorSpace() {
+  mode = colorGray;
+  indexed = gFalse;
+  bits = 1;
+  numComponents = 1;
+  lookupComponents = 1;
+  lookup = (Guchar (*)[4])gmalloc((1 << bits) * 4 * sizeof(Guchar));
+  ok = gTrue;
+}
+
 GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
-  Object obj;
+  Object obj, obj2;
   double decodeLow[4], decodeHigh[4];
   int decodeComps;
   Guchar (*palette)[4];
@@ -83,10 +93,12 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
     numComponents = lookupComponents = 4;
   } else if (colorSpace->isArray()) {
     colorSpace->arrayGet(0, &obj);
-    if (obj.isName("DeviceGray") || obj.isName("G")) {
+    if (obj.isName("DeviceGray") || obj.isName("G") ||
+	obj.isName("CalGray")) {
       mode = colorGray;
       numComponents = lookupComponents = 1;
-    } else if (obj.isName("DeviceRGB") || obj.isName("RGB")) {
+    } else if (obj.isName("DeviceRGB") || obj.isName("RGB") ||
+	       obj.isName("CalRGB")) {
       mode = colorRGB;
       numComponents = lookupComponents = 3;
     } else if (obj.isName("DeviceCMYK") || obj.isName("CMYK")) {
@@ -110,12 +122,28 @@ GfxColorSpace::GfxColorSpace(int bits1, Object *colorSpace, Object *decode) {
       goto err1;
     }
     colorSpace->arrayGet(1, &obj);
-    if (obj.isName("DeviceRGB") || obj.isName("RGB")) {
+    if (obj.isName("DeviceGray") || obj.isName("G")) {
+      mode = colorGray;
+      lookupComponents = 1;
+    } else if (obj.isName("DeviceRGB") || obj.isName("RGB")) {
       mode = colorRGB;
       lookupComponents = 3;
     } else if (obj.isName("DeviceCMYK") || obj.isName("CMYK")) {
       mode = colorCMYK;
       lookupComponents = 4;
+    } else if (obj.isArray()) {
+      obj.arrayGet(0, &obj2);
+      if (obj.isName("CalGray")) {
+	mode = colorGray;
+	lookupComponents = 1;
+      } else if (obj.isName("CalRGB")) {
+	mode = colorRGB;
+	lookupComponents = 3;
+      } else {
+	obj2.free();
+	goto err2;
+      }
+      obj2.free();
     } else {
       goto err2;
     }
@@ -205,6 +233,15 @@ GfxColorSpace::~GfxColorSpace() {
   gfree(lookup);
 }
 
+GfxColorSpace::GfxColorSpace(GfxColorSpace *colorSpace) {
+  int size;
+
+  memcpy(this, colorSpace, sizeof(GfxColorSpace));
+  size = (1 << bits) * 4 * sizeof(Guchar);
+  lookup = (Guchar (*)[4])gmalloc(size);
+  memcpy(lookup, colorSpace->lookup, size);
+}
+
 void GfxColorSpace::getGray(Guchar x[4], Guchar *gray) {
   Guchar *p;
 
@@ -257,6 +294,27 @@ void GfxColorSpace::getRGB(Guchar x[4], Guchar *r, Guchar *g, Guchar *b) {
       *r = lookup[x[0]][0];
       *g = lookup[x[1]][1];
       *b = lookup[x[2]][2];
+      break;
+    }
+  }
+}
+
+void GfxColorSpace::getColor(double x[4], GfxColor *color) {
+  Guchar *p;
+
+  if (indexed) {
+    p = lookup[(int)x[0]];
+    color->setRGB(p[0] / 255.0, p[1] / 255.0, p[2] / 255.0);
+  } else {
+    switch (mode) {
+    case colorGray:
+      color->setGray(x[0]);
+      break;
+    case colorCMYK:
+      color->setCMYK(x[0], x[1], x[2], x[3]);
+      break;
+    case colorRGB:
+      color->setRGB(x[0], x[1], x[2]);
       break;
     }
   }
@@ -328,6 +386,7 @@ void GfxSubpath::curveTo(double x1, double y1, double x2, double y2,
 }
 
 GfxPath::GfxPath() {
+  justMoved = gFalse;
   size = 16;
   n = 0;
   subpaths = (GfxSubpath **)gmalloc(size * sizeof(GfxSubpath *));
@@ -342,9 +401,13 @@ GfxPath::~GfxPath() {
 }
 
 // Used for copy().
-GfxPath::GfxPath(GfxSubpath **subpaths1, int n1, int size1) {
+GfxPath::GfxPath(GBool justMoved1, double firstX1, double firstY1,
+		 GfxSubpath **subpaths1, int n1, int size1) {
   int i;
 
+  justMoved = justMoved1;
+  firstX = firstX1;
+  firstY = firstY1;
   size = size1;
   n = n1;
   subpaths = (GfxSubpath **)gmalloc(size * sizeof(GfxSubpath *));
@@ -353,13 +416,40 @@ GfxPath::GfxPath(GfxSubpath **subpaths1, int n1, int size1) {
 }
 
 void GfxPath::moveTo(double x, double y) {
-  if (n >= size) {
-    size += 16;
-    subpaths = (GfxSubpath **)grealloc(subpaths, size * sizeof(GfxSubpath *));
-  }
-  subpaths[n] = new GfxSubpath(x, y);
-  ++n;
+  justMoved = gTrue;
+  firstX = x;
+  firstY = y;
 }
+
+void GfxPath::lineTo(double x, double y) {
+  if (justMoved) {
+    if (n >= size) {
+      size += 16;
+      subpaths = (GfxSubpath **)
+	           grealloc(subpaths, size * sizeof(GfxSubpath *));
+    }
+    subpaths[n] = new GfxSubpath(firstX, firstY);
+    ++n;
+    justMoved = gFalse;
+  }
+  subpaths[n-1]->lineTo(x, y);
+}
+
+void GfxPath::curveTo(double x1, double y1, double x2, double y2,
+	     double x3, double y3) {
+  if (justMoved) {
+    if (n >= size) {
+      size += 16;
+      subpaths = (GfxSubpath **)
+	           grealloc(subpaths, size * sizeof(GfxSubpath *));
+    }
+    subpaths[n] = new GfxSubpath(firstX, firstY);
+    ++n;
+    justMoved = gFalse;
+  }
+  subpaths[n-1]->curveTo(x1, y1, x2, y2, x3, y3);
+}
+
 
 //------------------------------------------------------------------------
 // GfxState
@@ -412,6 +502,8 @@ GfxState::GfxState(int dpi, int x1a, int y1a, int x2a, int y2a, int rotate,
     pageHeight = (int)(k * (y2 - y1));
   }
 
+  fillColorSpace = new GfxColorSpace();
+  strokeColorSpace = new GfxColorSpace();
   fillColor.setGray(0);
   strokeColor.setGray(0);
 
@@ -431,7 +523,7 @@ GfxState::GfxState(int dpi, int x1a, int y1a, int x2a, int y2a, int rotate,
   textMat[4] = 0; textMat[5] = 0;
   charSpace = 0;
   wordSpace = 0;
-  horizScaling = 100;
+  horizScaling = 1;
   leading = 0;
   rise = 0;
   render = 0;
@@ -444,6 +536,10 @@ GfxState::GfxState(int dpi, int x1a, int y1a, int x2a, int y2a, int rotate,
 }
 
 GfxState::~GfxState() {
+  if (fillColorSpace)
+    delete fillColorSpace;
+  if (strokeColorSpace)
+    delete strokeColorSpace;
   gfree(lineDash);
   delete path;
   if (saved)
@@ -453,6 +549,10 @@ GfxState::~GfxState() {
 // Used for copy();
 GfxState::GfxState(GfxState *state) {
   memcpy(this, state, sizeof(GfxState));
+  if (fillColorSpace)
+    fillColorSpace = state->fillColorSpace->copy();
+  if (strokeColorSpace)
+    strokeColorSpace = state->strokeColorSpace->copy();
   if (lineDashLength > 0) {
     lineDash = (double *)gmalloc(lineDashLength * sizeof(double));
     memcpy(lineDash, state->lineDash, lineDashLength * sizeof(double));
@@ -500,6 +600,18 @@ void GfxState::concatCTM(double a, double b, double c,
   ctm[3] = c * b1 + d * d1;
   ctm[4] = e * a1 + f * c1 + ctm[4];
   ctm[5] = e * b1 + f * d1 + ctm[5];
+}
+
+void GfxState::setFillColorSpace(GfxColorSpace *colorSpace) {
+  if (fillColorSpace)
+    delete fillColorSpace;
+  fillColorSpace = colorSpace;
+}
+
+void GfxState::setStrokeColorSpace(GfxColorSpace *colorSpace) {
+  if (strokeColorSpace)
+    delete strokeColorSpace;
+  strokeColorSpace = colorSpace;
 }
 
 void GfxState::setLineDash(double *dash, int length, double start) {

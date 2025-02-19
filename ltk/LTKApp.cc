@@ -12,14 +12,38 @@
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#ifdef _AIX
+#include <sys/select.h>
+#endif
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <gtypes.h>
 #include <LTKApp.h>
 #include <LTKResources.h>
 #include <LTKWindow.h>
+#include <LTKMenu.h>
 #include <LTKMisc.h>
 #include <LTKWidget.h>
+
+#if defined(VMS) && defined(__DECCXX) && (_VMS_VER < 70000000)
+int gettimeofday (struct timeval *__tp, void *__tzp);
+#endif
+
+//------------------------------------------------------------------------
+
+#define ltkSingleClickTime 200	// max time from press to release for
+				//   a single click (in ms)
+
+#define ltkDoubleClickTime 200	// max time from press to press for a
+				//   double click (in ms)
+
+//------------------------------------------------------------------------
+// LTKApp
+//------------------------------------------------------------------------
 
 LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
 	       int *argc, char *argv[]) {
@@ -30,7 +54,11 @@ LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
   appName = new GString(appName1);
   windows = NULL;
   grabWin = NULL;
+  activeMenu = NULL;
   repeatWidget = NULL;
+  repeatDelay = 0;
+  repeatPeriod = 0;
+  firstRepeat = gTrue;
   cmdLineDB = NULL;
   resourceDB = NULL;
   XrmInitialize();
@@ -44,6 +72,7 @@ LTKApp::LTKApp(char *appName1, XrmOptionDescRec *opts,
   delete displayName;
   screenNum = DefaultScreen(display);
   ltkGetOtherResources(display, cmdLineDB, &resourceDB);
+  pressedBtn = 0;
 }
 
 LTKApp::~LTKApp() {
@@ -130,53 +159,138 @@ LTKWindow *LTKApp::findWindow(Window xwin, LTKWidget **widget) {
   return w;
 }
 
+void LTKApp::setRepeatEvent(LTKWidget *repeatWidget1, int repeatDelay1,
+			    int repeatPeriod1) {
+  repeatWidget = repeatWidget1;
+  repeatDelay = repeatDelay1;
+  repeatPeriod = repeatPeriod1;
+  firstRepeat = gTrue;
+  gettimeofday(&lastRepeat, NULL);
+}
+
 void LTKApp::doEvent(GBool wait) {
+  fd_set readFDs, writeFDs, exceptFDs;
+  struct timeval curTime, timeout;
+  int timeout1;
   XEvent event;
-  int pending;
+  XEvent event2;
+  Window pointerRoot, pointerChild;
   LTKWindow *win;
   LTKWidget *widget;
+  LTKMenu *menu;
   KeySym key;
-  char s[20];
-  int n;
+  GString *str;
+  char buf[20];
+  Atom typeRet;
+  int formatRet;
+  unsigned long length, left;
+  unsigned char *bufPtr;
+  GBool click, dblClick;
+  int x, y, rx, ry;
+  unsigned int mask;
+  int n, i;
 
- start:
-  pending = XPending(display);
-
-  if (pending == 0 && repeatWidget) {
-    repeatWidget->repeatEvent();
-
-  } else if (pending > 0 || wait) {
-    XNextEvent(display, &event);
-    win = findWindow(event.xany.window, &widget);
-    switch (event.type) {
-    case Expose:
-      // redraw the window or widget, ignoring all but the last
-      // Expose event for that window
-      if (event.xexpose.count == 0 && win) {
-	if (widget)
-	  widget->redraw();
-	else
-	  win->redraw();
+  while (XPending(display) == 0) {
+    if (!wait)
+      return;
+    FD_ZERO(&readFDs);
+    FD_ZERO(&writeFDs);
+    FD_ZERO(&exceptFDs);
+    n = ConnectionNumber(display);
+    FD_SET(n, &readFDs);
+    if (!repeatWidget) {
+#ifdef __hpux
+      n = select(n+1, (int *)&readFDs, (int *)&writeFDs, (int *)&exceptFDs,
+		 NULL);
+#else
+      n = select(n+1, &readFDs, &writeFDs, &exceptFDs, NULL);
+#endif
+    } else {
+      gettimeofday(&curTime, NULL);
+      timeout.tv_sec = curTime.tv_sec - lastRepeat.tv_sec;
+      if (curTime.tv_usec < lastRepeat.tv_usec) {
+	--timeout.tv_sec;
+	timeout.tv_usec = (1000000 + curTime.tv_usec) - lastRepeat.tv_usec;
+      } else {
+	timeout.tv_usec = curTime.tv_usec - lastRepeat.tv_usec;
       }
-      break;
-    case ConfigureNotify:
-      if (win && !widget) {
-	if (event.xconfigure.width != win->getWidth() ||
-	    event.xconfigure.height != win->getHeight()) {
-	  XClearWindow(display, win->getXWindow());
-	  win->layout(-1, -1, event.xconfigure.width, event.xconfigure.height);
-	}
+      timeout1 = firstRepeat ? repeatDelay : repeatPeriod;
+      if (timeout.tv_sec > 0 || timeout.tv_usec > timeout1)
+	timeout.tv_usec = 0;
+      else
+	timeout.tv_usec = timeout1 - timeout.tv_usec;
+      timeout.tv_sec = 0;
+#ifdef __hpux
+      n = select(n+1, (int *)&readFDs, (int *)&writeFDs, (int *)&exceptFDs,
+		 &timeout);
+#else
+      n = select(n+1, &readFDs, &writeFDs, &exceptFDs, &timeout);
+#endif
+    }
+    if (n == 0 && repeatWidget) {
+      repeatWidget->repeatEvent();
+      firstRepeat = gFalse;
+      gettimeofday(&lastRepeat, NULL);
+      return;
+    }
+  }
+
+  XNextEvent(display, &event);
+  win = findWindow(event.xany.window, &widget);
+  if (activeMenu && event.xany.window == activeMenu->getXWindow())
+    menu = activeMenu;
+  else
+    menu = NULL;
+  switch (event.type) {
+  case Expose:
+    // redraw the window or widget, ignoring all but the last
+    // Expose event for that window
+    if (event.xexpose.count == 0) {
+      if (widget)
+	widget->redraw();
+      else if (win)
+	win->redrawBackground();
+      else if (menu)
+	menu->redraw();
+    }
+    break;
+  case GraphicsExpose:
+    // redraw the window or widget, ignoring all but the last
+    // GraphicsExpose event for that window
+    if (event.xgraphicsexpose.count == 0) {
+      if (widget)
+	widget->redraw();
+      else if (win)
+	win->redrawBackground();
+      else if (menu)
+	menu->redraw();
+    }
+    break;
+  case ConfigureNotify:
+    if (win && !widget) {
+      if (event.xconfigure.width != win->getWidth() ||
+	  event.xconfigure.height != win->getHeight()) {
+	XClearWindow(display, win->getXWindow());
+	win->layout(-1, -1, event.xconfigure.width, event.xconfigure.height);
       }
-      break;
-    case VisibilityNotify:
-      if (event.xvisibility.state == VisibilityUnobscured &&
-	  grabWin && win == grabWin->getOverWin())
-	XRaiseWindow(display, grabWin->getXWindow());
-      break;
-    case ButtonPress:
-      if (grabWin && win != grabWin)
-	goto start;
-      if (win) {
+    }
+    break;
+  case VisibilityNotify:
+    if (event.xvisibility.state == VisibilityUnobscured &&
+	grabWin && win == grabWin->getOverWin())
+      XRaiseWindow(display, grabWin->getXWindow());
+    break;
+  case ButtonPress:
+    dblClick = event.xbutton.time - buttonPressTime < ltkDoubleClickTime;
+    buttonPressTime = event.xbutton.time;
+    pressedBtn = event.xbutton.button - Button1 + 1;
+    if (menu) {
+      menu->buttonPress(event.xbutton.x, event.xbutton.y,
+			pressedBtn, dblClick);
+    } else if (win && !(grabWin && win != grabWin)) {
+      if (event.xbutton.button == Button3) {
+	win->postMenu(event.xbutton.x_root, event.xbutton.y_root);
+      } else {
 	if (widget != win->getKeyWidget()) {
 	  if (win->getKeyWidget())
 	    win->getKeyWidget()->activate(gFalse);
@@ -185,43 +299,91 @@ void LTKApp::doEvent(GBool wait) {
 	}
 	if (widget) {
 	  widget->buttonPress(event.xbutton.x, event.xbutton.y,
-			      event.xbutton.button - Button1 + 1);
+			      pressedBtn, dblClick);
 	}
       }
-      break;
-    case ButtonRelease:
-      if (grabWin && win != grabWin)
-	goto start;
-      if (win && widget) {
-	widget->buttonRelease(event.xbutton.x, event.xbutton.y,
-			      event.xbutton.button - Button1 + 1);
-      }
-      break;
-    case MotionNotify:
-      if (grabWin && win != grabWin)
-	goto start;
-      if (win && widget) {
-	widget->mouseMove(event.xmotion.x, event.xmotion.y);
-      }
-      break;
-    case KeyPress:
-      if (grabWin && win != grabWin)
-	goto start;
-      if (win) {
-	n = XLookupString((XKeyEvent *)&event, s, sizeof(s)-1,
-			  &key, NULL);
-	s[n] = '\0';
-	win->keyPress(key, s, n);
-      }
-      break;
-    case PropertyNotify:
-      if (grabWin && win != grabWin)
-	goto start;
-      if (win)
-	win->propChange(event.xproperty.atom);
-      break;
-    default:
-      break;
     }
+    break;
+  case ButtonRelease:
+    pressedBtn = 0;
+    click = event.xbutton.time - buttonPressTime < ltkSingleClickTime;
+    if (menu) {
+      menu->buttonRelease(event.xbutton.x, event.xbutton.y,
+			  event.xbutton.button - Button1 + 1, click);
+    } else if (win && !(grabWin && win != grabWin) && widget) {
+      widget->buttonRelease(event.xbutton.x, event.xbutton.y,
+			    event.xbutton.button - Button1 + 1, click);
+    }
+    break;
+  case MotionNotify:
+    // this assumes PointerMotionHintMask was selected, so we need
+    // to call XQueryPointer
+    XQueryPointer(display, event.xany.window, &pointerRoot, &pointerChild,
+		  &rx, &ry, &x, &y, &mask);
+    if (menu) {
+      menu->mouseMove(x, y, pressedBtn);
+    } else if (win && !(grabWin && win != grabWin) && widget) {
+      widget->mouseMove(x, y, pressedBtn);
+    }
+    break;
+  case KeyPress:
+    if (win && !(grabWin && win != grabWin)) {
+      n = XLookupString((XKeyEvent *)&event, buf, sizeof(buf)-1,
+			&key, NULL);
+      buf[n] = '\0';
+      win->keyPress(key, event.xkey.state, buf, n);
+    }
+    break;
+  case SelectionRequest:
+    event2.xselection.type = SelectionNotify;
+    event2.xselection.display = display;
+    event2.xselection.requestor = event.xselectionrequest.requestor;
+    event2.xselection.selection = event.xselectionrequest.selection;
+    event2.xselection.target = event.xselectionrequest.target;
+    event2.xselection.property = None;
+    event2.xselection.time = event.xselectionrequest.time;
+    if (event.xselectionrequest.target == XA_STRING &&
+	win && (str = win->getSelection())) {
+      XChangeProperty(display, event.xselectionrequest.requestor,
+		      event.xselectionrequest.property, XA_STRING, 8,
+		      PropModeReplace,
+		      (Guchar *)str->getCString(), str->getLength());
+      event2.xselection.property = event.xselectionrequest.property;
+    }
+    XSendEvent(display, event.xselectionrequest.requestor,
+	       False, 0, &event2);
+    break;
+  case SelectionClear:
+    if (win && win->getSelectionWidget()) {
+      win->getSelectionWidget()->clearSelection();
+    }
+    break;
+  case SelectionNotify:
+    if (win && !(grabWin && win != grabWin) && win->getPasteWidget() &&
+	event.xselection.target == XA_STRING &&
+	event.xselection.property != None) {
+      i = 0;
+      str = new GString();
+      do {
+	if (XGetWindowProperty(display, win->getXWindow(),
+			       event.xselection.property,
+			       i/4, 256/4, True, XA_STRING,
+			       &typeRet, &formatRet, &length, &left,
+			       &bufPtr) != Success)
+	  break;
+	str->append((char *)bufPtr, length);
+	XFree(bufPtr);
+	i += length;
+      } while (left > 0);
+      win->getPasteWidget()->paste(str);
+      delete str;
+    }
+    break;
+  case PropertyNotify:
+    if (win && !(grabWin && win != grabWin))
+      win->propChange(event.xproperty.atom);
+    break;
+  default:
+    break;
   }
 }

@@ -21,33 +21,40 @@
 #include "Link.h"
 
 //------------------------------------------------------------------------
+
+static GString *getFileSpecName(Object *fileSpecObj);
+
+//------------------------------------------------------------------------
 // LinkDest
 //------------------------------------------------------------------------
 
-LinkDest::LinkDest(Array *a, GBool remote) {
+LinkDest::LinkDest(Array *a, GBool pageIsRef1) {
   Object obj1, obj2;
 
+  // initialize fields
+  pageIsRef = pageIsRef1;
+  left = bottom = right = top = zoom = 0;
+  ok = gFalse;
+
   // get page
-  if (remote) {
-    if (!a->get(0, &obj1)->isInt()) {
-      error(-1, "Bad annotation destination");
-      goto err2;
-    }
-    pageNum = obj1.getInt() + 1;
-    pageRef.num = pageRef.gen = 0;
-    obj1.free();
-  } else {
+  if (pageIsRef) {
     if (!a->getNF(0, &obj1)->isRef()) {
       error(-1, "Bad annotation destination");
       goto err2;
     }
     pageRef.num = obj1.getRefNum();
     pageRef.gen = obj1.getRefGen();
-    pageNum = 0;
+    obj1.free();
+  } else {
+    if (!a->get(0, &obj1)->isInt()) {
+      error(-1, "Bad annotation destination");
+      goto err2;
+    }
+    pageNum = obj1.getInt() + 1;
     obj1.free();
   }
 
-  // get destination info
+  // get destination type
   a->get(1, &obj1);
 
   // XYZ link
@@ -177,76 +184,93 @@ LinkDest::LinkDest(Array *a, GBool remote) {
   obj2.free();
  err2:
   obj1.free();
-  ok = gFalse;
+}
+
+LinkDest::LinkDest(LinkDest *dest) {
+  kind = dest->kind;
+  pageIsRef = dest->pageIsRef;
+  if (pageIsRef)
+    pageRef = dest->pageRef;
+  else
+    pageNum = dest->pageNum;
+  left = dest->left;
+  bottom = dest->bottom;
+  right = dest->right;
+  top = dest->top;
+  zoom = dest->zoom;
+  changeLeft = dest->changeLeft;
+  changeTop = dest->changeTop;
+  changeZoom = dest->changeZoom;
+  ok = gTrue;
 }
 
 //------------------------------------------------------------------------
-// LinkGoto
+// LinkGoTo
 //------------------------------------------------------------------------
 
-LinkGoto::LinkGoto(char *subtype, Object *obj) {
-  Object obj1, obj2;
-  GBool remote;
-
-  fileName = NULL;
+LinkGoTo::LinkGoTo(Object *destObj) {
   dest = NULL;
   namedDest = NULL;
 
-  // destination specified directly in D entry
-  if (!subtype) {
+  // named destination
+  if (destObj->isName()) {
+    namedDest = new GString(destObj->getName());
+  } else if (destObj->isString()) {
+    namedDest = destObj->getString()->copy();
 
-    // destination array
-    if (obj->isArray()) {
-      dest = new LinkDest(obj->getArray(), gFalse);
-      if (!dest->isOk()) {
-	delete dest;
-	dest = NULL;
-      }
-
-    // named destination
-    } else if (obj->isName()) {
-      namedDest = new GString(obj->getName());
+  // destination dictionary
+  } else if (destObj->isArray()) {
+    dest = new LinkDest(destObj->getArray(), gTrue);
+    if (!dest->isOk()) {
+      delete dest;
+      dest = NULL;
     }
 
-  // scan GoTo/GoToR/Launch action dictionary
-  } else if (obj->isDict()) {
-
-    // file key
-    obj->dictLookup("F", &obj1);
-    if (obj1.isString()) {
-      fileName = obj1.getString()->copy();
-    } else if (obj1.isDict()) {
-      if (!obj1.dictLookup("Unix", &obj2)->isString()) {
-	obj2.free();
-	obj1.dictLookup("F", &obj2);
-      }
-      if (obj2.isString())
-	fileName = obj2.getString()->copy();
-      else
-	error(-1, "Can't get remote file name for link");
-      obj2.free();
-    }
-    obj1.free();
-
-    // destination key (for GoTo and GoToR actions)
-    remote = !strcmp(subtype, "GoToR");
-    if (remote || !strcmp(subtype, "GoTo")) {
-      obj->dictLookup("D", &obj1);
-      if (obj1.isArray()) {
-	dest = new LinkDest(obj1.getArray(), remote);
-	if (!dest->isOk()) {
-	  delete dest;
-	  dest = NULL;
-	}
-      } else if (obj1.isString()) {
-	namedDest = obj1.getString()->copy();
-      }
-      obj1.free();
-    }
+  // error
+  } else {
+    error(-1, "Illegal annotation destination");
   }
 }
 
-LinkGoto::~LinkGoto() {
+LinkGoTo::~LinkGoTo() {
+  if (dest)
+    delete dest;
+  if (namedDest)
+    delete namedDest;
+}
+
+//------------------------------------------------------------------------
+// LinkGoToR
+//------------------------------------------------------------------------
+
+LinkGoToR::LinkGoToR(Object *fileSpecObj, Object *destObj) {
+  dest = NULL;
+  namedDest = NULL;
+
+  // get file name
+  fileName = getFileSpecName(fileSpecObj);
+
+  // named destination
+  if (destObj->isName()) {
+    namedDest = new GString(destObj->getName());
+  } else if (destObj->isString()) {
+    namedDest = destObj->getString()->copy();
+
+  // destination dictionary
+  } else if (destObj->isArray()) {
+    dest = new LinkDest(destObj->getArray(), gFalse);
+    if (!dest->isOk()) {
+      delete dest;
+      dest = NULL;
+    }
+
+  // error
+  } else {
+    error(-1, "Illegal annotation destination");
+  }
+}
+
+LinkGoToR::~LinkGoToR() {
   if (fileName)
     delete fileName;
   if (dest)
@@ -255,16 +279,61 @@ LinkGoto::~LinkGoto() {
     delete namedDest;
 }
 
+
+//------------------------------------------------------------------------
+// LinkLaunch
+//------------------------------------------------------------------------
+
+LinkLaunch::LinkLaunch(Object *actionObj) {
+  Object obj1, obj2;
+
+  fileName = NULL;
+  params = NULL;
+
+  if (actionObj->isDict()) {
+    if (!actionObj->dictLookup("F", &obj1)->isNull()) {
+      fileName = getFileSpecName(&obj1);
+    } else {
+      obj1.free();
+      //~ This hasn't been defined by Adobe yet, so assume it looks
+      //~ just like the Win dictionary until they say otherwise.
+      if (actionObj->dictLookup("Unix", &obj1)->isDict()) {
+	obj1.dictLookup("F", &obj2);
+	fileName = getFileSpecName(&obj2);
+	obj2.free();
+	if (obj1.dictLookup("P", &obj2)->isString())
+	  params = obj2.getString()->copy();
+	obj2.free();
+      } else {
+	error(-1, "Bad launch-type link action");
+      }
+    }
+    obj1.free();
+  }
+}
+
+LinkLaunch::~LinkLaunch() {
+  if (fileName)
+    delete fileName;
+  if (params)
+    delete params;
+}
+
 //------------------------------------------------------------------------
 // LinkURI
 //------------------------------------------------------------------------
 
-LinkURI::LinkURI(GString *uri1) {
-  uri = uri1->copy();
+LinkURI::LinkURI(Object *uriObj) {
+  uri = NULL;
+  if (uriObj->isString())
+    uri = uriObj->getString()->copy();
+  else
+    error(-1, "Illegal URI-type link");
 }
 
 LinkURI::~LinkURI() {
-  delete uri;
+  if (uri)
+    delete uri;
 }
 
 //------------------------------------------------------------------------
@@ -284,38 +353,38 @@ LinkUnknown::~LinkUnknown() {
 //------------------------------------------------------------------------
 
 Link::Link(Dict *dict) {
-  Object obj1, obj2;
+  Object obj1, obj2, obj3, obj4;
 
   action = NULL;
 
   // get rectangle
   if (!dict->lookup("Rect", &obj1)->isArray()) {
     error(-1, "Annotation rectangle is wrong type");
-    goto err5;
+    goto err2;
   }
-  if (!obj1.arrayGet(0, &obj2)->isInt()) {
+  if (!obj1.arrayGet(0, &obj2)->isNum()) {
     error(-1, "Bad annotation rectangle");
-    goto err4;
+    goto err1;
   }
-  x1 = obj2.getInt();
+  x1 = obj2.getNum();
   obj2.free();
-  if (!obj1.arrayGet(1, &obj2)->isInt()) {
+  if (!obj1.arrayGet(1, &obj2)->isNum()) {
     error(-1, "Bad annotation rectangle");
-    goto err4;
+    goto err1;
   }
-  y1 = obj2.getInt();
+  y1 = obj2.getNum();
   obj2.free();
-  if (!obj1.arrayGet(2, &obj2)->isInt()) {
+  if (!obj1.arrayGet(2, &obj2)->isNum()) {
     error(-1, "Bad annotation rectangle");
-    goto err4;
+    goto err1;
   }
-  x2 = obj2.getInt();
+  x2 = obj2.getNum();
   obj2.free();
-  if (!obj1.arrayGet(3, &obj2)->isInt()) {
+  if (!obj1.arrayGet(3, &obj2)->isNum()) {
     error(-1, "Bad annotation rectangle");
-    goto err4;
+    goto err1;
   }
-  y2 = obj2.getInt();
+  y2 = obj2.getNum();
   obj2.free();
   obj1.free();
 
@@ -323,11 +392,11 @@ Link::Link(Dict *dict) {
   dict->lookup("Border", &obj1);
   if (!obj1.isArray()) {
     error(-1, "Annotation border is wrong type");
-    goto err5;
+    goto err2;
   }
   if (!obj1.arrayGet(2, &obj2)->isNum()) {
     error(-1, "Bad annotation border");
-    goto err4;
+    goto err1;
   }
   borderW = obj2.getNum();
   obj2.free();
@@ -335,7 +404,7 @@ Link::Link(Dict *dict) {
 
   // look for destination
   if (!dict->lookup("Dest", &obj1)->isNull()) {
-    action = new LinkGoto(NULL, &obj1);
+    action = new LinkGoTo(&obj1);
 
   // look for action
   } else {
@@ -343,34 +412,42 @@ Link::Link(Dict *dict) {
     if (dict->lookup("A", &obj1)->isDict()) {
       obj1.dictLookup("S", &obj2);
 
-      // GoTo / GoToR / Launch action
-      if (obj2.isName("GoTo") || obj2.isName("GoToR") ||
-	  obj2.isName("Launch")) {
-	action = new LinkGoto(obj2.getName(), &obj1);
-	obj2.free();
+      // GoTo action
+      if (obj2.isName("GoTo")) {
+	obj1.dictLookup("D", &obj3);
+	action = new LinkGoTo(&obj3);
+	obj3.free();
+
+      // GoToR action
+      } else if (obj2.isName("GoToR")) {
+	obj1.dictLookup("F", &obj3);
+	obj1.dictLookup("D", &obj4);
+	action = new LinkGoToR(&obj3, &obj4);
+	obj3.free();
+	obj4.free();
+
+      // Launch action
+      } else if (obj2.isName("Launch")) {
+	action = new LinkLaunch(&obj1);
 
       // URI action
       } else if (obj2.isName("URI")) {
-	obj2.free();
-	obj1.dictLookup("URI", &obj2);
-	if (obj2.isString()) {
-	  action = new LinkURI(obj2.getString());
-	} else {
-	  error(-1, "Bad annotation action");
-	  action = NULL;
-	}
-	obj2.free();
+	obj1.dictLookup("URI", &obj3);
+	action = new LinkURI(&obj3);
+	obj3.free();
 
       // unknown action
       } else if (obj2.isName()) {
 	action = new LinkUnknown(obj2.getName());
-        obj2.free();
 
       // action is missing or wrong type
       } else {
 	error(-1, "Bad annotation action");
 	action = NULL;
       }
+
+      obj2.free();
+
     } else {
       error(-1, "Missing annotation destination/action");
       action = NULL;
@@ -386,9 +463,9 @@ Link::Link(Dict *dict) {
 
   return;
 
- err4:
+ err1:
   obj2.free();
- err5:
+ err2:
   obj1.free();
   x1 = y1 = 1;
   x2 = y2 = 0;
@@ -437,12 +514,57 @@ Links::~Links() {
   gfree(links);
 }
 
-LinkAction *Links::find(int x, int y) {
+LinkAction *Links::find(double x, double y) {
   int i;
 
   for (i = 0; i < numLinks; ++i) {
-    if (links[i]->inRect(x, y) && links[i]->getAction())
-      return links[i]->getAction();
+    if (links[i]->inRect(x, y)) {
+      if (links[i]->getAction())
+	return links[i]->getAction();
+      return NULL;
+    }
   }
   return NULL;
+}
+
+GBool Links::onLink(double x, double y) {
+  int i;
+
+  for (i = 0; i < numLinks; ++i) {
+    if (links[i]->inRect(x, y))
+      return gTrue;
+  }
+  return gFalse;
+}
+
+//------------------------------------------------------------------------
+
+// Extract a file name from a file specification (string or dictionary).
+static GString *getFileSpecName(Object *fileSpecObj) {
+  GString *name;
+  Object obj1;
+
+  name = NULL;
+
+  // string
+  if (fileSpecObj->isString()) {
+    name = fileSpecObj->getString()->copy();
+
+  // dictionary
+  } else if (fileSpecObj->isDict()) {
+    if (!fileSpecObj->dictLookup("Unix", &obj1)->isString()) {
+      obj1.free();
+      fileSpecObj->dictLookup("F", &obj1);
+    }
+    if (obj1.isString())
+      name = obj1.getString()->copy();
+    else
+      error(-1, "Illegal file spec in link");
+
+  // error
+  } else {
+    error(-1, "Illegal file spec in link");
+  }
+
+  return name;
 }

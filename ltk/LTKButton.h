@@ -46,9 +46,7 @@ public:
 	    int iconWidth1, int iconHeight1,
 	    LTKButtonAction action1, LTKBoolValCbk pressCbk1);
 
-  ~LTKButton();
-
-  virtual LTKWidget *copy() { return new LTKButton(this); }
+  virtual ~LTKButton();
 
   //---------- access ----------
 
@@ -69,12 +67,11 @@ public:
 
   //---------- callbacks and event handlers ----------
 
-  virtual void buttonPress(int bx, int by, int button);
-  virtual void buttonRelease(int bx, int by, int button);
+  virtual void buttonPress(int bx, int by, int button, GBool dblClick);
+  virtual void buttonRelease(int bx, int by, int button, GBool click);
+  virtual void activateDefault();
 
 protected:
-
-  LTKButton(LTKButton *button);
 
   GString *label;		// label (button has either label or icon)
   Pixmap icon;			// icon

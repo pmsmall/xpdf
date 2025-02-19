@@ -24,12 +24,10 @@
 class LTKCanvas: public LTKWidget {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor ----------
 
   LTKCanvas(char *name1, int widgetNum1,
 	    int minWidth1, int minHeight1, LTKRedrawCbk redrawCbk1);
-
-  virtual LTKWidget *copy() { return new LTKCanvas(this); }
 
   //---------- layout ----------
 
@@ -40,8 +38,6 @@ public:
   virtual void redraw();
 
 protected:
-
-  LTKCanvas(LTKCanvas *canvas);
 
   int minWidth, minHeight;	// minimum size
 

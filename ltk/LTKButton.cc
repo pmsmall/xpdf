@@ -45,18 +45,6 @@ LTKButton::LTKButton(char *name1, int widgetNum1,
   pressCbk = pressCbk1;
 }
 
-LTKButton::LTKButton(LTKButton *button):
-    LTKWidget(button) {
-  label = button->label ? button->label->copy() : (GString *)NULL;
-  icon = None;
-  iconData = button->iconData;
-  iconWidth = button->iconWidth;
-  iconHeight = button->iconHeight;
-  action = button->action;
-  on = gFalse;
-  pressCbk = button->pressCbk;
-}
-
 LTKButton::~LTKButton() {
   if (label)
     delete label;
@@ -115,7 +103,7 @@ void LTKButton::redraw() {
   }
 }
 
-void LTKButton::buttonPress(int mx, int my, int button) {
+void LTKButton::buttonPress(int mx, int my, int button, GBool dblClick) {
   oldOn = on;
   switch (action) {
   case ltkButtonClick:
@@ -130,7 +118,7 @@ void LTKButton::buttonPress(int mx, int my, int button) {
   }
 }
 
-void LTKButton::buttonRelease(int mx, int my, int button) {
+void LTKButton::buttonRelease(int mx, int my, int button, GBool click) {
   // mouse was released over button
   if (mx >= 0 && mx < width && my >= 0 && my < height) {
     switch (action) {
@@ -149,6 +137,13 @@ void LTKButton::buttonRelease(int mx, int my, int button) {
   } else {
     setState(oldOn);
   }
+}
+
+//~ add a delay between press and release
+void LTKButton::activateDefault() {
+  buttonPress(0, 0, 1, gFalse);
+  XFlush(getDisplay());
+  buttonRelease(0, 0, 1, gTrue);
 }
 
 void LTKButton::setState(GBool on1) {

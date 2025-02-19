@@ -24,13 +24,9 @@
 class LTKEmpty: public LTKWidget {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor ----------
 
   LTKEmpty();
-
-  ~LTKEmpty();
-
-  virtual LTKWidget *copy() { return new LTKEmpty(); }
 
   //---------- layout ----------
 

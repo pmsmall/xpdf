@@ -23,26 +23,18 @@
 LTKWidget::LTKWidget(char *name1, int widgetNum1) {
   name = name1;
   widgetNum = widgetNum1;
+  parent = NULL;
+  compParent = NULL;
   x = 0;
   y = 0;
   width = 0;
   height = 0;
   btnPressCbk = NULL;
   btnReleaseCbk = NULL;
+  mouseMoveCbk = NULL;
+  mouseDragCbk = NULL;
   xwin = None;
-  next = NULL;
-}
-
-LTKWidget::LTKWidget(LTKWidget *widget) {
-  name = widget->name;
-  widgetNum = widget->widgetNum;
-  x = 0;
-  y = 0;
-  width = 0;
-  height = 0;
-  btnPressCbk = NULL;
-  btnReleaseCbk = NULL;
-  xwin = None;
+  mapped = gFalse;
   next = NULL;
 }
 
@@ -54,14 +46,22 @@ void LTKWidget::setParent(LTKWindow *parent1) {
   parent->addWidget(this);
 }
 
+void LTKWidget::setCompoundParent(LTKWidget *compParent1) {
+  compParent = compParent1;
+}
+
 long LTKWidget::getEventMask() {
   long mask;
 
   mask = ExposureMask;
   if (btnPressCbk)
-    mask |= ButtonPressMask;
+    mask |= ButtonPressMask | ButtonReleaseMask;
   if (btnReleaseCbk)
     mask |= ButtonReleaseMask;
+  if (mouseMoveCbk)
+    mask |= PointerMotionMask | PointerMotionHintMask;
+  if (mouseDragCbk)
+    mask |= ButtonMotionMask | PointerMotionHintMask;
   return mask;
 }
 
@@ -85,18 +85,29 @@ void LTKWidget::layout3() {
 
 void LTKWidget::map() {
   XMapWindow(getDisplay(), xwin);
+  mapped = gTrue;
 }
 
 void LTKWidget::clear() {
   XClearWindow(getDisplay(), xwin);
 }
 
-void LTKWidget::buttonPress(int mx, int my, int button) {
+void LTKWidget::buttonPress(int mx, int my, int button, GBool dblClick) {
   if (btnPressCbk)
-    (*btnPressCbk)(this, widgetNum, mx, my, button);
+    (*btnPressCbk)(this, widgetNum, mx, my, button, dblClick);
 }
 
-void LTKWidget::buttonRelease(int mx, int my, int button) {
+void LTKWidget::buttonRelease(int mx, int my, int button, GBool click) {
   if (btnReleaseCbk)
-    (*btnPressCbk)(this, widgetNum, mx, my, button);
+    (*btnReleaseCbk)(this, widgetNum, mx, my, button, click);
+}
+
+void LTKWidget::mouseMove(int mx, int my, int pressedBtn) {
+  if (pressedBtn == 0) {
+    if (mouseMoveCbk)
+      (*mouseMoveCbk)(this, widgetNum, mx, my);
+  } else {
+    if (mouseDragCbk)
+      (*mouseDragCbk)(this, widgetNum, mx, my, pressedBtn);
+  }
 }

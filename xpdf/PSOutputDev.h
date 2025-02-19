@@ -15,6 +15,7 @@
 
 #include <stddef.h>
 #include "config.h"
+#include "Object.h"
 #include "OutputDev.h"
 
 class GfxPath;
@@ -34,7 +35,8 @@ class PSOutputDev: public OutputDev {
 public:
 
   // Open a PostScript output file, and write the prolog.
-  PSOutputDev(char *fileName, Catalog *catalog, int firstPage, int lastPage);
+  PSOutputDev(char *fileName, Catalog *catalog,
+	      int firstPage, int lastPage, GBool embedType11);
 
   // Destructor -- writes the trailer and closes the file.
   virtual ~PSOutputDev();
@@ -109,16 +111,26 @@ public:
 private:
 
   void setupFont(GfxFont *font);
+  void setupEmbeddedFont(Ref *id);
   void doPath(GfxPath *path);
   void doImage(GBool mask, GBool inlineImg, Stream *str,
-	       int width, int height);
+	       int width, int height, int len);
   void writePS(char *fmt, ...);
   void writePSString(GString *s);
-  void writeStream(Stream *str, GBool inlineImg, GBool needA85);
+
+  GBool embedType1;		// embed Type 1 fonts?
 
   FILE *f;			// PostScript file
   PSFileType fileType;		// file / pipe / stdout
   int seqPage;			// current sequential page number
+
+  Ref *fontIDs;			// list of object IDs of all used fonts
+  int fontIDLen;		// number of entries in fontIDs array
+  int fontIDSize;		// size of fontIDs array
+  Ref *fontFileIDs;		// list of object IDs of all embedded fonts
+  int fontFileIDLen;		// number of entries in fontFileIDs array
+  int fontFileIDSize;		// size of fontFileIDs array
+
   GBool ok;			// set up ok?
 };
 

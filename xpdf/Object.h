@@ -171,6 +171,7 @@ public:
   GBool streamIs(char *dictType);
   void streamReset();
   int streamGetChar();
+  int streamLookChar();
   char *streamGetLine(char *buf, int size);
   int streamGetPos();
   void streamSetPos(int pos);
@@ -274,6 +275,9 @@ inline void Object::streamReset()
 
 inline int Object::streamGetChar()
   { return stream->getChar(); }
+
+inline int Object::streamLookChar()
+  { return stream->lookChar(); }
 
 inline char *Object::streamGetLine(char *buf, int size)
   { return stream->getLine(buf, size); }

@@ -11,7 +11,14 @@
 #endif
 
 #include <stddef.h>
+#include "Object.h"
+#include "Stream.h"
+#include "GfxState.h"
 #include "OutputDev.h"
+
+//------------------------------------------------------------------------
+// OutputDev
+//------------------------------------------------------------------------
 
 void OutputDev::setDefaultCTM(double *ctm1) {
   int i;
@@ -36,4 +43,43 @@ void OutputDev::cvtDevToUser(int dx, int dy, double *ux, double *uy) {
 void OutputDev::cvtUserToDev(double ux, double uy, int *dx, int *dy) {
   *dx = (int)(ctm[0] * ux + ctm[2] * uy + ctm[4] + 0.5);
   *dy = (int)(ctm[1] * ux + ctm[3] * uy + ctm[5] + 0.5);
+}
+
+void OutputDev::updateAll(GfxState *state) {
+  updateLineDash(state);
+  updateFlatness(state);
+  updateLineJoin(state);
+  updateLineCap(state);
+  updateMiterLimit(state);
+  updateLineWidth(state);
+  updateFillColor(state);
+  updateStrokeColor(state);
+  updateFont(state);
+}
+
+void OutputDev::drawImageMask(GfxState *state, Stream *str,
+			      int width, int height, GBool invert,
+			      GBool inlineImg) {
+  int i, j;
+
+  if (inlineImg) {
+    str->reset();
+    j = height * ((width + 7) / 8);
+    for (i = 0; i < j; ++i)
+      str->getChar();
+  }
+}
+
+void OutputDev::drawImage(GfxState *state, Stream *str, int width,
+			  int height, GfxColorSpace *colorSpace,
+			  GBool inlineImg) {
+  int i, j;
+
+  if (inlineImg) {
+    str->reset();
+    j = height * ((width * colorSpace->getNumComponents() *
+		   colorSpace->getBits() + 7) / 8);
+    for (i = 0; i < j; ++i)
+      str->getChar();
+  }
 }

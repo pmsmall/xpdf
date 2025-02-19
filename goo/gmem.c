@@ -44,7 +44,7 @@ void *gmalloc(int size) {
   char *mem;
   GMemHdr *hdr;
   void *data;
-  long *trl;
+  long *trl, *p;
 
   if (size == 0)
     return NULL;
@@ -61,7 +61,8 @@ void *gmalloc(int size) {
   hdr->next = gMemList;
   gMemList = hdr;
   ++gMemAlloc;
-  *trl = gMemDeadVal;
+  for (p = (long *)data; p <= trl; ++p)
+    *p = gMemDeadVal;
   return data;
 #else
   void *p;
@@ -122,7 +123,7 @@ void gfree(void *p) {
   int size;
   GMemHdr *hdr;
   GMemHdr *prevHdr, *q;
-  long *trl;
+  long *trl, *clr;
 
   if (p) {
     hdr = (GMemHdr *)((char *)p - gMemHdrSize);
@@ -142,6 +143,8 @@ void gfree(void *p) {
 	fprintf(stderr, "Overwrite past end of block %d at address %p\n",
 		hdr->index, p);
       }
+      for (clr = (long *)hdr; clr <= trl; ++clr)
+	*clr = gMemDeadVal;
       free(hdr);
     } else {
       fprintf(stderr, "Attempted to free bad address %p\n", p);
@@ -173,7 +176,7 @@ void gMemReport(FILE *f) {
 char *copyString(char *s) {
   char *s1;
 
-  s1 = gmalloc(strlen(s) + 1);
+  s1 = (char *)gmalloc(strlen(s) + 1);
   strcpy(s1, s);
   return s1;
 }

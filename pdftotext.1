@@ -1,0 +1,54 @@
+.\" Copyright 1997 Derek B. Noonburg
+.TH pdftotext 1 "28 May 1997"
+.SH NAME
+pdftotext \- Portable Document Format (PDF) to text converter
+(version 0.7)
+.SH SYNOPSIS
+.B pdftotext
+[options]
+.RI [ PDF-file
+.RI [ text-file ]]
+.SH DESCRIPTION
+.B Pdftotext
+converts Portable Document Format (PDF) files to plain text.
+.PP
+Pdftotext reads the PDF file,
+.IR PDF-file ,
+and writes a text file,
+.IR text-file .
+If
+.I text-file
+is not specified, pdftotext converts
+.I file.pdf
+to
+.IR file.txt .
+If 
+.I text-file
+is \'-', the text is sent to stdout.
+.SH OPTIONS
+.TP
+.BI \-f number
+Specifies the first page to convert.
+.TP
+.BI \-l number
+Specifies the last page to convert.
+.TP
+.B \-ascii7
+Convert the text to 7-bit ASCII; the default is to use the 8-bit
+ISO Latin-1 character set.
+.TP
+.B \-h
+Print usage information.
+.RB ( \-help
+is equivalent.)
+.SH BUGS
+This is a beta release of pdftotext, and there are still a bunch of
+PDF features which I have yet to implement.
+.SH AUTHOR
+The pdftotext software and documentation are copyright 1996, 1997
+Derek B. Noonburg (derekn@ece.cmu.edu).
+.SH "SEE ALSO"
+.BR xpdf (1),
+.BR pdftops (1)
+.br
+.B http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html

@@ -26,6 +26,12 @@
        -lnumber
               Specifies the last page to print.
 
+       -noemb By  default, any Type 1 fonts which are embedded in
+              the PDF file are copied into the  PostScript  file.
+              This option causes pdftops to substitute base fonts
+              instead.   Embedded  fonts  make  PostScript  files
+              larger, but may be necessary for readable output.
+
        -h     Print usage information.  (-help is equivalent.)
 
 2 BUGS
@@ -33,16 +39,13 @@
        This  is  a beta release of pdftops, and there are still a
        bunch of PDF features which I have yet to implement.
 
-       At this point, the biggest problem is that embedded  fonts
-       are not handled properly.
-
 2 AUTHOR
 
-       The  pdftops software and documentation are copyright 1996
-       Derek B. Noonburg (derekn@ece.cmu.edu).
+       The pdftops software and documentation are copyright 1996,
+       1997 Derek B. Noonburg (derekn@ece.cmu.edu).
 
 2 SEE_ALSO
 
-       xpdf(1)
+       xpdf(1), pdftotext(1)
        http://www.contrib.andrew.cmu.edu/usr/dn0o/xpdf/xpdf.html
 

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 #include <GString.h>
 
 static inline int size(int len) {
@@ -113,7 +114,7 @@ GString *GString::append(char *str, int length1) {
   resize(length + length1);
   memcpy(s + length, str, length1);
   length += length1;
-  s[length1] = '\0';
+  s[length] = '\0';
   return this;
 }
 
@@ -152,6 +153,17 @@ GString *GString::insert(int i, char *str) {
   return this;
 }
 
+GString *GString::insert(int i, char *str, int length1) {
+  int j;
+
+  resize(length + length1);
+  for (j = length; j >= i; --j)
+    s[j+length1] = s[j];
+  memcpy(s+i, str, length1);
+  length += length1;
+  return this;
+}
+
 GString *GString::del(int i, int n) {
   int j;
 
@@ -159,6 +171,26 @@ GString *GString::del(int i, int n) {
     for (j = i; j <= length - n; ++j)
       s[j] = s[j + n];
     resize(length -= n);
+  }
+  return this;
+}
+
+GString *GString::upperCase() {
+  int i;
+
+  for (i = 0; i < length; ++i) {
+    if (islower(s[i]))
+      s[i] = toupper(s[i]);
+  }
+  return this;
+}
+
+GString *GString::lowerCase() {
+  int i;
+
+  for (i = 0; i < length; ++i) {
+    if (isupper(s[i]))
+      s[i] = tolower(s[i]);
   }
   return this;
 }

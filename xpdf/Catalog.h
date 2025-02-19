@@ -17,6 +17,7 @@ class Object;
 class Page;
 class PageAttrs;
 class Ref;
+class LinkDest;
 
 //------------------------------------------------------------------------
 // Catalog
@@ -44,10 +45,9 @@ public:
   // not found.
   int findPage(int num, int gen);
 
-  // Find a named destination.  Returns the destination object
-  // (array or dictionary), or a null object if <name> is not a
-  // destination.
-  Object *findDest(GString *name, Object *obj);
+  // Find a named destination.  Returns the link destination, or
+  // NULL if <name> is not a destination.
+  LinkDest *findDest(GString *name);
 
 private:
 
@@ -55,9 +55,11 @@ private:
   Ref *pageRefs;		// object ID for each page
   int numPages;			// number of pages
   Object dests;			// named destination dictionary
+  Object nameTree;		// name tree
   GBool ok;			// true if catalog is valid
 
   int readPageTree(Dict *pages, PageAttrs *attrs, int start);
+  Object *findDestInTree(Object *tree, GString *name, Object *obj);
 };
 
 #endif

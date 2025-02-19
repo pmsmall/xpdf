@@ -44,6 +44,8 @@ char *Stream::getLine(char *buf, int size) {
   int i;
   int c;
 
+  if (lookChar() == EOF)
+    return NULL;
   for (i = 0; i < size - 1; ++i) {
     c = getChar();
     if (c == EOF || c == '\n')
@@ -93,10 +95,12 @@ Stream *Stream::addFilters(Object *dict) {
 	params.arrayGet(i, &params2);
       else
 	params2.initNull();
-      if (obj2.isName())
+      if (obj2.isName()) {
 	str = makeFilter(obj2.getName(), str, &params2);
-      else
+      } else {
 	error(getPos(), "Bad filter name");
+	str = new EOFStream(str);
+      }
       obj2.free();
       params2.free();
     }
@@ -155,7 +159,7 @@ Stream *Stream::makeFilter(char *name, Stream *str, Object *params) {
     str = new LZWStream(str, predictor, columns, colors, bits, early);
   } else if (!strcmp(name, "RunLengthDecode") || !strcmp(name, "RL")) {
     str = new RunLengthStream(str);
-  } else if (!strcmp(name, "CCITTFaxDecode")) {
+  } else if (!strcmp(name, "CCITTFaxDecode") || !strcmp(name, "CCF")) {
     encoding = 0;
     byteAlign = gFalse;
     columns = 1728;
@@ -184,10 +188,14 @@ Stream *Stream::makeFilter(char *name, Stream *str, Object *params) {
       obj.free();
     }
     str = new CCITTFaxStream(str, encoding, byteAlign, columns, rows, black);
-  } else if (!strcmp(name, "DCTDecode")) {
+  } else if (!strcmp(name, "DCTDecode") || !strcmp(name, "DCT")) {
     str = new DCTStream(str);
+  //~ FlateDecode parameters?
+  } else if (!strcmp(name, "FlateDecode") || !strcmp(name, "Fl")) {
+    str = new FlateStream(str);
   } else {
     error(getPos(), "Unknown filter '%s'", name);
+    str = new EOFStream(str);
   }
   return str;
 }
@@ -221,7 +229,6 @@ void FileStream::reset() {
 
 GBool FileStream::fillBuf() {
   int n;
-  char *p;
 
   bufPos += bufEnd - buf;
   bufPtr = bufEnd = buf;
@@ -1641,7 +1648,7 @@ GBool DCTStream::readHuffmanTables() {
   int index;
   Gushort code;
   Guchar sym;
-  int i, j;
+  int i;
   int c;
 
   length = read16() - 2;
@@ -1673,7 +1680,6 @@ GBool DCTStream::readHuffmanTables() {
       code = (code + c) << 1;
     }
     length -= 16;
-    j = 0;
     for (i = 0; i < sym; ++i)
       tbl->sym[i] = str->getChar();
     length -= sym;
@@ -1761,4 +1767,686 @@ GString *DCTStream::getPSFilter(char *indent) {
 
 GBool DCTStream::isBinary(GBool last) {
   return str->isBinary(gTrue);
+}
+
+//------------------------------------------------------------------------
+// FlateStream
+//------------------------------------------------------------------------
+
+int FlateStream::codeLenCodeMap[flateMaxCodeLenCodes] = {
+  16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
+};
+
+FlateDecode FlateStream::lengthDecode[flateMaxLitCodes-257] = {
+  {0,   3},
+  {0,   4},
+  {0,   5},
+  {0,   6},
+  {0,   7},
+  {0,   8},
+  {0,   9},
+  {0,  10},
+  {1,  11},
+  {1,  13},
+  {1,  15},
+  {1,  17},
+  {2,  19},
+  {2,  23},
+  {2,  27},
+  {2,  31},
+  {3,  35},
+  {3,  43},
+  {3,  51},
+  {3,  59},
+  {4,  67},
+  {4,  83},
+  {4,  99},
+  {4, 115},
+  {5, 131},
+  {5, 163},
+  {5, 195},
+  {5, 227},
+  {0, 258}
+};
+
+FlateDecode FlateStream::distDecode[flateMaxDistCodes] = {
+  { 0,     1},
+  { 0,     2},
+  { 0,     3},
+  { 0,     4},
+  { 1,     5},
+  { 1,     7},
+  { 2,     9},
+  { 2,    13},
+  { 3,    17},
+  { 3,    25},
+  { 4,    33},
+  { 4,    49},
+  { 5,    65},
+  { 5,    97},
+  { 6,   129},
+  { 6,   193},
+  { 7,   257},
+  { 7,   385},
+  { 8,   513},
+  { 8,   769},
+  { 9,  1025},
+  { 9,  1537},
+  {10,  2049},
+  {10,  3073},
+  {11,  4097},
+  {11,  6145},
+  {12,  8193},
+  {12, 12289},
+  {13, 16385},
+  {13, 24577}
+};
+
+FlateStream::FlateStream(Stream *str1) {
+  str = str1;
+}
+
+FlateStream::~FlateStream() {
+  delete str;
+}
+
+void FlateStream::reset() {
+  int cmf, flg;
+
+  str->reset();
+
+  // read header
+  //~ need to look at window size?
+  endOfBlock = eof = gTrue;
+  cmf = str->getChar();
+  flg = str->getChar();
+  if (cmf == EOF || flg == EOF)
+    return;
+  if ((cmf & 0x0f) != 0x08) {
+    error(getPos(), "Unknown compression method in flate stream");
+    return;
+  }
+  if ((((cmf << 8) + flg) % 31) != 0) {
+    error(getPos(), "Bad FCHECK in flate stream");
+    return;
+  }
+  if (flg & 0x20) {
+    error(getPos(), "FDICT bit set in flate stream");
+    return;
+  }
+
+  // initialize
+  index = 0;
+  remain = 0;
+  codeBuf = 0;
+  codeSize = 0;
+  compressedBlock = gFalse;
+  endOfBlock = gTrue;
+  eof = gFalse;
+}
+
+int FlateStream::getChar() {
+  int c;
+
+  while (remain == 0) {
+    if (endOfBlock && eof)
+      return EOF;
+    readSome();
+  }
+  c = buf[index];
+  index = (index + 1) & flateMask;
+  --remain;
+  return c;
+}
+
+int FlateStream::lookChar() {
+  int c;
+
+  while (remain == 0) {
+    if (endOfBlock && eof)
+      return EOF;
+    readSome();
+  }
+  c = buf[index];
+  return c;
+}
+
+GString *FlateStream::getPSFilter(char *indent) {
+  return NULL;
+}
+
+GBool FlateStream::isBinary(GBool last) {
+  return str->isBinary(gTrue);
+}
+
+void FlateStream::readSome() {
+  int code1, code2;
+  int len, dist;
+  int i, j, k;
+  int c;
+
+  if (endOfBlock) {
+    if (!startBlock())
+      return;
+  }
+
+  if (compressedBlock) {
+    if ((code1 = getHuffmanCodeWord(&litCodeTab)) == EOF)
+      goto err;
+    if (code1 < 256) {
+      buf[index] = code1;
+      remain = 1;
+    } else if (code1 == 256) {
+      endOfBlock = gTrue;
+      remain = 0;
+    } else {
+      code1 -= 257;
+      code2 = lengthDecode[code1].bits;
+      if (code2 > 0 && (code2 = getCodeWord(code2)) == EOF)
+	goto err;
+      len = lengthDecode[code1].first + code2;
+      if ((code1 = getHuffmanCodeWord(&distCodeTab)) == EOF)
+	goto err;
+      code2 = distDecode[code1].bits;
+      if (code2 > 0 && (code2 = getCodeWord(code2)) == EOF)
+	goto err;
+      dist = distDecode[code1].first + code2;
+      i = index;
+      j = (index - dist) & flateMask;
+      for (k = 0; k < len; ++k) {
+	buf[i] = buf[j];
+	i = (i + 1) & flateMask;
+	j = (j + 1) & flateMask;
+      }
+      remain = len;
+    }
+
+  } else {
+    len = (blockLen < flateWindow) ? blockLen : flateWindow;
+    for (i = 0, j = index; i < len; ++i, j = (j + 1) & flateMask) {
+      if ((c = str->getChar()) == EOF) {
+	endOfBlock = eof = gTrue;
+	break;
+      }
+      buf[j] = c & 0xff;
+    }
+    remain = i;
+    blockLen -= len;
+    if (blockLen == 0)
+      endOfBlock = gTrue;
+  }
+
+  return;
+
+err:
+  error(getPos(), "Unexpected end of file in flate stream");
+  endOfBlock = eof = gTrue;
+  remain = 0;
+}
+
+//~ uncompressed block stuff is completely untested (and unused?)
+GBool FlateStream::startBlock() {
+  int blockHdr;
+  int c;
+
+  // read block header
+  blockHdr = getCodeWord(3);
+  if (blockHdr & 1)
+    eof = gTrue;
+  blockHdr >>= 1;
+
+  // uncompressed block
+  if (blockHdr == 0) {
+#if 0 //~ for debugging
+    fprintf(stderr, "flate: uncompressed block\n");
+#endif
+    compressedBlock = gFalse;
+    if ((c = str->getChar()) == EOF)
+      goto err;
+    blockLen = c & 0xff;
+    if ((c = str->getChar()) == EOF)
+      goto err;
+    blockLen |= (c & 0xff) << 8;
+    codeBuf = 0;
+    codeSize = 0;
+
+  // compressed block with fixed codes
+  } else if (blockHdr == 1) {
+    compressedBlock = gTrue;
+    loadFixedCodes();
+
+  // compressed block with dynamic codes
+  } else if (blockHdr == 2) {
+    compressedBlock = gTrue;
+    if (!readDynamicCodes())
+      goto err;
+
+  // unknown block type
+  } else {
+    goto err;
+  }
+
+  endOfBlock = gFalse;
+  return gTrue;
+
+err:
+  error(getPos(), "Bad block header in flate stream");
+  endOfBlock = eof = gTrue;
+  return gFalse;
+}
+
+void FlateStream::loadFixedCodes() {
+  int i;
+
+  // set up code arrays
+  litCodeTab.codes = allCodes;
+  distCodeTab.codes = allCodes + flateMaxLitCodes;
+
+  // initialize literal code table
+  for (i = 0; i <= 143; ++i)
+    litCodeTab.codes[i].len = 8;
+  for (i = 144; i <= 255; ++i)
+    litCodeTab.codes[i].len = 9;
+  for (i = 256; i <= 279; ++i)
+    litCodeTab.codes[i].len = 7;
+  for (i = 280; i <= 285; ++i)
+    litCodeTab.codes[i].len = 8;
+  compHuffmanCodes(&litCodeTab, flateMaxLitCodes);
+
+  // initialize distance code table
+  for (i = 0; i < 5; ++i)
+    distCodeTab.start[i] = 0;
+  distCodeTab.start[5] = 0;
+  for (i = 6; i <= flateMaxHuffman+1; ++i)
+    distCodeTab.start[6] = flateMaxDistCodes;
+  for (i = 0; i < flateMaxDistCodes; ++i) {
+    distCodeTab.codes[i].len = 5;
+    distCodeTab.codes[i].code = i;
+    distCodeTab.codes[i].val = i;
+  }
+}
+
+GBool FlateStream::readDynamicCodes() {
+  int numCodeLenCodes;
+  int numLitCodes;
+  int numDistCodes;
+  FlateCode codeLenCodes[flateMaxCodeLenCodes];
+  FlateHuffmanTab codeLenCodeTab;
+  int len, repeat, code;
+  int i;
+
+  // read lengths
+  if ((numLitCodes = getCodeWord(5)) == EOF)
+    goto err;
+  numLitCodes += 257;
+  if ((numDistCodes = getCodeWord(5)) == EOF)
+    goto err;
+  numDistCodes += 1;
+  if ((numCodeLenCodes = getCodeWord(4)) == EOF)
+    goto err;
+  numCodeLenCodes += 4;
+  if (numLitCodes > flateMaxLitCodes ||
+      numCodeLenCodes > flateMaxCodeLenCodes)
+    goto err;
+
+  // read code length code table
+  codeLenCodeTab.codes = codeLenCodes;
+  for (i = 0; i < flateMaxCodeLenCodes; ++i)
+    codeLenCodes[i].len = 0;
+  for (i = 0; i < numCodeLenCodes; ++i) {
+    if ((codeLenCodes[codeLenCodeMap[i]].len = getCodeWord(3)) == -1)
+      goto err;
+  }
+  compHuffmanCodes(&codeLenCodeTab, flateMaxCodeLenCodes);
+
+  // set up code arrays
+  litCodeTab.codes = allCodes;
+  distCodeTab.codes = allCodes + numLitCodes;
+
+  // read literal and distance code tables
+  len = 0;
+  repeat = 0;
+  i = 0;
+  while (i < numLitCodes + numDistCodes) {
+    if ((code = getHuffmanCodeWord(&codeLenCodeTab)) == EOF)
+      goto err;
+    if (code == 16) {
+      if ((repeat = getCodeWord(2)) == EOF)
+	goto err;
+      for (repeat += 3; repeat > 0; --repeat)
+	allCodes[i++].len = len;
+    } else if (code == 17) {
+      if ((repeat = getCodeWord(3)) == EOF)
+	goto err;
+      len = 0;
+      for (repeat += 3; repeat > 0; --repeat)
+	allCodes[i++].len = 0;
+    } else if (code == 18) {
+      if ((repeat = getCodeWord(7)) == EOF)
+	goto err;
+      len = 0;
+      for (repeat += 11; repeat > 0; --repeat)
+	allCodes[i++].len = 0;
+    } else {
+      allCodes[i++].len = len = code;
+    }
+  }
+  compHuffmanCodes(&litCodeTab, numLitCodes);
+  compHuffmanCodes(&distCodeTab, numDistCodes);
+
+  return gTrue;
+
+err:
+  error(getPos(), "Bad dynamic code table in flate stream");
+  return gFalse;
+}
+
+// On entry, the <tab->codes> array contains the lengths of each code,
+// stored in code value order.  This function computes the code words.
+// The result is sorted in order of (1) code length and (2) code word.
+// The length values are no longer valid.  The <tab->start> array is
+// filled with the indexes of the first code of each length.
+void FlateStream::compHuffmanCodes(FlateHuffmanTab *tab, int n) {
+  int numLengths[flateMaxHuffman+1];
+  int nextCode[flateMaxHuffman+1];
+  int nextIndex[flateMaxHuffman+1];
+  int code;
+  int i, j;
+
+  // count number of codes for each code length
+  for (i = 0; i <= flateMaxHuffman; ++i)
+    numLengths[i] = 0;
+  for (i = 0; i < n; ++i)
+    ++numLengths[tab->codes[i].len];
+
+  // compute first index for each length
+  tab->start[0] = nextIndex[0] = 0;
+  for (i = 1; i <= flateMaxHuffman + 1; ++i)
+    tab->start[i] = nextIndex[i] = tab->start[i-1] + numLengths[i-1];
+
+  // compute first code for each length
+  code = 0;
+  numLengths[0] = 0;
+  for (i = 1; i <= flateMaxHuffman; ++i) {
+    code = (code + numLengths[i-1]) << 1;
+    nextCode[i] = code;
+  }
+
+  // compute the codes -- this permutes the codes array from value
+  // order to length/code order
+  for (i = 0; i < n; ++i) {
+    j = nextIndex[tab->codes[i].len]++;
+    if (tab->codes[i].len == 0)
+      tab->codes[j].code = 0;
+    else
+      tab->codes[j].code = nextCode[tab->codes[i].len]++;
+    tab->codes[j].val = i;
+  }
+}
+
+int FlateStream::getHuffmanCodeWord(FlateHuffmanTab *tab) {
+  int len;
+  int code;
+  int c;
+  int i, j;
+
+  code = 0;
+  for (len = 1; len <= flateMaxHuffman; ++len) {
+
+    // add a bit to the code
+    if (codeSize == 0) {
+      if ((c = str->getChar()) == EOF)
+	return EOF;
+      codeBuf = c & 0xff;
+      codeSize = 8;
+    }
+    code = (code << 1) | (codeBuf & 1);
+    codeBuf >>= 1;
+    --codeSize;
+
+    // look for code
+    i = tab->start[len];
+    j = tab->start[len + 1];
+    if (i < j && code >= tab->codes[i].code && code <= tab->codes[j-1].code) {
+      i += code - tab->codes[i].code;
+      return tab->codes[i].val;
+    }
+  }
+
+  // not found
+  error(getPos(), "Bad code (%04x) in flate stream", code);
+  return EOF;
+}
+
+int FlateStream::getCodeWord(int bits) {
+  int c;
+
+  while (codeSize < bits) {
+    if ((c = str->getChar()) == EOF)
+      return EOF;
+    codeBuf |= (c & 0xff) << codeSize;
+    codeSize += 8;
+  }
+  c = codeBuf & ((1 << bits) - 1);
+  codeBuf >>= bits;
+  codeSize -= bits;
+  return c;
+}
+
+//------------------------------------------------------------------------
+// EOFStream
+//------------------------------------------------------------------------
+
+EOFStream::EOFStream(Stream *str1) {
+  str = str1;
+}
+
+EOFStream::~EOFStream() {
+  delete str;
+}
+
+//------------------------------------------------------------------------
+// FixedLengthEncoder
+//------------------------------------------------------------------------
+
+FixedLengthEncoder::FixedLengthEncoder(Stream *str1, int length1) {
+  str = str1;
+  length = length1;
+  count = 0;
+}
+
+FixedLengthEncoder::~FixedLengthEncoder() {
+  if (str->isEncoder())
+    delete str;
+}
+
+void FixedLengthEncoder::reset() {
+  str->reset();
+  count = 0;
+}
+
+int FixedLengthEncoder::getChar() {
+  if (length >= 0 && count >= length)
+    return EOF;
+  ++count;
+  return str->getChar();
+}
+
+int FixedLengthEncoder::lookChar() {
+  if (length >= 0 && count >= length)
+    return EOF;
+  return str->getChar();
+}
+
+//------------------------------------------------------------------------
+// ASCII85Encoder
+//------------------------------------------------------------------------
+
+ASCII85Encoder::ASCII85Encoder(Stream *str1) {
+  str = str1;
+  bufPtr = bufEnd = buf;
+  lineLen = 0;
+  eof = gFalse;
+}
+
+ASCII85Encoder::~ASCII85Encoder() {
+  if (str->isEncoder())
+    delete str;
+}
+
+void ASCII85Encoder::reset() {
+  str->reset();
+  bufPtr = bufEnd = buf;
+  lineLen = 0;
+  eof = gFalse;
+}
+
+GBool ASCII85Encoder::fillBuf() {
+  Gulong t;
+  char buf1[5];
+  int c;
+  int n, i;
+
+  if (eof)
+    return gFalse;
+  t = 0;
+  for (n = 0; n < 4; ++n) {
+    if ((c = str->getChar()) == EOF)
+      break;
+    t = (t << 8) + c;
+  }
+  bufPtr = bufEnd = buf;
+  if (n > 0) {
+    if (n == 4 && t == 0) {
+      *bufEnd++ = 'z';
+      if (++lineLen == 65) {
+	*bufEnd++ = '\n';
+	lineLen = 0;
+      }
+    } else {
+      if (n < 4)
+	t <<= 8 * (4 - n);
+      for (i = 4; i >= 0; --i) {
+	buf1[i] = (char)(t % 85 + 0x21);
+	t /= 85;
+      }
+      for (i = 0; i <= n; ++i) {
+	*bufEnd++ = buf1[i];
+	if (++lineLen == 65) {
+	  *bufEnd++ = '\n';
+	  lineLen = 0;
+	}
+      }
+    }
+  }
+  if (n < 4) {
+    *bufEnd++ = '~';
+    *bufEnd++ = '>';
+    eof = gTrue;
+  }
+  return bufPtr < bufEnd;
+}
+
+//------------------------------------------------------------------------
+// RunLengthEncoder
+//------------------------------------------------------------------------
+
+RunLengthEncoder::RunLengthEncoder(Stream *str1) {
+  str = str1;
+  bufPtr = bufEnd = nextEnd = buf;
+  eof = gFalse;
+}
+
+RunLengthEncoder::~RunLengthEncoder() {
+  if (str->isEncoder())
+    delete str;
+}
+
+void RunLengthEncoder::reset() {
+  str->reset();
+  bufPtr = bufEnd = nextEnd = buf;
+  eof = gFalse;
+}
+
+//
+// When fillBuf finishes, buf[] looks like this:
+//   +-----+--------------+-----------------+--
+//   + tag | ... data ... | next 0, 1, or 2 |
+//   +-----+--------------+-----------------+--
+//    ^                    ^                 ^
+//    bufPtr               bufEnd            nextEnd
+//
+GBool RunLengthEncoder::fillBuf() {
+  int c, c1, c2;
+  int n;
+
+  // already hit EOF?
+  if (eof)
+    return gFalse;
+
+  // grab two bytes
+  if (nextEnd < bufEnd + 1) {
+    if ((c1 = str->getChar()) == EOF) {
+      eof = gTrue;
+      return gFalse;
+    }
+  } else {
+    c1 = bufEnd[0] & 0xff;
+  }
+  if (nextEnd < bufEnd + 2) {
+    if ((c2 = str->getChar()) == EOF) {
+      eof = gTrue;
+      buf[0] = 0;
+      buf[1] = c1;
+      bufPtr = buf;
+      bufEnd = &buf[2];
+      return gTrue;
+    }
+  } else {
+    c2 = bufEnd[1] & 0xff;
+  }
+
+  // check for repeat
+  if (c1 == c2) {
+    n = 2;
+    while (n < 128 && (c = str->getChar()) == c1)
+      ++n;
+    buf[0] = (char)(257 - n);
+    buf[1] = c1;
+    bufEnd = &buf[2];
+    if (c == EOF) {
+      eof = gTrue;
+    } else if (n < 128) {
+      buf[2] = c;
+      nextEnd = &buf[3];
+    } else {
+      nextEnd = bufEnd;
+    }
+
+  // get up to 128 chars
+  } else {
+    buf[1] = c1;
+    buf[2] = c2;
+    n = 2;
+    while (n < 128) {
+      if ((c = str->getChar()) == EOF) {
+	eof = gTrue;
+	break;
+      }
+      ++n;
+      buf[n] = c;
+      if (buf[n] == buf[n-1])
+	break;
+    }
+    if (buf[n] == buf[n-1]) {
+      buf[0] = (char)(n-2-1);
+      bufEnd = &buf[n-1];
+      nextEnd = &buf[n+1];
+    } else {
+      buf[0] = (char)(n-1);
+      bufEnd = nextEnd = &buf[n+1];
+    }
+  }
+  bufPtr = buf;
+  return gTrue;
 }

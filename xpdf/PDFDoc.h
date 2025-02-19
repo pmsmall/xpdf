@@ -22,6 +22,7 @@ class Catalog;
 class OutputDev;
 class Links;
 class LinkAction;
+class LinkDest;
 
 //------------------------------------------------------------------------
 // PDFDoc
@@ -43,6 +44,10 @@ public:
   Catalog *getCatalog() { return catalog; }
 
   // Get page parameters.
+  int getPageXMin(int page) { return catalog->getPage(page)->getX1(); }
+  int getPageYMin(int page) { return catalog->getPage(page)->getY1(); }
+  int getPageXMax(int page) { return catalog->getPage(page)->getX2(); }
+  int getPageYMax(int page) { return catalog->getPage(page)->getY2(); }
   int getPageWidth(int page) { return catalog->getPage(page)->getWidth(); }
   int getPageHeight(int page) { return catalog->getPage(page)->getHeight(); }
   int getPageRotate(int page) { return catalog->getPage(page)->getRotate(); }
@@ -64,16 +69,22 @@ public:
 
   // If point <x>,<y> is in a link, return the associated action;
   // else return NULL.
-  LinkAction *findLink(int x, int y) { return links->find(x, y); }
+  LinkAction *findLink(double x, double y) { return links->find(x, y); }
 
-  // Find a named destination.  Returns the destination object
-  // (array or dictionary), or a null object if <name> is not a
-  // destination.
-  Object *findDest(GString *name, Object *obj)
-    { return catalog->findDest(name, obj); }
+  // Return true if <x>,<y> is in a link.
+  GBool onLink(double x, double y) { return links->onLink(x, y); }
 
-  // Is printing allowed?  If not, print an error message.
+  // Find a named destination.  Returns the link destination, or
+  // NULL if <name> is not a destination.
+  LinkDest *findDest(GString *name)
+    { return catalog->findDest(name); }
+
+  // Are printing and copying allowed?  If not, print an error message.
   GBool okToPrint() { return xref->okToPrint(); }
+  GBool okToCopy() { return xref->okToCopy(); }
+
+  // Save this file with another name.
+  GBool saveAs(GString *name);
 
 private:
 

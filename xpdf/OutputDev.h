@@ -71,7 +71,7 @@ public:
   virtual void restoreState(GfxState *state) {}
 
   //----- update graphics state
-  virtual void updateAll(GfxState *state) {}
+  virtual void updateAll(GfxState *state);
   virtual void updateCTM(GfxState *state, double m11, double m12,
 			 double m21, double m22, double m31, double m32) {}
   virtual void updateLineDash(GfxState *state) {}
@@ -84,7 +84,7 @@ public:
   virtual void updateStrokeColor(GfxState *state) {}
 
   //----- update text state
-  virtual void updateFont(GfxState *state) = 0;
+  virtual void updateFont(GfxState *state) {}
   virtual void updateTextMat(GfxState *state) {}
   virtual void updateCharSpace(GfxState *state) {}
   virtual void updateRender(GfxState *state) {}
@@ -95,26 +95,28 @@ public:
   virtual void updateTextShift(GfxState *state, double shift) {}
 
   //----- path painting
-  virtual void stroke(GfxState *state) = 0;
-  virtual void fill(GfxState *state) = 0;
-  virtual void eoFill(GfxState *state) = 0;
+  virtual void stroke(GfxState *state) {}
+  virtual void fill(GfxState *state) {}
+  virtual void eoFill(GfxState *state) {}
 
   //----- path clipping
   virtual void clip(GfxState *state) {}
   virtual void eoClip(GfxState *state) {}
 
   //----- text drawing
+  virtual void beginString(GfxState *state, GString *s) {}
+  virtual void endString(GfxState *state) {}
   virtual void drawChar(GfxState *state, double x, double y,
-			Guchar c) {}
+			double dx, double dy, Guchar c) {}
   virtual void drawString(GfxState *state, GString *s) {}
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Stream *str,
 			     int width, int height, GBool invert,
-			     GBool inlineImg) = 0;
+			     GBool inlineImg);
   virtual void drawImage(GfxState *state, Stream *str, int width,
 			 int height, GfxColorSpace *colorSpace,
-			 GBool inlineImg) = 0;
+			 GBool inlineImg);
 
 private:
 

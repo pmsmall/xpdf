@@ -56,11 +56,15 @@ enum GfxColorMode {
 class GfxColorSpace {
 public:
 
-  // Constructor.
+  // Constructors.
+  GfxColorSpace();
   GfxColorSpace(int bits1, Object *colorSpace, Object *decode);
 
   // Destructor.
   ~GfxColorSpace();
+
+  // Copy.
+  GfxColorSpace *copy() { return new GfxColorSpace(this); }
 
   // Is color space valid?
   GBool isOk() { return ok; }
@@ -73,12 +77,12 @@ public:
   GfxColorMode getMode() { return mode; }
   GBool isIndexed() { return indexed; }
 
-  // Convert an input value to a color.
-  void getRGB(Guchar x[4], Guchar *r, Guchar *g, Guchar *b);
+  // Convert an input value to a color (for images).
   void getGray(Guchar x[4], Guchar *gray);
+  void getRGB(Guchar x[4], Guchar *r, Guchar *g, Guchar *b);
 
-  // Get color corresponding to index.
-  Guchar *lookupIndex(int i) { return lookup[i]; }
+  // Convert an input value to a color (for fill/stroke colors).
+  void getColor(double x[4], GfxColor *color);
 
 private:
 
@@ -89,6 +93,8 @@ private:
   int lookupComponents;		// number of components in lookup table
   Guchar (*lookup)[4];		// lookup table
   GBool ok;			// is color space valid?
+
+  GfxColorSpace(GfxColorSpace *colorSpace);
 };
 
 //------------------------------------------------------------------------
@@ -149,9 +155,13 @@ public:
   ~GfxPath();
 
   // Copy.
-  GfxPath *copy() { return new GfxPath(subpaths, n, size); }
+  GfxPath *copy()
+    { return new GfxPath(justMoved, firstX, firstY, subpaths, n, size); }
 
-  // Is the path non-empty, i.e., is there a current point?
+  // Is there a current point?
+  GBool isCurPt() { return n > 0 || justMoved; }
+
+  // Is the path non-empty, i.e., is there at least one segment?
   GBool isPath() { return n > 0; }
 
   // Get subpaths.
@@ -162,27 +172,29 @@ public:
   double getLastX() { return subpaths[n-1]->getLastX(); }
   double getLastY() { return subpaths[n-1]->getLastY(); }
 
-  // Move the current point, i.e., start a new subpath.
+  // Move the current point.
   void moveTo(double x, double y);
 
   // Add a segment to the last subpath.
-  void lineTo(double x, double y) { subpaths[n-1]->lineTo(x, y); }
+  void lineTo(double x, double y);
 
   // Add a Bezier curve to the last subpath
   void curveTo(double x1, double y1, double x2, double y2,
-	       double x3, double y3)
-    { subpaths[n-1]->curveTo(x1, y1, x2, y2, x3, y3); }
+	       double x3, double y3);
 
   // Close the last subpath.
   void close() { subpaths[n-1]->close(); }
 
 private:
 
+  GBool justMoved;		// set if a new subpath was just started
+  double firstX, firstY;	// first point in new subpath
   GfxSubpath **subpaths;	// subpaths
   int n;			// number of subpaths
   int size;			// size of subpaths array
 
-  GfxPath(GfxSubpath **subpaths1, int n1, int size1);
+  GfxPath(GBool justMoved1, double firstX1, double firstY1,
+	  GfxSubpath **subpaths1, int n1, int size1);
 };
 
 //------------------------------------------------------------------------
@@ -236,7 +248,8 @@ public:
   double getLineX() { return lineX; }
   double getLineY() { return lineY; }
 
-  // Is there a current point?
+  // Is there a current point/path?
+  GBool isCurPt() { return path->isCurPt(); }
   GBool isPath() { return path->isPath(); }
 
   // Transforms.
@@ -273,6 +286,12 @@ public:
     { strokeColor.setCMYK(c, m, y, k); }
   void setStrokeRGB(double r, double g, double b)
     { strokeColor.setRGB(r, g, b); }
+  void setFillColorSpace(GfxColorSpace *colorSpace);
+  void setStrokeColorSpace(GfxColorSpace *colorSpace);
+  void setFillColor(double x[4])
+    { fillColorSpace->getColor(x, &fillColor); }
+  void setStrokeColor(double x[4])
+    { strokeColorSpace->getColor(x, &strokeColor); }
   void setLineWidth(double width)
     { lineWidth = width; }
   void setLineDash(double *dash, int length, double start);
@@ -291,7 +310,7 @@ public:
   void setWordSpace(double space)
     { wordSpace = space; }
   void setHorizScaling(double scale)
-    { horizScaling = scale; }
+    { horizScaling = 0.01 * scale; }
   void setLeading(double leading1)
     { leading = leading1; }
   void setRise(double rise1)
@@ -319,6 +338,7 @@ public:
   // Push/pop GfxState on/off stack.
   GfxState *save();
   GfxState *restore();
+  GBool hasSaves() { return saved != NULL; }
 
 private:
 
@@ -326,6 +346,8 @@ private:
   int x1, y1, x2, y2;		// page corners (user coords)
   int pageWidth, pageHeight;	// page size (pixels)
 
+  GfxColorSpace *fillColorSpace;   // fill color space
+  GfxColorSpace *strokeColorSpace; // stroke color space
   GfxColor fillColor;		// fill color
   GfxColor strokeColor;		// stroke color
 

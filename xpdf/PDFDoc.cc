@@ -32,6 +32,7 @@ PDFDoc::PDFDoc(GString *fileName1) {
   FileStream *str;
   Object catObj;
   Object obj;
+  GString *fileName2;
 
   // setup
   ok = gFalse;
@@ -40,14 +41,31 @@ PDFDoc::PDFDoc(GString *fileName1) {
   file = NULL;
   links = NULL;
 
-  // new file name
+  // try to open file
   fileName = fileName1;
-
-  // open PDF file and create stream
-  if (!(file = fopen(fileName->getCString(), "r"))) {
+  fileName2 = NULL;
+#ifdef VMS
+  if (!(file = fopen(fileName->getCString(), "rb", "ctx=stm"))) {
     error(-1, "Couldn't open file '%s'", fileName->getCString());
     return;
   }
+#else
+  if (!(file = fopen(fileName->getCString(), "r"))) {
+    fileName2 = fileName->copy();
+    fileName2->lowerCase();
+    if (!(file = fopen(fileName2->getCString(), "r"))) {
+      fileName2->upperCase();
+      if (!(file = fopen(fileName2->getCString(), "r"))) {
+	error(-1, "Couldn't open file '%s'", fileName->getCString());
+	delete fileName2;
+	return;
+      }
+    }
+    delete fileName2;
+  }
+#endif
+
+  // create stream
   obj.initNull();
   str = new FileStream(file, 0, -1, &obj);
 
@@ -91,16 +109,16 @@ PDFDoc::~PDFDoc() {
 void PDFDoc::displayPage(OutputDev *out, int page, int zoom, int rotate,
 			 GBool doLinks) {
   Link *link;
-  int x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   double w;
   int i;
 
   if (printCommands)
     printf("***** page %d *****\n", page);
   catalog->getPage(page)->display(out, zoom, rotate);
-  if (links)
-    delete links;
   if (doLinks) {
+    if (links)
+      delete links;
     links = getLinks(page);
     for (i = 0; i < links->getNumLinks(); ++i) {
       link = links->getLink(i);
@@ -108,6 +126,7 @@ void PDFDoc::displayPage(OutputDev *out, int page, int zoom, int rotate,
       if (w > 0)
 	out->drawLinkBorder(x1, y1, x2, y2, w);
     }
+    out->dump();
   }
 }
 
@@ -122,6 +141,22 @@ void PDFDoc::displayPages(OutputDev *out, int firstPage, int lastPage,
     p = catalog->getPage(page);
     p->display(out, zoom, rotate);
   }
+}
+
+GBool PDFDoc::saveAs(GString *name) {
+  FILE *f;
+  char buf[4096];
+  int n;
+
+  if (!(f = fopen(name->getCString(), "w"))) {
+    error(-1, "Couldn't open file '%s'", name->getCString());
+    return gFalse;
+  }
+  rewind(file);
+  while ((n = fread(buf, 1, sizeof(buf), file)) > 0)
+    fwrite(buf, 1, n, f);
+  fclose(f);
+  return gTrue;
 }
 
 Links *PDFDoc::getLinks(int page) {

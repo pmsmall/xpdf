@@ -68,6 +68,9 @@ public:
   // Get the dictionary associated with this stream.
   virtual Dict *getDict() = 0;
 
+  // Is this an encoding filter?
+  virtual GBool isEncoder() { return gFalse; }
+
   // Add filters to this stream according to the parameters in <dict>.
   // Returns the new stream.
   Stream *addFilters(Object *dict);
@@ -90,11 +93,9 @@ public:
   virtual ~FileStream();
   virtual void reset();
   virtual int getChar()
-    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
-      return *bufPtr++ & 0xff; }
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr++ & 0xff); }
   virtual int lookChar()
-    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
-      return *bufPtr & 0xff; }
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr & 0xff); }
   virtual int getPos() { return bufPos + (bufPtr - buf); }
   virtual void setPos(int pos1);
   virtual GBool isBinary(GBool last = gTrue) { return last; }
@@ -216,11 +217,9 @@ public:
   virtual ~LZWStream();
   virtual void reset();
   virtual int getChar()
-    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
-      return *bufPtr++ & 0xff; }
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr++ & 0xff); }
   virtual int lookChar()
-    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
-      return *bufPtr & 0xff; }
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr & 0xff); }
   virtual int getPos() { return str->getPos(); }
   virtual GString *getPSFilter(char *indent);
   virtual GBool isBinary(GBool last = gTrue);
@@ -262,11 +261,9 @@ public:
   virtual ~RunLengthStream();
   virtual void reset();
   virtual int getChar()
-    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
-      return *bufPtr++ & 0xff; }
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr++ & 0xff); }
   virtual int lookChar()
-    { if (bufPtr >= bufEnd && !fillBuf()) return EOF;
-      return *bufPtr & 0xff; }
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr & 0xff); }
   virtual int getPos() { return str->getPos(); }
   virtual GString *getPSFilter(char *indent);
   virtual GBool isBinary(GBool last = gTrue);
@@ -406,6 +403,203 @@ private:
   GBool readTrailer();
   int readMarker();
   int read16();
+};
+
+//------------------------------------------------------------------------
+// FlateStream
+//------------------------------------------------------------------------
+
+#define flateWindow          32768    // buffer size
+#define flateMask            (flateWindow-1)
+#define flateMaxHuffman         15    // max Huffman code length
+#define flateMaxCodeLenCodes    19    // max # code length codes
+#define flateMaxLitCodes       286    // max # literal codes
+#define flateMaxDistCodes       30    // max # distance codes
+
+// Huffman code table entry
+struct FlateCode {
+  int len;			// code length in bits
+  int code;			// code word
+  int val;			// value represented by this code
+};
+
+// Huffman code table
+struct FlateHuffmanTab {
+  int start[flateMaxHuffman+2];	// indexes of first code of each length
+  FlateCode *codes;		// codes, sorted by length and code word
+};
+
+// Decoding info for length and distance code words
+struct FlateDecode {
+  int bits;			// # extra bits
+  int first;			// first length/distance
+};
+
+class FlateStream: public Stream {
+public:
+
+  FlateStream(Stream *str1);
+  virtual ~FlateStream();
+  virtual void reset();
+  virtual int getChar();
+  virtual int lookChar();
+  virtual int getPos() { return str->getPos(); }
+  virtual GString *getPSFilter(char *indent);
+  virtual GBool isBinary(GBool last = gTrue);
+  virtual Stream *getBaseStream() { return str->getBaseStream(); }
+  virtual FILE *getFile() { return str->getFile(); }
+  virtual Dict *getDict() { return str->getDict(); }
+
+private:
+
+  Stream *str;			// stream
+  Guchar buf[flateWindow];	// output data buffer
+  int index;			// current index into output buffer
+  int remain;			// number valid bytes in output buffer
+  int codeBuf;			// input buffer
+  int codeSize;			// number of bits in input buffer
+  FlateCode			// literal and distance codes
+    allCodes[flateMaxLitCodes + flateMaxDistCodes];
+  FlateHuffmanTab litCodeTab;	// literal code table
+  FlateHuffmanTab distCodeTab;	// distance code table
+  GBool compressedBlock;	// set if reading a compressed block
+  int blockLen;			// remaining length of uncompressed block
+  GBool endOfBlock;		// set when end of block is reached
+  GBool eof;			// set when end of stream is reached
+
+  static int			// code length code reordering
+    codeLenCodeMap[flateMaxCodeLenCodes];
+  static FlateDecode		// length decoding info
+    lengthDecode[flateMaxLitCodes-257];
+  static FlateDecode		// distance decoding info
+    distDecode[flateMaxDistCodes];
+
+  void readSome();
+  GBool startBlock();
+  void loadFixedCodes();
+  GBool readDynamicCodes();
+  void compHuffmanCodes(FlateHuffmanTab *tab, int n);
+  int getHuffmanCodeWord(FlateHuffmanTab *tab);
+  int getCodeWord(int bits);
+};
+
+//------------------------------------------------------------------------
+// EOFStream
+//------------------------------------------------------------------------
+
+class EOFStream: public Stream {
+public:
+
+  EOFStream(Stream *str1);
+  virtual ~EOFStream();
+  virtual void reset() {}
+  virtual int getChar() { return EOF; }
+  virtual int lookChar() { return EOF; }
+  virtual int getPos() { return str->getPos(); }
+  virtual GString *getPSFilter(char *indent)  { return NULL; }
+  virtual GBool isBinary(GBool last = gTrue) { return gFalse; }
+  virtual Stream *getBaseStream() { return str->getBaseStream(); }
+  virtual FILE *getFile() { return str->getFile(); }
+  virtual Dict *getDict() { return str->getDict(); }
+
+private:
+
+  Stream *str;
+};
+
+//------------------------------------------------------------------------
+// FixedLengthEncoder
+//------------------------------------------------------------------------
+
+class FixedLengthEncoder: public Stream {
+public:
+
+  FixedLengthEncoder(Stream *str1, int length1);
+  ~FixedLengthEncoder();
+  virtual void reset();
+  virtual int getChar();
+  virtual int lookChar();
+  virtual int getPos() { return str->getPos(); }
+  virtual GString *getPSFilter(char *indent) { return NULL; }
+  virtual GBool isBinary(GBool last = gTrue) { return gFalse; }
+  virtual Stream *getBaseStream() { return str->getBaseStream(); }
+  virtual FILE *getFile() { return str->getFile(); }
+  virtual Dict *getDict() { return str->getDict(); }
+  virtual GBool isEncoder() { return gTrue; }
+
+private:
+
+  Stream *str;
+  int length;
+  int count;
+};
+
+//------------------------------------------------------------------------
+// ASCII85Encoder
+//------------------------------------------------------------------------
+
+class ASCII85Encoder: public Stream {
+public:
+
+  ASCII85Encoder(Stream *str1);
+  virtual ~ASCII85Encoder();
+  virtual void reset();
+  virtual int getChar()
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr++ & 0xff); }
+  virtual int lookChar()
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr & 0xff); }
+  virtual int getPos() { return str->getPos(); }
+  virtual GString *getPSFilter(char *indent) { return NULL; }
+  virtual GBool isBinary(GBool last = gTrue) { return gFalse; }
+  virtual Stream *getBaseStream() { return str->getBaseStream(); }
+  virtual FILE *getFile() { return str->getFile(); }
+  virtual Dict *getDict() { return str->getDict(); }
+  virtual GBool isEncoder() { return gTrue; }
+
+private:
+
+  Stream *str;
+  char buf[8];
+  char *bufPtr;
+  char *bufEnd;
+  int lineLen;
+  GBool eof;
+
+  GBool fillBuf();
+};
+
+//------------------------------------------------------------------------
+// RunLengthEncoder
+//------------------------------------------------------------------------
+
+class RunLengthEncoder: public Stream {
+public:
+
+  RunLengthEncoder(Stream *str1);
+  virtual ~RunLengthEncoder();
+  virtual void reset();
+  virtual int getChar()
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr++ & 0xff); }
+  virtual int lookChar()
+    { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr & 0xff); }
+  virtual int getPos() { return str->getPos(); }
+  virtual GString *getPSFilter(char *indent) { return NULL; }
+  virtual GBool isBinary(GBool last = gTrue) { return gFalse; }
+  virtual Stream *getBaseStream() { return str->getBaseStream(); }
+  virtual FILE *getFile() { return str->getFile(); }
+  virtual Dict *getDict() { return str->getDict(); }
+  virtual GBool isEncoder() { return gTrue; }
+
+private:
+
+  Stream *str;
+  char buf[131];
+  char *bufPtr;
+  char *bufEnd;
+  char *nextEnd;
+  GBool eof;
+
+  GBool fillBuf();
 };
 
 #endif

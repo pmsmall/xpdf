@@ -25,14 +25,12 @@
 class LTKLabel: public LTKWidget {
 public:
 
-  //---------- constructors and destructor ----------
+  //---------- constructor and destructor ----------
 
   LTKLabel(char *name1, int widgetNum1,
 	   int maxLength1, char *fontName1, char *text1);
 
-  ~LTKLabel();
-
-  virtual LTKWidget *copy() { return new LTKLabel(this); }
+  virtual ~LTKLabel();
 
   //---------- special access ----------
 
@@ -47,8 +45,6 @@ public:
   virtual void redraw();
 
 protected:
-
-  LTKLabel(LTKLabel *label);
 
   int maxLength;		// max label length
   GString *text;		// the label text

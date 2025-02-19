@@ -18,24 +18,95 @@
 #include "Error.h"
 
 //------------------------------------------------------------------------
+
+// A '1' in this array means the corresponding character ends a name
+// or command.
+static char endOfNameChars[128] = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0,   // 0x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 1x
+  1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1,   // 2x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0,   // 3x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 4x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0,   // 5x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 6x
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0    // 7x
+};
+
+//------------------------------------------------------------------------
 // Lexer
 //------------------------------------------------------------------------
 
-Lexer::Lexer(Stream *str1, GBool freeStream1) {
-  str = str1;
-  str->reset();
-  freeStream = freeStream1;
+Lexer::Lexer(Stream *str) {
+  Object obj;
+
+  curStr.initStream(str);
+  streams = new Array();
+  streams->add(curStr.copy(&obj));
+  strPtr = 0;
+  freeArray = gTrue;
+  curStr.streamReset();
+}
+
+Lexer::Lexer(Object *obj) {
+  Object obj2;
+
+  if (obj->isStream()) {
+    streams = new Array();
+    freeArray = gTrue;
+    streams->add(obj->copy(&obj2));
+  } else {
+    streams = obj->getArray();
+    freeArray = gFalse;
+  }
+  strPtr = 0;
+  if (streams->getLength() > 0) {
+    streams->get(strPtr, &curStr);
+    curStr.streamReset();
+  }
 }
 
 Lexer::~Lexer() {
-  if (freeStream)
-    delete str;
+  if (!curStr.isNone())
+    curStr.free();
+  if (freeArray)
+    delete streams;
+}
+
+int Lexer::getChar() {
+  int c;
+
+  c = EOF;
+  while (!curStr.isNone() && (c = curStr.streamGetChar()) == EOF) {
+    curStr.free();
+    ++strPtr;
+    if (strPtr < streams->getLength()) {
+      streams->get(strPtr, &curStr);
+      curStr.streamReset();
+    }
+  }
+  return c;
+}
+
+int Lexer::lookChar() {
+  int c;
+
+  c = EOF;
+  while (!curStr.isNone() && (c = curStr.streamLookChar()) == EOF) {
+    curStr.free();
+    ++strPtr;
+    if (strPtr < streams->getLength()) {
+      streams->get(strPtr, &curStr);
+      curStr.streamReset();
+    }
+  }
+  return c;
 }
 
 Object *Lexer::getObj(Object *obj) {
   char *p;
   int c, c2;
   GBool comment, neg, done;
+  int numParen;
   int xi;
   double xf, scale;
   GString *s;
@@ -44,7 +115,7 @@ Object *Lexer::getObj(Object *obj) {
   // skip whitespace and comments
   comment = gFalse;
   while (1) {
-    if ((c = str->getChar()) == EOF)
+    if ((c = getChar()) == EOF)
       return obj->initEOF();
     if (comment) {
       if (c == '\r' || c == '\n')
@@ -73,12 +144,12 @@ Object *Lexer::getObj(Object *obj) {
       xi = c - '0';
     }
     while (1) {
-      c = str->lookChar();
+      c = lookChar();
       if (isdigit(c)) {
-	str->getChar();
+	getChar();
 	xi = xi * 10 + (c - '0');
       } else if (c == '.') {
-	str->getChar();
+	getChar();
 	goto doReal;
       } else {
 	break;
@@ -92,10 +163,10 @@ Object *Lexer::getObj(Object *obj) {
     xf = xi;
     scale = 0.1;
     while (1) {
-      c = str->lookChar();
+      c = lookChar();
       if (!isdigit(c))
 	break;
-      str->getChar();
+      getChar();
       xf = xf + scale * (c - '0');
       scale *= 0.1;
     }
@@ -108,11 +179,12 @@ Object *Lexer::getObj(Object *obj) {
   case '(':
     p = tokBuf;
     n = 0;
+    numParen = 1;
     done = gFalse;
     s = NULL;
     do {
       c2 = EOF;
-      switch (c = str->getChar()) {
+      switch (c = getChar()) {
 
       case EOF:
       case '\r':
@@ -121,12 +193,17 @@ Object *Lexer::getObj(Object *obj) {
 	done = gTrue;
 	break;
 
+      case '(':
+	++numParen;
+	break;
+
       case ')':
-	done = gTrue;
+	if (--numParen == 0)
+	  done = gTrue;
 	break;
 
       case '\\':
-	switch (c = str->getChar()) {
+	switch (c = getChar()) {
 	case 'n':
 	  c2 = '\n';
 	  break;
@@ -150,21 +227,21 @@ Object *Lexer::getObj(Object *obj) {
 	case '0': case '1': case '2': case '3':
 	case '4': case '5': case '6': case '7':
 	  c2 = c - '0';
-	  c = str->lookChar();
+	  c = lookChar();
 	  if (c >= '0' && c <= '7') {
-	    str->getChar();
+	    getChar();
 	    c2 = (c2 << 3) + (c - '0');
-	    c = str->lookChar();
+	    c = lookChar();
 	    if (c >= '0' && c <= '7') {
-	      str->getChar();
+	      getChar();
 	      c2 = (c2 << 3) + (c - '0');
 	    }
 	  }
 	  break;
 	case '\r':
-	  c = str->lookChar();
+	  c = lookChar();
 	  if (c == '\n')
-	    str->getChar();
+	    getChar();
 	  break;
 	case '\n':
 	  break;
@@ -207,11 +284,8 @@ Object *Lexer::getObj(Object *obj) {
   case '/':
     p = tokBuf;
     n = 0;
-    while ((c = str->lookChar()) != EOF && !isspace(c) &&
-	   c != '/' && c != '%' && c != '(' && c != ')' &&
-	   c != '<' && c != '>' && c != '[' && c != ']' &&
-	   c != '{' && c != '}') {
-      str->getChar();
+    while ((c = lookChar()) != EOF && !(c < 128 && endOfNameChars[c])) {
+      getChar();
       if (++n == tokBufSize) {
 	error(getPos(), "Name token too long");
 	break;
@@ -232,11 +306,11 @@ Object *Lexer::getObj(Object *obj) {
 
   // hex string or dict punctuation
   case '<':
-    c = str->lookChar();
+    c = lookChar();
 
     // dict punctuation
     if (c == '<') {
-      str->getChar();
+      getChar();
       tokBuf[0] = tokBuf[1] = '<';
       tokBuf[2] = '\0';
       obj->initCmd(tokBuf);
@@ -248,7 +322,7 @@ Object *Lexer::getObj(Object *obj) {
       c2 = 0;
       s = NULL;
       while (1) {
-	c = str->getChar();
+	c = getChar();
 	if (c == '>') {
 	  break;
 	} else if (c == EOF) {
@@ -292,9 +366,9 @@ Object *Lexer::getObj(Object *obj) {
 
   // dict punctuation
   case '>':
-    c = str->lookChar();
+    c = lookChar();
     if (c == '>') {
-      str->getChar();
+      getChar();
       tokBuf[0] = tokBuf[1] = '>';
       tokBuf[2] = '\0';
       obj->initCmd(tokBuf);
@@ -317,11 +391,8 @@ Object *Lexer::getObj(Object *obj) {
     p = tokBuf;
     *p++ = c;
     n = 1;
-    while ((c = str->lookChar()) != EOF && !isspace(c) &&
-	   c != '%' && c != '(' && c != ')' &&
-	   c != '<' && c != '>' && c != '[' && c != ']' &&
-	   c != '{' && c != '}') {
-      str->getChar();
+    while ((c = lookChar()) != EOF && !(c < 128 && endOfNameChars[c])) {
+      getChar();
       if (++n == tokBufSize) {
 	error(getPos(), "Command token too long");
 	break;
@@ -347,12 +418,12 @@ void Lexer::skipToNextLine() {
   int c;
 
   while (1) {
-    c = str->getChar();
+    c = getChar();
     if (c == EOF || c == '\n')
       return;
     if (c == '\r') {
-      if ((c = str->lookChar()) == '\n')
-	str->getChar();
+      if ((c = lookChar()) == '\n')
+	getChar();
       return;
     }
   }

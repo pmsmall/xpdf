@@ -29,20 +29,21 @@ class Gfx;
 // Gfx
 //------------------------------------------------------------------------
 
-enum TchkType {
-  tchkBool,
-  tchkInt,
-  tchkNum,
-  tchkString,
-  tchkName,
-  tchkArray,
-  tchkNone			// used to avoid empty initializer lists
-};
-
 enum GfxClipType {
   clipNone,
   clipNormal,
   clipEO
+};
+
+enum TchkType {
+  tchkBool,			// boolean
+  tchkInt,			// integer
+  tchkNum,			// number (integer or real)
+  tchkString,			// string
+  tchkName,			// name
+  tchkArray,			// array
+  tchkVarNum,			// variable number of numbers
+  tchkNone			// used to avoid empty initializer lists
 };
 
 #define maxArgs 8
@@ -51,39 +52,36 @@ struct Operator {
   char name[4];
   int numArgs;
   TchkType tchk[maxArgs];
-  void (Gfx::*func)(Object args[]);
+  void (Gfx::*func)(Object args[], int numArgs);
 };
 
 class Gfx {
 public:
 
   // Constructor for regular output.
-  Gfx(OutputDev *out1, int pageNum, Dict *fontDict, Dict *xObjDict1,
-      int dpi, int x1, int y1, int x2, int y2, int rotate);
+  Gfx(OutputDev *out1, int pageNum, Dict *resDict,
+      int dpi, int x1, int y1, int x2, int y2, GBool crop,
+      int cropX1, int cropY1, int cropX2, int cropY2, int rotate);
 
   // Destructor.
   ~Gfx();
 
-  // Interpret an array or stream.
-  void display(Array *a1);
-  void display(Stream *str1);
+  // Interpret a stream or array of streams.
+  void display(Object *obj);
 
 private:
 
-  int getPos();
-
   OutputDev *out;		// output device
   GfxFontDict *fonts;		// font dictionary
-  Dict *xObjDict;		// XObject dictionary
+  Object xObjDict;		// XObject dictionary
+  Object colorSpaceDict;	// color space dictionary
 
   GfxState *state;		// current graphics state
   GBool fontChanged;		// set if font or text matrix has changed
   GfxClipType clip;		// do a clip?
   int ignoreUndef;		// current BX/EX nesting level
 
-  Array *a;			// if displaying from an array
-  int index;			// index in array
-  Parser *parser;		// if displaying from a stream
+  Parser *parser;		// parser for page content stream(s)
 
   static Operator opTab[];	// table of operators
 
@@ -91,96 +89,101 @@ private:
   void execOp(Object *cmd, Object args[], int numArgs);
   Operator *findOp(char *name);
   GBool checkArg(Object *arg, TchkType type);
-  Object *nextObj(Object *obj);
+  int getPos();
 
   // graphics state operators
-  void opSave(Object args[]);
-  void opRestore(Object args[]);
-  void opConcat(Object args[]);
-  void opSetDash(Object args[]);
-  void opSetFlat(Object args[]);
-  void opSetLineJoin(Object args[]);
-  void opSetLineCap(Object args[]);
-  void opSetMiterLimit(Object args[]);
-  void opSetLineWidth(Object args[]);
+  void opSave(Object args[], int numArgs);
+  void opRestore(Object args[], int numArgs);
+  void opConcat(Object args[], int numArgs);
+  void opSetDash(Object args[], int numArgs);
+  void opSetFlat(Object args[], int numArgs);
+  void opSetLineJoin(Object args[], int numArgs);
+  void opSetLineCap(Object args[], int numArgs);
+  void opSetMiterLimit(Object args[], int numArgs);
+  void opSetLineWidth(Object args[], int numArgs);
+  void opSetExtGState(Object args[], int numArgs);
 
   // color operators
-  void opSetFillGray(Object args[]);
-  void opSetStrokeGray(Object args[]);
-  void opSetFillCMYKColor(Object args[]);
-  void opSetStrokeCMYKColor(Object args[]);
-  void opSetFillRGBColor(Object args[]);
-  void opSetStrokeRGBColor(Object args[]);
+  void opSetFillGray(Object args[], int numArgs);
+  void opSetStrokeGray(Object args[], int numArgs);
+  void opSetFillCMYKColor(Object args[], int numArgs);
+  void opSetStrokeCMYKColor(Object args[], int numArgs);
+  void opSetFillRGBColor(Object args[], int numArgs);
+  void opSetStrokeRGBColor(Object args[], int numArgs);
+  void opSetFillColorSpace(Object args[], int numArgs);
+  void opSetStrokeColorSpace(Object args[], int numArgs);
+  void opSetFillColor(Object args[], int numArgs);
+  void opSetStrokeColor(Object args[], int numArgs);
 
   // path segment operators
-  void opMoveTo(Object args[]);
-  void opLineTo(Object args[]);
-  void opCurveTo(Object args[]);
-  void opCurveTo1(Object args[]);
-  void opCurveTo2(Object args[]);
-  void opRectangle(Object args[]);
-  void opClosePath(Object args[]);
+  void opMoveTo(Object args[], int numArgs);
+  void opLineTo(Object args[], int numArgs);
+  void opCurveTo(Object args[], int numArgs);
+  void opCurveTo1(Object args[], int numArgs);
+  void opCurveTo2(Object args[], int numArgs);
+  void opRectangle(Object args[], int numArgs);
+  void opClosePath(Object args[], int numArgs);
 
   // path painting operators
-  void opEndPath(Object args[]);
-  void opStroke(Object args[]);
-  void opCloseStroke(Object args[]);
-  void opFill(Object args[]);
-  void opEOFill(Object args[]);
-  void opFillStroke(Object args[]);
-  void opCloseFillStroke(Object args[]);
-  void opEOFillStroke(Object args[]);
-  void opCloseEOFillStroke(Object args[]);
+  void opEndPath(Object args[], int numArgs);
+  void opStroke(Object args[], int numArgs);
+  void opCloseStroke(Object args[], int numArgs);
+  void opFill(Object args[], int numArgs);
+  void opEOFill(Object args[], int numArgs);
+  void opFillStroke(Object args[], int numArgs);
+  void opCloseFillStroke(Object args[], int numArgs);
+  void opEOFillStroke(Object args[], int numArgs);
+  void opCloseEOFillStroke(Object args[], int numArgs);
   void doEndPath();
 
   // path clipping operators
-  void opClip(Object args[]);
-  void opEOClip(Object args[]);
+  void opClip(Object args[], int numArgs);
+  void opEOClip(Object args[], int numArgs);
 
   // text object operators
-  void opBeginText(Object args[]);
-  void opEndText(Object args[]);
+  void opBeginText(Object args[], int numArgs);
+  void opEndText(Object args[], int numArgs);
 
   // text state operators
-  void opSetCharSpacing(Object args[]);
-  void opSetFont(Object args[]);
-  void opSetTextLeading(Object args[]);
-  void opSetTextRender(Object args[]);
-  void opSetTextRise(Object args[]);
-  void opSetWordSpacing(Object args[]);
-  void opSetHorizScaling(Object args[]);
+  void opSetCharSpacing(Object args[], int numArgs);
+  void opSetFont(Object args[], int numArgs);
+  void opSetTextLeading(Object args[], int numArgs);
+  void opSetTextRender(Object args[], int numArgs);
+  void opSetTextRise(Object args[], int numArgs);
+  void opSetWordSpacing(Object args[], int numArgs);
+  void opSetHorizScaling(Object args[], int numArgs);
 
   // text positioning operators
-  void opTextMove(Object args[]);
-  void opTextMoveSet(Object args[]);
-  void opSetTextMatrix(Object args[]);
-  void opTextNextLine(Object args[]);
+  void opTextMove(Object args[], int numArgs);
+  void opTextMoveSet(Object args[], int numArgs);
+  void opSetTextMatrix(Object args[], int numArgs);
+  void opTextNextLine(Object args[], int numArgs);
 
   // text string operators
-  void opShowText(Object args[]);
-  void opMoveShowText(Object args[]);
-  void opMoveSetShowText(Object args[]);
-  void opShowSpaceText(Object args[]);
+  void opShowText(Object args[], int numArgs);
+  void opMoveShowText(Object args[], int numArgs);
+  void opMoveSetShowText(Object args[], int numArgs);
+  void opShowSpaceText(Object args[], int numArgs);
   void doShowText(GString *s);
 
   // XObject operators
-  void opXObject(Object args[]);
+  void opXObject(Object args[], int numArgs);
   void doImage(Stream *str, GBool inlineImg);
-  void doForm(Stream *str);
+  void doForm(Object *str);
 
   // in-line image operators
-  void opBeginImage(Object args[]);
+  void opBeginImage(Object args[], int numArgs);
   Stream *buildImageStream();
-  void opImageData(Object args[]);
-  void opEndImage(Object args[]);
+  void opImageData(Object args[], int numArgs);
+  void opEndImage(Object args[], int numArgs);
 
   // type 3 font operators
-  void opSetCharWidth(Object args[]);
-  void opSetCacheDevice(Object args[]);
+  void opSetCharWidth(Object args[], int numArgs);
+  void opSetCacheDevice(Object args[], int numArgs);
 
   // compatibility operators
-  void opBeginIgnoreUndef(Object args[]);
-  void opEndIgnoreUndef(Object args[]);
+  void opBeginIgnoreUndef(Object args[], int numArgs);
+  void opEndIgnoreUndef(Object args[], int numArgs);
 };
 
 #endif

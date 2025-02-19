@@ -26,13 +26,6 @@ LTKCanvas::LTKCanvas(char *name1, int widgetNum1,
   redrawCbk = redrawCbk1;
 }
 
-LTKCanvas::LTKCanvas(LTKCanvas *canvas):
-    LTKWidget(canvas) {
-  minWidth = canvas->minWidth;
-  minHeight = canvas->minHeight;
-  redrawCbk = canvas->redrawCbk;
-}
-
 void LTKCanvas::layout1() {
   width = minWidth;
   height = minHeight;

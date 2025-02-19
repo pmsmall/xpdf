@@ -13,13 +13,13 @@
 #include <gtypes.h>
 #include <gmem.h>
 #include <GString.h>
-#include <fileNames.h>
+#include <gfile.h>
 #include "Params.h"
 
-char **fontPath;
+char **fontPath = NULL;
 static int fontPathLen, fontPathSize;
 
-DevFontMapEntry *devFontMap;
+DevFontMapEntry *devFontMap = NULL;
 static int devFontMapLen, devFontMapSize;
 
 void initParams(char *configFile) {
@@ -68,12 +68,16 @@ void initParams(char *configFile) {
 void freeParams() {
   int i;
 
-  for (i = 0; i < fontPathLen; ++i)
-    gfree(fontPath[i]);
-  gfree(fontPath);
-  for (i = 0; i < devFontMapLen; ++i) {
-    gfree(devFontMap[i].pdfFont);
-    gfree(devFontMap[i].devFont);
+  if (fontPath) {
+    for (i = 0; i < fontPathLen; ++i)
+      gfree(fontPath[i]);
+    gfree(fontPath);
   }
-  gfree(devFontMap);
+  if (devFontMap) {
+    for (i = 0; i < devFontMapLen; ++i) {
+      gfree(devFontMap[i].pdfFont);
+      gfree(devFontMap[i].devFont);
+    }
+    gfree(devFontMap);
+  }
 }

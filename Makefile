@@ -6,27 +6,36 @@
 #
 #========================================================================
 
+include Makefile.config
+
 all:
 	cd goo; $(MAKE)
 	cd ltk; $(MAKE)
 	cd xpdf; $(MAKE) all
 
-xpdf:
+xpdf: dummy
 	cd goo; $(MAKE)
 	cd ltk; $(MAKE)
-	cd xpdf; $(MAKE) xpdf
+	cd xpdf; $(MAKE) xpdf$(EXE)
 
-pdftops:
+pdftops: dummy
 	cd goo; $(MAKE)
-	cd xpdf; $(MAKE) pdftops
+	cd xpdf; $(MAKE) pdftops$(EXE)
+
+pdftotext: dummy
+	cd goo; $(MAKE)
+	cd xpdf; $(MAKE) pdftotext$(EXE)
 
 install:
-	install -c xpdf/xpdf $(PREFIX)/bin
-	install -c xpdf/pdftops $(PREFIX)/bin
-	install -c xpdf.1 $(PREFIX)/man/man1
-	install -c pdftops.1 $(PREFIX)/man/man1
+	$(INSTALL) xpdf/xpdf$(EXE) $(PREFIX)/bin
+	$(INSTALL) xpdf/pdftops$(EXE) $(PREFIX)/bin
+	$(INSTALL) xpdf/pdftotext$(EXE) $(PREFIX)/bin
+	$(INSTALL) xpdf.1 $(PREFIX)/man/man1
+	$(INSTALL) pdftops.1 $(PREFIX)/man/man1
+	$(INSTALL) pdftotext.1 $(PREFIX)/man/man1
 
 clean:
 	cd goo; $(MAKE) clean
 	cd ltk; $(MAKE) clean
 	cd xpdf; $(MAKE) clean
+dummy:

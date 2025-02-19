@@ -34,22 +34,11 @@ LTKTextIn::LTKTextIn(char *name1, int widgetNum1, int minWidth1,
   active = gFalse;
   firstChar = 0;
   cursor = 0;
+  selectionEnd = 0;
+  dragging = gFalse;
   doneCbk = doneCbk1;
   tabTarget = tabTarget1;
   fontName = fontName1;
-  fontStruct = NULL;
-  textGC = None;
-}
-
-LTKTextIn::LTKTextIn(LTKTextIn *textIn):
-    LTKWidget(textIn) {
-  minWidth = textIn->minWidth;
-  text = new GString();
-  active = gFalse;
-  cursor = 0;
-  doneCbk = textIn->doneCbk;
-  tabTarget = textIn->tabTarget;
-  fontName = textIn->fontName;
   fontStruct = NULL;
   textGC = None;
 }
@@ -63,18 +52,22 @@ LTKTextIn::~LTKTextIn() {
 }
 
 long LTKTextIn::getEventMask() {
-  return LTKWidget::getEventMask() | ButtonPressMask | KeyPressMask;
+  return LTKWidget::getEventMask() |
+         ButtonPressMask | ButtonReleaseMask | ButtonMotionMask |
+         PointerMotionHintMask | KeyPressMask;
 }
 
 void LTKTextIn::setText(char *s) {
   delete text;
   text = new GString(s);
   firstChar = 0;
-  cursor = 0;
+  if (getXWindow() != None && active)
+    xorCursor();
+  cursor = selectionEnd = 0;
   if (getXWindow() != None) {
-    redrawTail(0, gTrue);
+    redrawTail(0);
     if (active)
-      drawCursor(active);
+      xorCursor();
   }
 }
 
@@ -115,192 +108,380 @@ void LTKTextIn::layout3() {
 }
 
 void LTKTextIn::redraw() {
-  redrawTail(firstChar, gFalse);
+  XFillRectangle(getDisplay(), xwin, getBgGC(), 0, 0, width, height);
+  redrawTail(firstChar);
   if (active)
-    drawCursor(active);
+    xorCursor();
 }
 
-void LTKTextIn::buttonPress(int mx, int my, int button) {
-  XCharStruct extents;
-  int direction, ascent, descent;
-  int x1, x2;
+void LTKTextIn::buttonPress(int mx, int my, int button, GBool dblClick) {
+  // move cursor
+  if (button == 1) {
+    xorCursor();
+    cursor = xToCursor(mx);
+    if (cursor < firstChar)
+      cursor = firstChar;
+    selectionEnd = cursor;
+    xorCursor();
+    dragging = gTrue;
+    dragAnchor = cursor;
 
-  drawCursor(gFalse);
-  x2 = horizBorder;
-  for (cursor = firstChar; cursor < text->getLength(); ++cursor) {
-    XTextExtents(fontStruct, text->getCString() + cursor, 1,
-		 &direction, &ascent, &descent, &extents);
-    x1 = x2;
-    x2 += extents.width;
-    if (mx < (x1 + x2) / 2)
-      break;
+  // paste
+  } else if (button == 2) {
+    parent->requestPaste(this);
   }
-  drawCursor(gTrue);
+}
+
+void LTKTextIn::buttonRelease(int mx, int my, int button, GBool click) {
+  dragging = gFalse;
+  if (cursor != selectionEnd)
+    parent->setSelection(this, new GString(text->getCString() + cursor,
+					   selectionEnd - cursor));
+}
+
+void LTKTextIn::mouseMove(int mx, int my, int pressedBtn) {
+  int newCursor, newSelectionEnd;
+  int i;
+
+  if (dragging) {
+    i = xToCursor(mx);
+    if (i >= dragAnchor) {
+      newCursor = dragAnchor;
+      newSelectionEnd = i;
+    } else {
+      newCursor = i;
+      newSelectionEnd = dragAnchor;
+    }
+    if (newCursor != cursor || newSelectionEnd != selectionEnd)
+      moveCursor(newCursor, newSelectionEnd, i);
+  }
 }
 
 void LTKTextIn::activate(GBool on) {
   if (active != on) {
-    drawCursor(on);
-    parent->setKeyWidget(on ? this : (LTKWidget *)NULL);
-    active = on;
-    if (!active && doneCbk)
-      (*doneCbk)(this, widgetNum, text);
+    if (on) {
+      xorCursor();
+      parent->setKeyWidget(this);
+      active = gTrue;
+    } else {
+      xorCursor();
+      selectionEnd = cursor;
+      parent->setKeyWidget(NULL);
+      active = gFalse;
+      if (doneCbk)
+	(*doneCbk)(this, widgetNum, text);
+    }
   }
 }
 
-void LTKTextIn::keyPress(KeySym key, char *s, int n) {
-  int needRedraw;
-  int oldCursor;
+void LTKTextIn::keyPress(KeySym key, Guint modifiers, char *s, int n) {
+  int newCursor, newSelectionEnd;
+  int redrawPos;
+  GBool killSelection;
   LTKWidget *widget;
 
-  drawCursor(gFalse);
-
-  oldCursor = cursor;
-  needRedraw = -1;
-  if (key == XK_Left) {
+  newCursor = cursor;
+  killSelection = gTrue;
+  redrawPos = -1;
+  if (key == XK_Left) {		// left arrow
     if (cursor > 0)
-      --cursor;
-  } else if (key == XK_Right) {
+      --newCursor;
+  } else if (key == XK_Right) {	// right arrow
     if (cursor < text->getLength())
-      ++cursor;
+      ++newCursor;
   } else if (n >= 1) {
     switch (s[0]) {
     case '\001':		// ^A
-      cursor = 0;
+      newCursor = 0;
       break;
     case '\002':		// ^B
       if (cursor > 0)
-	--cursor;
+	--newCursor;
       break;
     case '\005':		// ^E
-      cursor = text->getLength();
+      newCursor = text->getLength();
       break;
     case '\006':		// ^F
       if (cursor < text->getLength())
-	++cursor;
+	++newCursor;
       break;
     case '\014':		// ^L
-      needRedraw = firstChar;
+      redrawPos = firstChar;
+      killSelection = gFalse;
       break;
     case '\b':			// bs
     case '\177':		// del
-      if (cursor > 0) {
+      if (selectionEnd > cursor) {
+	text->del(cursor, selectionEnd - cursor);
+	redrawPos = cursor;
+      } else if (cursor > 0) {
 	text->del(cursor - 1);
-	--cursor;
-	needRedraw = cursor;
+	--newCursor;
+	redrawPos = newCursor;
       }
       break;
     case '\004':		// ^D
-      if (cursor < text->getLength()) {
+      if (selectionEnd > cursor) {
+	text->del(cursor, selectionEnd - cursor);
+	redrawPos = cursor;
+      } else if (cursor < text->getLength()) {
 	text->del(cursor);
-	needRedraw = cursor;
+	redrawPos = cursor;
       }
       break;
     case '\013':		// ^K
       text->del(cursor, text->getLength() - cursor);
-      needRedraw = cursor;
+      redrawPos = cursor;
       break;
     case '\025':		// ^U
       text->clear();
-      cursor = 0;
-      needRedraw = cursor;
+      newCursor = 0;
+      redrawPos = newCursor;
       break;
-    case '\n':
+    case '\n':			// return, tab
     case '\r':
     case '\t':
       activate(gFalse);
       if (tabTarget)
 	if ((widget = parent->findWidget(tabTarget)))
 	  widget->activate(gTrue);
+      newCursor = newSelectionEnd = cursor;
       break;
-    default:
+    default:			// insert char
       if (s[0] >= 0x20) {
+	if (selectionEnd > cursor)
+	  text->del(cursor, selectionEnd - cursor);
 	text->insert(cursor, s);
-	needRedraw = cursor;
-	++cursor;
+	redrawPos = cursor;
+	++newCursor;
       }
       break;
     }
+  } else {			// ignore weird X keysyms
+    killSelection = gFalse;
   }
 
-  if (needRedraw >= 0 || cursor != oldCursor)
-    redrawTail(needRedraw, gTrue);
-  if (active)
-    drawCursor(gTrue);
+  newSelectionEnd = killSelection ? newCursor : selectionEnd;
+  if (newCursor != cursor || newSelectionEnd != selectionEnd ||
+      redrawPos >= 0) {
+    xorCursor();
+    cursor = newCursor;
+    selectionEnd = newSelectionEnd;
+    redrawTail(redrawPos);
+    if (active)
+      xorCursor();
+  }
 }
 
-void LTKTextIn::drawCursor(GBool on) {
+void LTKTextIn::clearSelection() {
+  if (active)
+    xorCursor();
+  selectionEnd = cursor;
+  if (active)
+    xorCursor();
+}
+
+void LTKTextIn::paste(GString *str) {
+  int redrawPos;
+
+  if (active)
+    xorCursor();
+  text->insert(cursor, str);
+  redrawPos = cursor;
+  cursor += str->getLength();
+  selectionEnd = cursor;
+  redrawTail(redrawPos);
+  if (active)
+    xorCursor();
+}
+
+int LTKTextIn::xToCursor(int mx) {
   XCharStruct extents;
   int direction, ascent, descent;
-  int tx, ty;
+  int x1, x2;
+  int pos;
 
-  tx = horizBorder;
-  ty = (height - textHeight) / 2;
-  if (cursor > firstChar) {
-    XTextExtents(fontStruct, text->getCString() + firstChar,
-		 cursor - firstChar,
+  if (mx < horizBorder)
+    return firstChar > 0 ? firstChar - 1 : 0;
+
+  x2 = horizBorder;
+  for (pos = firstChar; pos < text->getLength(); ++pos) {
+    XTextExtents(fontStruct, text->getCString() + pos, 1,
 		 &direction, &ascent, &descent, &extents);
-    tx += extents.width;
+    x1 = x2;
+    x2 += extents.width;
+    if (mx < (x1 + x2) / 2)
+      break;
   }
-  if (on) {
-    XDrawLine(getDisplay(), xwin, textGC, tx-1, ty, tx-1, ty + textHeight);
-    XDrawLine(getDisplay(), xwin, textGC, tx, ty, tx, ty + textHeight);
+  return pos;
+}
+
+int LTKTextIn::cursorToX(int cur) {
+  XCharStruct extents;
+  int direction, ascent, descent;
+  int x;
+
+  x = horizBorder;
+  if (cur > firstChar) {
+    XTextExtents(fontStruct, text->getCString() + firstChar,
+		 cur - firstChar,
+		 &direction, &ascent, &descent, &extents);
+    x += extents.width;
+  }
+  return x;
+}
+
+void LTKTextIn::xorCursor() {
+  int tx1, tx2, ty;
+  int i, j;
+
+  ty = (height - textHeight) / 2;
+
+  // draw cursor
+  if (cursor == selectionEnd) {
+    tx1 = cursorToX(cursor);
+    XDrawLine(getDisplay(), xwin, getXorGC(),
+	      tx1 - 1, ty, tx1 - 1, ty + textHeight - 1);
+    XDrawLine(getDisplay(), xwin, getXorGC(),
+	      tx1, ty, tx1, ty + textHeight - 1);
+
+  // draw selection
   } else {
-    XDrawLine(getDisplay(), xwin, getBgGC(), tx-1, ty, tx-1, ty + textHeight);
-    XDrawLine(getDisplay(), xwin, getBgGC(), tx, ty, tx, ty + textHeight);
-    ty += textBase;
-    if (cursor <= firstChar) {
-      XDrawString(getDisplay(), xwin, textGC, tx, ty,
-		  text->getCString() + cursor, 1);
+    i = (cursor >= firstChar) ? cursor : firstChar;
+    tx1 = cursorToX(i);
+    j = selectionEnd;
+    tx2 = cursorToX(j);
+    if (tx2 > width) {
+      tx2 = width;
+      j = xToCursor(tx2);
+      if (j < text->getLength())
+	++j;
+    }
+    XFillRectangle(getDisplay(), xwin, getXorGC(),
+		   tx1, ty, tx2 - tx1, textHeight);
+  }
+}
+
+void LTKTextIn::moveCursor(int newCursor, int newSelectionEnd,
+			   int visiblePos) {
+  GBool needRedraw;
+  int tx1, tx2, ty;
+  int i;
+
+  // y coordinate
+  ty = (height - textHeight) / 2;
+
+  // make sure moving end of selection is visible
+  needRedraw = gFalse;
+  if (visiblePos < firstChar) {
+    firstChar = visiblePos;
+    needRedraw = gTrue;
+  } else if (visiblePos > firstChar) {
+    tx1 = cursorToX(visiblePos);
+    if (tx1 > width - horizBorder - 1) {
+      do {
+	++firstChar;
+	tx1 = cursorToX(visiblePos);
+      } while (tx1 > width - horizBorder - 1 && firstChar < visiblePos);
+      needRedraw = gTrue;
+    }
+  }
+  if (needRedraw) {
+    tx1 = horizBorder;
+    XFillRectangle(getDisplay(), xwin, getBgGC(),
+		   tx1, ty, width - tx1, textHeight);
+    i = xToCursor(width);
+    if (i < text->getLength())
+      ++i;
+    XDrawString(getDisplay(), xwin, textGC, tx1, ty + textBase,
+		text->getCString() + firstChar, i - firstChar);
+    cursor = newCursor;
+    selectionEnd = newSelectionEnd;
+    xorCursor();
+  } else {
+
+    // no selection previously
+    if (cursor == selectionEnd) {
+      xorCursor();
+
     } else {
-      XTextExtents(fontStruct, text->getCString() + firstChar,
-		   cursor - 1 - firstChar,
-		   &direction, &ascent, &descent, &extents);
-      tx = horizBorder + extents.width;
-      XDrawString(getDisplay(), xwin, textGC, tx, ty,
-		  text->getCString() + cursor - 1, 2);
+
+      // shrank on the left
+      if (newCursor > cursor) {
+	tx1 = cursorToX(cursor);
+	tx2 = cursorToX(newCursor);
+	XFillRectangle(getDisplay(), xwin, getXorGC(),
+		       tx1, ty, tx2 - tx1, textHeight);
+      }
+
+      // shrank on the right
+      if (newSelectionEnd  < selectionEnd) {
+	tx1 = cursorToX(newSelectionEnd);
+	tx2 = cursorToX(selectionEnd);
+	XFillRectangle(getDisplay(), xwin, getXorGC(),
+		       tx1, ty, tx2 - tx1, textHeight);
+      }
+    }
+
+    // no selection left
+    if (newCursor == newSelectionEnd) {
+      cursor = newCursor;
+      selectionEnd = newSelectionEnd;
+      xorCursor();
+
+    } else {
+
+      // grew on the left
+      if (newCursor < cursor) {
+	tx1 = cursorToX(newCursor);
+	tx2 = cursorToX(cursor);
+	XFillRectangle(getDisplay(), xwin, getXorGC(),
+		       tx1, ty, tx2 - tx1, textHeight);
+      }
+
+      // grew on the right
+      if (newSelectionEnd > selectionEnd) {
+	tx1 = cursorToX(selectionEnd);
+	tx2 = cursorToX(newSelectionEnd);
+	XFillRectangle(getDisplay(), xwin, getXorGC(),
+		       tx1, ty, tx2 - tx1, textHeight);
+      }
+
+      cursor = newCursor;
+      selectionEnd = newSelectionEnd;
     }
   }
 }
 
-void LTKTextIn::redrawTail(int i, GBool clear) {
-  XCharStruct extents;
-  int direction, ascent, descent;
+void LTKTextIn::redrawTail(int i) {
   int tx, ty;
+  int j;
 
   // make sure cursor is visible
   if (cursor < firstChar) {
     firstChar = cursor;
     i = firstChar;
   } else if (cursor > firstChar) {
-    XTextExtents(fontStruct, text->getCString() + firstChar,
-		 cursor - firstChar,
-		 &direction, &ascent, &descent, &extents);
-    if (extents.width > width - 2 * horizBorder - 1) {
+    tx = cursorToX(cursor);
+    if (tx > width - horizBorder - 1) {
       do {
 	++firstChar;
-	XTextExtents(fontStruct, text->getCString() + firstChar,
-		     cursor - firstChar,
-		     &direction, &ascent, &descent, &extents);
-      } while (extents.width > width - 2 * horizBorder - 1 &&
-	       firstChar < cursor);
+	tx = cursorToX(cursor);
+      } while (tx > width - horizBorder - 1 && firstChar < cursor);
       i = firstChar;
     }
   }
 
   // redraw if necessary
   if (i >= 0) {
-    tx = horizBorder;
+    tx = cursorToX(i);
     ty = (height - textHeight) / 2;
-    if (i > firstChar) {
-      XTextExtents(fontStruct, text->getCString() + firstChar, i - firstChar,
-		   &direction, &ascent, &descent, &extents);
-      tx += extents.width;
-    }
-    if (clear)
-      XFillRectangle(getDisplay(), xwin, getBgGC(), tx, 0, width - tx, height);
+    XFillRectangle(getDisplay(), xwin, getBgGC(), tx, 0, width - tx, height);
     ty += textBase;
+    j = xToCursor(width);
+    if (j < text->getLength())
+      ++j;
     XDrawString(getDisplay(), xwin, textGC, tx, ty,
-		text->getCString() + i, text->getLength() - i);
+		text->getCString() + i, j - i);
   }
 }

@@ -14,9 +14,10 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <GString.h>
 #include <gmem.h>
-#include <fileNames.h>
+#include <gfile.h>
 #include "Object.h"
 #include "Array.h"
 #include "Dict.h"
@@ -25,6 +26,23 @@
 #include "GfxFont.h"
 
 #include "FontInfo.h"
+
+//------------------------------------------------------------------------
+
+static Gushort *defCharWidths[12] = {
+  courierWidths,
+  courierObliqueWidths,
+  courierBoldWidths,
+  courierBoldObliqueWidths,
+  helveticaWidths,
+  helveticaObliqueWidths,
+  helveticaBoldWidths,
+  helveticaBoldObliqueWidths,
+  timesRomanWidths,
+  timesItalicWidths,
+  timesBoldWidths,
+  timesBoldItalicWidths
+};
 
 //------------------------------------------------------------------------
 // GfxFontEncoding
@@ -141,7 +159,9 @@ int GfxFontEncoding::getCharCode(char *name) {
 
 GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
   BuiltinFont *builtinFont;
-  Object obj1, obj2;
+  char buf[256];
+  Object obj1, obj2, obj3;
+  char *p1, *p2;
   int i;
 
   // get font tag and ID
@@ -166,6 +186,57 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
     }
   }
 
+  // get info from font descriptor
+  flags = fontSerif;   // assume Times-Roman by default
+  embFontID.num = -1;
+  embFontID.gen = -1;
+  embFontName = NULL;
+  fontDict->lookup("FontDescriptor", &obj1);
+  if (obj1.isDict()) {
+
+    // flags
+    obj1.dictLookup("Flags", &obj2);
+    if (obj2.isInt())
+      flags = obj2.getInt();
+    obj2.free();
+
+    // embedded font file and font name
+    obj1.dictLookupNF("FontFile", &obj2);
+    if (obj2.isRef()) {
+      embFontID = obj2.getRef();
+
+      // get font name from the font file itself since font subsets
+      // sometimes use the 'AAAAAA+foo' name and sometimes use just 'foo'
+      obj2.fetch(&obj3);
+      if (obj3.isStream()) {
+	obj3.streamReset();
+	for (i = 0; i < 64; ++i) {
+	  obj3.streamGetLine(buf, sizeof(buf));
+	  if (!strncmp(buf, "/FontName", 9)) {
+	    if ((p1 = strchr(buf+9, '/'))) {
+	      ++p1;
+	      for (p2 = p1; *p2 && !isspace(*p2); ++p2) ;
+	      embFontName = new GString(p1, p2 - p1);
+	    }
+	    break;
+	  }
+	}
+      }
+      obj3.free();
+      obj2.free();
+
+      // couldn't find font name so just use the one in the PDF font
+      // descriptor
+      if (!embFontName) {
+	obj1.dictLookup("FontName", &obj2);
+	if (obj2.isName())
+	  embFontName = new GString(obj2.getName());
+      }
+    }
+    obj2.free();
+  }
+  obj1.free();
+
   // get encoding and character widths
   if (builtinFont) {
     makeEncoding(fontDict, builtinFont->encoding);
@@ -174,17 +245,6 @@ GfxFont::GfxFont(char *tag1, Ref id1, Dict *fontDict) {
     makeEncoding(fontDict, NULL);
     makeWidths(fontDict, NULL, NULL);
   }
-
-  // get info from font descriptor
-  flags = 0;
-  fontDict->lookup("FontDescriptor", &obj1);
-  if (obj1.isDict()) {
-    obj1.dictLookup("Flags", &obj2);
-    if (obj2.isInt())
-      flags = obj2.getInt();
-    obj2.free();
-  }
-  obj1.free();
 }
 
 double GfxFont::getWidth(GString *s) {
@@ -201,7 +261,8 @@ void GfxFont::makeEncoding(Dict *fontDict, GfxFontEncoding *builtinEncoding) {
   GfxFontEncoding *baseEnc;
   Object obj1, obj2, obj3;
   char *name;
-  int code, i;
+  GBool hex;
+  int code, n, i;
 
   // start with empty encoding
   encoding = new GfxFontEncoding();
@@ -243,21 +304,38 @@ void GfxFont::makeEncoding(Dict *fontDict, GfxFontEncoding *builtinEncoding) {
   obj1.free();
 
   // merge base encoding and differences;
-  // try to fix weird character names for font subsets
+  // try to fix decimal or hex character names for font subsets
+  hex = gFalse;
   for (code = 0; code < 256; ++code) {
     if ((name = encoding->getCharName(code))) {
-      //~ if name starts with 'G', the char number is sometimes in hex
-      if ((name[0] == 'C' || name[0] == 'G') &&
-	  name[1] >= '0' && name[1] <= '9' &&
-	  strlen(name) <= 5) {
+      if ((name[0] == 'C' || name[0] == 'G') && strlen(name) == 3 &&
+	  ((name[1] >= 'a' && name[1] <= 'f') ||
+	   (name[1] >= 'A' && name[1] <= 'F') ||
+	   (name[2] >= 'a' && name[2] <= 'f') ||
+	   (name[2] >= 'A' && name[2] <= 'F'))) {
+	hex = gTrue;
+	break;
+      }
+    }
+  }
+  for (code = 0; code < 256; ++code) {
+    if ((name = encoding->getCharName(code))) {
+      n = strlen(name);
+      i = -1;
+      if (hex && n == 3 && (name[0] == 'C' || name[0] == 'G') &&
+	  isxdigit(name[1]) && isxdigit(name[2]))
+	sscanf(name+1, "%x", &i);
+      else if (!hex && n >= 3 && n <= 5 && isdigit(name[1]))
 	i = atoi(name+1);
+      if (i >= 0 && i < winAnsiEncodingSize) {
 	//~ this is a kludge -- is there a standard internal encoding
 	//~ used by all/most Type 1 fonts?
 	if (i == 262)		// hyphen
 	  i = 45;
 	else if (i == 266)	// emdash
 	  i = 208;
-	encoding->addChar(code, copyString(standardEncoding.getCharName(i)));
+	if ((name = winAnsiEncoding.getCharName(i)))
+	  encoding->addChar(code, copyString(name));
       }
     } else if ((name = baseEnc->getCharName(code))) {
       encoding->addChar(code, copyString(name));
@@ -390,6 +468,8 @@ void GfxFont::makeWidths(Dict *fontDict, GfxFontEncoding *builtinEncoding,
   int firstChar, lastChar;
   int code, code2;
   char *name;
+  Gushort *defWidths;
+  int index;
 
   // initialize all widths to zero
   for (code = 0; code < 256; ++code)
@@ -424,8 +504,23 @@ void GfxFont::makeWidths(Dict *fontDict, GfxFontEncoding *builtinEncoding,
       }
     } else {
       error(-1, "No character widths resource for non-builtin font");
-      for (code = 0; code < 255; ++code)
-	widths[code] = 0.3;
+      if (isFixedWidth())
+	index = 8;
+      else if (isSerif())
+	index = 4;
+      else
+	index = 0;
+      if (isBold())
+	index += 2;
+      if (isItalic())
+	index += 1;
+      defWidths = defCharWidths[index];
+      code2 = 0; // to make gcc happy
+      for (code = 0; code < 256; ++code) {
+	if ((name = encoding->getCharName(code)) &&
+	    (code2 = standardEncoding.getCharCode(name)) >= 0)
+	  widths[code] = defWidths[code2] / 1000.0;
+      }
     }
     obj1.free();
   }
@@ -437,6 +532,8 @@ GfxFont::~GfxFont() {
     delete name;
   if (encoding)
     delete encoding;
+  if (embFontName)
+    delete embFontName;
 }
 
 //------------------------------------------------------------------------

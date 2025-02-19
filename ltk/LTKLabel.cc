@@ -30,16 +30,6 @@ LTKLabel::LTKLabel(char *name1, int widgetNum1,
   textGC = None;
 }
 
-LTKLabel::LTKLabel(LTKLabel *label):
-    LTKWidget(label) {
-  maxLength = label->maxLength;
-  text = label->text->copy();
-  length = label->length;
-  fontName = label->fontName;
-  fontStruct = NULL;
-  textGC = None;
-}
-
 LTKLabel::~LTKLabel() {
   delete text;
   if (fontName && fontStruct) {
